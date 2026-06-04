@@ -1,0 +1,207 @@
+<UserControl x:Class="SwiftList.App.Views.Settings.Plugins.PluginManagementSettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:services="clr-namespace:SwiftList.App.Services"
+             xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"
+             mc:Ignorable="d"
+             d:DesignHeight="520" d:DesignWidth="700">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/SwiftList.App;component/Resources/Styles.xaml"/>
+                <ResourceDictionary Source="../../../Resources/Styles/SearchWindow.xaml"/>
+                <ResourceDictionary Source="../../../Resources/Styles/SettingsWindow.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
+            <conv:BoolToVisibilityConverter x:Key="InvertBoolToVis" Invert="True"/>
+            <conv:ComponentTypeToLabelConverter x:Key="TypeToLabel"/>
+            <conv:ComponentTypeToBadgeBrushConverter x:Key="TypeToBrush"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+            <!-- Page header -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <TextBlock Style="{StaticResource SettingsSectionTitle}"
+                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_Title]}"
+                           VerticalAlignment="Center"/>
+                <Border CornerRadius="4" Background="{DynamicResource BadgeBackground}" BorderBrush="{DynamicResource BadgeBorderBrush}" BorderThickness="1" Margin="8,0,0,0" Padding="5,1,5,2" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding HostSdkVersion, StringFormat='SDK v{0}'}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BadgeText}" FontFamily="Microsoft YaHei UI"/>
+                </Border>
+            </StackPanel>
+            <TextBlock Style="{StaticResource SettingsHintText}"
+                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_Hint]}"/>
+
+            <!-- Empty state -->
+            <Border Style="{StaticResource SettingsCard}"
+                    Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_NoPlugins]}"
+                           Foreground="{DynamicResource TextSecondary2}"
+                           HorizontalAlignment="Center" Padding="0,8"/>
+            </Border>
+
+            <!-- Plugin cards -->
+            <ItemsControl ItemsSource="{Binding Plugins}" Margin="0,12,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource SettingsCard}" Margin="0,0,0,12">
+                            <StackPanel>
+
+                                <!-- Plugin header row -->
+                                <Grid Cursor="Hand">
+                                    <Grid.InputBindings>
+                                        <MouseBinding MouseAction="LeftClick"
+                                                      Command="{Binding DataContext.ToggleExpandCommand,
+                                                                RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                      CommandParameter="{Binding}"/>
+                                    </Grid.InputBindings>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Plugin icon -->
+                                    <Border Grid.Column="0" Width="36" Height="36" CornerRadius="8"
+                                            Background="{DynamicResource BadgeBackground}" Margin="0,0,12,0">
+                                        <TextBlock Text="&#xECAA;" FontFamily="Segoe MDL2 Assets"
+                                                   FontSize="16" Foreground="{DynamicResource BadgeText}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <!-- Name + meta -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontFamily="Microsoft YaHei UI"
+                                                   FontSize="14" FontWeight="SemiBold"
+                                                    Foreground="{DynamicResource TextPrimary}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_Version]}"
+                                                       Foreground="{DynamicResource TextSecondary2}" FontSize="11"/>
+                                            <TextBlock Text=" " FontSize="11"/>
+                                            <TextBlock Text="{Binding Version}"
+                                                       Foreground="{DynamicResource TextPrimary2}" FontSize="11" FontWeight="SemiBold"/>
+                                            <TextBlock Text="  ·  " Foreground="{DynamicResource SeparatorBrush}" FontSize="11"/>
+                                            <TextBlock Text="{Binding DllFileName}"
+                                                       Foreground="{DynamicResource TextSecondary2}" FontSize="11"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Expand/collapse chevron -->
+                                    <TextBlock Grid.Column="2" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="10" Foreground="{DynamicResource TextSecondary2}"
+                                               VerticalAlignment="Center" Margin="8,0,0,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="&#xE70E;"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                                                        <Setter Property="Text" Value="&#xE70D;"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+
+                                <!-- Components section (collapsible) -->
+                                <StackPanel Margin="0,12,0,0"
+                                            Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
+
+                                    <Border Height="1" Background="{DynamicResource SeparatorBrush}" Margin="0,0,0,10"/>
+
+                                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_ComponentsTitle]}"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextSecondary2}" Margin="0,0,0,12"
+                                               FontFamily="Microsoft YaHei UI"/>
+
+                                    <!-- No components placeholder -->
+                                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_NoComponents]}"
+                                               Foreground="{DynamicResource TextSecondary2}" FontSize="12"
+                                               Visibility="{Binding HasNoComponents, Converter={StaticResource BoolToVis}}"/>
+
+                                    <!-- Component Groups -->
+                                    <ItemsControl ItemsSource="{Binding ComponentGroups}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="0,0,0,14">
+                                                    <!-- Group Header -->
+                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                                        <Border Width="3" Height="12" CornerRadius="1"
+                                                                Background="{Binding ComponentType, Converter={StaticResource TypeToBrush}}"
+                                                                Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding GroupName}"
+                                                                   FontSize="11" FontWeight="Bold"
+                                                                   Foreground="{Binding ComponentType, Converter={StaticResource TypeToBrush}}"
+                                                                   FontFamily="Microsoft YaHei UI"
+                                                                   VerticalAlignment="Center"/>
+                                                    </StackPanel>
+
+                                                    <!-- Nested components -->
+                                                    <ItemsControl ItemsSource="{Binding Components}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Style="{StaticResource SettingsRow}" Padding="8,6" Margin="0,0,0,4">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                            <ColumnDefinition Width="Auto"/>
+                                                                        </Grid.ColumnDefinitions>
+
+                                                                        <TextBlock Grid.Column="0"
+                                                                                   Text="{Binding DisplayName}"
+                                                                                   FontSize="12"
+                                                                                   FontFamily="Microsoft YaHei UI"
+                                                                                   Foreground="{DynamicResource TextPrimary}"
+                                                                                   VerticalAlignment="Center"/>
+
+                                                                        <!-- CheckBox shown for toggleable components -->
+                                                                        <CheckBox Grid.Column="1"
+                                                                                  IsChecked="{Binding IsEnabled}"
+                                                                                  VerticalAlignment="Center"
+                                                                                  Visibility="{Binding IsToggleable, Converter={StaticResource BoolToVis}}"/>
+
+                                                                        <!-- Lock icon shown for read-only components (e.g. TranslationProvider) -->
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="&#xE72E;"
+                                                                                   FontFamily="Segoe MDL2 Assets"
+                                                                                   FontSize="13"
+                                                                                   Foreground="{DynamicResource SeparatorBrush}"
+                                                                                   ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_ReadOnlyTooltip]}"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Visibility="{Binding IsToggleable, Converter={StaticResource InvertBoolToVis}}"/>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Restart note banner -->
+            <Border Margin="0,4,0,8" Padding="12,8" CornerRadius="6"
+                    Background="{DynamicResource WarningBackground}" BorderBrush="{DynamicResource WarningBorderBrush}" BorderThickness="1">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                               Foreground="{DynamicResource WarningBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_RestartNote]}"
+                               FontSize="12" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center"
+                               FontFamily="Microsoft YaHei UI"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,145 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:app="clr-namespace:SwiftList.App"
+                    xmlns:local="clr-namespace:SwiftList.App.Converters">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="../Styles/Colors.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- ═══════════ Inline Search Result Item Template ═══════════ -->
+    <DataTemplate x:Key="InlineSearchResultTemplate" DataType="{x:Type app:AppSearchResult}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <!-- Icon -->
+                <ColumnDefinition Width="Auto"/>
+                <!-- Name -->
+                <ColumnDefinition Width="*"/>
+                <!-- Shortcut badge -->
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.ColumnSpan="3"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       FontFamily="Microsoft YaHei UI, Segoe UI"
+                       Foreground="{DynamicResource AccentBlue}"
+                       VerticalAlignment="Center"
+                       Text="{Binding Name}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <!-- File/Folder icon -->
+            <Image Grid.Column="0" Source="{Binding Icon}" Width="23" Height="23" Margin="0,0,14,0" VerticalAlignment="Center"
+                   RenderOptions.BitmapScalingMode="HighQuality">
+                <Image.Style>
+                    <Style TargetType="Image">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Image.Style>
+            </Image>
+
+            <!-- Name -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Grid.Column" Value="1"/>
+                        <Setter Property="Grid.ColumnSpan" Value="1"/>
+                        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
+                                <Setter Property="Grid.Column" Value="0"/>
+                                <Setter Property="Grid.ColumnSpan" Value="3"/>
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <TextBlock FontFamily="Microsoft YaHei UI, Segoe UI"
+                           Foreground="{DynamicResource TextPrimary}"
+                           TextTrimming="CharacterEllipsis"
+                           local:TextHighlighter.Text="{Binding Name}"
+                           local:TextHighlighter.HighlightText="{Binding SearchQuery}"
+                           local:TextHighlighter.HighlightBrush="{DynamicResource AccentBlue}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontSize" Value="14"/>
+                            <Setter Property="TextAlignment" Value="Left"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
+                                    <Setter Property="FontSize" Value="18"/>
+                                    <Setter Property="TextAlignment" Value="Center"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock FontSize="11"
+                           FontFamily="Microsoft YaHei UI, Segoe UI"
+                           Foreground="{DynamicResource TextSecondary}"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,2,0,0"
+                           local:TextHighlighter.Text="{Binding ParentDir}"
+                           local:TextHighlighter.HighlightText="{Binding SearchQuery}"
+                           local:TextHighlighter.HighlightBrush="{DynamicResource AccentBlue}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ParentDir}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+
+            <!-- Keyboard shortcut hint -->
+            <TextBlock Grid.Column="2"
+                       Text="{Binding ShortcutHint}"
+                       FontSize="12"
+                       FontFamily="Segoe UI"
+                       Foreground="{DynamicResource ShortcutColor}"
+                       VerticalAlignment="Center"
+                       Margin="14,0,0,0">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="{Binding ShortcutVisibility}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
+    </DataTemplate>
+
+</ResourceDictionary>

@@ -1,0 +1,66 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      # 1. Checkout codebase with full history to retrieve previous tags/commits
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. Configure .NET SDK
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # 3. Install NSIS packaging tool via Chocolatey
+      - name: Install NSIS
+        run: |
+          choco install nsis -y
+          echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
+
+      # 4. Execute the build and package batch script
+      - name: Run Build and Package Script
+        run: |
+          .\make.bat
+
+      # 5. Extract commit history since the previous tag as Release Notes
+      - name: Generate Changelog
+        id: changelog
+        shell: bash
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 "${{ github.ref_name }}^" 2>/dev/null || echo "")
+          echo "## Changelog (Commits)" > changelog.md
+          echo "" >> changelog.md
+          if [ -z "$PREV_TAG" ]; then
+            git log --pretty=format:"* %s (%h)" --no-merges >> changelog.md
+          else
+            git log --pretty=format:"* %s (%h)" --no-merges "$PREV_TAG..${{ github.ref_name }}" >> changelog.md
+          fi
+          echo "" >> changelog.md
+
+      # 6. Publish release and upload artifacts (installer and portable ZIP)
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: changelog.md
+          files: |
+            SwiftList-Setup.exe
+            SwiftList-Portable.zip
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

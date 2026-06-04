@@ -1,0 +1,36 @@
+using System.Collections.Generic;
+using SwiftList.PluginSdk;
+using SwiftList.App.ViewModels.Settings.Plugins;
+
+namespace SwiftList.App.Services
+{
+    public class FilteredResultColumnProvider : IResultColumnProvider
+    {
+        private readonly IResultColumnProvider _inner;
+        private readonly string _dllName;
+        private readonly PluginManager _manager;
+
+        public FilteredResultColumnProvider(IResultColumnProvider inner, string dllName, PluginManager manager)
+        {
+            _inner = inner;
+            _dllName = dllName;
+            _manager = manager;
+        }
+
+        public IEnumerable<ResultColumnDefinition> GetColumns()
+        {
+            foreach (var col in _inner.GetColumns())
+            {
+                if (_manager.IsComponentEnabled(_dllName, PluginComponentType.ColumnProvider, col.ColumnId))
+                {
+                    yield return col;
+                }
+            }
+        }
+
+        public string GetCellValue(ISearchResult result, string columnId)
+        {
+            return _inner.GetCellValue(result, columnId);
+        }
+    }
+}

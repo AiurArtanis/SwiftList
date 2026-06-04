@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Plugins/CoreExtensions/CoreExtensions.csproj" />
+  <Project Path="Plugins/PinyinAlias/PinyinAlias.csproj" />
+</Solution>
