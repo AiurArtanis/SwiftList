@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace SwiftList.Core.Hook.InlineSearch
 {
@@ -82,6 +83,36 @@ namespace SwiftList.Core.Hook.InlineSearch
                 return vkCode == 0x10 || vkCode == 0xA0 || vkCode == 0xA1;
             if (modifier == "WIN" || modifier == "WINDOWS")
                 return vkCode == 0x5B || vkCode == 0x5C;
+            return false;
+        }
+
+        public static bool IsForegroundProcessBlacklisted(List<string> blacklistedProcesses)
+        {
+            if (blacklistedProcesses == null || blacklistedProcesses.Count == 0)
+                return false;
+
+            try
+            {
+                IntPtr fgHwnd = KeyboardNativeMethods.GetForegroundWindow();
+                if (fgHwnd == IntPtr.Zero) return false;
+                KeyboardNativeMethods.GetWindowThreadProcessId(fgHwnd, out uint processId);
+                if (processId == 0) return false;
+                using var process = System.Diagnostics.Process.GetProcessById((int)processId);
+                string procName = process.ProcessName;
+                foreach (var blacklisted in blacklistedProcesses)
+                {
+                    if (string.IsNullOrEmpty(blacklisted)) continue;
+                    if (blacklisted.Equals(procName, StringComparison.OrdinalIgnoreCase) ||
+                        blacklisted.Equals(procName + ".exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors
+            }
             return false;
         }
     }

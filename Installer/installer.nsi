@@ -7,10 +7,10 @@ SetCompressor lzma
 
 !define APP_NAME "SwiftList"
 !ifndef APP_VERSION
-  !define APP_VERSION "1.2.2"
+  !define APP_VERSION "1.2.3"
 !endif
 !ifndef APP_VERSION_4
-  !define APP_VERSION_4 "1.2.2.0"
+  !define APP_VERSION_4 "1.2.3.0"
 !endif
 !define APP_PUBLISHER "SwiftList developer"
 !define APP_WEBSITE "https://github.com/swiftlist/SwiftList"

@@ -66,6 +66,11 @@ namespace SwiftList.Core.Hook.InlineSearch
 
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
+            if (KeyboardUtils.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses))
+            {
+                return KeyboardNativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
+            }
+
             if (FullscreenHelper.IsForegroundWindowFullScreen())
             {
                 return KeyboardNativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);

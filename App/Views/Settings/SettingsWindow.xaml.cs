@@ -66,6 +66,8 @@ namespace SwiftList.App
             PageHotkeys.Visibility = tag == "Hotkeys" ? Visibility.Visible : Visibility.Collapsed;
             PagePlugins.Visibility = tag == "Plugins" ? Visibility.Visible : Visibility.Collapsed;
             PageAbout.Visibility = tag == "About" ? Visibility.Visible : Visibility.Collapsed;
+            if (PageBlacklist != null)
+                PageBlacklist.Visibility = tag == "Blacklist" ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 }

@@ -288,5 +288,15 @@
   "Hotkeys_ComboKey": "Shortcut Key",
   "Hotkeys_QuickSwitchTitle": "File Dialog Quick Redirect",
   "Hotkeys_SelectionTitle": "Shortcut Selection (1-9)",
-  "Hotkeys_SelectionModifier": "Modifier for number keys"
+  "Hotkeys_SelectionModifier": "Modifier for number keys",
+  "Settings_Blacklist": "Process Blacklist",
+  "Blacklist_Title": "Process Blacklist",
+  "Blacklist_Hint": "Add process executable names here that should bypass the keyboard hook. When these processes are in the foreground, SwiftList global hotkeys and typing interception will be direct pass-through.",
+  "Blacklist_ProcessCardTitle": "Blacklisted Processes",
+  "Blacklist_ProcessCardDesc": "Enter executable file names (e.g. devenv.exe or game.exe, case-insensitive, .exe suffix is optional), one per line.",
+  "Blacklist_AddBtn": "Add Process",
+  "Blacklist_ApplyBtn": "Apply Text",
+  "Blacklist_GenerateBtn": "Generate Text",
+  "Blacklist_RemoveTooltip": "Remove this process from blacklist",
+  "Blacklist_EditTooltip": "Edit this process name"
 }
