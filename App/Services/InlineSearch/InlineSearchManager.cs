@@ -105,7 +105,7 @@ namespace SwiftList.App.Services
 
             _explorerTracker.OnError += (msg) =>
             {
-                Logger.Log($"[InlineSearchManager] ExplorerTracker error: {msg}");
+                Logger.Log($"[InlineSearchManager] ExplorerTracker error: {msg}", SwiftList.Core.LogLevel.Error);
             };
 
             _explorerTracker.OnPathCaptured += (path, isDesktop) =>

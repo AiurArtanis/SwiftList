@@ -212,7 +212,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[ActionMenuBuilder] GetIconFromHBitmap failed: {ex.Message}");
+                Logger.Log($"[ActionMenuBuilder] GetIconFromHBitmap failed: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return null;
             }
         }

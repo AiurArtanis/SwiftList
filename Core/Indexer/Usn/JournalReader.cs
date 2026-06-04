@@ -26,14 +26,14 @@ namespace SwiftList.Core.Indexer.Usn
 
             if (handle.IsInvalid)
             {
-                Logger.Log($"[JournalReader] Failed to open drive {drive} handle.");
+                Logger.Log($"[JournalReader] Failed to open drive {drive} handle.", SwiftList.Core.LogLevel.Error);
                 return null;
             }
 
             var rootFrn = VolumeHelper.GetRootFrn(drive);
             if (!rootFrn.HasValue)
             {
-                Logger.Log($"[JournalReader] Failed to resolve root FRN on {drive}.");
+                Logger.Log($"[JournalReader] Failed to resolve root FRN on {drive}.", SwiftList.Core.LogLevel.Error);
                 return null;
             }
 
@@ -50,7 +50,7 @@ namespace SwiftList.Core.Indexer.Usn
 
             if (!success)
             {
-                Logger.Log($"[JournalReader] Failed to query USN journal on {drive}.");
+                Logger.Log($"[JournalReader] Failed to query USN journal on {drive}.", SwiftList.Core.LogLevel.Error);
                 return null;
             }
 
@@ -88,7 +88,7 @@ namespace SwiftList.Core.Indexer.Usn
                     if (err == Win32Api.ERROR_HANDLE_EOF)
                         break;
                     
-                    Logger.Log($"[JournalReader] FSCTL_ENUM_USN_DATA on {drive} failed. Error: {err}");
+                    Logger.Log($"[JournalReader] FSCTL_ENUM_USN_DATA on {drive} failed. Error: {err}", SwiftList.Core.LogLevel.Error);
                     break;
                 }
 
@@ -120,7 +120,7 @@ namespace SwiftList.Core.Indexer.Usn
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log($"[JournalReader] Record parsing error on {drive}: {ex}");
+                        Logger.Log($"[JournalReader] Record parsing error on {drive}: {ex}", SwiftList.Core.LogLevel.Error);
                     }
 
                     offset += (int)recordLen;
@@ -147,7 +147,7 @@ namespace SwiftList.Core.Indexer.Usn
 
             if (handle.IsInvalid)
             {
-                Logger.Log($"[JournalReader] Failed to open drive {drive} handle for catch-up.");
+                Logger.Log($"[JournalReader] Failed to open drive {drive} handle for catch-up.", SwiftList.Core.LogLevel.Error);
                 return -1;
             }
 
@@ -164,7 +164,7 @@ namespace SwiftList.Core.Indexer.Usn
 
             if (!success)
             {
-                Logger.Log($"[JournalReader] Failed to query USN journal for catch-up on {drive}.");
+                Logger.Log($"[JournalReader] Failed to query USN journal for catch-up on {drive}.", SwiftList.Core.LogLevel.Error);
                 return -1;
             }
 
@@ -173,7 +173,7 @@ namespace SwiftList.Core.Indexer.Usn
 
             if (currentJournalId != journalId)
             {
-                Logger.Log($"[JournalReader] Journal ID mismatch on {drive} (expected {journalId}, got {currentJournalId}). Need full re-index.");
+                Logger.Log($"[JournalReader] Journal ID mismatch on {drive} (expected {journalId}, got {currentJournalId}). Need full re-index.", SwiftList.Core.LogLevel.Warn);
                 return -1;
             }
 
@@ -207,7 +207,7 @@ namespace SwiftList.Core.Indexer.Usn
                 if (!success)
                 {
                     int err = Marshal.GetLastWin32Error();
-                    Logger.Log($"[JournalReader] FSCTL_READ_USN_JOURNAL failed during catch-up on {drive}: {err}");
+                    Logger.Log($"[JournalReader] FSCTL_READ_USN_JOURNAL failed during catch-up on {drive}: {err}", SwiftList.Core.LogLevel.Error);
                     return -1;
                 }
 
@@ -236,7 +236,7 @@ namespace SwiftList.Core.Indexer.Usn
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log($"[JournalReader] Catch-up record parse error on {drive}: {ex}");
+                        Logger.Log($"[JournalReader] Catch-up record parse error on {drive}: {ex}", SwiftList.Core.LogLevel.Error);
                     }
 
                     offset += (int)recordLen;

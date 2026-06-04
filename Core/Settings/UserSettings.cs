@@ -13,6 +13,8 @@ namespace SwiftList.Core
         public List<string> IgnoredPathRegexes { get; set; } = new();
         public bool StartWithWindows { get; set; }
         public bool AutoElevateIfAdmin { get; set; }
+        public bool AutoCheckUpdates { get; set; } = true;
+        public bool AutoSilentUpdate { get; set; } = false;
         public string LogLevel { get; set; } = "Info";
         public string PreferredLanguage { get; set; } = GetDefaultSystemLanguage();
         public string Theme { get; set; } = "Light";
@@ -64,7 +66,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[UserSettings] Failed to load settings: {ex.Message}");
+                Logger.Log($"[UserSettings] Failed to load settings: {ex.Message}", SwiftList.Core.LogLevel.Warn);
                 return new UserSettings();
             }
         }

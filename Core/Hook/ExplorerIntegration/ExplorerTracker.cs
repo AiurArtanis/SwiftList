@@ -106,7 +106,7 @@ namespace SwiftList.Core.Hook
             if (_hForegroundHook == IntPtr.Zero || _hNameChangeHook == IntPtr.Zero || _hLocationChangeHook == IntPtr.Zero)
             {
                 Stop();
-                Logger.Log("[ExplorerTracker] Failed to register WinEvent hooks!");
+                Logger.Log("[ExplorerTracker] Failed to register WinEvent hooks!", SwiftList.Core.LogLevel.Error);
                 return;
             }
 

@@ -45,7 +45,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[ServiceInstallManager] Failed to read service path from registry: {ex.Message}");
+                Logger.Log($"[ServiceInstallManager] Failed to read service path from registry: {ex.Message}", SwiftList.Core.LogLevel.Warn);
             }
 
             string serviceExePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SwiftList.Service.exe");
@@ -77,7 +77,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[ServiceInstallManager] Service installation failed: {ex}");
+                Logger.Log($"[ServiceInstallManager] Service installation failed: {ex}", SwiftList.Core.LogLevel.Error);
                 onError?.Invoke(ex);
             }
         }
@@ -102,7 +102,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[ServiceInstallManager] Silent service installation failed: {ex.Message}");
+                Logger.Log($"[ServiceInstallManager] Silent service installation failed: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
             finally
             {

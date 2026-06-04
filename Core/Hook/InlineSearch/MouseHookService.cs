@@ -55,7 +55,7 @@ namespace SwiftList.Core.Hook.InlineSearch
             _hookId = SetWindowsHookEx(WH_MOUSE_LL, _proc, hMod, 0);
             if (_hookId == IntPtr.Zero)
             {
-                Logger.Log($"[MouseHookService] Failed to install mouse hook! Error={Marshal.GetLastWin32Error()}");
+                Logger.Log($"[MouseHookService] Failed to install mouse hook! Error={Marshal.GetLastWin32Error()}", SwiftList.Core.LogLevel.Error);
             }
         }
 

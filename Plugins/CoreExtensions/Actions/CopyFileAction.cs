@@ -32,7 +32,7 @@ namespace SwiftList.Plugins.CoreExtensions.Actions
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[CopyFileAction] Failed to copy file: {ex.Message}");
+                Logger.Log($"[CopyFileAction] Failed to copy file: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
     }

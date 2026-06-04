@@ -44,7 +44,7 @@ namespace SwiftList.Core.Indexer.Usn
                 }
                 else
                 {
-                    Logger.Log($"[UsnIndexer] Drive {drive} indexing failed.");
+                    Logger.Log($"[UsnIndexer] Drive {drive} indexing failed.", SwiftList.Core.LogLevel.Error);
                 }
             }
 

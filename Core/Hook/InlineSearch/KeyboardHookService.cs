@@ -41,7 +41,7 @@ namespace SwiftList.Core.Hook.InlineSearch
             _hookId = KeyboardNativeMethods.SetWindowsHookEx(KeyboardNativeMethods.WH_KEYBOARD_LL, _proc, hMod, 0);
             if (_hookId == IntPtr.Zero)
             {
-                Logger.Log($"[KeyboardHookService] Failed to install keyboard hook! Error={Marshal.GetLastWin32Error()}");
+                Logger.Log($"[KeyboardHookService] Failed to install keyboard hook! Error={Marshal.GetLastWin32Error()}", SwiftList.Core.LogLevel.Error);
             }
         }
 

@@ -109,7 +109,7 @@ namespace SwiftList.App
             }
             catch (Exception ex)
             {
-                Logger.Log($"[App] Failed to initialize TranslationManager or ThemeManager: {ex.Message}");
+                Logger.Log($"[App] Failed to initialize TranslationManager or ThemeManager: {ex.Message}", LogLevel.Error);
             }
 
             // Start the activation named pipe server to listen to subsequent launches
@@ -128,6 +128,70 @@ namespace SwiftList.App
                     Logger.Log("[App] InlineSearchManager started.");
                 }
             }), System.Windows.Threading.DispatcherPriority.Loaded);
+
+            // Background update check on startup
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Delay slightly to ensure app is fully initialized and main window is up
+                    await Task.Delay(3000);
+                    
+                    var settings = UserSettings.Load();
+                    if (!settings.AutoCheckUpdates)
+                    {
+                        return;
+                    }
+                    
+                    var release = await UpdateService.Instance.CheckForUpdatesAsync();
+                    if (release != null)
+                    {
+                        var currentVersion = typeof(App).Assembly.GetName().Version;
+                        var cleanTag = release.TagName.TrimStart('v', 'V');
+                        if (Version.TryParse(cleanTag, out var latestVersion) && latestVersion > currentVersion)
+                        {
+                            // If auto silent update is enabled and user is admin, prompt user and execute silent update
+                            if (settings.AutoSilentUpdate && UpdateService.Instance.IsUserAdmin())
+                            {
+                                var zipAsset = Array.Find(release.Assets, a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+                                if (zipAsset != null)
+                                {
+                                    _ = Dispatcher.BeginInvoke(new Action(async () =>
+                                    {
+                                        string promptFormat = TranslationManager.Instance["About_SilentUpdatePrompt"];
+                                        string prompt = string.Format(promptFormat, release.TagName);
+                                        string title = TranslationManager.Instance["About_CheckUpdate"];
+                                        
+                                        MessageBox.Show(prompt, title, MessageBoxButton.OK, MessageBoxImage.Information);
+                                        
+                                        bool success = await UpdateService.Instance.StartSilentUpdateAsync(zipAsset.BrowserDownloadUrl);
+                                        if (success)
+                                        {
+                                            Application.Current.Shutdown();
+                                        }
+                                    }));
+                                    return;
+                                }
+                            }
+
+                            _ = Dispatcher.BeginInvoke(new Action(() =>
+                            {
+                                string promptFormat = TranslationManager.Instance["About_NewVersionAvailablePrompt"];
+                                string prompt = string.Format(promptFormat, release.TagName);
+                                
+                                string title = TranslationManager.Instance["About_CheckUpdate"];
+                                
+                                MessageBox.Show(prompt, title, MessageBoxButton.OK, MessageBoxImage.Information);
+                                ShowSettingsWindow("About");
+                            }));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"[App] Background startup update check failed: {ex.Message}", LogLevel.Warn);
+                }
+            });
         }
 
         public static void HideInlineSearch()
@@ -138,7 +202,7 @@ namespace SwiftList.App
         private static void LogException(string source, Exception? ex)
         {
             string details = ex != null ? ex.ToString() : "Null exception object";
-            Logger.Log($"CRITICAL CRASH ({source}):\n{details}");
+            Logger.Log($"CRITICAL CRASH ({source}):\n{details}", LogLevel.Error);
             
             // Show message box to alert user
             MessageBox.Show(string.Format(SwiftList.App.Services.TranslationManager.Instance["Crash_Message"], source, ex?.Message, Logger.LogDir), SwiftList.App.Services.TranslationManager.Instance["Crash_Title"], MessageBoxButton.OK, MessageBoxImage.Error);

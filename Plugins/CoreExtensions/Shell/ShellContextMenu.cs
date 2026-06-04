@@ -72,7 +72,7 @@ namespace SwiftList.Plugins.CoreExtensions.Shell
                 int hr = ShellContextMenuNativeMethods.SHParseDisplayName(path, IntPtr.Zero, out session._pidl, 0, out _);
                 if (hr < 0)
                 {
-                    Logger.Log($"[ShellMenuSession] SHParseDisplayName failed for: {path} (HR: {hr})");
+                    Logger.Log($"[ShellMenuSession] SHParseDisplayName failed for: {path} (HR: {hr})", SwiftList.Core.LogLevel.Error);
                     session.Dispose();
                     return null;
                 }
@@ -82,7 +82,7 @@ namespace SwiftList.Plugins.CoreExtensions.Shell
                 hr = ShellContextMenuNativeMethods.SHBindToParent(session._pidl, ref iidIShellFolder, out session._parentFolderPtr, ref relativePidl);
                 if (hr < 0)
                 {
-                    Logger.Log($"[ShellMenuSession] SHBindToParent failed (HR: {hr})");
+                    Logger.Log($"[ShellMenuSession] SHBindToParent failed (HR: {hr})", SwiftList.Core.LogLevel.Error);
                     session.Dispose();
                     return null;
                 }
@@ -107,7 +107,7 @@ namespace SwiftList.Plugins.CoreExtensions.Shell
             }
             catch (Exception ex)
             {
-                Logger.Log($"[ShellMenuSession] Create failed: {ex.Message}");
+                Logger.Log($"[ShellMenuSession] Create failed: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 session.Dispose();
                 return null;
             }
@@ -191,7 +191,7 @@ namespace SwiftList.Plugins.CoreExtensions.Shell
             }
             catch (Exception ex)
             {
-                Logger.Log($"[ShellMenuSession] InvokeCommand failed (id={commandId}): {ex.Message}");
+                Logger.Log($"[ShellMenuSession] InvokeCommand failed (id={commandId}): {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
 

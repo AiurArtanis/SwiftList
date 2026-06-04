@@ -35,7 +35,7 @@ namespace SwiftList.App.ViewModels.Search
                             }
                             catch (Exception ex)
                             {
-                                Logger.Log($"[SearchResultMapper] Failed to create vector icon for instant result: {ex.Message}");
+                                Logger.Log($"[SearchResultMapper] Failed to create vector icon for instant result: {ex.Message}", SwiftList.Core.LogLevel.Error);
                             }
                         }
                         else
@@ -66,7 +66,7 @@ namespace SwiftList.App.ViewModels.Search
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[SearchResultMapper] Error getting instant results from provider '{provider.Name}': {ex.Message}");
+                    Logger.Log($"[SearchResultMapper] Error getting instant results from provider '{provider.Name}': {ex.Message}", SwiftList.Core.LogLevel.Error);
                 }
             }
         }

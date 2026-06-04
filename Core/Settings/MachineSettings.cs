@@ -23,7 +23,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[MachineSettings] Failed to load settings: {ex.Message}");
+                Logger.Log($"[MachineSettings] Failed to load settings: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return new MachineSettings();
             }
         }

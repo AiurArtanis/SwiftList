@@ -71,7 +71,7 @@ namespace SwiftList.Core
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[StartMenuAppIndex] Failed to enumerate files in {dir}: {ex.Message}");
+                    Logger.Log($"[StartMenuAppIndex] Failed to enumerate files in {dir}: {ex.Message}", SwiftList.Core.LogLevel.Warn);
                     continue;
                 }
 
@@ -85,7 +85,7 @@ namespace SwiftList.Core
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[StartMenuAppIndex] Failed to enumerate directories in {dir}: {ex.Message}");
+                    Logger.Log($"[StartMenuAppIndex] Failed to enumerate directories in {dir}: {ex.Message}", SwiftList.Core.LogLevel.Warn);
                     continue;
                 }
 
@@ -126,7 +126,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[StartMenuAppIndex] Failed to resolve shortcut target for {shortcutPath}: {ex.Message}");
+                Logger.Log($"[StartMenuAppIndex] Failed to resolve shortcut target for {shortcutPath}: {ex.Message}", SwiftList.Core.LogLevel.Warn);
                 return null;
             }
             finally
@@ -150,7 +150,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[StartMenuAppIndex] Failed to enumerate directories in {root}: {ex.Message}");
+                Logger.Log($"[StartMenuAppIndex] Failed to enumerate directories in {root}: {ex.Message}", SwiftList.Core.LogLevel.Warn);
                 return Array.Empty<string>();
             }
         }

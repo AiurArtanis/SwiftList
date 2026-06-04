@@ -99,7 +99,7 @@ namespace SwiftList.App.ViewModels.Search
                 catch (OperationCanceledException) { }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[SearchExecutionEngine] PerformSearch failed: {ex}");
+                    Logger.Log($"[SearchExecutionEngine] PerformSearch failed: {ex}", SwiftList.Core.LogLevel.Error);
                 }
                 finally
                 {

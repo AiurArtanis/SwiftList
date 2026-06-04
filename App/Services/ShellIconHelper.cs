@@ -136,7 +136,7 @@ namespace SwiftList.App
                         }
                         catch (Exception ex)
                         {
-                            Core.Logger.Log($"[ShellIconHelper] Failed to get PIDL shell icon for {path}: {ex.Message}");
+                            Core.Logger.Log($"[ShellIconHelper] Failed to get PIDL shell icon for {path}: {ex.Message}", SwiftList.Core.LogLevel.Warn);
                         }
                         finally
                         {
@@ -201,7 +201,7 @@ namespace SwiftList.App
             }
             catch (Exception ex)
             {
-                Core.Logger.Log($"[ShellIconHelper] Failed to get shell icon for {path}: {ex.Message}");
+                Core.Logger.Log($"[ShellIconHelper] Failed to get shell icon for {path}: {ex.Message}", SwiftList.Core.LogLevel.Warn);
             }
 
             return null;

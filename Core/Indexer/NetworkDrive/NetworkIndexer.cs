@@ -258,7 +258,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
             }
             catch (Exception ex)
             {
-                Logger.Log($"[NetworkIndexer] Failed to publish checkpoint for {drive}: {ex.Message}");
+                Logger.Log($"[NetworkIndexer] Failed to publish checkpoint for {drive}: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
 

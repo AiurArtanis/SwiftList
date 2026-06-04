@@ -69,7 +69,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[NetworkDriveResolver] Failed to get network drives: {ex.Message}");
+                Logger.Log($"[NetworkDriveResolver] Failed to get network drives: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
 
             return results.OrderBy(d => d.Letter).ToList();
@@ -134,7 +134,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[NetworkDriveResolver] ResolveToLogicalPath failed: {ex.Message}");
+                Logger.Log($"[NetworkDriveResolver] ResolveToLogicalPath failed: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
 
             return path;

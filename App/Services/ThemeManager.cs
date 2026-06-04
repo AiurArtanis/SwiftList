@@ -47,7 +47,7 @@ namespace SwiftList.App.Services
 
             if (theme == null)
             {
-                Logger.Log($"[ThemeManager] No themes found, failed to apply theme '{themeId}'");
+                Logger.Log($"[ThemeManager] No themes found, failed to apply theme '{themeId}'", SwiftList.Core.LogLevel.Error);
                 return false;
             }
 
@@ -80,7 +80,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[ThemeManager] Error applying theme '{themeId}': {ex.Message}");
+                Logger.Log($"[ThemeManager] Error applying theme '{themeId}': {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return false;
             }
         }

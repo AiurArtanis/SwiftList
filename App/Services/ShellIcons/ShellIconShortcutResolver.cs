@@ -45,7 +45,7 @@ namespace SwiftList.App
             }
             catch (Exception ex)
             {
-                Core.Logger.Log($"[ShellIconHelper] Failed to resolve shortcut icon for {shortcutPath}: {ex.Message}");
+                Core.Logger.Log($"[ShellIconHelper] Failed to resolve shortcut icon for {shortcutPath}: {ex.Message}", SwiftList.Core.LogLevel.Warn);
             }
             finally
             {

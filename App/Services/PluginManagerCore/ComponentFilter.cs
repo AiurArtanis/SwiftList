@@ -30,7 +30,7 @@ namespace SwiftList.App.Services.PluginManagerCore
             }
             catch (Exception ex)
             {
-                Logger.Log($"[PluginManager] Failed to refresh disabled components: {ex.Message}");
+                Logger.Log($"[PluginManager] Failed to refresh disabled components: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
 

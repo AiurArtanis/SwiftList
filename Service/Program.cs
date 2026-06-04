@@ -17,7 +17,7 @@ namespace SwiftList.Service
             // Set up global exception handlers
             AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             {
-                Logger.Log($"CRITICAL SERVICE UNHANDLED EXCEPTION:\n{e.ExceptionObject}");
+                Logger.Log($"CRITICAL SERVICE UNHANDLED EXCEPTION:\n{e.ExceptionObject}", SwiftList.Core.LogLevel.Error);
             };
 
             Logger.Initialize("service.log", Logger.SharedDataDir, overwrite: true);
@@ -127,7 +127,7 @@ namespace SwiftList.Service
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to install service: {ex.Message}");
-                Logger.Log($"Failed to install service: {ex}");
+                Logger.Log($"Failed to install service: {ex}", SwiftList.Core.LogLevel.Error);
             }
         }
 
@@ -158,7 +158,7 @@ namespace SwiftList.Service
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to uninstall service: {ex.Message}");
-                Logger.Log($"Failed to uninstall service: {ex}");
+                Logger.Log($"Failed to uninstall service: {ex}", SwiftList.Core.LogLevel.Error);
             }
         }
 

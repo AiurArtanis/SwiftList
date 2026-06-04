@@ -158,6 +158,37 @@ namespace SwiftList.App.ViewModels.Settings
             }
         }
 
+        public bool AutoCheckUpdates
+        {
+            get => _userSettings.AutoCheckUpdates;
+            set
+            {
+                if (_userSettings.AutoCheckUpdates != value)
+                {
+                    _userSettings.AutoCheckUpdates = value;
+                    _userSettings.Save();
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool IsUserAdmin => UpdateService.Instance.IsUserAdmin();
+
+        public bool AutoSilentUpdate
+        {
+            get => IsUserAdmin && _userSettings.AutoSilentUpdate;
+            set
+            {
+                if (!IsUserAdmin) return;
+                if (_userSettings.AutoSilentUpdate != value)
+                {
+                    _userSettings.AutoSilentUpdate = value;
+                    _userSettings.Save();
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public string LogLevel => NormalizeLogLevel(_userSettings.LogLevel);
 
 

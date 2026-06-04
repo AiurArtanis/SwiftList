@@ -60,7 +60,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
                     RenamedEventHandler onRenamed = (_, e) => OnWatcherRenamed(drive, e.OldFullPath, e.FullPath);
                     ErrorEventHandler onError = (_, e) =>
                     {
-                        Logger.Log($"[WatcherManager] Watcher error on {drive}: {e.GetException().Message}");
+                        Logger.Log($"[WatcherManager] Watcher error on {drive}: {e.GetException().Message}", SwiftList.Core.LogLevel.Error);
                         _queueRefresh(drive, "watcher error");
                     };
 
@@ -75,7 +75,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[WatcherManager] Failed to watch network drive {drive}: {ex.Message}");
+                    Logger.Log($"[WatcherManager] Failed to watch network drive {drive}: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 }
             }
         }
@@ -145,7 +145,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
             }
             catch (Exception ex)
             {
-                Logger.Log($"[WatcherManager] Watcher changed handling failed on {drive}: {ex.Message}");
+                Logger.Log($"[WatcherManager] Watcher changed handling failed on {drive}: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 _queueRefresh(drive, "incremental failure");
             }
         }
@@ -178,7 +178,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
             }
             catch (Exception ex)
             {
-                Logger.Log($"[WatcherManager] Watcher rename handling failed on {drive}: {ex.Message}");
+                Logger.Log($"[WatcherManager] Watcher rename handling failed on {drive}: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 _queueRefresh(drive, "incremental rename failure");
             }
         }

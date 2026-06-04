@@ -57,8 +57,8 @@ jobs:
         with:
           body_path: changelog.md
           files: |
-            SwiftList-Setup.exe
-            SwiftList-Portable.zip
+            dist/SwiftList-Setup.exe
+            dist/SwiftList-Portable.zip
           name: ${{ github.ref_name }}
           draft: false
           prerelease: false

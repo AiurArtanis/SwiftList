@@ -26,7 +26,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Failed to send activation signal: {ex.Message}");
+                Logger.Log($"Failed to send activation signal: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
 
@@ -55,7 +55,7 @@ namespace SwiftList.App.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[AppPipeService] Named pipe server error: {ex.Message}");
+                    Logger.Log($"[AppPipeService] Named pipe server error: {ex.Message}", SwiftList.Core.LogLevel.Error);
                     await Task.Delay(1000); // Prevent tight loop on error
                 }
             }

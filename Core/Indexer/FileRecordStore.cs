@@ -214,7 +214,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[FileRecordStore] Failed to load {basePath}: {ex.Message}");
+                Logger.Log($"[FileRecordStore] Failed to load {basePath}: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return null;
             }
         }

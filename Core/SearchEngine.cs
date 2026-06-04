@@ -60,7 +60,7 @@ namespace SwiftList.Core
 
                 if (shouldTrim)
                 {
-                    Logger.Log("[SearchEngine] Service has been idle for 3s. Trimming working set...");
+                    Logger.Log("[SearchEngine] Service has been idle for 3s. Trimming working set...", LogLevel.Debug);
                     _indexer.ClearCaches();
                     Win32Api.TrimWorkingSet();
                 }
@@ -115,7 +115,7 @@ namespace SwiftList.Core
             var status = GetStatus();
             if (status.State != "ready")
             {
-                Logger.Log($"[SearchEngine] File search skipped because index is not ready. State: {status.State}");
+                Logger.Log($"[SearchEngine] File search skipped because index is not ready. State: {status.State}", SwiftList.Core.LogLevel.Warn);
                 return new SearchResponse
                 {
                     AppResults = appResults
@@ -165,7 +165,7 @@ namespace SwiftList.Core
             var status = GetStatus();
             if (status.State != "ready")
             {
-                Logger.Log($"[SearchEngine] File search skipped because index is not ready. State: {status.State}");
+                Logger.Log($"[SearchEngine] File search skipped because index is not ready. State: {status.State}", SwiftList.Core.LogLevel.Warn);
                 return true;
             }
 

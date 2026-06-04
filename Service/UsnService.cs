@@ -31,7 +31,7 @@ namespace SwiftList.Service
             }
             catch (Exception ex)
             {
-                Logger.Log($"[UsnService] Failed to start service: {ex}");
+                Logger.Log($"[UsnService] Failed to start service: {ex}", SwiftList.Core.LogLevel.Error);
                 Stop();
             }
         }

@@ -39,7 +39,7 @@ namespace SwiftList.Core
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[Monitor] Critical loop failure on drive {_drive}: {ex}");
+                    Logger.Log($"[Monitor] Critical loop failure on drive {_drive}: {ex}", SwiftList.Core.LogLevel.Error);
                 }
             }, _token);
         }
@@ -61,7 +61,7 @@ namespace SwiftList.Core
 
             if (handle.IsInvalid)
             {
-                Logger.Log($"[Monitor] Failed to open drive {_drive} handle for monitoring.");
+                Logger.Log($"[Monitor] Failed to open drive {_drive} handle for monitoring.", SwiftList.Core.LogLevel.Error);
                 return;
             }
 
@@ -98,13 +98,13 @@ namespace SwiftList.Core
                     if (!success)
                     {
                         int err = Marshal.GetLastWin32Error();
-                        Logger.Log($"[Monitor] FSCTL_READ_USN_JOURNAL error on drive {_drive}: {err}");
+                        Logger.Log($"[Monitor] FSCTL_READ_USN_JOURNAL error on drive {_drive}: {err}", SwiftList.Core.LogLevel.Error);
                         // Don't immediately break; wait and retry a few times
                         await Task.Delay(2000, _token);
                         consecutiveEmptyReads++;
                         if (consecutiveEmptyReads > 10)
                         {
-                            Logger.Log($"[Monitor] Too many consecutive errors on drive {_drive}. Stopping monitor.");
+                            Logger.Log($"[Monitor] Too many consecutive errors on drive {_drive}. Stopping monitor.", SwiftList.Core.LogLevel.Error);
                             break;
                         }
                         continue;
@@ -137,7 +137,7 @@ namespace SwiftList.Core
                             }
                             catch (Exception ex)
                             {
-                                Logger.Log($"[Monitor] Record parse error during monitoring on {_drive}: {ex}");
+                                Logger.Log($"[Monitor] Record parse error during monitoring on {_drive}: {ex}", SwiftList.Core.LogLevel.Error);
                             }
 
                             offset += (int)recordLen;
@@ -175,7 +175,7 @@ namespace SwiftList.Core
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[Monitor] Unexpected error in monitor loop on drive {_drive}: {ex}");
+                    Logger.Log($"[Monitor] Unexpected error in monitor loop on drive {_drive}: {ex}", SwiftList.Core.LogLevel.Error);
                     await Task.Delay(2000, _token);
                 }
             }

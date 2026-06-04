@@ -63,7 +63,7 @@ namespace SwiftList.App.Services
                     catch (OperationCanceledException) { }
                     catch (Exception ex)
                     {
-                        Logger.Log($"[SearchRunner] Search failed: {ex.Message}");
+                        Logger.Log($"[SearchRunner] Search failed: {ex.Message}", SwiftList.Core.LogLevel.Error);
                     }
                     finally
                     {

@@ -214,7 +214,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
                 if (!string.IsNullOrEmpty(uncPath))
                 {
                     physicalRoot = uncPath;
-                    Logger.Log($"[NetworkIndexer] Mapped drive {drive}: is not directly accessible. Resolved to UNC path: {uncPath}");
+                    Logger.Log($"[NetworkIndexer] Mapped drive {drive}: is not directly accessible. Resolved to UNC path: {uncPath}", SwiftList.Core.LogLevel.Warn);
                 }
             }
 
@@ -249,7 +249,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
             }
             catch (Exception ex)
             {
-                Logger.Log($"[NetworkIndexer] Failed to index {drive}: {ex.Message}");
+                Logger.Log($"[NetworkIndexer] Failed to index {drive}: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 _setStatus(drive, "error", null, ex.Message);
             }
         }

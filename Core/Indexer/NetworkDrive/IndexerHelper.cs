@@ -64,7 +64,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
             }
             catch (Exception ex)
             {
-                Logger.Log($"[IndexerHelper] Failed to load network drive {drive}: {ex.Message}");
+                Logger.Log($"[IndexerHelper] Failed to load network drive {drive}: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return false;
             }
         }

@@ -65,7 +65,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[TrayIconService] Failed to load logo resource: {ex.Message}");
+                Logger.Log($"[TrayIconService] Failed to load logo resource: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 _notifyIcon.Icon = SystemIcons.Application;
             }
 

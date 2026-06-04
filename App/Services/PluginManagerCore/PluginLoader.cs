@@ -33,7 +33,7 @@ namespace SwiftList.App.Services.PluginManagerCore
             }
             catch (Exception ex)
             {
-                Logger.Log($"[PluginManager] Error while loading plugins: {ex.Message}");
+                Logger.Log($"[PluginManager] Error while loading plugins: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
 
             // TranslationManager is reloaded explicitly in App.xaml.cs after all plugins are loaded,
@@ -103,7 +103,7 @@ namespace SwiftList.App.Services.PluginManagerCore
             }
             catch (Exception ex)
             {
-                Logger.Log($"[PluginManager] Failed to load assembly {fileName}: {ex.Message}");
+                Logger.Log($"[PluginManager] Failed to load assembly {fileName}: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
     }

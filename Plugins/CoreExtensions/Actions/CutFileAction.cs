@@ -39,7 +39,7 @@ namespace SwiftList.Plugins.CoreExtensions.Actions
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[CutFileAction] Failed to cut file: {ex.Message}");
+                Logger.Log($"[CutFileAction] Failed to cut file: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
     }

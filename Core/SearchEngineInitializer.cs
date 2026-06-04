@@ -79,7 +79,7 @@ namespace SwiftList.Core
                     }
                     else
                     {
-                        Logger.Log("[SearchEngineInitializer] No per-drive caches loaded. Falling back to full scan.");
+                        Logger.Log("[SearchEngineInitializer] No per-drive caches loaded. Falling back to full scan.", SwiftList.Core.LogLevel.Warn);
                     }
                 }
 
@@ -98,7 +98,7 @@ namespace SwiftList.Core
                         
                         if (newUsn < 0)
                         {
-                            Logger.Log($"[SearchEngineInitializer] Silent catch-up failed for drive {meta.Drive} (journal mismatch or error). Requiring full re-index.");
+                            Logger.Log($"[SearchEngineInitializer] Silent catch-up failed for drive {meta.Drive} (journal mismatch or error). Requiring full re-index.", SwiftList.Core.LogLevel.Error);
                             catchUpSuccess = false;
                             break;
                         }
@@ -163,7 +163,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[SearchEngineInitializer] Index initialization failed: {ex}");
+                Logger.Log($"[SearchEngineInitializer] Index initialization failed: {ex}", SwiftList.Core.LogLevel.Error);
             }
             finally
             {

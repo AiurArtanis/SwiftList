@@ -24,7 +24,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[SearchService] Failed to deserialize STATUS: {ex.Message}");
+                Logger.Log($"[SearchService] Failed to deserialize STATUS: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return new UsnIndexer.IndexerStatus { State = "error" };
             }
         }
@@ -67,7 +67,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[SearchService] Streaming search failed: {ex.Message}");
+                Logger.Log($"[SearchService] Streaming search failed: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return SearchNetworkDrives(query, fileCandidateLimit, directoryFilter, exclusionRules, onResult, token);
             }
         }
@@ -102,7 +102,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[SearchService] Failed to deserialize machine settings: {ex.Message}");
+                Logger.Log($"[SearchService] Failed to deserialize machine settings: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return new MachineSettings();
             }
         }
@@ -139,7 +139,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[PipeClient] SendPipeCommand failed for {msg.Id}: {ex.Message}");
+                Logger.Log($"[PipeClient] SendPipeCommand failed for {msg.Id}: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return "ERROR";
             }
         }
@@ -178,7 +178,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[SearchService] Network drive search failed: {ex.Message}");
+                Logger.Log($"[SearchService] Network drive search failed: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return false;
             }
         }

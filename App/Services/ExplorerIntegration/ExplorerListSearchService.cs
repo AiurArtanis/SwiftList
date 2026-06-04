@@ -183,13 +183,13 @@ namespace SwiftList.App.Services
                     }
                     catch (Exception ex)
                     {
-                        Core.Logger.Log($"[ExplorerListSearch] Failed to read Explorer window {i}: {ex.Message}");
+                        Core.Logger.Log($"[ExplorerListSearch] Failed to read Explorer window {i}: {ex.Message}", SwiftList.Core.LogLevel.Error);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Core.Logger.Log($"[ExplorerListSearch] Failed to load Explorer list: {ex.Message}");
+                Core.Logger.Log($"[ExplorerListSearch] Failed to load Explorer list: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
 
             return items;

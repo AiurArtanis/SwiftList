@@ -37,7 +37,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[TranslationManager] Failed to load preferred language: {ex.Message}");
+                Logger.Log($"[TranslationManager] Failed to load preferred language: {ex.Message}", SwiftList.Core.LogLevel.Warn);
             }
             // Do NOT call ReloadTranslations() here:
             // PluginManager may not be initialized yet, causing a recursive Lazy<T> exception.
@@ -98,7 +98,7 @@ namespace SwiftList.App.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[TranslationManager] Failed to get translations from provider '{provider.Name}': {ex.Message}");
+                    Logger.Log($"[TranslationManager] Failed to get translations from provider '{provider.Name}': {ex.Message}", SwiftList.Core.LogLevel.Error);
                 }
             }
         }

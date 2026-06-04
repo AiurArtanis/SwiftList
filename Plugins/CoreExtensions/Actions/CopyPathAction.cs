@@ -28,7 +28,7 @@ namespace SwiftList.Plugins.CoreExtensions.Actions
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[CopyPathAction] Failed to copy path: {ex.Message}");
+                SwiftList.Core.Logger.Log($"[CopyPathAction] Failed to copy path: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
     }

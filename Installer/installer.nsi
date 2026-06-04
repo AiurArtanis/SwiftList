@@ -1,4 +1,4 @@
-﻿; =====================================================================
+; =====================================================================
 ; SwiftList Nullsoft Scriptable Install System (NSIS) Script
 ; =====================================================================
 
@@ -6,8 +6,13 @@ Unicode true
 SetCompressor lzma
 
 !define APP_NAME "SwiftList"
-!define APP_VERSION "1.0.0"
-!define APP_PUBLISHER "Google DeepMind"
+!ifndef APP_VERSION
+  !define APP_VERSION "1.1.0"
+!endif
+!ifndef APP_VERSION_4
+  !define APP_VERSION_4 "1.1.0.0"
+!endif
+!define APP_PUBLISHER "SwiftList developer"
 !define APP_WEBSITE "https://github.com/swiftlist/SwiftList"
 !define APP_EXE_NAME "SwiftList.App.exe"
 !define SERVICE_EXE_NAME "SwiftList.Service.exe"
@@ -16,7 +21,7 @@ SetCompressor lzma
 ; ==========================================
 ; Version Info Resources
 ; ==========================================
-VIProductVersion "1.0.0.0"
+VIProductVersion "${APP_VERSION_4}"
 VIAddVersionKey "ProductName" "${APP_NAME}"
 VIAddVersionKey "CompanyName" "${APP_PUBLISHER}"
 VIAddVersionKey "LegalCopyright" "Copyright (C) 2026"
@@ -25,7 +30,7 @@ VIAddVersionKey "FileVersion" "${APP_VERSION}"
 VIAddVersionKey "ProductVersion" "${APP_VERSION}"
 
 Name "${APP_NAME}"
-OutFile "SwiftList-Setup.exe"
+OutFile "..\dist\SwiftList-Setup.exe"
 InstallDir "$PROGRAMFILES64\${APP_NAME}"
 InstallDirRegKey HKLM "Software\${APP_NAME}" "InstallDir"
 RequestExecutionLevel admin
@@ -36,11 +41,11 @@ RequestExecutionLevel admin
 !include "MUI2.nsh"
 
 !define MUI_ABORTWARNING
-!define MUI_ICON "App\logo.ico"
-!define MUI_UNICON "App\logo.ico"
+!define MUI_ICON "..\App\logo.ico"
+!define MUI_UNICON "..\App\logo.ico"
 
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "LICENSE"
+!insertmacro MUI_PAGE_LICENSE "..\LICENSE"
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
@@ -61,37 +66,20 @@ RequestExecutionLevel admin
 !insertmacro MUI_LANGUAGE "SimpChinese"
 
 ; ==========================================
-; Multilingual Strings
+; Multilingual Strings (Includes language files)
 ; ==========================================
-LangString LaunchAppText ${LANG_ENGLISH} "Launch ${APP_NAME}"
-LangString LaunchAppText ${LANG_SIMPCHINESE} "启动 ${APP_NAME}"
-
-LangString SecInstallText ${LANG_ENGLISH} "Core Program (Required)"
-LangString SecInstallText ${LANG_SIMPCHINESE} "核心主程序 (必选)"
-
-LangString SecDesktopText ${LANG_ENGLISH} "Create Desktop Shortcut"
-LangString SecDesktopText ${LANG_SIMPCHINESE} "创建桌面快捷方式"
-
-LangString SecStartMenuText ${LANG_ENGLISH} "Create Start Menu Shortcuts"
-LangString SecStartMenuText ${LANG_SIMPCHINESE} "创建开始菜单快捷方式"
-
-LangString UninstallShortcutText ${LANG_ENGLISH} "Uninstall ${APP_NAME}"
-LangString UninstallShortcutText ${LANG_SIMPCHINESE} "卸载 ${APP_NAME}"
-
-LangString DescInstall ${LANG_ENGLISH} "Installs SwiftList core binaries and background system service."
-LangString DescInstall ${LANG_SIMPCHINESE} "安装 ${APP_NAME} 核心运行文件与后台系统服务（必选）。"
-
-LangString DescDesktop ${LANG_ENGLISH} "Creates a shortcut to SwiftList on your desktop."
-LangString DescDesktop ${LANG_SIMPCHINESE} "在桌面上创建 ${APP_NAME} 的快捷方式。"
-
-LangString DescStartMenu ${LANG_ENGLISH} "Creates shortcuts to SwiftList and the uninstaller in the Start Menu."
-LangString DescStartMenu ${LANG_SIMPCHINESE} "在开始菜单中创建 ${APP_NAME} 的快捷方式与卸载程序项。"
+!include "Languages\en-US.nsh"
+!include "Languages\zh-CN.nsh"
 
 ; ==========================================
 ; Installation Steps
 ; ==========================================
 Section "" SecInstall
     SectionIn RO
+
+    ; 0. Check and install .NET 10.0 Desktop Runtime
+    !include "dotnet_check.nsh"
+
     SetOutPath "$INSTDIR"
 
     ; 1. Close running instances
@@ -104,7 +92,7 @@ Section "" SecInstall
     Sleep 500
 
     ; 2. Copy publish files recursively (excluding pdb files to keep installer lightweight)
-    File /r /x *.pdb "publish\SwiftList\*.*"
+    File /r /x *.pdb "..\publish\SwiftList\*.*"
 
     ; 3. Create Windows Service using native sc.exe
     DetailPrint "Registering and configuring background service..."

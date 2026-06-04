@@ -161,7 +161,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[RuntimeIndex] Error generating alias: {ex.Message}");
+                    Logger.Log($"[RuntimeIndex] Error generating alias: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 }
             }
 

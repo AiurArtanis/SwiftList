@@ -108,7 +108,7 @@ namespace SwiftList.App.Services
         public IEnumerable<ITranslationProvider> TranslationProviders => _translationProviders;
         public IEnumerable<IThemeProvider> ThemeProviders => _themeProviders;
 
-        // ── Unfiltered collections (settings UI �?show disabled as unchecked) ─
+        // ── Unfiltered collections (settings UI ?show disabled as unchecked) ─
 
         public IEnumerable<PluginActionRegistration> AllActions => _actions;
         public IEnumerable<IDynamicActionProvider> AllDynamicProviders => _dynamicProviders;
@@ -192,7 +192,7 @@ namespace SwiftList.App.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[PluginManager] Failed to execute instant result action: {ex.Message}");
+                    Logger.Log($"[PluginManager] Failed to execute instant result action: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 }
                 return true;
             }
@@ -202,7 +202,7 @@ namespace SwiftList.App.Services
             var registration = _actions.FirstOrDefault(x => x.RuntimeActionId == result.PluginActionId);
             if (registration == null)
             {
-                Logger.Log($"[PluginManager] Plugin search action not found: {result.PluginActionId}");
+                Logger.Log($"[PluginManager] Plugin search action not found: {result.PluginActionId}", SwiftList.Core.LogLevel.Warn);
                 return false;
             }
 

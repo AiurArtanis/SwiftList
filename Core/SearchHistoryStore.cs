@@ -42,7 +42,7 @@ namespace SwiftList.Core
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[SearchHistoryStore] Failed to write history: {ex.Message}");
+                    Logger.Log($"[SearchHistoryStore] Failed to write history: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 }
 
                 _priorityCache = BuildPriorityCache(_entriesCache);
@@ -101,7 +101,7 @@ namespace SwiftList.Core
             }
             catch (Exception ex)
             {
-                Logger.Log($"[SearchHistoryStore] Failed to read history: {ex.Message}");
+                Logger.Log($"[SearchHistoryStore] Failed to read history: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return new List<string>();
             }
         }

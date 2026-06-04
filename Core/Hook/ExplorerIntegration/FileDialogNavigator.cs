@@ -74,7 +74,7 @@ namespace SwiftList.Core.Hook
             }
             catch (Exception ex)
             {
-                Logger.Log($"[FileDialogNavigator] Error during dialog navigation: {ex.Message}");
+                Logger.Log($"[FileDialogNavigator] Error during dialog navigation: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
 
@@ -252,7 +252,7 @@ namespace SwiftList.Core.Hook
             }
             catch (Exception ex)
             {
-                Logger.Log($"[FileDialogNavigator] Failed to get dialog path: {ex.Message}");
+                Logger.Log($"[FileDialogNavigator] Failed to get dialog path: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
             return null;
         }

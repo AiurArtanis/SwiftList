@@ -58,7 +58,7 @@ namespace SwiftList.App.Services
                     }
                     catch (Exception startEx)
                     {
-                        Logger.Log($"[FileExecutor] Process.Start failed for '{path}', retrying with physical path '{physicalPath}': {startEx.Message}");
+                        Logger.Log($"[FileExecutor] Process.Start failed for '{path}', retrying with physical path '{physicalPath}': {startEx.Message}", SwiftList.Core.LogLevel.Warn);
                         startInfo.FileName = physicalPath;
                         if (isFile)
                         {
@@ -78,7 +78,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[FileExecutor] OpenFileOrFolder failed for '{path}': {ex}");
+                Logger.Log($"[FileExecutor] OpenFileOrFolder failed for '{path}': {ex}", SwiftList.Core.LogLevel.Error);
                 MessageBox.Show(string.Format(TranslationManager.Instance["Executor_OpenFailed"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -91,7 +91,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[FileExecutor] Locate in explorer failed for '{path}': {ex.Message}");
+                Logger.Log($"[FileExecutor] Locate in explorer failed for '{path}': {ex.Message}", SwiftList.Core.LogLevel.Error);
                 MessageBox.Show(string.Format(TranslationManager.Instance["Executor_LocateFailed"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -122,7 +122,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[FileExecutor] Locate in existing explorer failed for '{path}': {ex.Message}");
+                Logger.Log($"[FileExecutor] Locate in existing explorer failed for '{path}': {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return false;
             }
         }
@@ -151,7 +151,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[FileExecutor] Select item in existing explorer failed for '{path}': {ex.Message}");
+                Logger.Log($"[FileExecutor] Select item in existing explorer failed for '{path}': {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return false;
             }
         }
@@ -205,7 +205,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[FileExecutor] Select item in existing explorer failed for '{path}': {ex.Message}");
+                Logger.Log($"[FileExecutor] Select item in existing explorer failed for '{path}': {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
 

@@ -44,13 +44,13 @@ namespace SwiftList.Service
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log($"[ServicePluginLoader] Failed to load plugin assembly {Path.GetFileName(dllFile)}: {ex.Message}");
+                        Logger.Log($"[ServicePluginLoader] Failed to load plugin assembly {Path.GetFileName(dllFile)}: {ex.Message}", SwiftList.Core.LogLevel.Error);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log($"[ServicePluginLoader] Error while loading plugins: {ex.Message}");
+                Logger.Log($"[ServicePluginLoader] Error while loading plugins: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
     }

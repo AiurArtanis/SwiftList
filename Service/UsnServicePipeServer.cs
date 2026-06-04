@@ -55,7 +55,7 @@ namespace SwiftList.Service
             }
             catch (Exception ex)
             {
-                Logger.Log($"[PipeServer] Failed to create PipeSecurity: {ex.Message}");
+                Logger.Log($"[PipeServer] Failed to create PipeSecurity: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
 
             while (!token.IsCancellationRequested)
@@ -92,7 +92,7 @@ namespace SwiftList.Service
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    Logger.Log($"[PipeServer] Server connection failed: {ex.Message}");
+                    Logger.Log($"[PipeServer] Server connection failed: {ex.Message}", SwiftList.Core.LogLevel.Error);
                     await Task.Delay(1000, token);
                 }
             }
@@ -157,7 +157,7 @@ namespace SwiftList.Service
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[PipeServer] Client connection handler error: {ex.Message}");
+                    Logger.Log($"[PipeServer] Client connection handler error: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 }
                 finally
                 {
@@ -208,7 +208,7 @@ namespace SwiftList.Service
             }
             catch (Exception ex)
             {
-                Logger.Log($"[UsnService] Error processing request {msg.Id}: {ex.Message}");
+                Logger.Log($"[UsnService] Error processing request {msg.Id}: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return $"ERROR: {ex.Message}";
             }
         }
@@ -247,7 +247,7 @@ namespace SwiftList.Service
             }
             catch (Exception ex)
             {
-                Logger.Log($"[UsnService] Error processing streaming search request {msg.Id}: {ex.Message}");
+                Logger.Log($"[UsnService] Error processing streaming search request {msg.Id}: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
             finally
             {
