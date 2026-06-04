@@ -77,6 +77,36 @@ namespace SwiftList.Core
             return detected;
         }
 
+        public static List<string> DetectFolderIndexDrives()
+        {
+            var detected = new List<string>();
+            var drives = DriveInfo.GetDrives();
+            foreach (var drive in drives)
+            {
+                if (!drive.IsReady) continue;
+                string driveLetter = drive.Name.Split(':')[0].ToUpper();
+                
+                var volumeName = new StringBuilder(260);
+                var fileSystemName = new StringBuilder(260);
+                bool success = Win32Api.GetVolumeInformationW(
+                    drive.Name,
+                    volumeName, (uint)volumeName.Capacity,
+                    out _, out _, out _,
+                    fileSystemName, (uint)fileSystemName.Capacity
+                );
+
+                if (success)
+                {
+                    string fs = fileSystemName.ToString();
+                    if (fs != "NTFS" && fs != "ReFS")
+                    {
+                        detected.Add(driveLetter);
+                    }
+                }
+            }
+            return detected;
+        }
+
         public static string GetFileSystemType(string driveLetter)
         {
             string rootPath = $"{driveLetter}:\\";

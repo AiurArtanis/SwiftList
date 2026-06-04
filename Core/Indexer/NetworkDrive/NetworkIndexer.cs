@@ -10,7 +10,8 @@ namespace SwiftList.Core.Indexer.NetworkDrive
     public sealed class NetworkIndexer : IDisposable
     {
         private readonly object _gate = new();
-        private readonly Dictionary<string, NetworkIndex> _indexes = new(StringComparer.OrdinalIgnoreCase);
+        internal object Gate => _gate;
+        internal readonly Dictionary<string, NetworkIndex> _indexes = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, NetworkIndexStatus> _statuses = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, string> _refreshModes = new(StringComparer.OrdinalIgnoreCase);
         private bool _configured;
@@ -67,6 +68,16 @@ namespace SwiftList.Core.Indexer.NetworkDrive
             var enabledDrives = enabledSettings.Select(d => d.Drive).ToList();
             var refreshModes = enabledSettings.ToDictionary(d => d.Drive, d => d.RefreshMode, StringComparer.OrdinalIgnoreCase);
 
+            var localFolderDrives = VolumeHelper.DetectFolderIndexDrives();
+            foreach (var drive in localFolderDrives)
+            {
+                if (!enabledDrives.Contains(drive, StringComparer.OrdinalIgnoreCase))
+                {
+                    enabledDrives.Add(drive);
+                    refreshModes[drive] = "startup";
+                }
+            }
+
             foreach (var d in enabledSettings)
             {
                 NetworkDriveResolver.ResolveToUnc(d.Drive);
@@ -122,38 +133,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
                 return _statuses.Values.Select(s => s.Clone()).OrderBy(s => s.Drive).ToList();
         }
 
-        public List<SearchResult> Search(string query, int limit, CancellationToken token = default, string? directoryFilter = null)
-        {
-            EnsureConfigured();
-            if (limit <= 0 || string.IsNullOrWhiteSpace(query))
-                return new List<SearchResult>();
 
-            NetworkIndex[] snapshots;
-            lock (_gate)
-                snapshots = _indexes.Values.ToArray();
-
-            if (snapshots.Length == 0)
-                return new List<SearchResult>();
-
-            var parsed = SearchQueryParser.Parse(query);
-            string? directoryFilterLower = IndexerHelper.NormalizeFilter(directoryFilter);
-            var results = new List<SearchResult>(Math.Min(limit, 64));
-
-            foreach (var index in snapshots)
-            {
-                token.ThrowIfCancellationRequested();
-                if (!IsDriveAllowed(index.Drive, parsed, directoryFilterLower))
-                    continue;
-
-                index.Search(parsed, query, directoryFilterLower, limit, results, token);
-            }
-
-            results.Sort(FzfResultRank.CompareResults);
-            if (results.Count > limit)
-                results.RemoveRange(limit, results.Count - limit);
-
-            return results;
-        }
 
         private void SetStatus(string drive, string state, int? items, string? error)
         {
@@ -262,16 +242,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
             }
         }
 
-        private static bool IsDriveAllowed(string indexDrive, ParsedSearchQuery parsed, string? directoryFilterLower)
-        {
-            if (parsed.TargetDrive != null && !parsed.TargetDrive.Equals(indexDrive, StringComparison.OrdinalIgnoreCase))
-                return false;
 
-            if (directoryFilterLower == null)
-                return true;
-
-            return directoryFilterLower.StartsWith(indexDrive + @":\", StringComparison.OrdinalIgnoreCase);
-        }
 
         public void Dispose()
         {

@@ -24,6 +24,7 @@ namespace SwiftList.Core
 
         private long _lastSearchTimeTicks = Environment.TickCount64;
         private bool _needsTrim;
+        private long _lastDriveDetectTime = 0;
         private readonly object _trimLock = new();
         private readonly Timer? _idleTimer;
 
@@ -67,7 +68,63 @@ namespace SwiftList.Core
             }
         }
 
-        public UsnIndexer.IndexerStatus GetStatus() => _indexer.Status;
+        public UsnIndexer.IndexerStatus GetStatus()
+        {
+            long now = Environment.TickCount64;
+            if (now - _lastDriveDetectTime > 5000 && (_indexer.Status.State is "ready" or "idle"))
+            {
+                _lastDriveDetectTime = now;
+                RefreshDrivesInStatus();
+            }
+            return _indexer.Status;
+        }
+
+        private void RefreshDrivesInStatus()
+        {
+            try
+            {
+                var detectedDrives = VolumeHelper.DetectSupportedDrives();
+                var machineSettings = MachineSettings.Load();
+                var enabledSet = new HashSet<string>(machineSettings.EnabledLocalDrives, StringComparer.OrdinalIgnoreCase);
+                var supportedDrives = enabledSet.Count == 0
+                    ? detectedDrives
+                    : detectedDrives.Where(enabledSet.Contains).ToList();
+
+                var enabled = new HashSet<string>(supportedDrives, StringComparer.OrdinalIgnoreCase);
+
+                lock (_indexer.LockObj)
+                {
+                    var currentDrives = _indexer.Status.Drives.ToDictionary(d => d.Drive, StringComparer.OrdinalIgnoreCase);
+                    var newDrivesList = new List<UsnIndexer.DriveIndexStatus>();
+
+                    foreach (var d in detectedDrives)
+                    {
+                        if (currentDrives.TryGetValue(d, out var existing))
+                        {
+                            existing.Enabled = enabled.Contains(d);
+                            newDrivesList.Add(existing);
+                        }
+                        else
+                        {
+                            newDrivesList.Add(new UsnIndexer.DriveIndexStatus
+                            {
+                                Drive = d,
+                                Enabled = enabled.Contains(d),
+                                Kind = VolumeHelper.GetFileSystemType(d),
+                                State = enabled.Contains(d) ? "pending" : "disabled",
+                                CachePath = Path.Combine(IndexCacheDir, d + ".meta")
+                            });
+                        }
+                    }
+
+                    _indexer.Status.Drives = newDrivesList;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[SearchEngine] Failed to refresh drive statuses: {ex.Message}", LogLevel.Error);
+            }
+        }
 
         public MachineSettings GetMachineSettings() => _machineSettings;
 
