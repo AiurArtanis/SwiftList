@@ -52,9 +52,9 @@ namespace SwiftList.Core.Indexer.Usn
                 fsType = VolumeHelper.GetFileSystemType(drive);
                 Logger.Log($"[JournalReader] Failed to query USN journal on {drive}. Error: {err}, FileSystem: {fsType}", SwiftList.Core.LogLevel.Warn);
 
-                if (fsType.Equals("NTFS", StringComparison.OrdinalIgnoreCase))
+                if (fsType.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fsType.Equals("ReFS", StringComparison.OrdinalIgnoreCase))
                 {
-                    Logger.Log($"[JournalReader] Attempting to create/activate USN journal on NTFS drive {drive}...");
+                    Logger.Log($"[JournalReader] Attempting to create/activate USN journal on {fsType} drive {drive}...");
                     var createData = new Win32Api.CREATE_USN_JOURNAL_DATA
                     {
                         MaximumSize = 0,
