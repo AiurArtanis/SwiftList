@@ -1,6 +1,6 @@
 using System.Windows.Media;
 
-namespace SwiftList.App.Services
+namespace SwiftList.PluginSdk
 {
     /// <summary>
     /// Helper class to create WPF ImageSource from vector SVG path data.

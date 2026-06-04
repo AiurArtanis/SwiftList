@@ -11,7 +11,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\PluginSdk\PluginSdk.csproj" />
-    <ProjectReference Include="..\..\Core\Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

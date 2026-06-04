@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SwiftList.App.Services
+namespace SwiftList.PluginSdk
 {
     /// <summary>
     /// Plugin interface to register and provide cell values for custom columns in the results GridView.

@@ -78,10 +78,6 @@ namespace SwiftList.Core.Indexer.NetworkDrive
                 }
             }
 
-            foreach (var d in enabledSettings)
-            {
-                NetworkDriveResolver.ResolveToUnc(d.Drive);
-            }
 
             lock (_gate)
             {

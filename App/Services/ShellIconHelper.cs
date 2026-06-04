@@ -84,7 +84,7 @@ namespace SwiftList.App
             // EXE, LNK, ICO, etc. have unique icons per file.
             // We use FullPath as cacheKey for these to avoid caching them under a single generic ".exe" key.
             // Also treat existing directories as unique icon types to extract their customized folder icons.
-            string checkPath = SwiftList.Core.NetworkDriveResolver.ResolveToPhysicalPath(path);
+            string checkPath = path;
             bool isUniqueIconType = (!isDir && (
                 ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) ||
                 ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase) ||

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
 
 namespace SwiftList.App.Views.Settings

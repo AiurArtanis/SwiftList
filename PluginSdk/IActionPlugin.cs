@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SwiftList.App.Services
+namespace SwiftList.PluginSdk
 {
     /// <summary>
     /// Represents a plugin that provides one or more search result actions.

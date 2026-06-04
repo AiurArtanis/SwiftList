@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using SwiftList.App.Services;
 using SwiftList.PluginSdk;
-using SwiftList.Core;
 
 namespace SwiftList.Plugins.CoreExtensions.Shell
 {
@@ -21,8 +19,7 @@ namespace SwiftList.Plugins.CoreExtensions.Shell
         public bool CanProvide(ISearchResult result)
         {
             if (result == null || string.IsNullOrEmpty(result.FullPath)) return false;
-            string physicalPath = NetworkDriveResolver.ResolveToPhysicalPath(result.FullPath);
-            return File.Exists(physicalPath) || Directory.Exists(physicalPath);
+            return File.Exists(result.FullPath) || Directory.Exists(result.FullPath);
         }
 
         public IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu)
@@ -31,8 +28,7 @@ namespace SwiftList.Plugins.CoreExtensions.Shell
             if (hMenu == IntPtr.Zero)
             {
                 _session?.Dispose();
-                string resolvedPath = NetworkDriveResolver.ResolveToLogicalPath(result.FullPath);
-                _session = ShellMenuSession.Create(resolvedPath);
+                _session = ShellMenuSession.Create(result.FullPath);
                 _lastPath = result.FullPath;
             }
 

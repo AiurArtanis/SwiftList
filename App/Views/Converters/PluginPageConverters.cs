@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using SwiftList.App.ViewModels.Settings.Plugins;
 
 // Alias to avoid ambiguity with System.Drawing.Color

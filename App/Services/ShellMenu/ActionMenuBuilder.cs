@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using SwiftList.Core;
+using SwiftList.PluginSdk;
 
 namespace SwiftList.App.Services
 {
@@ -212,7 +212,7 @@ namespace SwiftList.App.Services
             }
             catch (Exception ex)
             {
-                Logger.Log($"[ActionMenuBuilder] GetIconFromHBitmap failed: {ex.Message}", SwiftList.Core.LogLevel.Error);
+                SwiftList.Core.Logger.Log($"[ActionMenuBuilder] GetIconFromHBitmap failed: {ex.Message}", SwiftList.Core.LogLevel.Error);
                 return null;
             }
         }

@@ -208,16 +208,6 @@ namespace SwiftList.Core.Indexer.NetworkDrive
             string root = drive + @":\";
             string physicalRoot = root;
 
-            if (!System.IO.Directory.Exists(root))
-            {
-                string? uncPath = NetworkDriveResolver.ResolveToUnc(drive);
-                if (!string.IsNullOrEmpty(uncPath))
-                {
-                    physicalRoot = uncPath;
-                    Logger.Log($"[NetworkIndexer] Mapped drive {drive}: is not directly accessible. Resolved to UNC path: {uncPath}", SwiftList.Core.LogLevel.Warn);
-                }
-            }
-
             try
             {
                 _setStatus(drive, "indexing", 0, null);

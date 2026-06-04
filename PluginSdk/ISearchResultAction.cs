@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows.Media;
 
-namespace SwiftList.App.Services
+namespace SwiftList.PluginSdk
 {
     /// <summary>
     /// Represents an action that can be performed on a search result.

@@ -1,8 +1,6 @@
 using System;
 using System.Windows.Media;
-using SwiftList.App.Services;
 using SwiftList.PluginSdk;
-using SwiftList.Core;
 
 namespace SwiftList.Plugins.CoreExtensions.Actions
 {
@@ -19,8 +17,7 @@ namespace SwiftList.Plugins.CoreExtensions.Actions
         public bool CanExecute(ISearchResult result)
         {
             if (result == null || string.IsNullOrEmpty(result.FullPath)) return false;
-            string physicalPath = NetworkDriveResolver.ResolveToPhysicalPath(result.FullPath);
-            return System.IO.File.Exists(physicalPath) || System.IO.Directory.Exists(physicalPath);
+            return System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath);
         }
 
         public void Execute(ISearchResult result, IPluginSearchWindow view)
@@ -39,7 +36,7 @@ namespace SwiftList.Plugins.CoreExtensions.Actions
             }
             catch (Exception ex)
             {
-                Logger.Log($"[CutFileAction] Failed to cut file: {ex.Message}", SwiftList.Core.LogLevel.Error);
+                Logger.Log($"[CutFileAction] Failed to cut file: {ex.Message}", LogLevel.Error);
             }
         }
     }

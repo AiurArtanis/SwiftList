@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
 using SwiftList.App.ViewModels;

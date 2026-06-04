@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Windows.Input;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using SwiftList.App.ViewModels;
 using ListBox = System.Windows.Controls.ListBox;
 using SwiftList.App.Views.InlineSearchWindow.Helpers;

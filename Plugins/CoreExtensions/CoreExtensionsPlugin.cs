@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using SwiftList.App.Services;
 using SwiftList.Plugins.CoreExtensions.Actions;
 using SwiftList.Plugins.CoreExtensions.Shell;
 using SwiftList.PluginSdk;

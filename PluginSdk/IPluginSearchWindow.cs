@@ -1,4 +1,4 @@
-namespace SwiftList.App.Services
+namespace SwiftList.PluginSdk
 {
     /// <summary>
     /// Minimal search window interface exposed to plugins.

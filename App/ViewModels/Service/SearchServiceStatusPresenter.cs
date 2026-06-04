@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using SwiftList.App.ViewModels.Search;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using SwiftList.Core.Indexer.Usn;
 
 namespace SwiftList.App.ViewModels.Service

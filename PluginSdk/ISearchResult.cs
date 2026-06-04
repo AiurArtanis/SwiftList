@@ -1,4 +1,4 @@
-namespace SwiftList.App.Services
+namespace SwiftList.PluginSdk
 {
     /// <summary>
     /// Read-only search result data structure exposed to plugins.

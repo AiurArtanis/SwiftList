@@ -1,9 +1,10 @@
 using System.Windows;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 
 namespace SwiftList.App
 {
-    public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, SwiftList.App.Services.ISearchResult
+    public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, SwiftList.PluginSdk.ISearchResult
     {
         public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
         protected virtual void OnPropertyChanged(string propertyName)
@@ -141,7 +142,7 @@ namespace SwiftList.App
                 if (_dateModified.HasValue) return _dateModified.Value;
                 try
                 {
-                    string physicalPath = SwiftList.Core.NetworkDriveResolver.ResolveToPhysicalPath(FullPath);
+                    string physicalPath = FullPath;
                     if (System.IO.File.Exists(physicalPath) || System.IO.Directory.Exists(physicalPath))
                     {
                         _dateModified = System.IO.Directory.Exists(physicalPath)

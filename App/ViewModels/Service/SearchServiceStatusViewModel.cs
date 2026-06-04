@@ -4,6 +4,7 @@ using System.Windows.Input;
 using SwiftList.Core;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using Application = System.Windows.Application;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
 using SwiftList.App.ViewModels;

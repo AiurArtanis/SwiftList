@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SwiftList.App.Services
+namespace SwiftList.PluginSdk
 {
     /// <summary>
     /// Plugin interface to register custom filter categories and items in the Search Window sidebar.

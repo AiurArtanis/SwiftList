@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using SwiftList.Core;
-using SwiftList.PluginSdk;
 
 namespace SwiftList.App.Services
 {

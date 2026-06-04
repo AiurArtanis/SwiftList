@@ -30,14 +30,6 @@ namespace SwiftList.Core.Indexer.NetworkDrive
 
                 string root = drive + @":\";
                 string physicalRoot = root;
-                if (!Directory.Exists(root))
-                {
-                    string? uncPath = NetworkDriveResolver.ResolveToUnc(drive);
-                    if (!string.IsNullOrEmpty(uncPath))
-                    {
-                        physicalRoot = uncPath;
-                    }
-                }
 
                 try
                 {
@@ -100,12 +92,6 @@ namespace SwiftList.Core.Indexer.NetworkDrive
 
         private string TranslateToLogical(string drive, string path)
         {
-            string root = drive + @":\";
-            string? uncPath = NetworkDriveResolver.ResolveToUnc(drive);
-            if (!string.IsNullOrEmpty(uncPath) && path.StartsWith(uncPath, StringComparison.OrdinalIgnoreCase))
-            {
-                return Path.Combine(root, path.Substring(uncPath.Length).TrimStart(Path.DirectorySeparatorChar));
-            }
             return path;
         }
 

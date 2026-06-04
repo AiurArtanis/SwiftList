@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Input;
 using SwiftList.Core;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using SwiftList.App.ViewModels;
 using SwiftList.App.ViewModels.Service;
 

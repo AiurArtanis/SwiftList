@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 
 namespace SwiftList.App.Views.QuickSearchWindow
 {

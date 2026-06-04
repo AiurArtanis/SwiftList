@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text.RegularExpressions;
-using SwiftList.App.Services;
 using SwiftList.PluginSdk;
 
 namespace SwiftList.Plugins.CoreExtensions.Providers

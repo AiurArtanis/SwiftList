@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using SwiftList.App.ViewModels;
 
 namespace SwiftList.App.ViewModels.Settings.Plugins

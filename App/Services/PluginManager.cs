@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SwiftList.Core;
-using SwiftList.PluginSdk;
 using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.App.Services.PluginManagerCore;
 
@@ -23,14 +22,14 @@ namespace SwiftList.App.Services
         /// <summary>Gets the singleton instance of the PluginManager.</summary>
         public static PluginManager Instance => _instance.Value;
 
-        private readonly List<IActionPlugin> _plugins = new();
+        private readonly List<SwiftList.PluginSdk.IActionPlugin> _plugins = new();
         private readonly List<PluginActionRegistration> _actions = new();
-        private readonly List<IDynamicActionProvider> _dynamicProviders = new();
-        private readonly List<IInstantResultProvider> _instantResultProviders = new();
-        private readonly List<ISidebarFilterProvider> _sidebarFilterProviders = new();
-        private readonly List<IResultColumnProvider> _resultColumnProviders = new();
-        private readonly List<ITranslationProvider> _translationProviders = new();
-        private readonly List<IThemeProvider> _themeProviders = new();
+        private readonly List<SwiftList.PluginSdk.IDynamicActionProvider> _dynamicProviders = new();
+        private readonly List<SwiftList.PluginSdk.IInstantResultProvider> _instantResultProviders = new();
+        private readonly List<SwiftList.PluginSdk.ISidebarFilterProvider> _sidebarFilterProviders = new();
+        private readonly List<SwiftList.PluginSdk.IResultColumnProvider> _resultColumnProviders = new();
+        private readonly List<SwiftList.PluginSdk.ITranslationProvider> _translationProviders = new();
+        private readonly List<SwiftList.PluginSdk.IThemeProvider> _themeProviders = new();
         private uint _nextRuntimeActionId = 0x80000000;
 
         private readonly ComponentFilter _filter = new();
@@ -48,13 +47,13 @@ namespace SwiftList.App.Services
 
         // ── PluginRegistry callbacks ──────────────────────────────────────────
 
-        void PluginRegistry.RegisterPlugin(IActionPlugin plugin) => RegisterPlugin(plugin);
+        void PluginRegistry.RegisterPlugin(SwiftList.PluginSdk.IActionPlugin plugin) => RegisterPlugin(plugin);
 
-        void PluginRegistry.AddInstantResultProvider(IInstantResultProvider p) => _instantResultProviders.Add(p);
-        void PluginRegistry.AddSidebarFilterProvider(ISidebarFilterProvider p) => _sidebarFilterProviders.Add(p);
-        void PluginRegistry.AddResultColumnProvider(IResultColumnProvider p) => _resultColumnProviders.Add(p);
-        void PluginRegistry.AddTranslationProvider(ITranslationProvider p) => _translationProviders.Add(p);
-        void PluginRegistry.AddThemeProvider(IThemeProvider p) => _themeProviders.Add(p);
+        void PluginRegistry.AddInstantResultProvider(SwiftList.PluginSdk.IInstantResultProvider p) => _instantResultProviders.Add(p);
+        void PluginRegistry.AddSidebarFilterProvider(SwiftList.PluginSdk.ISidebarFilterProvider p) => _sidebarFilterProviders.Add(p);
+        void PluginRegistry.AddResultColumnProvider(SwiftList.PluginSdk.IResultColumnProvider p) => _resultColumnProviders.Add(p);
+        void PluginRegistry.AddTranslationProvider(SwiftList.PluginSdk.ITranslationProvider p) => _translationProviders.Add(p);
+        void PluginRegistry.AddThemeProvider(SwiftList.PluginSdk.IThemeProvider p) => _themeProviders.Add(p);
 
         // ── Public API ────────────────────────────────────────────────────────
 
@@ -64,7 +63,7 @@ namespace SwiftList.App.Services
             => _filter.IsEnabled(dllName, type, name);
 
         /// <summary>Registers a plugin and loads its actions and dynamic providers.</summary>
-        public void RegisterPlugin(IActionPlugin plugin)
+        public void RegisterPlugin(SwiftList.PluginSdk.IActionPlugin plugin)
         {
             if (plugin == null) return;
             _plugins.Add(plugin);
@@ -76,18 +75,18 @@ namespace SwiftList.App.Services
 
         // ── Filtered collections (active components only) ─────────────────────
 
-        public IEnumerable<IActionPlugin> Plugins => _plugins;
+        public IEnumerable<SwiftList.PluginSdk.IActionPlugin> Plugins => _plugins;
 
         public IEnumerable<PluginActionRegistration> Actions
             => _actions.Where(a => _filter.IsEnabled(ComponentFilter.GetDllName(a.Plugin), PluginComponentType.Action, a.Action.Id));
 
-        public IEnumerable<IDynamicActionProvider> DynamicProviders
+        public IEnumerable<SwiftList.PluginSdk.IDynamicActionProvider> DynamicProviders
             => _dynamicProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.DynamicProvider, p.GetType().Name));
 
-        public IEnumerable<IInstantResultProvider> InstantResultProviders
+        public IEnumerable<SwiftList.PluginSdk.IInstantResultProvider> InstantResultProviders
             => _instantResultProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.InstantProvider, p.Id));
 
-        public IEnumerable<ISidebarFilterProvider> SidebarFilterProviders
+        public IEnumerable<SwiftList.PluginSdk.ISidebarFilterProvider> SidebarFilterProviders
         {
             get
             {
@@ -96,7 +95,7 @@ namespace SwiftList.App.Services
             }
         }
 
-        public IEnumerable<IResultColumnProvider> ResultColumnProviders
+        public IEnumerable<SwiftList.PluginSdk.IResultColumnProvider> ResultColumnProviders
         {
             get
             {
@@ -105,18 +104,18 @@ namespace SwiftList.App.Services
             }
         }
 
-        public IEnumerable<ITranslationProvider> TranslationProviders => _translationProviders;
-        public IEnumerable<IThemeProvider> ThemeProviders => _themeProviders;
+        public IEnumerable<SwiftList.PluginSdk.ITranslationProvider> TranslationProviders => _translationProviders;
+        public IEnumerable<SwiftList.PluginSdk.IThemeProvider> ThemeProviders => _themeProviders;
 
         // ── Unfiltered collections (settings UI ?show disabled as unchecked) ─
 
         public IEnumerable<PluginActionRegistration> AllActions => _actions;
-        public IEnumerable<IDynamicActionProvider> AllDynamicProviders => _dynamicProviders;
-        public IEnumerable<IInstantResultProvider> AllInstantResultProviders => _instantResultProviders;
-        public IEnumerable<ISidebarFilterProvider> AllSidebarFilterProviders => _sidebarFilterProviders;
-        public IEnumerable<IResultColumnProvider> AllResultColumnProviders => _resultColumnProviders;
-        public IEnumerable<ITranslationProvider> AllTranslationProviders => _translationProviders;
-        public IEnumerable<IThemeProvider> AllThemeProviders => _themeProviders;
+        public IEnumerable<SwiftList.PluginSdk.IDynamicActionProvider> AllDynamicProviders => _dynamicProviders;
+        public IEnumerable<SwiftList.PluginSdk.IInstantResultProvider> AllInstantResultProviders => _instantResultProviders;
+        public IEnumerable<SwiftList.PluginSdk.ISidebarFilterProvider> AllSidebarFilterProviders => _sidebarFilterProviders;
+        public IEnumerable<SwiftList.PluginSdk.IResultColumnProvider> AllResultColumnProviders => _resultColumnProviders;
+        public IEnumerable<SwiftList.PluginSdk.ITranslationProvider> AllTranslationProviders => _translationProviders;
+        public IEnumerable<SwiftList.PluginSdk.IThemeProvider> AllThemeProviders => _themeProviders;
 
         // ── Search and execution ──────────────────────────────────────────────
 
@@ -138,7 +137,7 @@ namespace SwiftList.App.Services
             }
         }
 
-        public bool TryExecuteSearchAction(AppSearchResult result, IPluginSearchWindow view)
+        public bool TryExecuteSearchAction(AppSearchResult result, SwiftList.PluginSdk.IPluginSearchWindow view)
         {
             if (result.IsInstantResult)
             {

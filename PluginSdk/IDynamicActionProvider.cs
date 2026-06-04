@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SwiftList.App.Services
+namespace SwiftList.PluginSdk
 {
     /// <summary>
     /// Represents a provider that generates dynamic action items at runtime

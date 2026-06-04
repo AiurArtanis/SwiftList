@@ -5,6 +5,7 @@ using System.Windows.Input;
 using SwiftList.App.ViewModels;
 using SwiftList.App.Views.SearchWindow;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using TextBox = System.Windows.Controls.TextBox;
 using ListView = System.Windows.Controls.ListView;

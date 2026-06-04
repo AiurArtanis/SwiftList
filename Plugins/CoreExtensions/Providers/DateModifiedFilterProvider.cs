@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using SwiftList.App.Services;
 using SwiftList.PluginSdk;
 
 namespace SwiftList.Plugins.CoreExtensions.Providers

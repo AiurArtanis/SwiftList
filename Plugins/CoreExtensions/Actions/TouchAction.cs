@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Windows.Media;
-using SwiftList.App.Services;
 using SwiftList.PluginSdk;
 
 namespace SwiftList.Plugins.CoreExtensions.Actions

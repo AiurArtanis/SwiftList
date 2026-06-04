@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using SwiftList.Core;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 
 namespace SwiftList.App.ViewModels.Search
 {

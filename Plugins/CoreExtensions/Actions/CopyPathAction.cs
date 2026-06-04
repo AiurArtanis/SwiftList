@@ -1,6 +1,5 @@
 using System;
 using System.Windows.Media;
-using SwiftList.App.Services;
 using SwiftList.PluginSdk;
 
 namespace SwiftList.Plugins.CoreExtensions.Actions
@@ -28,7 +27,7 @@ namespace SwiftList.Plugins.CoreExtensions.Actions
             }
             catch (Exception ex)
             {
-                SwiftList.Core.Logger.Log($"[CopyPathAction] Failed to copy path: {ex.Message}", SwiftList.Core.LogLevel.Error);
+                Logger.Log($"[CopyPathAction] Failed to copy path: {ex.Message}", LogLevel.Error);
             }
         }
     }

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SwiftList.App.Services
+namespace SwiftList.PluginSdk
 {
     /// <summary>
     /// Represents a provider that can process the search query in real-time

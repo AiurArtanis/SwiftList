@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using SwiftList.Core;
+using SwiftList.PluginSdk;
 
 namespace SwiftList.App.Services
 {

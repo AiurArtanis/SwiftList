@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using ListBox = System.Windows.Controls.ListBox;
 
+using SwiftList.PluginSdk;
+
 namespace SwiftList.App.Services
 {
     /// <summary>

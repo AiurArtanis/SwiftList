@@ -25,10 +25,9 @@ namespace SwiftList.App.Services
 
             try
             {
-                string physicalPath = NetworkDriveResolver.ResolveToPhysicalPath(path);
-                if (File.Exists(physicalPath) || Directory.Exists(physicalPath))
+                if (File.Exists(path) || Directory.Exists(path))
                 {
-                    bool isFile = File.Exists(physicalPath);
+                    bool isFile = File.Exists(path);
                     var startInfo = new ProcessStartInfo
                     {
                         FileName = path,
@@ -40,14 +39,9 @@ namespace SwiftList.App.Services
                         string? workingDirectory = Path.GetDirectoryName(path);
                         if (!string.IsNullOrWhiteSpace(workingDirectory))
                         {
-                            string physicalWorkingDir = NetworkDriveResolver.ResolveToPhysicalPath(workingDirectory);
                             if (Directory.Exists(workingDirectory))
                             {
                                 startInfo.WorkingDirectory = workingDirectory;
-                            }
-                            else if (Directory.Exists(physicalWorkingDir))
-                            {
-                                startInfo.WorkingDirectory = physicalWorkingDir;
                             }
                         }
                     }
@@ -58,17 +52,8 @@ namespace SwiftList.App.Services
                     }
                     catch (Exception startEx)
                     {
-                        Logger.Log($"[FileExecutor] Process.Start failed for '{path}', retrying with physical path '{physicalPath}': {startEx.Message}", SwiftList.Core.LogLevel.Warn);
-                        startInfo.FileName = physicalPath;
-                        if (isFile)
-                        {
-                            string? physicalWorkingDir = Path.GetDirectoryName(physicalPath);
-                            if (!string.IsNullOrWhiteSpace(physicalWorkingDir) && Directory.Exists(physicalWorkingDir))
-                            {
-                                startInfo.WorkingDirectory = physicalWorkingDir;
-                            }
-                        }
-                        Process.Start(startInfo);
+                        Logger.Log($"[FileExecutor] Process.Start failed for '{path}': {startEx.Message}", SwiftList.Core.LogLevel.Error);
+                        throw;
                     }
                 }
                 else

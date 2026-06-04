@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using SwiftList.Core;
 using SwiftList.App.ViewModels;
 

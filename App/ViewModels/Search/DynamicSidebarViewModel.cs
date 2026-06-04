@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using SwiftList.App.ViewModels;
 
 namespace SwiftList.App.ViewModels.Search

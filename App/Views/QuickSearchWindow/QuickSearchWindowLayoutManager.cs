@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using SwiftList.Core;
 
 namespace SwiftList.App

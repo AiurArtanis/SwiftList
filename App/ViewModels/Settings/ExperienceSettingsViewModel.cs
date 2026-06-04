@@ -219,7 +219,7 @@ namespace SwiftList.App.ViewModels.Settings
             _userSettings.Save();
         }
 
-        public static LogLevel ParseLogLevel(string? value)
+        public static SwiftList.Core.LogLevel ParseLogLevel(string? value)
         {
             return value switch
             {

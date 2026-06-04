@@ -10,6 +10,7 @@ using SwiftList.Core;
 using SwiftList.Core.Indexer.NetworkDrive;
 using SwiftList.App.ViewModels;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 
 namespace SwiftList.App.ViewModels.Settings
 {

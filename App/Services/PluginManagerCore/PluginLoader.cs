@@ -2,15 +2,14 @@ using System;
 using System.IO;
 using System.Reflection;
 using SwiftList.Core;
-using SwiftList.PluginSdk;
 
 namespace SwiftList.App.Services.PluginManagerCore
 {
     /// <summary>
     /// Scans the <c>Plugins/</c> directory for DLL assemblies and registers every
-    /// recognised <see cref="IActionPlugin"/>, <see cref="IAliasProvider"/>,
-    /// <see cref="IInstantResultProvider"/>, <see cref="ISidebarFilterProvider"/>,
-    /// <see cref="IResultColumnProvider"/> and <see cref="ITranslationProvider"/>.
+    /// recognised <see cref="SwiftList.PluginSdk.IActionPlugin"/>, <see cref="IAliasProvider"/>,
+    /// <see cref="SwiftList.PluginSdk.IInstantResultProvider"/>, <see cref="SwiftList.PluginSdk.ISidebarFilterProvider"/>,
+    /// <see cref="SwiftList.PluginSdk.IResultColumnProvider"/> and <see cref="SwiftList.PluginSdk.ITranslationProvider"/>.
     /// </summary>
     internal static class PluginLoader
     {
@@ -51,51 +50,51 @@ namespace SwiftList.App.Services.PluginManagerCore
                     if (type.IsInterface || type.IsAbstract)
                         continue;
 
-                    if (typeof(IActionPlugin).IsAssignableFrom(type))
+                    if (typeof(SwiftList.PluginSdk.IActionPlugin).IsAssignableFrom(type))
                     {
-                        var plugin = (IActionPlugin)Activator.CreateInstance(type)!;
+                        var plugin = (SwiftList.PluginSdk.IActionPlugin)Activator.CreateInstance(type)!;
                         registry.RegisterPlugin(plugin);
                         Logger.Log($"[PluginManager] Loaded action plugin: '{type.Name}' (v{plugin.Version}) from {fileName}");
                     }
 
-                    if (typeof(IAliasProvider).IsAssignableFrom(type))
+                    if (typeof(SwiftList.PluginSdk.IAliasProvider).IsAssignableFrom(type))
                     {
-                        var provider = (IAliasProvider)Activator.CreateInstance(type)!;
+                        var provider = (SwiftList.PluginSdk.IAliasProvider)Activator.CreateInstance(type)!;
                         AliasProviderRegistry.Register(provider);
                         Logger.Log($"[PluginManager] Loaded alias provider: '{type.Name}' ({provider.Id}) from {fileName}");
                     }
 
-                    if (typeof(IInstantResultProvider).IsAssignableFrom(type))
+                    if (typeof(SwiftList.PluginSdk.IInstantResultProvider).IsAssignableFrom(type))
                     {
-                        var provider = (IInstantResultProvider)Activator.CreateInstance(type)!;
+                        var provider = (SwiftList.PluginSdk.IInstantResultProvider)Activator.CreateInstance(type)!;
                         registry.AddInstantResultProvider(provider);
                         Logger.Log($"[PluginManager] Loaded instant result provider: '{type.Name}' from {fileName}");
                     }
 
-                    if (typeof(ISidebarFilterProvider).IsAssignableFrom(type))
+                    if (typeof(SwiftList.PluginSdk.ISidebarFilterProvider).IsAssignableFrom(type))
                     {
-                        var provider = (ISidebarFilterProvider)Activator.CreateInstance(type)!;
+                        var provider = (SwiftList.PluginSdk.ISidebarFilterProvider)Activator.CreateInstance(type)!;
                         registry.AddSidebarFilterProvider(provider);
                         Logger.Log($"[PluginManager] Loaded sidebar filter provider from {fileName}");
                     }
 
-                    if (typeof(IResultColumnProvider).IsAssignableFrom(type))
+                    if (typeof(SwiftList.PluginSdk.IResultColumnProvider).IsAssignableFrom(type))
                     {
-                        var provider = (IResultColumnProvider)Activator.CreateInstance(type)!;
+                        var provider = (SwiftList.PluginSdk.IResultColumnProvider)Activator.CreateInstance(type)!;
                         registry.AddResultColumnProvider(provider);
                         Logger.Log($"[PluginManager] Loaded result column provider from {fileName}");
                     }
 
-                    if (typeof(ITranslationProvider).IsAssignableFrom(type))
+                    if (typeof(SwiftList.PluginSdk.ITranslationProvider).IsAssignableFrom(type))
                     {
-                        var provider = (ITranslationProvider)Activator.CreateInstance(type)!;
+                        var provider = (SwiftList.PluginSdk.ITranslationProvider)Activator.CreateInstance(type)!;
                         registry.AddTranslationProvider(provider);
                         Logger.Log($"[PluginManager] Loaded translation provider: '{type.Name}' from {fileName}");
                     }
 
-                    if (typeof(IThemeProvider).IsAssignableFrom(type))
+                    if (typeof(SwiftList.PluginSdk.IThemeProvider).IsAssignableFrom(type))
                     {
-                        var provider = (IThemeProvider)Activator.CreateInstance(type)!;
+                        var provider = (SwiftList.PluginSdk.IThemeProvider)Activator.CreateInstance(type)!;
                         registry.AddThemeProvider(provider);
                         Logger.Log($"[PluginManager] Loaded theme provider: '{type.Name}' from {fileName}");
                     }

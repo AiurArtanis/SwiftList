@@ -3,6 +3,7 @@ using System.IO;
 using System.Reflection;
 using SwiftList.Core;
 using SwiftList.PluginSdk;
+using Logger = SwiftList.Core.Logger;
 
 namespace SwiftList.Service
 {

@@ -100,6 +100,12 @@ namespace SwiftList.App
                 // Register TranslationService delegate for decoupled plugins
                 SwiftList.PluginSdk.TranslationService.LookupFunc = key => SwiftList.App.Services.TranslationManager.Instance[key];
 
+                // Register Logger delegate for decoupled plugins
+                SwiftList.PluginSdk.Logger.LogAction = (msg, lvl) =>
+                {
+                    SwiftList.Core.Logger.Log(msg, (SwiftList.Core.LogLevel)(int)lvl);
+                };
+
                 SwiftList.App.Services.TranslationManager.Instance.ReloadTranslations();
                 Logger.Log("[App] TranslationManager initialized.");
 

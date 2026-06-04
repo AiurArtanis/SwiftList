@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using SwiftList.Core;
-using SwiftList.PluginSdk;
 
 namespace SwiftList.App.Services
 {
@@ -21,7 +20,7 @@ namespace SwiftList.App.Services
         {
         }
 
-        public IEnumerable<ITheme> GetAvailableThemes()
+        public IEnumerable<SwiftList.PluginSdk.ITheme> GetAvailableThemes()
         {
             return PluginManager.Instance.ThemeProviders
                 .SelectMany(p => p.GetThemes())

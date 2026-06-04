@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Controls;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk;
 using SwiftList.App.Helpers;
 using SwiftList.Core;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
