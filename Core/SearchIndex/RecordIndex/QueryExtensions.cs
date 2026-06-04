@@ -6,9 +6,9 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
 {
     public static class QueryExtensions
     {
-        public static ulong GetId(this RuntimeIndex index, int i) => index.Ids[i];
+        public static UInt128 GetId(this RuntimeIndex index, int i) => index.Ids[i];
 
-        public static ulong GetParentId(this RuntimeIndex index, int i)
+        public static UInt128 GetParentId(this RuntimeIndex index, int i)
         {
             int parentIndex = index.ParentIndexes[i];
             return (uint)parentIndex < (uint)index.Ids.Count ? index.Ids[parentIndex] : index.Ids[i];
@@ -80,12 +80,12 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
             return false;
         }
 
-        internal static int ResolveParentIndex(this RuntimeIndex index, ulong id, ulong parentId)
+        internal static int ResolveParentIndex(this RuntimeIndex index, UInt128 id, UInt128 parentId)
         {
             return parentId != id && index.TryGetIndexById(parentId, out int parentIndex) ? parentIndex : -1;
         }
 
-        public static bool TryGetIndexById(this RuntimeIndex index, ulong id, out int idx)
+        public static bool TryGetIndexById(this RuntimeIndex index, UInt128 id, out int idx)
         {
             if (index.DeltaIdToIndex.TryGetValue(id, out idx))
             {
@@ -103,7 +103,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
                 while (low <= high)
                 {
                     int mid = low + ((high - low) >> 1);
-                    ulong midId = index.Ids[mid];
+                    UInt128 midId = index.Ids[mid];
                     if (midId == id)
                     {
                         if (!index.IsDeleted(mid))
@@ -131,7 +131,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
             index.NameCharDelta.TryGetValue(key, out delta);
         }
 
-        public static bool TryResolvePath(this RuntimeIndex index, string pathLower, out ulong id, out string childPrefixLower)
+        public static bool TryResolvePath(this RuntimeIndex index, string pathLower, out UInt128 id, out string childPrefixLower)
         {
             id = default;
             childPrefixLower = string.Empty;
@@ -184,7 +184,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
 
         public static string GetFullPath(this RuntimeIndex index, int idx)
         {
-            ulong id = index.Ids[idx];
+            UInt128 id = index.Ids[idx];
             int parentIndex = index.ParentIndexes[idx];
             string name = index.GetName(idx);
             if (index.PathMemo.TryGetValue(id, out string? path))
@@ -199,7 +199,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
             return path;
         }
 
-        public static bool IsUnderDirectory(this RuntimeIndex index, int idx, ulong ancestorId)
+        public static bool IsUnderDirectory(this RuntimeIndex index, int idx, UInt128 ancestorId)
         {
             if (index.Ids[idx] == ancestorId)
                 return true;
@@ -236,7 +236,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
             index.PathMemo.Clear();
         }
 
-        private static ulong FindRootId(this RuntimeIndex index)
+        private static UInt128 FindRootId(this RuntimeIndex index)
         {
             for (int i = 0; i < index.Count; i++)
             {
@@ -273,7 +273,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
             return false;
         }
 
-        public static ChildEnumerable EnumerateChildren(this RuntimeIndex index, ulong parentId)
+        public static ChildEnumerable EnumerateChildren(this RuntimeIndex index, UInt128 parentId)
         {
             return index.TryGetIndexById(parentId, out int parentIndex)
                 ? index.EnumerateChildren(parentIndex)

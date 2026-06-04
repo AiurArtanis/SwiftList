@@ -20,7 +20,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
 
         public string Drive { get; }
         public DateTime LastUpdated { get; set; } = DateTime.Now;
-        public ulong RootId { get; private set; }
+        public UInt128 RootId { get; private set; }
         public int Skipped { get; private set; }
         public int Errors { get; private set; }
         public int EnumerateErrors { get; private set; }
@@ -189,11 +189,11 @@ namespace SwiftList.Core.Indexer.NetworkDrive
                 return false;
 
             string? parentPath = Path.GetDirectoryName(normalized.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            ulong parentId = string.IsNullOrWhiteSpace(parentPath) || PathHelpers.NormalizePath(parentPath, true).Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase)
+            UInt128 parentId = string.IsNullOrWhiteSpace(parentPath) || PathHelpers.NormalizePath(parentPath, true).Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase)
                 ? RootId
-                : PathHelpers.HashPath64(PathHelpers.NormalizePath(parentPath, true));
+                : (UInt128)PathHelpers.HashPath64(PathHelpers.NormalizePath(parentPath, true));
 
-            ulong id = PathHelpers.HashPath64(normalized);
+            UInt128 id = PathHelpers.HashPath64(normalized);
             _runtime.Upsert(new FileRecord(
                 id,
                 parentId,
@@ -222,9 +222,9 @@ namespace SwiftList.Core.Indexer.NetworkDrive
                 UpsertPath(root, child, includeChildren: true, exclusionRules);
         }
 
-        private bool RemoveSubtree(ulong id)
+        private bool RemoveSubtree(UInt128 id)
         {
-            var toRemove = new List<ulong>();
+            var toRemove = new List<UInt128>();
             CollectSubtree(id, toRemove);
             if (toRemove.Count == 0)
                 return false;
@@ -234,7 +234,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
             return true;
         }
 
-        private void CollectSubtree(ulong id, List<ulong> ids)
+        private void CollectSubtree(UInt128 id, List<UInt128> ids)
         {
             foreach (int childIndex in _runtime.EnumerateChildren(id))
                 CollectSubtree(_runtime.GetId(childIndex), ids);

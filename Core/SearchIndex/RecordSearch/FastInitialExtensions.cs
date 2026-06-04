@@ -18,7 +18,7 @@ namespace SwiftList.Core.SearchIndex.RecordSearch
             FzfTopN matches,
             CancellationToken token,
             string? directoryFilterLower,
-            ulong? directoryRootId,
+            UInt128? directoryRootId,
             List<int>? matchedCandidates,
             out bool completed)
         {

@@ -4,8 +4,8 @@ namespace SwiftList.Core.Indexer.NetworkDrive
 {
     internal readonly record struct NetworkWalkRecord(FileRecord Record, FileAttributes Attributes)
     {
-        public ulong Id => Record.Id;
-        public ulong ParentId => Record.ParentId;
+        public UInt128 Id => Record.Id;
+        public UInt128 ParentId => Record.ParentId;
         public string Name => Record.Name;
         public FileRecordFlags Flags => Record.Flags;
         public FileAttributes Attributes { get; } = Attributes;
@@ -21,5 +21,5 @@ namespace SwiftList.Core.Indexer.NetworkDrive
         InvalidName
     }
 
-    internal readonly record struct WorkItem(string Path, string LogicalPath, ulong LocalId, int Depth, NetworkIgnoreRuleSet IgnoreRules);
+    internal readonly record struct WorkItem(string Path, string LogicalPath, UInt128 LocalId, int Depth, NetworkIgnoreRuleSet IgnoreRules);
 }

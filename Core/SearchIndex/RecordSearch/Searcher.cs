@@ -46,7 +46,7 @@ namespace SwiftList.Core.SearchIndex.RecordSearch
                 if (index.DirectoryFilterExcludesSource(directoryFilterLower))
                     return new List<SearchResult>();
 
-                ulong? directoryRootId = index.TryGetDirectoryRootId(directoryFilterLower);
+                UInt128? directoryRootId = index.TryGetDirectoryRootId(directoryFilterLower);
                 return this.SearchNames(index, pattern, limit, token, directoryFilterLower, directoryRootId);
             }
             finally

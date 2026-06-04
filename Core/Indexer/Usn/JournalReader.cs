@@ -23,20 +23,18 @@ namespace SwiftList.Core.Indexer.Usn
                 0,
                 IntPtr.Zero
             );
-
             if (handle.IsInvalid)
             {
                 Logger.Log($"[JournalReader] Failed to open drive {drive} handle.", SwiftList.Core.LogLevel.Error);
                 return null;
             }
-
+            string fsType = VolumeHelper.GetFileSystemType(drive);
             var rootFrn = VolumeHelper.GetRootFrn(drive);
             if (!rootFrn.HasValue)
             {
                 Logger.Log($"[JournalReader] Failed to resolve root FRN on {drive}.", SwiftList.Core.LogLevel.Error);
                 return null;
             }
-
             byte[] queryBuf = new byte[56];
             uint bytesReturned;
             bool success = Win32Api.DeviceIoControl(
@@ -51,7 +49,7 @@ namespace SwiftList.Core.Indexer.Usn
             if (!success)
             {
                 int err = Marshal.GetLastWin32Error();
-                string fsType = VolumeHelper.GetFileSystemType(drive);
+                fsType = VolumeHelper.GetFileSystemType(drive);
                 Logger.Log($"[JournalReader] Failed to query USN journal on {drive}. Error: {err}, FileSystem: {fsType}", SwiftList.Core.LogLevel.Warn);
 
                 if (fsType.Equals("NTFS", StringComparison.OrdinalIgnoreCase))
@@ -100,6 +98,11 @@ namespace SwiftList.Core.Indexer.Usn
 
             ulong journalId = BitConverter.ToUInt64(queryBuf, 0);
             long nextUsn = BitConverter.ToInt64(queryBuf, 16);
+
+            if (fsType.Equals("ReFS", StringComparison.OrdinalIgnoreCase))
+            {
+                return ReFsScanner.ScanDrive(drive, handle, rootFrn.Value, journalId, nextUsn);
+            }
 
             int bufSize = 1024 * 1024;
             byte[] outBuf = new byte[bufSize];
@@ -158,7 +161,7 @@ namespace SwiftList.Core.Indexer.Usn
                     ReadOnlySpan<byte> recordSpan = new ReadOnlySpan<byte>(outBuf, offset, (int)recordLen);
                     try
                     {
-                        var record = Win32Api.ParseRecord(recordSpan);
+                        var record = UsnRecordParser.ParseRecord(recordSpan);
                         
                         driveSearchItems[record.FileReferenceNumber] = (record.FileName, record.ParentFileReferenceNumber, record.IsDirectory);
                     }
@@ -175,7 +178,7 @@ namespace SwiftList.Core.Indexer.Usn
             return (rootFrn.Value, driveSearchItems, nextUsn, journalId);
         }
 
-        public long CatchUpDrive(string drive, ulong journalId, long startUsn, Action<Win32Api.ParsedUsnRecord> onRecord)
+        public long CatchUpDrive(string drive, ulong journalId, long startUsn, Action<ParsedUsnRecord> onRecord)
         {
             Logger.Log($"[JournalReader] Catching up drive {drive} from USN {startUsn}...");
             string volumePath = $"\\\\.\\{drive}:";
@@ -274,7 +277,7 @@ namespace SwiftList.Core.Indexer.Usn
                     ReadOnlySpan<byte> recordSpan = new ReadOnlySpan<byte>(outBuf, offset, (int)recordLen);
                     try
                     {
-                        var record = Win32Api.ParseRecord(recordSpan);
+                        var record = UsnRecordParser.ParseRecord(recordSpan);
                         changeCount++;
                         onRecord(record);
                     }

@@ -58,7 +58,7 @@ namespace SwiftList.Core.SearchIndex.RecordSearch
             if (!parsed.PathEndsWithSeparator || parsed.ExactPathLower == null || parsed.TargetDrive == null)
                 return false;
 
-            if (!index.TryResolvePath(parsed.ExactPathLower, out ulong parentId, out string childPrefixLower))
+            if (!index.TryResolvePath(parsed.ExactPathLower, out UInt128 parentId, out string childPrefixLower))
                 return false;
 
             var pattern = childPrefixLower.Length == 0 ? null : Helpers.GetPattern("child|" + childPrefixLower, "^" + childPrefixLower, parseText: true);

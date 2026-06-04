@@ -85,7 +85,7 @@ namespace SwiftList.Core.SearchIndex.RecordSearch
         public bool CanCacheCandidates(
             FzfPattern pattern,
             string? directoryFilterLower,
-            ulong? directoryRootId,
+            UInt128? directoryRootId,
             out string cacheTerm)
         {
             cacheTerm = string.Empty;

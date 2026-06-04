@@ -7,10 +7,10 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
     public sealed class RuntimeIndex
     {
         private int _loadedCount;
-        private readonly Dictionary<ulong, int> _deltaIdToIndex = new();
+        private readonly Dictionary<UInt128, int> _deltaIdToIndex = new();
         private readonly Dictionary<char, List<int>> _nameCharDelta = new();
-        private readonly Dictionary<ulong, string> _pathMemo = new();
-        private readonly List<ulong> _ids = new();
+        private readonly Dictionary<UInt128, string> _pathMemo = new();
+        private readonly List<UInt128> _ids = new();
         private readonly List<int> _parentIndexes = new();
         private readonly List<int> _nameIds = new();
         private readonly List<byte> _flags = new();
@@ -32,7 +32,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
         internal readonly record struct ChildRange(int Start, int Count);
 
         // Internal properties to expose underlying storage to extension methods
-        internal List<ulong> Ids => _ids;
+        internal List<UInt128> Ids => _ids;
         internal List<int> ParentIndexes => _parentIndexes;
         internal List<int> NameIds => _nameIds;
         internal List<byte> Flags => _flags;
@@ -42,9 +42,9 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
             get => _loadedCount;
             set => _loadedCount = value;
         }
-        internal Dictionary<ulong, int> DeltaIdToIndex => _deltaIdToIndex;
+        internal Dictionary<UInt128, int> DeltaIdToIndex => _deltaIdToIndex;
         internal Dictionary<char, List<int>> NameCharDelta => _nameCharDelta;
-        internal Dictionary<ulong, string> PathMemo => _pathMemo;
+        internal Dictionary<UInt128, string> PathMemo => _pathMemo;
         internal NameTable Names => _names;
         internal Dictionary<int, string[]> DeltaNameAliases => _deltaNameAliases;
         internal System.Collections.BitArray HasAlias
@@ -108,7 +108,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
 
             this.EnsureCapacity(store.Records.Count);
 
-            var parentIds = new List<ulong>(store.Records.Count);
+            var parentIds = new List<UInt128>(store.Records.Count);
             var tempAliasIndices = new List<int>();
             var tempAliasValues = new List<string[]>();
 
@@ -150,7 +150,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
 
             for (int index = 0; index < Count; index++)
             {
-                ulong parentId = parentIds[index];
+                UInt128 parentId = parentIds[index];
                 int parentIndex = -1;
                 if (parentId != _ids[index])
                 {
@@ -171,7 +171,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
         public FileRecordStore ToStore(
             FileRecordSourceKind sourceKind,
             FileRecordIdKind idKind,
-            ulong rootId,
+            UInt128 rootId,
             ulong journalId,
             long nextUsn)
         {

@@ -8,11 +8,6 @@ namespace SwiftList.Core.Indexer.Usn
 {
     public class UsnIndexer : IDisposable
     {
-        private readonly object _lockObj = new();
-        private readonly JournalReader _reader = new();
-        private readonly Dictionary<string, DriveRuntimeMetadata> _driveMetadata = new(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, RuntimeIndex> _recordIndexes = new(StringComparer.OrdinalIgnoreCase);
-
         public class IndexerStatus
         {
             public string State { get; set; } = "idle";
@@ -35,6 +30,11 @@ namespace SwiftList.Core.Indexer.Usn
             public string CachePath { get; set; } = string.Empty;
         }
 
+        internal readonly object _lockObj = new();
+        internal readonly JournalReader _reader = new();
+        internal readonly Dictionary<string, DriveRuntimeMetadata> _driveMetadata = new(StringComparer.OrdinalIgnoreCase);
+        internal readonly Dictionary<string, RuntimeIndex> _recordIndexes = new(StringComparer.OrdinalIgnoreCase);
+
         public IndexerStatus Status { get; } = new();
         public object LockObj => _lockObj;
 
@@ -42,11 +42,10 @@ namespace SwiftList.Core.Indexer.Usn
         {
             public FileRecordSourceKind SourceKind { get; init; }
             public FileRecordIdKind IdKind { get; init; }
-            public ulong RootId { get; init; }
+            public UInt128 RootId { get; init; }
             public ulong JournalId { get; set; }
             public long NextUsn { get; set; }
         }
-
 
         public List<SearchResult> Search(string query, int limit = 500, CancellationToken token = default, string? directoryFilter = null)
         {
@@ -76,78 +75,9 @@ namespace SwiftList.Core.Indexer.Usn
             }
         }
 
-        public List<(string Drive, ulong JournalId, long NextUsn)> BuildIndex()
-        {
-            Logger.Log("[UsnIndexer] BuildIndex started");
-            var drives = VolumeHelper.DetectSupportedDrives();
-            Logger.Log($"[UsnIndexer] Detected NTFS/ReFS drives: {string.Join(", ", drives)}");
-            return BuildDrives(drives, clearExisting: true);
-        }
-
-        public List<(string Drive, ulong JournalId, long NextUsn)> BuildDrives(IReadOnlyList<string> drives, bool clearExisting)
-        {
-            lock (LockObj)
-            {
-                Status.State = "indexing";
-                Status.Progress = 0;
-                if (clearExisting)
-                {
-                    Status.TotalFiles = 0;
-                    Status.TotalDirs = 0;
-                    _driveMetadata.Clear();
-                    _recordIndexes.Clear();
-                    Status.ActiveDrives.Clear();
-                }
-
-                if (clearExisting)
-                    Status.ActiveDrives = drives.ToList();
-                else
-                {
-                    foreach (var drive in drives)
-                    {
-                        if (!Status.ActiveDrives.Contains(drive))
-                            Status.ActiveDrives.Add(drive);
-                    }
-                }
-            }
-
-            return IndexBuilder.BuildDrives(
-                _reader,
-                drives,
-                SetDriveState,
-                (drive, rootFrn, searchItems, nextUsn, journalId, progress, index) =>
-                {
-                    lock (LockObj)
-                    {
-                        var store = IndexCacheManager.CreateStoreFromDriveData(drive, rootFrn, searchItems, nextUsn, journalId);
-
-                        var runtime = new RuntimeIndex();
-                        runtime.Load(store);
-                        _driveMetadata[drive] = CreateMetadata(store);
-                        _recordIndexes[drive] = runtime;
-                        Status.TotalFiles += runtime.TotalFiles;
-                        Status.TotalDirs += runtime.TotalDirs;
-
-                        Status.Progress = progress;
-                        UpdateDriveCounts(drive);
-                    }
-                },
-                elapsedSeconds =>
-                {
-                    lock (LockObj)
-                    {
-                        Status.State = "ready";
-                        Status.Progress = 100;
-                        Status.ElapsedTime = elapsedSeconds;
-                    }
-                    Logger.Log($"[UsnIndexer] All indices built! Files: {Status.TotalFiles}, Folders: {Status.TotalDirs}. Time: {elapsedSeconds:F2}s");
-                }
-            );
-        }
-
         public long CatchUpDrive(string drive, ulong journalId, long startUsn)
         {
-            var changes = new List<Win32Api.ParsedUsnRecord>();
+            var changes = new List<ParsedUsnRecord>();
             long nextUsn = _reader.CatchUpDrive(drive, journalId, startUsn, changes.Add);
             if (nextUsn >= 0 && changes.Count > 0)
                 ApplyUsnRecords(drive, changes);
@@ -155,12 +85,12 @@ namespace SwiftList.Core.Indexer.Usn
             return nextUsn;
         }
 
-        public void ApplyUsnRecord(string drive, Win32Api.ParsedUsnRecord record)
+        public void ApplyUsnRecord(string drive, ParsedUsnRecord record)
         {
             ApplyUsnRecords(drive, new[] { record });
         }
 
-        public void ApplyUsnRecords(string drive, IReadOnlyList<Win32Api.ParsedUsnRecord> records)
+        public void ApplyUsnRecords(string drive, IReadOnlyList<ParsedUsnRecord> records)
         {
             lock (LockObj)
             {
@@ -194,11 +124,6 @@ namespace SwiftList.Core.Indexer.Usn
             }
         }
 
-        public void SaveDrivesToCache(string cacheDir, List<(string Drive, ulong JournalId, long NextUsn)> driveMetadata)
-        {
-            IndexCacheManager.SaveDrivesToCache(cacheDir, driveMetadata, _recordIndexes, _driveMetadata);
-        }
-
         public void CompactMemory()
         {
             try
@@ -214,46 +139,7 @@ namespace SwiftList.Core.Indexer.Usn
             SearchCoordinator.ClearCaches();
         }
 
-        public List<(string Drive, ulong JournalId, long NextUsn)> LoadDrivesFromCache(string cacheDir, IReadOnlyList<string> drives)
-        {
-            lock (LockObj)
-            {
-                _driveMetadata.Clear();
-                _recordIndexes.Clear();
-                Status.ActiveDrives.Clear();
-                Status.TotalFiles = 0;
-                Status.TotalDirs = 0;
-
-                var metadata = new List<(string Drive, ulong JournalId, long NextUsn)>();
-                foreach (var drive in drives)
-                {
-                    var store = FileRecordStoreSerializer.Load(cacheDir, drive);
-                    if (store != null)
-                    {
-                        var runtime = new RuntimeIndex();
-                        runtime.Load(store);
-                        _driveMetadata[drive] = CreateMetadata(store);
-                        _recordIndexes[drive] = runtime;
-                        Status.TotalFiles += runtime.TotalFiles;
-                        Status.TotalDirs += runtime.TotalDirs;
-                        Status.ActiveDrives.Add(drive);
-                        metadata.Add((drive, store.JournalId, store.NextUsn));
-                        UpdateDriveCounts(drive);
-                    }
-                }
-
-                if (metadata.Count > 0)
-                {
-                    Status.State = "ready";
-                    Status.Progress = 100;
-                }
-
-                CompactMemory();
-                return metadata;
-            }
-        }
-
-        private static DriveRuntimeMetadata CreateMetadata(FileRecordStore store)
+        internal static DriveRuntimeMetadata CreateMetadata(FileRecordStore store)
         {
             return new DriveRuntimeMetadata
             {
@@ -265,9 +151,9 @@ namespace SwiftList.Core.Indexer.Usn
             };
         }
 
-        private static ulong ToSourceLocalId(UInt128 value)
+        private static UInt128 ToSourceLocalId(UInt128 value)
         {
-            return (ulong)value;
+            return value;
         }
 
         private void UpdateTotalsFromRuntime()
@@ -276,7 +162,7 @@ namespace SwiftList.Core.Indexer.Usn
             Status.TotalDirs = _recordIndexes.Values.Sum(r => r.TotalDirs);
         }
 
-        private void UpdateDriveCounts(string drive)
+        internal void UpdateDriveCounts(string drive)
         {
             var item = Status.Drives.FirstOrDefault(d => d.Drive.Equals(drive, StringComparison.OrdinalIgnoreCase));
             if (item == null)

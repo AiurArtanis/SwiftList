@@ -19,7 +19,7 @@ namespace SwiftList.Core.SearchIndex.RecordSearch
             int limit,
             CancellationToken token,
             string? directoryFilterLower,
-            ulong? directoryRootId)
+            UInt128? directoryRootId)
         {
             int keep = Math.Max(limit * 8, 64);
             var matches = new FzfTopN(keep);
@@ -65,7 +65,7 @@ namespace SwiftList.Core.SearchIndex.RecordSearch
             FzfSlab slab,
             CancellationToken token,
             string? directoryFilterLower,
-            ulong? directoryRootId,
+            UInt128? directoryRootId,
             List<int>? matchedCandidates)
         {
             int count = index.Count;

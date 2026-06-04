@@ -90,7 +90,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
             index.PathMemo.Clear();
         }
 
-        public static void Remove(this RuntimeIndex index, ulong id)
+        public static void Remove(this RuntimeIndex index, UInt128 id)
         {
             if (!index.TryGetIndexById(id, out int idx))
                 return;
@@ -129,7 +129,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
             index.CharMasks.TrimExcess();
         }
 
-        internal static void AddColumns(this RuntimeIndex index, ulong id, string name, FileRecordFlags flags)
+        internal static void AddColumns(this RuntimeIndex index, UInt128 id, string name, FileRecordFlags flags)
         {
             index.Ids.Add(id);
             index.NameIds.Add(index.Names.GetId(name));

@@ -91,7 +91,7 @@ namespace SwiftList.Core.SearchIndex.RecordSearch
             return value.EndsWith(Path.DirectorySeparatorChar) ? value : value + Path.DirectorySeparatorChar;
         }
 
-        public static ulong? TryGetDirectoryRootId(this RuntimeIndex index, string? directoryFilterLower)
+        public static UInt128? TryGetDirectoryRootId(this RuntimeIndex index, string? directoryFilterLower)
         {
             if (directoryFilterLower == null)
                 return null;
@@ -100,7 +100,7 @@ namespace SwiftList.Core.SearchIndex.RecordSearch
             if (directoryFilterLower.Equals(sourceRootLower, StringComparison.Ordinal))
                 return null;
 
-            if (index.TryResolvePath(directoryFilterLower, out ulong id, out string childPrefixLower) &&
+            if (index.TryResolvePath(directoryFilterLower, out UInt128 id, out string childPrefixLower) &&
                 childPrefixLower.Length == 0)
             {
                 return id;

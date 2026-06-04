@@ -29,8 +29,8 @@ namespace SwiftList.Core
     public readonly struct FileRecord
     {
         public FileRecord(
-            ulong id,
-            ulong parentId,
+            UInt128 id,
+            UInt128 parentId,
             string name,
             FileRecordFlags flags)
         {
@@ -40,8 +40,8 @@ namespace SwiftList.Core
             Flags = flags;
         }
 
-        public ulong Id { get; }
-        public ulong ParentId { get; }
+        public UInt128 Id { get; }
+        public UInt128 ParentId { get; }
         public string Name { get; }
         public FileRecordFlags Flags { get; }
         public bool IsDirectory => (Flags & FileRecordFlags.Directory) != 0;
@@ -53,7 +53,7 @@ namespace SwiftList.Core
         public string SourceKey { get; set; } = string.Empty;
         public FileRecordSourceKind SourceKind { get; set; }
         public FileRecordIdKind IdKind { get; set; }
-        public ulong RootId { get; set; }
+        public UInt128 RootId { get; set; }
         public ulong JournalId { get; set; }
         public long NextUsn { get; set; }
         public List<FileRecord> Records { get; } = new();
@@ -85,7 +85,7 @@ namespace SwiftList.Core
         private const string MetaMagic = "SLRCMETA";
         private const string RecordsMagic = "SLRCREC";
         private const string NamesMagic = "SLRCNAME";
-        private const int Version = 5;
+        private const int Version = 6;
 
         public static string GetBasePath(string cacheDir, string sourceKey)
         {
@@ -122,8 +122,10 @@ namespace SwiftList.Core
                 {
                     var record = store.Records[i];
                     writer.Write(record.Name);
-                    recordWriter.Write(record.Id);
-                    recordWriter.Write(record.ParentId);
+                    recordWriter.Write((ulong)record.Id);
+                    recordWriter.Write((ulong)(record.Id >> 64));
+                    recordWriter.Write((ulong)record.ParentId);
+                    recordWriter.Write((ulong)(record.ParentId >> 64));
                     recordWriter.Write((ushort)record.Flags);
                 }
             }
@@ -136,7 +138,8 @@ namespace SwiftList.Core
                 writer.Write(store.SourceKey);
                 writer.Write((byte)store.SourceKind);
                 writer.Write((byte)store.IdKind);
-                writer.Write(store.RootId);
+                writer.Write((ulong)store.RootId);
+                writer.Write((ulong)(store.RootId >> 64));
                 writer.Write(store.JournalId);
                 writer.Write(store.NextUsn);
                 writer.Write(store.Records.Count);
@@ -167,7 +170,9 @@ namespace SwiftList.Core
                     store.SourceKey = reader.ReadString();
                     store.SourceKind = (FileRecordSourceKind)reader.ReadByte();
                     store.IdKind = (FileRecordIdKind)reader.ReadByte();
-                    store.RootId = reader.ReadUInt64();
+                    ulong rootLow = reader.ReadUInt64();
+                    ulong rootHigh = reader.ReadUInt64();
+                    store.RootId = new UInt128(rootHigh, rootLow);
                     store.JournalId = reader.ReadUInt64();
                     store.NextUsn = reader.ReadInt64();
                     _ = reader.ReadInt32();
@@ -199,8 +204,12 @@ namespace SwiftList.Core
                     store.Records.Capacity = count;
                     for (int i = 0; i < count; i++)
                     {
-                        ulong id = reader.ReadUInt64();
-                        ulong parentId = reader.ReadUInt64();
+                        ulong idLow = reader.ReadUInt64();
+                        ulong idHigh = reader.ReadUInt64();
+                        ulong parentIdLow = reader.ReadUInt64();
+                        ulong parentIdHigh = reader.ReadUInt64();
+                        UInt128 id = new UInt128(idHigh, idLow);
+                        UInt128 parentId = new UInt128(parentIdHigh, parentIdLow);
                         var flags = (FileRecordFlags)reader.ReadUInt16();
                         store.Records.Add(new FileRecord(
                             id,

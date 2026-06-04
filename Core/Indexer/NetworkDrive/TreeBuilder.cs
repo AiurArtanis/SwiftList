@@ -148,7 +148,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
                 Interlocked.Increment(ref _slowDirectories);
         }
 
-        private WalkRecordResult TryCreateRecord(string child, string logicalParentPath, ulong parentId, out NetworkWalkRecord record, out bool isDirectory, out string fullPath)
+        private WalkRecordResult TryCreateRecord(string child, string logicalParentPath, UInt128 parentId, out NetworkWalkRecord record, out bool isDirectory, out string fullPath)
         {
             record = default;
             isDirectory = false;
@@ -276,7 +276,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
                 : Math.Clamp(Environment.ProcessorCount, 2, 8);
         }
 
-        private void EnqueueDirectory(string path, string logicalPath, ulong parentId, int depth, NetworkIgnoreRuleSet ignoreRules)
+        private void EnqueueDirectory(string path, string logicalPath, UInt128 parentId, int depth, NetworkIgnoreRuleSet ignoreRules)
         {
             Interlocked.Increment(ref _pendingDirectories);
             try

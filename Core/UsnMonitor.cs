@@ -118,7 +118,7 @@ namespace SwiftList.Core
                         _startUsn = BitConverter.ToInt64(outBuf, 0);
                         int offset = 8;
                         int recordsProcessed = 0;
-                        var records = new List<Win32Api.ParsedUsnRecord>();
+                        var records = new List<ParsedUsnRecord>();
 
                         while (offset < returnedSize)
                         {
@@ -132,7 +132,7 @@ namespace SwiftList.Core
                             ReadOnlySpan<byte> recordSpan = new ReadOnlySpan<byte>(outBuf, offset, (int)recordLen);
                             try
                             {
-                                records.Add(Win32Api.ParseRecord(recordSpan));
+                                records.Add(UsnRecordParser.ParseRecord(recordSpan));
                                 recordsProcessed++;
                             }
                             catch (Exception ex)

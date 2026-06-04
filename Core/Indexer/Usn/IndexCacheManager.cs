@@ -23,7 +23,7 @@ namespace SwiftList.Core.Indexer.Usn
             };
             var namePool = new FileRecordNamePool();
 
-            store.RootId = (ulong)rootFrn;
+            store.RootId = rootFrn;
             store.Records.Add(new FileRecord(
                 store.RootId,
                 store.RootId,
@@ -34,8 +34,8 @@ namespace SwiftList.Core.Indexer.Usn
             {
                 var flags = kvp.Value.IsDir ? FileRecordFlags.Directory : FileRecordFlags.None;
                 store.Records.Add(new FileRecord(
-                    (ulong)kvp.Key,
-                    (ulong)kvp.Value.ParentFrn,
+                    kvp.Key,
+                    kvp.Value.ParentFrn,
                     namePool.Get(kvp.Value.Name),
                     flags));
             }

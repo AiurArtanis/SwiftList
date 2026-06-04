@@ -18,7 +18,7 @@ namespace SwiftList.Core.SearchIndex.RecordSearch
             FzfSlab slab,
             CancellationToken token,
             string? directoryFilterLower,
-            ulong? directoryRootId)
+            UInt128? directoryRootId)
         {
             if (!searcher.CacheManager.CanCacheCandidates(pattern, directoryFilterLower, directoryRootId, out string cacheTerm))
                 return false;
