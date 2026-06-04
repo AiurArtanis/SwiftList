@@ -74,11 +74,11 @@ namespace SwiftList.Core.Indexer.Usn
                             uint fileAttributes = (uint)Marshal.ReadInt32(currentEntry, 56);
                             uint fileNameLength = (uint)Marshal.ReadInt32(currentEntry, 60);
 
-                            ulong idLow = (ulong)Marshal.ReadInt64(currentEntry, 64);
-                            ulong idHigh = (ulong)Marshal.ReadInt64(currentEntry, 72);
+                            ulong idLow = (ulong)Marshal.ReadInt64(currentEntry, 72);
+                            ulong idHigh = (ulong)Marshal.ReadInt64(currentEntry, 80);
                             UInt128 fileId = new UInt128(idHigh, idLow);
 
-                            IntPtr namePtr = currentEntry + 80;
+                            IntPtr namePtr = currentEntry + 88;
                             string fileName = Marshal.PtrToStringUni(namePtr, (int)fileNameLength / 2);
 
                             if (fileName != "." && fileName != "..")
