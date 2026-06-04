@@ -97,13 +97,17 @@ namespace SwiftList.Core.Hook.InlineSearch
                 if (fgHwnd == IntPtr.Zero) return false;
                 KeyboardNativeMethods.GetWindowThreadProcessId(fgHwnd, out uint processId);
                 if (processId == 0) return false;
-                using var process = System.Diagnostics.Process.GetProcessById((int)processId);
-                string procName = process.ProcessName;
+
+                string? procName = GetProcessNameById(processId);
+                if (string.IsNullOrEmpty(procName)) return false;
+
                 foreach (var blacklisted in blacklistedProcesses)
                 {
                     if (string.IsNullOrEmpty(blacklisted)) continue;
                     if (blacklisted.Equals(procName, StringComparison.OrdinalIgnoreCase) ||
-                        blacklisted.Equals(procName + ".exe", StringComparison.OrdinalIgnoreCase))
+                        blacklisted.Equals(procName + ".exe", StringComparison.OrdinalIgnoreCase) ||
+                        (procName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && 
+                         blacklisted.Equals(procName.Substring(0, procName.Length - 4), StringComparison.OrdinalIgnoreCase)))
                     {
                         return true;
                     }
@@ -114,6 +118,39 @@ namespace SwiftList.Core.Hook.InlineSearch
                 // Ignore errors
             }
             return false;
+        }
+
+        private static string? GetProcessNameById(uint processId)
+        {
+            IntPtr hProcess = KeyboardNativeMethods.OpenProcess(0x1000, false, processId); // 0x1000 = PROCESS_QUERY_LIMITED_INFORMATION
+            if (hProcess != IntPtr.Zero)
+            {
+                try
+                {
+                    var sb = new System.Text.StringBuilder(1024);
+                    uint size = (uint)sb.Capacity;
+                    if (KeyboardNativeMethods.QueryFullProcessImageName(hProcess, 0, sb, ref size))
+                    {
+                        string fullPath = sb.ToString();
+                        return System.IO.Path.GetFileName(fullPath); // Returns name with extension, e.g. "cmd.exe"
+                    }
+                }
+                finally
+                {
+                    KeyboardNativeMethods.CloseHandle(hProcess);
+                }
+            }
+
+            // Fallback to .NET Process class (in case OpenProcess fails or limited info is not available, though unlikely)
+            try
+            {
+                using var process = System.Diagnostics.Process.GetProcessById((int)processId);
+                return process.ProcessName; // Returns name without extension, e.g. "cmd"
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

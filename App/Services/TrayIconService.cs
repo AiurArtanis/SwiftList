@@ -18,10 +18,12 @@ namespace SwiftList.App.Services
 
         private System.Windows.Controls.ContextMenu? _wpfContextMenu;
         private System.Windows.Controls.MenuItem? _wpfItemShowWindow;
+        private System.Windows.Controls.MenuItem? _wpfItemToggleHotkeys;
         private System.Windows.Controls.MenuItem? _wpfItemSettings;
         private System.Windows.Controls.MenuItem? _wpfItemAbout;
         private System.Windows.Controls.MenuItem? _wpfItemExit;
         private Window? _dummyWindow;
+        private bool _isHotkeysDisabled;
 
         public TrayIconService(QuickSearchViewModel viewModel, Action showWindowAction, Action toggleVisibilityAction)
         {
@@ -93,6 +95,9 @@ namespace SwiftList.App.Services
             };
             _wpfItemShowWindow.Click += (s, e) => ShowSearchWindow();
 
+            _wpfItemToggleHotkeys = new System.Windows.Controls.MenuItem();
+            _wpfItemToggleHotkeys.Click += (s, e) => ToggleHotkeys();
+
             _wpfItemSettings = new System.Windows.Controls.MenuItem
             {
                 Icon = CreateIcon("\uE713", "MenuText")
@@ -112,6 +117,7 @@ namespace SwiftList.App.Services
             _wpfItemExit.Click += (s, e) => Application.Current.Shutdown();
 
             _wpfContextMenu.Items.Add(_wpfItemShowWindow);
+            _wpfContextMenu.Items.Add(_wpfItemToggleHotkeys);
             _wpfContextMenu.Items.Add(_wpfItemSettings);
             _wpfContextMenu.Items.Add(new System.Windows.Controls.Separator());
             _wpfContextMenu.Items.Add(_wpfItemAbout);
@@ -187,6 +193,33 @@ namespace SwiftList.App.Services
             if (_wpfItemSettings != null) _wpfItemSettings.Header = TranslationManager.Instance["Tray_Settings"];
             if (_wpfItemAbout != null) _wpfItemAbout.Header = TranslationManager.Instance["Tray_About"];
             if (_wpfItemExit != null) _wpfItemExit.Header = TranslationManager.Instance["Tray_Exit"];
+            UpdateHotkeysMenuState();
+        }
+
+        private void ToggleHotkeys()
+        {
+            if (_wpfItemToggleHotkeys == null) return;
+            _isHotkeysDisabled = !_isHotkeysDisabled;
+            if (App.HookClient != null)
+            {
+                App.HookClient.IsHotkeysDisabled = _isHotkeysDisabled;
+            }
+            UpdateHotkeysMenuState();
+        }
+
+        private void UpdateHotkeysMenuState()
+        {
+            if (_wpfItemToggleHotkeys == null) return;
+            _wpfItemToggleHotkeys.Header = TranslationManager.Instance["Tray_ToggleHotkeys"];
+            bool isDisabled = App.HookClient != null ? App.HookClient.IsHotkeysDisabled : _isHotkeysDisabled;
+            if (isDisabled)
+            {
+                _wpfItemToggleHotkeys.Icon = CreateIcon("\uE73E", "AccentBlue");
+            }
+            else
+            {
+                _wpfItemToggleHotkeys.Icon = CreateIcon("\uE71A", "MenuText");
+            }
         }
 
         private void ShowSettingsWindow(string? targetSection = null)

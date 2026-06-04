@@ -227,6 +227,7 @@
   "Search_KeywordOnly": "Keyword {0}",
   "Search_KeywordParams": "Keyword {0} · Args {1}",
   "Tray_ShowWindow": "Show Main Window",
+  "Tray_ToggleHotkeys": "Disable Hotkeys",
   "Tray_Settings": "Settings",
   "Tray_About": "About",
   "Tray_Exit": "Exit",

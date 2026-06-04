@@ -227,6 +227,7 @@
   "Search_KeywordOnly": "关键字 {0}",
   "Search_KeywordParams": "关键字 {0} · 参数 {1}",
   "Tray_ShowWindow": "显示主窗口",
+  "Tray_ToggleHotkeys": "禁用快捷键",
   "Tray_Settings": "设置",
   "Tray_About": "关于",
   "Tray_Exit": "退出",

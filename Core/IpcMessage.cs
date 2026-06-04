@@ -10,6 +10,7 @@ namespace SwiftList.Core
         NavigateDialog = 5,
         RestoreDialogFocus = 6,
         ReloadSettings = 7,
+        SetHotkeysDisabled = 8,
 
         // Hook -> App
         Activate = 10,

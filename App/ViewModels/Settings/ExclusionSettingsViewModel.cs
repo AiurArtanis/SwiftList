@@ -120,6 +120,10 @@ namespace SwiftList.App.ViewModels.Settings
 
         public void Save()
         {
+            ApplyBulkText(ExcludedPaths, ExcludedPathsText);
+            ApplyBulkText(IgnoredGlobs, IgnoredGlobsText);
+            ApplyBulkText(IgnoredRegexes, IgnoredRegexesText);
+
             _userSettings.ExcludedPaths = NormalizeItems(ExcludedPaths);
             _userSettings.IgnoredPathGlobs = NormalizeItems(IgnoredGlobs);
             _userSettings.IgnoredPathRegexes = NormalizeItems(IgnoredRegexes);

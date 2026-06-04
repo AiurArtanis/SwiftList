@@ -29,6 +29,7 @@ namespace SwiftList.Core.Hook.InlineSearch
         public bool IsQuickSearchWindowVisible { get; set; }
         public bool IsInlineSearchVisible { get; set; }
         public uint AppProcessId { get; set; }
+        public bool IsHotkeysDisabledTemporarily { get; set; }
 
         public KeyboardHookService(ExplorerTracker explorerTracker)
         {
@@ -66,11 +67,6 @@ namespace SwiftList.Core.Hook.InlineSearch
 
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (KeyboardUtils.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses))
-            {
-                return KeyboardNativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
-            }
-
             if (FullscreenHelper.IsForegroundWindowFullScreen())
             {
                 return KeyboardNativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
@@ -83,7 +79,8 @@ namespace SwiftList.Core.Hook.InlineSearch
                 uint time = hookStruct.time;
 
                 // 1. Detect Toggle Window Hotkey
-                if (_hotkeyDetector.CheckToggleWindowHotkey(vkCode, time, out bool consumeToggleKey, OnDoubleCtrl))
+                bool bypassToggleHotkey = IsHotkeysDisabledTemporarily || KeyboardUtils.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses);
+                if (!bypassToggleHotkey && _hotkeyDetector.CheckToggleWindowHotkey(vkCode, time, out bool consumeToggleKey, OnDoubleCtrl))
                 {
                     if (consumeToggleKey)
                     {

@@ -27,6 +27,20 @@ namespace SwiftList.Core.Hook
         /// </summary>
         public int ServiceProcessId { get; private set; }
 
+        private bool _isHotkeysDisabled;
+        public bool IsHotkeysDisabled
+        {
+            get => _isHotkeysDisabled;
+            set
+            {
+                if (_isHotkeysDisabled != value)
+                {
+                    _isHotkeysDisabled = value;
+                    SendMessage(new IpcMessage { Id = IpcMessageId.SetHotkeysDisabled, BoolVal = value });
+                }
+            }
+        }
+
         // Hook and Tracker Events fired to App
         public event Action? OnActivated;
         public event Action<char>? OnCharacterTyped;
@@ -130,6 +144,7 @@ namespace SwiftList.Core.Hook
 
                     // Send initial process ID of the App so the Service can ignore it
                     SendMessage(new IpcMessage { Id = IpcMessageId.SetAppProcessId, ProcessId = (uint)Environment.ProcessId });
+                    SendMessage(new IpcMessage { Id = IpcMessageId.SetHotkeysDisabled, BoolVal = _isHotkeysDisabled });
 
                     // Listen for events from Hook Service
                     while (!token.IsCancellationRequested && pipe.IsConnected && !_hookProcess.HasExited)

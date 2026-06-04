@@ -187,6 +187,7 @@ namespace SwiftList.App.ViewModels.Settings
             Blacklist.Save();
             
             _userSettings.Save();
+            App.HookClient?.SendMessage(new IpcMessage { Id = IpcMessageId.ReloadSettings });
             PluginManager.Instance.RefreshDisabledComponents();
             NetworkDrive.ResetPendingEdits();
             if (NetworkSettingsChanged(previousNetworkDrives, _userSettings.NetworkDrives) ||

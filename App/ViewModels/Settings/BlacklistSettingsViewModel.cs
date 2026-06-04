@@ -56,6 +56,7 @@ namespace SwiftList.App.ViewModels.Settings
 
         public void Save()
         {
+            ApplyBulkText();
             _userSettings.BlacklistedProcesses = NormalizeItems();
             RefreshBulkText();
         }

@@ -52,6 +52,8 @@ namespace SwiftList.Core.Hook
 
         private int _nativeThreadId;
         private volatile bool _running;
+        private uint _appProcessId;
+        private bool _isHotkeysDisabledTemporarily;
 
         public HookProcess(HookIpcServer ipcServer)
         {
@@ -74,6 +76,7 @@ namespace SwiftList.Core.Hook
                         if (_keyboardHook != null) _keyboardHook.IsInlineSearchVisible = msg.BoolVal;
                         break;
                     case IpcMessageId.SetAppProcessId:
+                        _appProcessId = msg.ProcessId;
                         if (_keyboardHook != null) _keyboardHook.AppProcessId = msg.ProcessId;
                         if (_explorerTracker != null) _explorerTracker.AppProcessId = msg.ProcessId;
                         break;
@@ -137,6 +140,10 @@ namespace SwiftList.Core.Hook
                     case IpcMessageId.ReloadSettings:
                         if (_keyboardHook != null) _keyboardHook.ReloadSettings();
                         break;
+                    case IpcMessageId.SetHotkeysDisabled:
+                        _isHotkeysDisabledTemporarily = msg.BoolVal;
+                        if (_keyboardHook != null) _keyboardHook.IsHotkeysDisabledTemporarily = msg.BoolVal;
+                        break;
                 }
             }
             catch (Exception ex)
@@ -153,6 +160,7 @@ namespace SwiftList.Core.Hook
             {
                 // 1. Start Explorer Tracker
                 _explorerTracker = new ExplorerTracker();
+                _explorerTracker.AppProcessId = _appProcessId;
                 _explorerTracker.OnExplorerActivated += (hwnd, title, className, isDesktop) =>
                 {
                     _ipcServer.SendMessage(new IpcMessage
@@ -197,6 +205,8 @@ namespace SwiftList.Core.Hook
 
                 // 2. Start Keyboard Hook
                 _keyboardHook = new KeyboardHookService(_explorerTracker);
+                _keyboardHook.AppProcessId = _appProcessId;
+                _keyboardHook.IsHotkeysDisabledTemporarily = _isHotkeysDisabledTemporarily;
                 _keyboardHook.OnDoubleCtrl += () =>
                 {
                     Logger.Log("[HookProcess] Double-Ctrl detected, sending ACTIVATE.", LogLevel.Debug);

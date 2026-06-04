@@ -54,6 +54,7 @@ namespace SwiftList.Core
                     break;
                 case IpcMessageId.SetQuickSearchVisible:
                 case IpcMessageId.SetInlineSearchVisible:
+                case IpcMessageId.SetHotkeysDisabled:
                     writer.Write(msg.BoolVal);
                     break;
                 case IpcMessageId.NavigateDialog:
@@ -124,6 +125,7 @@ namespace SwiftList.Core
                     break;
                 case IpcMessageId.SetQuickSearchVisible:
                 case IpcMessageId.SetInlineSearchVisible:
+                case IpcMessageId.SetHotkeysDisabled:
                     msg.BoolVal = reader.ReadBoolean();
                     break;
                 case IpcMessageId.NavigateDialog:
