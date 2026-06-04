@@ -20,9 +20,19 @@ namespace SwiftList.Service
                 Logger.Log($"CRITICAL SERVICE UNHANDLED EXCEPTION:\n{e.ExceptionObject}", SwiftList.Core.LogLevel.Error);
             };
 
-            Logger.Initialize("service.log", Logger.SharedDataDir, overwrite: true);
-            Logger.Log("=========================================");
-            Logger.Log($"Service starting with arguments: {string.Join(" ", args)}");
+            bool isHook = args.Length > 0 && args[0].Equals("--hook", StringComparison.OrdinalIgnoreCase);
+            if (isHook)
+            {
+                Logger.Initialize("hook.log", Logger.UserDataDir, overwrite: true);
+                Logger.Log("=========================================");
+                Logger.Log($"Hook starting with arguments: {string.Join(" ", args)}");
+            }
+            else
+            {
+                Logger.Initialize("service.log", Logger.SharedDataDir, overwrite: true);
+                Logger.Log("=========================================");
+                Logger.Log($"Service starting with arguments: {string.Join(" ", args)}");
+            }
 
             if (args.Length > 0)
             {
@@ -47,7 +57,6 @@ namespace SwiftList.Service
                 }
                 else if (cmd == "--hook")
                 {
-                    Logger.Initialize("hook.log", Logger.UserDataDir, overwrite: true);
                     Logger.Log("Running in hook mode.");
                     RunHookMode();
                     return;

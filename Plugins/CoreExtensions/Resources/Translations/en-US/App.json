@@ -60,6 +60,7 @@
   "Local_RebuildBtn": "Rebuild Index",
   "Local_Drives": "Drives",
   "Local_HeaderDrive": "Drive",
+  "Local_HeaderFileSystem": "File System",
   "Local_HeaderStatus": "Status",
   "Local_HeaderItems": "Items",
   "Local_UpdatePolicy": "Update Policy",

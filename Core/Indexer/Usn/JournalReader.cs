@@ -50,6 +50,50 @@ namespace SwiftList.Core.Indexer.Usn
 
             if (!success)
             {
+                int err = Marshal.GetLastWin32Error();
+                string fsType = VolumeHelper.GetFileSystemType(drive);
+                Logger.Log($"[JournalReader] Failed to query USN journal on {drive}. Error: {err}, FileSystem: {fsType}", SwiftList.Core.LogLevel.Warn);
+
+                if (fsType.Equals("NTFS", StringComparison.OrdinalIgnoreCase))
+                {
+                    Logger.Log($"[JournalReader] Attempting to create/activate USN journal on NTFS drive {drive}...");
+                    var createData = new Win32Api.CREATE_USN_JOURNAL_DATA
+                    {
+                        MaximumSize = 0,
+                        AllocationDelta = 0
+                    };
+                    uint bytesReturnedCreate;
+                    bool createSuccess = Win32Api.DeviceIoControl(
+                        handle,
+                        Win32Api.FSCTL_CREATE_USN_JOURNAL,
+                        ref createData, (uint)Marshal.SizeOf<Win32Api.CREATE_USN_JOURNAL_DATA>(),
+                        IntPtr.Zero, 0,
+                        out bytesReturnedCreate,
+                        IntPtr.Zero
+                    );
+
+                    if (createSuccess)
+                    {
+                        Logger.Log($"[JournalReader] USN journal successfully created/activated on {drive}. Retrying query...");
+                        success = Win32Api.DeviceIoControl(
+                            handle,
+                            Win32Api.FSCTL_QUERY_USN_JOURNAL,
+                            IntPtr.Zero, 0,
+                            queryBuf, (uint)queryBuf.Length,
+                            out bytesReturned,
+                            IntPtr.Zero
+                        );
+                    }
+                    else
+                    {
+                        int createErr = Marshal.GetLastWin32Error();
+                        Logger.Log($"[JournalReader] Failed to create USN journal on {drive}. Error: {createErr}", SwiftList.Core.LogLevel.Error);
+                    }
+                }
+            }
+
+            if (!success)
+            {
                 Logger.Log($"[JournalReader] Failed to query USN journal on {drive}.", SwiftList.Core.LogLevel.Error);
                 return null;
             }

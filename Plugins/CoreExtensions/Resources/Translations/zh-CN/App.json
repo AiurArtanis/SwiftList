@@ -60,6 +60,7 @@
   "Local_RebuildBtn": "重建索引",
   "Local_Drives": "驱动器",
   "Local_HeaderDrive": "驱动器",
+  "Local_HeaderFileSystem": "文件系统",
   "Local_HeaderStatus": "状态",
   "Local_HeaderItems": "项目",
   "Local_UpdatePolicy": "更新策略",

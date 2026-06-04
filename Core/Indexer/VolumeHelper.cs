@@ -76,5 +76,21 @@ namespace SwiftList.Core
             }
             return detected;
         }
+
+        public static string GetFileSystemType(string driveLetter)
+        {
+            string rootPath = $"{driveLetter}:\\";
+            var volumeName = new StringBuilder(260);
+            var fileSystemName = new StringBuilder(260);
+            
+            bool success = Win32Api.GetVolumeInformationW(
+                rootPath,
+                volumeName, (uint)volumeName.Capacity,
+                out _, out _, out _,
+                fileSystemName, (uint)fileSystemName.Capacity
+            );
+            
+            return success ? fileSystemName.ToString() : "NTFS";
+        }
     }
 }

@@ -28,7 +28,7 @@ namespace SwiftList.Core
             {
                 Drive = d,
                 Enabled = enabled.Contains(d),
-                Kind = "LocalNtfs",
+                Kind = VolumeHelper.GetFileSystemType(d),
                 State = enabled.Contains(d) ? "pending" : "disabled",
                 CachePath = FileRecordStoreSerializer.GetBasePath(_indexCacheDir, d) + ".meta"
             }).ToList();

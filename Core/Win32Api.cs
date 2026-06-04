@@ -21,6 +21,7 @@ namespace SwiftList.Core
         public const uint FSCTL_QUERY_USN_JOURNAL = 0x000900f4;
         public const uint FSCTL_ENUM_USN_DATA = 0x000900b3;
         public const uint FSCTL_READ_USN_JOURNAL = 0x000900bb;
+        public const uint FSCTL_CREATE_USN_JOURNAL = 0x000900e7;
         public const uint ERROR_HANDLE_EOF = 38;
 
         // USN Reason Codes
@@ -92,6 +93,13 @@ namespace SwiftList.Core
             public ulong UsnJournalID;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct CREATE_USN_JOURNAL_DATA
+        {
+            public ulong MaximumSize;
+            public ulong AllocationDelta;
+        }
+
         public struct ParsedUsnRecord
         {
             public uint RecordLength;
@@ -150,6 +158,18 @@ namespace SwiftList.Core
             IntPtr lpInBuffer,
             uint nInBufferSize,
             byte[] lpOutBuffer,
+            uint nOutBufferSize,
+            out uint lpBytesReturned,
+            IntPtr lpOverlapped
+        );
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool DeviceIoControl(
+            SafeFileHandle hDevice,
+            uint dwIoControlCode,
+            ref CREATE_USN_JOURNAL_DATA lpInBuffer,
+            uint nInBufferSize,
+            IntPtr lpOutBuffer,
             uint nOutBufferSize,
             out uint lpBytesReturned,
             IntPtr lpOverlapped
