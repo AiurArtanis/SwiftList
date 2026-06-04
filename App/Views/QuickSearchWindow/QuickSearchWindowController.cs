@@ -149,9 +149,21 @@ namespace SwiftList.App.Views.QuickSearchWindow
 
         public void PositionWindow()
         {
-            var screen = SystemParameters.WorkArea;
-            _window.Left = (screen.Width - _window.Width) / 2 + screen.Left;
-            _window.Top = screen.Height * 0.25 + screen.Top;
+            double dpiScaleX = 1.0, dpiScaleY = 1.0;
+            var source = PresentationSource.FromVisual(_window);
+            if (source?.CompositionTarget != null)
+            {
+                dpiScaleX = source.CompositionTarget.TransformFromDevice.M11;
+                dpiScaleY = source.CompositionTarget.TransformFromDevice.M22;
+            }
+
+            var screen = _lastActiveHwnd != IntPtr.Zero
+                ? System.Windows.Forms.Screen.FromHandle(_lastActiveHwnd)
+                : System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Control.MousePosition);
+
+            var workingArea = screen.WorkingArea;
+            _window.Left = (workingArea.Width * dpiScaleX - _window.Width) / 2 + workingArea.Left * dpiScaleX;
+            _window.Top = workingArea.Height * dpiScaleY * 0.25 + workingArea.Top * dpiScaleY;
         }
 
         public void ToggleVisibility()

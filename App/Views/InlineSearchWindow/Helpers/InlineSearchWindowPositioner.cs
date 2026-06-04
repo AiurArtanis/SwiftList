@@ -71,9 +71,10 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                 Grid.SetRow(_window.ResultsSeparator, 1);
                 Grid.SetRow(_window.SearchBoxBorder, 2);
 
-                var workArea = SystemParameters.WorkArea;
-                _window.Left = workArea.Right - windowWidth + xamlMargin - visibleMargin;
-                _window.Top = workArea.Bottom - windowHeight + xamlMargin - visibleMargin;
+                var screen = System.Windows.Forms.Screen.PrimaryScreen ?? System.Windows.Forms.Screen.AllScreens[0];
+                var workingArea = screen.WorkingArea;
+                _window.Left = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
+                _window.Top = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
             }
             else if (tracker.ActiveHwnd != IntPtr.Zero)
             {
@@ -111,12 +112,13 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                         _window.Top = winBottom - windowHeight + xamlMargin - visibleMargin;
                     }
 
-                    // Constrain within the monitor work area
-                    var workArea = SystemParameters.WorkArea;
-                    double minLeft = workArea.Left + visibleMargin - xamlMargin;
-                    double minTop = workArea.Top + visibleMargin - xamlMargin;
-                    double maxLeft = workArea.Right - windowWidth + xamlMargin - visibleMargin;
-                    double maxTop = workArea.Bottom - windowHeight + xamlMargin - visibleMargin;
+                    // Constrain within the monitor work area where the active window is located
+                    var screen = System.Windows.Forms.Screen.FromHandle(tracker.ActiveHwnd);
+                    var workingArea = screen.WorkingArea;
+                    double minLeft = workingArea.Left * dpiScaleX + visibleMargin - xamlMargin;
+                    double minTop = workingArea.Top * dpiScaleY + visibleMargin - xamlMargin;
+                    double maxLeft = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
+                    double maxTop = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
 
                     if (_window.Left < minLeft) _window.Left = minLeft;
                     if (_window.Top < minTop) _window.Top = minTop;
@@ -125,10 +127,13 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                 }
                 else
                 {
-                    // Fallback: place the window safely in the bottom-right corner of the work area so it is fully visible
-                    var workArea = SystemParameters.WorkArea;
-                    _window.Left = workArea.Right - windowWidth + xamlMargin - visibleMargin;
-                    _window.Top = workArea.Bottom - windowHeight + xamlMargin - visibleMargin;
+                    // Fallback: place the window safely in the bottom-right corner of the active window's monitor work area so it is fully visible
+                    var screen = tracker.ActiveHwnd != IntPtr.Zero 
+                        ? System.Windows.Forms.Screen.FromHandle(tracker.ActiveHwnd)
+                        : System.Windows.Forms.Screen.PrimaryScreen ?? System.Windows.Forms.Screen.AllScreens[0];
+                    var workingArea = screen.WorkingArea;
+                    _window.Left = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
+                    _window.Top = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
                 }
             }
         }
