@@ -59,6 +59,15 @@ namespace SwiftList.App.ViewModels.Settings
             set => SetProperty(ref _drivesPlaceholderText, value);
         }
 
+        public bool IsUserAdmin => UpdateService.Instance.IsUserAdmin();
+
+        private bool _isDriveCheckboxEnabled;
+        public bool IsDriveCheckboxEnabled
+        {
+            get => _isDriveCheckboxEnabled;
+            set => SetProperty(ref _isDriveCheckboxEnabled, value);
+        }
+
         public void UpdateStatus(UsnIndexer.IndexerStatus status, MachineSettings settings)
         {
             var enabled = settings.EnabledLocalDrives.Count == 0
@@ -86,7 +95,8 @@ namespace SwiftList.App.ViewModels.Settings
             bool isServiceReady = status.State != "error";
             bool isBusy = status.State is "indexing" or "loading-cache" or "pending";
 
-            CanRebuild = isServiceReady && (status.State is "ready" or "idle");
+            CanRebuild = IsUserAdmin && isServiceReady && (status.State is "ready" or "idle");
+            IsDriveCheckboxEnabled = IsUserAdmin && isServiceReady && !isBusy;
 
             if (!isServiceReady)
             {

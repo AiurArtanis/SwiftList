@@ -94,6 +94,12 @@
                                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_General]}"/>
                                 </StackPanel>
                             </ListBoxItem>
+                            <ListBoxItem Tag="Hotkeys">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE765;" FontFamily="Segoe MDL2 Assets" Margin="0,0,12,0"/>
+                                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Hotkeys]}"/>
+                                </StackPanel>
+                            </ListBoxItem>
                             <ListBoxItem Tag="Plugins">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xECAA;" FontFamily="Segoe MDL2 Assets" Margin="0,0,12,0"/>
@@ -115,6 +121,8 @@
                         <settings:NetworkDriveSettingsPage x:Name="PageNetwork" Visibility="Collapsed"/>
                         <settings:ExclusionSettingsPage x:Name="PageExclusions" Visibility="Collapsed"/>
                         <settings:ExperienceSettingsPage x:Name="PageExperience" Visibility="Collapsed"/>
+                        <settings:HotkeySettingsPage x:Name="PageHotkeys" Visibility="Collapsed"
+                                                      DataContext="{Binding Hotkeys}"/>
                         <plugins:PluginManagementSettingsPage x:Name="PagePlugins" Visibility="Collapsed"
                                                               DataContext="{Binding Plugins}"/>
                         <settings:AboutSettingsPage x:Name="PageAbout" Visibility="Collapsed"/>

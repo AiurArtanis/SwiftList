@@ -63,6 +63,7 @@ namespace SwiftList.App
             PageNetwork.Visibility = tag == "Network" ? Visibility.Visible : Visibility.Collapsed;
             PageExclusions.Visibility = tag == "Exclusions" ? Visibility.Visible : Visibility.Collapsed;
             PageExperience.Visibility = tag == "Experience" ? Visibility.Visible : Visibility.Collapsed;
+            PageHotkeys.Visibility = tag == "Hotkeys" ? Visibility.Visible : Visibility.Collapsed;
             PagePlugins.Visibility = tag == "Plugins" ? Visibility.Visible : Visibility.Collapsed;
             PageAbout.Visibility = tag == "About" ? Visibility.Visible : Visibility.Collapsed;
         }

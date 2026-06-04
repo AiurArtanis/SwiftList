@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using SwiftList.App.Services;
 using SwiftList.App.ViewModels;
+using SwiftList.Core;
 
 namespace SwiftList.App.Views.InlineSearchWindow.Helpers
 {
@@ -99,6 +100,45 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
             var scrollViewer = GetScrollViewer(_window.LstResults);
             int firstVisible = scrollViewer != null ? (int)Math.Round(scrollViewer.VerticalOffset) : 0;
             int shortcutIndex = 1;
+
+            string selectMod = "Ctrl";
+            string quickSwitchHint = "Ctrl+G";
+            try
+            {
+                var settings = UserSettings.Load();
+                var mod = settings.SelectIndexModifier;
+                if (!string.IsNullOrEmpty(mod))
+                {
+                    selectMod = string.Equals(mod, "Control", StringComparison.OrdinalIgnoreCase) ? "Ctrl" : mod;
+                }
+
+                var quickSwitch = settings.QuickSwitchHotkey;
+                if (quickSwitch != null)
+                {
+                    if (string.Equals(quickSwitch.Type, "KeyCombo", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string qsMod = quickSwitch.Modifier;
+                        if (string.Equals(qsMod, "Control", StringComparison.OrdinalIgnoreCase)) qsMod = "Ctrl";
+                        
+                        string qsKey = quickSwitch.Key;
+                        if (string.Equals(qsKey, "Space", StringComparison.OrdinalIgnoreCase)) qsKey = "Space";
+                        else if (string.Equals(qsKey, "Enter", StringComparison.OrdinalIgnoreCase)) qsKey = "Enter";
+                        else if (string.Equals(qsKey, "Escape", StringComparison.OrdinalIgnoreCase)) qsKey = "Esc";
+                        else if (string.Equals(qsKey, "Tab", StringComparison.OrdinalIgnoreCase)) qsKey = "Tab";
+
+                        quickSwitchHint = string.Equals(qsMod, "None", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(qsMod)
+                            ? qsKey : $"{qsMod}+{qsKey}";
+                    }
+                    else // ModifierClick
+                    {
+                        string qsClickMod = quickSwitch.ClickModifier;
+                        if (string.Equals(qsClickMod, "Control", StringComparison.OrdinalIgnoreCase)) qsClickMod = "Ctrl";
+                        quickSwitchHint = $"{qsClickMod} x{quickSwitch.ClickCount}";
+                    }
+                }
+            }
+            catch { }
+
             for (int i = 0; i < _window.LstResults.Items.Count; i++)
             {
                 if (_window.LstResults.Items[i] is AppSearchResult item)
@@ -112,14 +152,14 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
 
                     if (item.IsJumpToExplorerPath)
                     {
-                        item.ShortcutHint = "Ctrl+G";
+                        item.ShortcutHint = quickSwitchHint;
                         item.ShortcutVisibility = Visibility.Visible;
                         continue;
                     }
 
                     if (i >= firstVisible && shortcutIndex <= 9)
                     {
-                        item.ShortcutHint = $"Ctrl+{shortcutIndex}";
+                        item.ShortcutHint = $"{selectMod}+{shortcutIndex}";
                         item.ShortcutVisibility = Visibility.Visible;
                         shortcutIndex++;
                     }

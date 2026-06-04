@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Controls;
 using SwiftList.App.Services;
+using SwiftList.App.Helpers;
 using SwiftList.Core;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
@@ -133,7 +134,8 @@ namespace SwiftList.App.Views.QuickSearchWindow
                 return;
             }
 
-            if (Keyboard.Modifiers == ModifierKeys.Control)
+            var selectIndexMod = UserSettings.Load().SelectIndexModifier;
+            if (Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(selectIndexMod))
             {
                 int num = -1;
                 if (e.Key >= Key.D1 && e.Key <= Key.D9)
@@ -143,7 +145,7 @@ namespace SwiftList.App.Views.QuickSearchWindow
 
                 if (num >= 0)
                 {
-                    var scrollViewer = GetScrollViewer(_window.LstResults);
+                    var scrollViewer = WpfUiHelper.GetScrollViewer(_window.LstResults);
                     int firstVisible = scrollViewer != null ? (int)Math.Round(scrollViewer.VerticalOffset) : 0;
                     int shortcutIndex = 0;
 
@@ -270,18 +272,6 @@ namespace SwiftList.App.Views.QuickSearchWindow
             }
 
             return path;
-        }
-
-        private ScrollViewer? GetScrollViewer(DependencyObject depObj)
-        {
-            if (depObj is ScrollViewer viewer) return viewer;
-            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(depObj); i++)
-            {
-                var child = System.Windows.Media.VisualTreeHelper.GetChild(depObj, i);
-                var result = GetScrollViewer(child);
-                if (result != null) return result;
-            }
-            return null;
         }
 
         private bool IsSearchCaretAtEnd()

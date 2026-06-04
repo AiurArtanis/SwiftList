@@ -85,6 +85,18 @@ namespace SwiftList.App
             var scrollViewer = GetScrollViewer(_window.LstResults);
             int firstVisible = scrollViewer != null ? (int)Math.Round(scrollViewer.VerticalOffset) : 0;
             int shortcutIndex = 1;
+
+            string selectMod = "Ctrl";
+            try
+            {
+                var mod = UserSettings.Load().SelectIndexModifier;
+                if (!string.IsNullOrEmpty(mod))
+                {
+                    selectMod = string.Equals(mod, "Control", StringComparison.OrdinalIgnoreCase) ? "Ctrl" : mod;
+                }
+            }
+            catch { }
+
             for (int i = 0; i < _window.LstResults.Items.Count; i++)
             {
                 if (_window.LstResults.Items[i] is AppSearchResult item)
@@ -98,7 +110,7 @@ namespace SwiftList.App
 
                     if (i >= firstVisible && shortcutIndex <= 9)
                     {
-                        item.ShortcutHint = $"Ctrl+{shortcutIndex}";
+                        item.ShortcutHint = $"{selectMod}+{shortcutIndex}";
                         item.ShortcutVisibility = Visibility.Visible;
                         shortcutIndex++;
                     }

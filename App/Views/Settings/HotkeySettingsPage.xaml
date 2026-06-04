@@ -1,0 +1,253 @@
+<UserControl x:Class="SwiftList.App.Views.Settings.HotkeySettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:services="clr-namespace:SwiftList.App.Services"
+             mc:Ignorable="d"
+             d:DesignHeight="550" d:DesignWidth="700">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/SwiftList.App;component/Resources/Styles.xaml"/>
+                <ResourceDictionary Source="../../Resources/Styles/SearchWindow.xaml"/>
+                <ResourceDictionary Source="../../Resources/Styles/SettingsWindow.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="0,0,10,0">
+            <TextBlock Style="{StaticResource SettingsSectionTitle}" 
+                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_Title]}"/>
+            <TextBlock Style="{StaticResource SettingsHintText}" 
+                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_Hint]}"/>
+
+            <!-- 1. Toggle Search Window Hotkey Card -->
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ToggleTitle]}" 
+                               FontWeight="SemiBold" FontSize="13" FontFamily="Microsoft YaHei UI" Margin="0,0,0,10"/>
+                    
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="200"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_TriggerType]}" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1"
+                                  Style="{StaticResource SettingsComboBox}"
+                                  ItemsSource="{Binding HotkeyTypeOptions}"
+                                  SelectedValuePath="Value"
+                                  DisplayMemberPath="Label"
+                                  SelectedValue="{Binding ToggleType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+
+                    <!-- Toggle Modifier Click Config (Double Ctrl) -->
+                    <StackPanel Margin="0,8,0,0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ToggleType}" Value="ModifierClick">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="200"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ClickModifier]}" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1"
+                                      Style="{StaticResource SettingsComboBox}"
+                                      ItemsSource="{Binding ClickModifierOptions}"
+                                      SelectedValuePath="Value"
+                                      DisplayMemberPath="Label"
+                                      SelectedValue="{Binding ToggleClickModifier, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="200"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ClickCount]}" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1"
+                                      Style="{StaticResource SettingsComboBox}"
+                                      ItemsSource="{Binding ClickCountOptions}"
+                                      SelectedValuePath="Value"
+                                      DisplayMemberPath="Label"
+                                      SelectedValue="{Binding ToggleClickCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Toggle Key Combo Config (Alt+Space) -->
+                    <StackPanel Margin="0,8,0,0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ToggleType}" Value="KeyCombo">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="200"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ComboModifier]}" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1"
+                                      Style="{StaticResource SettingsComboBox}"
+                                      ItemsSource="{Binding ModifierOptions}"
+                                      SelectedValuePath="Value"
+                                      DisplayMemberPath="Label"
+                                      SelectedValue="{Binding ToggleModifier, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="200"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ComboKey]}" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1"
+                                      Style="{StaticResource SettingsComboBox}"
+                                      ItemsSource="{Binding KeyOptions}"
+                                      SelectedValuePath="Value"
+                                      DisplayMemberPath="Label"
+                                      SelectedValue="{Binding ToggleKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 2. Quick Switch Redirect Hotkey Card -->
+            <Border Style="{StaticResource SettingsCard}" Margin="0,15,0,0">
+                <StackPanel>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickSwitchTitle]}" 
+                               FontWeight="SemiBold" FontSize="13" FontFamily="Microsoft YaHei UI" Margin="0,0,0,10"/>
+
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="200"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_TriggerType]}" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1"
+                                  Style="{StaticResource SettingsComboBox}"
+                                  ItemsSource="{Binding HotkeyTypeOptions}"
+                                  SelectedValuePath="Value"
+                                  DisplayMemberPath="Label"
+                                  SelectedValue="{Binding QuickSwitchType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+
+                    <!-- Quick Switch Modifier Click Config -->
+                    <StackPanel Margin="0,8,0,0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding QuickSwitchType}" Value="ModifierClick">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="200"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ClickModifier]}" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1"
+                                      Style="{StaticResource SettingsComboBox}"
+                                      ItemsSource="{Binding ClickModifierOptions}"
+                                      SelectedValuePath="Value"
+                                      DisplayMemberPath="Label"
+                                      SelectedValue="{Binding QuickSwitchClickModifier, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="200"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ClickCount]}" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1"
+                                      Style="{StaticResource SettingsComboBox}"
+                                      ItemsSource="{Binding ClickCountOptions}"
+                                      SelectedValuePath="Value"
+                                      DisplayMemberPath="Label"
+                                      SelectedValue="{Binding QuickSwitchClickCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Quick Switch Key Combo Config (Ctrl+G) -->
+                    <StackPanel Margin="0,8,0,0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding QuickSwitchType}" Value="KeyCombo">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="200"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ComboModifier]}" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1"
+                                      Style="{StaticResource SettingsComboBox}"
+                                      ItemsSource="{Binding ModifierOptions}"
+                                      SelectedValuePath="Value"
+                                      DisplayMemberPath="Label"
+                                      SelectedValue="{Binding QuickSwitchModifier, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="200"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ComboKey]}" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1"
+                                      Style="{StaticResource SettingsComboBox}"
+                                      ItemsSource="{Binding KeyOptions}"
+                                      SelectedValuePath="Value"
+                                      DisplayMemberPath="Label"
+                                      SelectedValue="{Binding QuickSwitchKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 3. Selection Shortcut 1-9 Card -->
+            <Border Style="{StaticResource SettingsCard}" Margin="0,15,0,0">
+                <StackPanel>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectionTitle]}" 
+                               FontWeight="SemiBold" FontSize="13" FontFamily="Microsoft YaHei UI" Margin="0,0,0,10"/>
+
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="200"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectionModifier]}" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1"
+                                  Style="{StaticResource SettingsComboBox}"
+                                  ItemsSource="{Binding SelectIndexModifierOptions}"
+                                  SelectedValuePath="Value"
+                                  DisplayMemberPath="Label"
+                                  SelectedValue="{Binding SelectIndexModifier, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

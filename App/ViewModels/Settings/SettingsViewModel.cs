@@ -44,6 +44,7 @@ namespace SwiftList.App.ViewModels.Settings
             Experience = new ExperienceSettingsViewModel(_userSettings);
             Exclusions = new ExclusionSettingsViewModel(_userSettings);
             Plugins = new PluginManagementViewModel(_userSettings);
+            Hotkeys = new HotkeySettingsViewModel(_userSettings);
 
             RefreshCommand = new RelayCommand(Refresh);
             ApplyCommand = new RelayCommand(Apply, () => CanApply);
@@ -71,6 +72,7 @@ namespace SwiftList.App.ViewModels.Settings
         public ExperienceSettingsViewModel Experience { get; }
         public ExclusionSettingsViewModel Exclusions { get; }
         public PluginManagementViewModel Plugins { get; }
+        public HotkeySettingsViewModel Hotkeys { get; }
 
         public ICommand RefreshCommand { get; }
         public ICommand ApplyCommand { get; }
@@ -179,6 +181,7 @@ namespace SwiftList.App.ViewModels.Settings
             Exclusions.Save();
             Experience.Apply();
             Plugins.Save();
+            Hotkeys.Apply();
             
             _userSettings.Save();
             PluginManager.Instance.RefreshDisabledComponents();

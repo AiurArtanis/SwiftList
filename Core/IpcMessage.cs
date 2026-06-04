@@ -9,6 +9,7 @@ namespace SwiftList.Core
         SetInlineSearchVisible = 4,
         NavigateDialog = 5,
         RestoreDialogFocus = 6,
+        ReloadSettings = 7,
 
         // Hook -> App
         Activate = 10,

@@ -118,8 +118,9 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                 return;
             }
 
-            // Ctrl + 1..9
-            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            // Custom Modifier + 1..9
+            var selectIndexMod = UserSettings.Load().SelectIndexModifier;
+            if (Keyboard.Modifiers == GetWpfModifier(selectIndexMod))
             {
                 int num = -1;
                 if (e.Key >= Key.D1 && e.Key <= Key.D9)
@@ -247,6 +248,25 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
         public static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
         {
             return InlineSearchWindowLayoutManager.FindVisualParent<T>(child);
+        }
+
+        private ModifierKeys GetWpfModifier(string modifierStr)
+        {
+            if (string.IsNullOrEmpty(modifierStr)) return ModifierKeys.Control;
+            switch (modifierStr.Trim().ToUpperInvariant())
+            {
+                case "ALT":
+                    return ModifierKeys.Alt;
+                case "SHIFT":
+                    return ModifierKeys.Shift;
+                case "WIN":
+                case "WINDOWS":
+                    return ModifierKeys.Windows;
+                case "NONE":
+                    return ModifierKeys.None;
+                default:
+                    return ModifierKeys.Control;
+            }
         }
     }
 }

@@ -134,6 +134,9 @@ namespace SwiftList.Core.Hook
                         }
                         break;
 
+                    case IpcMessageId.ReloadSettings:
+                        if (_keyboardHook != null) _keyboardHook.ReloadSettings();
+                        break;
                 }
             }
             catch (Exception ex)
