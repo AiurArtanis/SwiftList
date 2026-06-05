@@ -25,11 +25,11 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # 3. Install NSIS packaging tool via Chocolatey
-      - name: Install NSIS
+      # 3. Install Inno Setup packaging tool via Chocolatey
+      - name: Install Inno Setup
         run: |
-          choco install nsis -y
-          echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
+          choco install innosetup -y
+          echo "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
 
       # 4. Execute the build and package batch script
       - name: Run Build and Package Script

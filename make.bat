@@ -81,16 +81,16 @@ if errorlevel 1 (
 )
 del /s /q "%OUT%\*.pdb" >nul 2>&1
 
-:: 7. Find NSIS compiler
-set "MAKENSIS="
-where makensis >nul 2>&1
-if "%errorlevel%"=="0" set "MAKENSIS=makensis"
-if "%MAKENSIS%"=="" if exist "C:\Program Files (x86)\NSIS\makensis.exe" set "MAKENSIS=C:\Program Files (x86)\NSIS\makensis.exe"
-if "%MAKENSIS%"=="" if exist "C:\Program Files\NSIS\makensis.exe" set "MAKENSIS=C:\Program Files\NSIS\makensis.exe"
+:: 7. Find Inno Setup compiler
+set "ISCC="
+where iscc >nul 2>&1
+if "%errorlevel%"=="0" set "ISCC=iscc"
+if "%ISCC%"=="" if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" set "ISCC=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+if "%ISCC%"=="" if exist "C:\Program Files\Inno Setup 6\ISCC.exe" set "ISCC=C:\Program Files\Inno Setup 6\ISCC.exe"
 
-if "%MAKENSIS%"=="" (
-    echo [Error] NSIS compiler makensis.exe not found.
-    echo Please install NSIS or add it to your PATH.
+if "%ISCC%"=="" (
+    echo [Error] Inno Setup compiler ISCC.exe not found.
+    echo Please install Inno Setup or add it to your PATH.
     exit /b 1
 )
 
@@ -98,16 +98,15 @@ if "%MAKENSIS%"=="" (
 echo.
 echo Extracting application version...
 for /f "usebackq tokens=*" %%v in (`powershell -NoProfile -Command "([xml](Get-Content '%ROOT%App\App.csproj')).Project.PropertyGroup.Version"`) do set "APP_VER=%%v"
-for /f "usebackq tokens=*" %%v in (`powershell -NoProfile -Command "$a = '%APP_VER%.0.0.0' -split '\.'; $a[0..3] -join '.'"`) do set "APP_VER_4=%%v"
-echo App Version: %APP_VER% (PE Version: %APP_VER_4%)
+echo App Version: %APP_VER%
 
-:: 9. Compile NSIS Installer
+:: 9. Compile Inno Setup Installer
 echo.
-echo [6/6] Compiling NSIS Installer...
-echo Using NSIS compiler: "%MAKENSIS%"
-"%MAKENSIS%" /INPUTCHARSET UTF8 /DAPP_VERSION="%APP_VER%" /DAPP_VERSION_4="%APP_VER_4%" "%ROOT%Installer\installer.nsi"
+echo [6/6] Compiling Inno Setup Installer...
+echo Using Inno Setup compiler: "%ISCC%"
+"%ISCC%" /DAppVersion="%APP_VER%" "%ROOT%Installer\installer.iss"
 if errorlevel 1 (
-    echo [Error] NSIS compilation failed.
+    echo [Error] Inno Setup compilation failed.
     exit /b 1
 )
 
