@@ -193,9 +193,5 @@ namespace SwiftList.App.Services
                 Logger.Log($"[FileExecutor] Select item in existing explorer failed for '{path}': {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
-
-        public static string? GetDialogFolderPath(IntPtr dialogHwnd) => SwiftList.Core.Hook.FileDialogNavigator.GetDialogFolderPath(dialogHwnd);
-
-        public static void NavigateDialog(IntPtr targetEdit, string fullPath) => SwiftList.Core.Hook.FileDialogNavigator.NavigateDialog(targetEdit, fullPath);
     }
 }

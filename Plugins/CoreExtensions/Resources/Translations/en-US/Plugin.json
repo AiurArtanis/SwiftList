@@ -50,5 +50,6 @@
   "Action_Touch": "Create Empty File",
   "Action_Mkdir": "Create Directory",
   "Command_Name": "System Command Runner",
-  "Plugins_ExplorerTargetName": "Windows File Explorer"
+  "Plugins_ExplorerTargetName": "Windows File Explorer",
+  "Plugins_StandardFileDialogAdapterName": "Standard Windows File Dialog"
 }

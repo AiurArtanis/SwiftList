@@ -5,7 +5,7 @@ using SwiftList.Core;
 
 namespace SwiftList.Core.Hook
 {
-    internal sealed class ExplorerDialogNavigationTracker
+    internal sealed class FileDialogNavigationTracker
     {
         private readonly ConcurrentDictionary<IntPtr, DateTime> _dialogFirstSeenTimes = new();
         private string? _lastActiveExplorerPath;
@@ -19,7 +19,7 @@ namespace SwiftList.Core.Hook
             _lastExplorerPathUpdateTime = DateTime.Now;
         }
 
-        public void HandleDialogSeen(IntPtr mainDialog, IntPtr targetEdit)
+        public void HandleDialogSeen(IntPtr mainDialog, PluginSdk.IFileDialogAdapter? adapter)
         {
             bool isNewDialog = false;
             DateTime dialogFirstSeenTime = _dialogFirstSeenTimes.GetOrAdd(mainDialog, _ =>
@@ -52,7 +52,10 @@ namespace SwiftList.Core.Hook
                         Logger.Log($"[ExplorerTracker] Dialog 0x{mainDialog:X} reactivated. Explorer path updated at {_lastExplorerPathUpdateTime} which is later than dialog creation time {dialogFirstSeenTime}. Auto-navigating!", LogLevel.Debug);
                         ThreadPool.QueueUserWorkItem(_ =>
                         {
-                            FileDialogNavigator.NavigateDialog(targetEdit, currentPath);
+                            if (adapter != null)
+                            {
+                                adapter.NavigateTo(mainDialog, currentPath);
+                            }
                         });
                     }
 

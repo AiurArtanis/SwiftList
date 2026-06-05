@@ -261,6 +261,7 @@
   "Plugins_TypeColumnProvider": "列扩展",
   "Plugins_TypeAliasProvider": "别名扩充",
   "Plugins_TypeActivePathCollector": "路径采集器",
+  "Plugins_TypeFileDialogAdapter": "文件选择器适配器",
   "Plugins_TypeTranslationProvider": "语言包",
   "Plugins_TypeThemeProvider": "主题包",
   "Theme_Light": "浅色",

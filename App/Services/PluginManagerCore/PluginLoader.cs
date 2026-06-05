@@ -105,6 +105,13 @@ namespace SwiftList.App.Services.PluginManagerCore
                         registry.AddActivePathCollector(provider);
                         Logger.Log($"[PluginManager] Loaded active path collector: '{type.Name}' from {fileName}");
                     }
+
+                    if (typeof(SwiftList.PluginSdk.IFileDialogAdapter).IsAssignableFrom(type))
+                    {
+                        var provider = (SwiftList.PluginSdk.IFileDialogAdapter)Activator.CreateInstance(type)!;
+                        SwiftList.PluginSdk.FileDialogAdapterRegistry.Register(provider);
+                        Logger.Log($"[PluginManager] Loaded file dialog adapter: '{type.Name}' from {fileName}");
+                    }
                 }
             }
             catch (Exception ex)

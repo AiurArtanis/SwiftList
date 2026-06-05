@@ -58,6 +58,13 @@ namespace SwiftList.Service
                                 ActivePathCollectorRegistry.Register(provider);
                                 Logger.Log($"[ServicePluginLoader] Loaded active path collector: '{type.Name}' from {Path.GetFileName(dllFile)}");
                             }
+
+                            if (typeof(IFileDialogAdapter).IsAssignableFrom(type))
+                            {
+                                IFileDialogAdapter provider = (IFileDialogAdapter)Activator.CreateInstance(type)!;
+                                FileDialogAdapterRegistry.Register(provider);
+                                Logger.Log($"[ServicePluginLoader] Loaded file dialog adapter: '{type.Name}' from {Path.GetFileName(dllFile)}");
+                            }
                         }
                     }
                     catch (Exception ex)

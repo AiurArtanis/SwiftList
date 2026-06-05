@@ -47,6 +47,10 @@ namespace SwiftList.App.Services
             SwiftList.PluginSdk.ActivePathCollectorRegistry.FilterFunc = prov =>
                 _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.ActivePathCollector, prov.GetType().Name);
 
+            // Wire up the dynamic filtering delegate for file dialog adapters
+            SwiftList.PluginSdk.FileDialogAdapterRegistry.FilterFunc = prov =>
+                _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.FileDialogAdapter, prov.GetType().Name);
+
             PluginLoader.Load(this);
         }
 

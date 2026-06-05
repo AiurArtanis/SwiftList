@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using SwiftList.Core;
+using SwiftList.PluginSdk;
 
 namespace SwiftList.Core.Hook
 {
@@ -14,7 +15,7 @@ namespace SwiftList.Core.Hook
         private IntPtr _hLocationChangeHook = IntPtr.Zero;
         private bool _isRunning;
 
-        private readonly ExplorerDialogNavigationTracker _dialogTracker = new();
+        private readonly FileDialogNavigationTracker _dialogTracker = new();
         private readonly ExplorerWindowClassifier _classifier;
 
         // Internal state exposed to ExplorerWindowClassifier
@@ -25,9 +26,36 @@ namespace SwiftList.Core.Hook
         public string? LastActiveExplorerClassName { get; set; }
         public bool IsExplorerOrDesktopActive { get; set; }
         public bool IsDesktop { get; set; }
-        public bool IsActiveWindowDialog { get; set; }
+
+        private bool _isActiveWindowDialog;
+        public bool IsActiveWindowDialog { get => _isActiveWindowDialog; set => _isActiveWindowDialog = value; }
         public bool IsActiveWindowExplorer { get; set; }
-        public IntPtr ActiveHwnd { get; set; }
+
+        public IFileDialogAdapter? ActiveAdapter { get; private set; }
+
+        private IntPtr _activeHwnd;
+        public IntPtr ActiveHwnd
+        {
+            get => _activeHwnd;
+            set
+            {
+                _activeHwnd = value;
+                if (_activeHwnd != IntPtr.Zero)
+                {
+                    var sbClass = new StringBuilder(256);
+                    ExplorerNativeHooks.GetClassName(_activeHwnd, sbClass, sbClass.Capacity);
+                    string className = sbClass.ToString();
+                    string processName = GetProcessName(_activeHwnd);
+                    ActiveAdapter = FileDialogAdapterRegistry.GetMatchingAdapter(_activeHwnd, className, processName);
+                    _isActiveWindowDialog = ActiveAdapter != null;
+                }
+                else
+                {
+                    ActiveAdapter = null;
+                    _isActiveWindowDialog = false;
+                }
+            }
+        }
         public string? ActivePath => LastPath;
         public uint AppProcessId { get; set; }
 
@@ -37,12 +65,28 @@ namespace SwiftList.Core.Hook
         public event Action? OnActiveWindowMoved;
         public event Action<string>? OnError;
 
+        private string GetProcessName(IntPtr hwnd)
+        {
+            try
+            {
+                ExplorerNativeHooks.GetWindowThreadProcessId(hwnd, out uint pid);
+                if (pid != 0)
+                {
+                    using (var proc = System.Diagnostics.Process.GetProcessById((int)pid))
+                    {
+                        return proc.ProcessName;
+                    }
+                }
+            }
+            catch { }
+            return "Unknown";
+        }
+
         public void UpdateActiveWindow(IntPtr hwnd, string title, string className, bool isDesktop)
         {
             ActiveHwnd = hwnd;
             IsExplorerOrDesktopActive = true;
             IsDesktop = isDesktop;
-            IsActiveWindowDialog = className.Equals("#32770", StringComparison.OrdinalIgnoreCase);
             IsActiveWindowExplorer = className.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase);
             if (!IsActiveWindowDialog)
             {
@@ -156,6 +200,16 @@ namespace SwiftList.Core.Hook
             rect = default;
             if (ActiveHwnd == IntPtr.Zero) return false;
 
+            if (ActiveAdapter != null)
+            {
+                if (ActiveAdapter.GetDockBounds(ActiveHwnd, out var adapterRect))
+                {
+                    rect = new RECT { Left = adapterRect.Left, Top = adapterRect.Top, Right = adapterRect.Right, Bottom = adapterRect.Bottom };
+                    return true;
+                }
+                return false;
+            }
+
             var nativeRect = new ExplorerNativeHooks.RECT();
             int result = ExplorerNativeHooks.DwmGetWindowAttribute(ActiveHwnd, ExplorerNativeHooks.DWMWA_EXTENDED_FRAME_BOUNDS, out nativeRect, System.Runtime.InteropServices.Marshal.SizeOf<ExplorerNativeHooks.RECT>());
             if (result == 0)
@@ -199,13 +253,15 @@ namespace SwiftList.Core.Hook
             {
                 var sbClass = new StringBuilder(256);
                 ExplorerNativeHooks.GetClassName(currentFg, sbClass, sbClass.Capacity);
-                if (sbClass.ToString().Equals("#32770", StringComparison.OrdinalIgnoreCase))
+                string className = sbClass.ToString();
+                string processName = GetProcessName(currentFg);
+                if (FileDialogAdapterRegistry.GetMatchingAdapter(currentFg, className, processName) != null)
                     _classifier.CheckActiveWindow(currentFg);
             }
 
-            if (IsActiveWindowDialog && ActiveHwnd != IntPtr.Zero)
+            if (IsActiveWindowDialog && ActiveHwnd != IntPtr.Zero && ActiveAdapter != null)
             {
-                string? activePath = FileDialogNavigator.GetDialogFolderPath(ActiveHwnd);
+                string? activePath = ActiveAdapter.GetCurrentPath(ActiveHwnd);
                 if (!string.IsNullOrEmpty(activePath) && activePath != LastPath)
                 {
                     LastPath = activePath;

@@ -130,22 +130,20 @@ namespace SwiftList.Core.Hook.InlineSearch
                 }
             }
 
-            if (_explorerTracker.IsActiveWindowDialog && triggered)
+            if (_explorerTracker.IsActiveWindowDialog && triggered && _explorerTracker.ActiveAdapter != null)
             {
                 string? lastExplorerPath = _explorerTracker.LastActiveExplorerPath;
                 if (!string.IsNullOrEmpty(lastExplorerPath) && Directory.Exists(lastExplorerPath))
                 {
-                    IntPtr targetEdit = ExplorerTracker.FindSubEditBox(_explorerTracker.ActiveHwnd);
-                    if (targetEdit != IntPtr.Zero)
+                    string navPath = lastExplorerPath.EndsWith("\\") ? lastExplorerPath : lastExplorerPath + "\\";
+                    var adapter = _explorerTracker.ActiveAdapter;
+                    var hwnd = _explorerTracker.ActiveHwnd;
+                    System.Threading.ThreadPool.QueueUserWorkItem(_ =>
                     {
-                        string navPath = lastExplorerPath.EndsWith("\\") ? lastExplorerPath : lastExplorerPath + "\\";
-                        System.Threading.ThreadPool.QueueUserWorkItem(_ =>
-                        {
-                            FileDialogNavigator.NavigateDialog(targetEdit, navPath);
-                        });
-                        consumeKey = true;
-                        return true;
-                    }
+                        adapter.NavigateTo(hwnd, navPath);
+                    });
+                    consumeKey = true;
+                    return true;
                 }
             }
             return false;

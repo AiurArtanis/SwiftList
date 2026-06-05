@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Threading;
 using SwiftList.Core;
+using SwiftList.PluginSdk;
 
 namespace SwiftList.Core.Hook
 {
@@ -12,9 +13,9 @@ namespace SwiftList.Core.Hook
     internal sealed class ExplorerWindowClassifier
     {
         private readonly ExplorerTracker _tracker;
-        private readonly ExplorerDialogNavigationTracker _dialogTracker;
+        private readonly FileDialogNavigationTracker _dialogTracker;
 
-        public ExplorerWindowClassifier(ExplorerTracker tracker, ExplorerDialogNavigationTracker dialogTracker)
+        public ExplorerWindowClassifier(ExplorerTracker tracker, FileDialogNavigationTracker dialogTracker)
         {
             _tracker = tracker;
             _dialogTracker = dialogTracker;
@@ -29,15 +30,11 @@ namespace SwiftList.Core.Hook
                 if (IsFocusChangeIgnored(hwnd))
                     return;
 
-                IntPtr mainDialog = ExplorerNativeHooks.FindMainFileDialog(hwnd);
-                if (mainDialog != IntPtr.Zero && ExplorerNativeHooks.HasBreadcrumbParent(mainDialog))
+                IntPtr dialogHwnd = FindMatchingDialogWindow(hwnd, out var adapter);
+                if (dialogHwnd != IntPtr.Zero && adapter != null)
                 {
-                    IntPtr targetEdit = ExplorerNativeHooks.FindSubEditBox(mainDialog);
-                    if (targetEdit != IntPtr.Zero)
-                    {
-                        TrackFileDialogWindow(mainDialog, targetEdit);
-                        return;
-                    }
+                    TrackFileDialogWindow(dialogHwnd);
+                    return;
                 }
 
                 IntPtr rootHwnd = ExplorerNativeHooks.GetAncestor(hwnd, ExplorerNativeHooks.GA_ROOTOWNER);
@@ -139,13 +136,13 @@ namespace SwiftList.Core.Hook
                     return;
                 }
 
-                if (windowClassName.Equals("#32770", StringComparison.OrdinalIgnoreCase))
+                var matchedAdapter = FileDialogAdapterRegistry.GetMatchingAdapter(rootHwnd, windowClassName, processName);
+                if (matchedAdapter != null)
                 {
                     _tracker.IsExplorerOrDesktopActive = true;
                     _tracker.IsDesktop = false;
-                    _tracker.IsActiveWindowDialog = true;
-                    _tracker.IsActiveWindowExplorer = false;
                     _tracker.ActiveHwnd = rootHwnd;
+                    _tracker.IsActiveWindowExplorer = false;
                 }
                 else
                 {
@@ -172,16 +169,15 @@ namespace SwiftList.Core.Hook
             return false;
         }
 
-        private void TrackFileDialogWindow(IntPtr mainDialog, IntPtr targetEdit)
+        private void TrackFileDialogWindow(IntPtr mainDialog)
         {
-            _dialogTracker.HandleDialogSeen(mainDialog, targetEdit);
-
             _tracker.IsExplorerOrDesktopActive = true;
             _tracker.IsDesktop = false;
-            _tracker.IsActiveWindowDialog = true;
             _tracker.ActiveHwnd = mainDialog;
 
-            string? activePath = FileDialogNavigator.GetDialogFolderPath(mainDialog);
+            _dialogTracker.HandleDialogSeen(mainDialog, _tracker.ActiveAdapter);
+
+            string? activePath = _tracker.ActiveAdapter?.GetCurrentPath(mainDialog);
             _tracker.LastPath = !string.IsNullOrEmpty(activePath) ? activePath : string.Empty;
 
             var windowTitle = new StringBuilder(256);
@@ -197,6 +193,43 @@ namespace SwiftList.Core.Hook
             }
 
             _tracker.RaisePathCaptured(_tracker.LastPath, false);
+        }
+
+        private IntPtr FindMatchingDialogWindow(IntPtr hwnd, out IFileDialogAdapter? adapter)
+        {
+            IntPtr current = hwnd;
+            while (current != IntPtr.Zero)
+            {
+                var sbClass = new StringBuilder(256);
+                ExplorerNativeHooks.GetClassName(current, sbClass, sbClass.Capacity);
+                string className = sbClass.ToString();
+
+                ExplorerNativeHooks.GetWindowThreadProcessId(current, out uint pid);
+                string processName = "Unknown";
+                if (pid != 0)
+                {
+                    try
+                    {
+                        using (var proc = System.Diagnostics.Process.GetProcessById((int)pid))
+                        {
+                            processName = proc.ProcessName;
+                        }
+                    }
+                    catch { }
+                }
+
+                var matched = FileDialogAdapterRegistry.GetMatchingAdapter(current, className, processName);
+                if (matched != null)
+                {
+                    adapter = matched;
+                    return current;
+                }
+
+                current = ExplorerNativeHooks.GetParent(current);
+            }
+
+            adapter = null;
+            return IntPtr.Zero;
         }
     }
 }

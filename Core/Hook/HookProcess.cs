@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using SwiftList.Core.Hook.InlineSearch;
+using SwiftList.PluginSdk;
 
 namespace SwiftList.Core.Hook
 {
@@ -32,16 +33,7 @@ namespace SwiftList.Core.Hook
 
 
         [StructLayout(LayoutKind.Sequential)]
-        private struct MSG
-        {
-            public IntPtr hwnd;
-            public uint message;
-            public IntPtr wParam;
-            public IntPtr lParam;
-            public uint time;
-            public int ptX;
-            public int ptY;
-        }
+        private struct MSG { public IntPtr hwnd; public uint message; public IntPtr wParam; public IntPtr lParam; public uint time; public int ptX; public int ptY; }
 
         private const uint WM_QUIT = 0x0012;
 
@@ -82,13 +74,39 @@ namespace SwiftList.Core.Hook
                         break;
                     case IpcMessageId.NavigateDialog:
                         {
-                            IntPtr targetEdit = (IntPtr)msg.Hwnd;
+                            IntPtr dialogHwnd = (IntPtr)msg.Hwnd;
                             string? navPath = msg.StringVal1;
-                            if (targetEdit != IntPtr.Zero && !string.IsNullOrEmpty(navPath))
+                            if (dialogHwnd != IntPtr.Zero && !string.IsNullOrEmpty(navPath))
                             {
                                 System.Threading.ThreadPool.QueueUserWorkItem(_ =>
                                 {
-                                    FileDialogNavigator.NavigateDialog(targetEdit, navPath);
+                                    var adapter = (_explorerTracker != null && _explorerTracker.ActiveHwnd == dialogHwnd)
+                                        ? _explorerTracker.ActiveAdapter
+                                        : null;
+
+                                    if (adapter == null)
+                                    {
+                                        var sbClass = new StringBuilder(256);
+                                        ExplorerNativeHooks.GetClassName(dialogHwnd, sbClass, sbClass.Capacity);
+                                        string className = sbClass.ToString();
+                                        string processName = "Unknown";
+                                        try
+                                        {
+                                            ExplorerNativeHooks.GetWindowThreadProcessId(dialogHwnd, out uint pid);
+                                            if (pid != 0)
+                                            {
+                                                using (var proc = System.Diagnostics.Process.GetProcessById((int)pid))
+                                                    processName = proc.ProcessName;
+                                            }
+                                        }
+                                        catch { }
+                                        adapter = FileDialogAdapterRegistry.GetMatchingAdapter(dialogHwnd, className, processName);
+                                    }
+
+                                    if (adapter != null)
+                                    {
+                                        adapter.NavigateTo(dialogHwnd, navPath);
+                                    }
                                 });
                             }
                         }
@@ -100,37 +118,32 @@ namespace SwiftList.Core.Hook
                             {
                                 System.Threading.ThreadPool.QueueUserWorkItem(_ =>
                                 {
-                                    IntPtr targetEdit = ExplorerNativeHooks.FindSubEditBox(activeHwnd);
-                                    if (targetEdit == IntPtr.Zero) return;
+                                    var adapter = (_explorerTracker != null && _explorerTracker.ActiveHwnd == activeHwnd)
+                                        ? _explorerTracker.ActiveAdapter
+                                        : null;
 
-                                    uint targetThread = ExplorerNativeHooks.GetWindowThreadProcessId(targetEdit, out uint _);
-                                    uint currentThread = ExplorerNativeHooks.GetCurrentThreadId();
-                                    bool attached = false;
-                                    try
+                                    if (adapter == null)
                                     {
-                                        // Send a dummy key event so Windows grants this thread foreground permission,
-                                        // bypassing the foreground-lock that was set when the low-privilege inline
-                                        // window was the foreground window.
-                                        keybd_event(0xFF, 0, 0, UIntPtr.Zero);
-                                        keybd_event(0xFF, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-
-                                        if (targetThread != 0 && targetThread != currentThread)
+                                        var sbClass = new StringBuilder(256);
+                                        ExplorerNativeHooks.GetClassName(activeHwnd, sbClass, sbClass.Capacity);
+                                        string className = sbClass.ToString();
+                                        string processName = "Unknown";
+                                        try
                                         {
-                                            attached = ExplorerNativeHooks.AttachThreadInput(currentThread, targetThread, true);
+                                            ExplorerNativeHooks.GetWindowThreadProcessId(activeHwnd, out uint pid);
+                                            if (pid != 0)
+                                            {
+                                                using (var proc = System.Diagnostics.Process.GetProcessById((int)pid))
+                                                    processName = proc.ProcessName;
+                                            }
                                         }
-
-                                        ExplorerNativeHooks.SetForegroundWindow(activeHwnd);
-                                        ExplorerNativeHooks.SetFocus(targetEdit);
-                                        ExplorerNativeHooks.PostMessage(targetEdit, ExplorerNativeHooks.WM_LBUTTONDOWN, (IntPtr)1, IntPtr.Zero);
-                                        ExplorerNativeHooks.PostMessage(targetEdit, ExplorerNativeHooks.WM_LBUTTONUP, IntPtr.Zero, IntPtr.Zero);
-                                        ExplorerNativeHooks.PostMessage(targetEdit, ExplorerNativeHooks.EM_SETSEL, IntPtr.Zero, (IntPtr)(-1));
+                                        catch { }
+                                        adapter = FileDialogAdapterRegistry.GetMatchingAdapter(activeHwnd, className, processName);
                                     }
-                                    finally
+
+                                    if (adapter != null)
                                     {
-                                        if (attached)
-                                        {
-                                            ExplorerNativeHooks.AttachThreadInput(currentThread, targetThread, false);
-                                        }
+                                        adapter.RestoreFocus(activeHwnd);
                                     }
                                 });
                             }
@@ -247,42 +260,19 @@ namespace SwiftList.Core.Hook
 
         private void CleanupHooks()
         {
-            if (_keyboardHook != null)
-            {
-                _keyboardHook.Dispose();
-                _keyboardHook = null;
-            }
-            if (_mouseHook != null)
-            {
-                _mouseHook.Dispose();
-                _mouseHook = null;
-            }
-            if (_explorerTracker != null)
-            {
-                _explorerTracker.Dispose();
-                _explorerTracker = null;
-            }
+            _keyboardHook?.Dispose(); _keyboardHook = null;
+            _mouseHook?.Dispose(); _mouseHook = null;
+            _explorerTracker?.Dispose(); _explorerTracker = null;
             Logger.Log("[HookProcess] Hooks and ExplorerTracker stopped/cleaned up.", LogLevel.Info);
-            
-            try
-            {
-                Win32Api.TrimWorkingSet();
-            }
-            catch { }
+            try { Win32Api.TrimWorkingSet(); } catch { }
         }
 
         public void Stop()
         {
             _running = false;
-            if (_nativeThreadId != 0)
-            {
-                PostThreadMessage(_nativeThreadId, WM_QUIT, IntPtr.Zero, IntPtr.Zero);
-            }
+            if (_nativeThreadId != 0) PostThreadMessage(_nativeThreadId, WM_QUIT, IntPtr.Zero, IntPtr.Zero);
         }
 
-        public void Dispose()
-        {
-            Stop();
-        }
+        public void Dispose() => Stop();
     }
 }

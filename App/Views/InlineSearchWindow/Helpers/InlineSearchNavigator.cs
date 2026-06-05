@@ -64,22 +64,18 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
             var tracker = window.Manager.ExplorerTracker;
             if (path != "__SHOW_MORE__" && tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
             {
-                IntPtr targetEdit = SwiftList.Core.Hook.ExplorerTracker.FindSubEditBox(tracker.ActiveHwnd);
-                if (targetEdit != IntPtr.Zero)
+                if (App.HookClient != null)
                 {
-                    if (App.HookClient != null)
+                    App.HookClient.SendMessage(new IpcMessage
                     {
-                        App.HookClient.SendMessage(new IpcMessage
-                        {
-                            Id = IpcMessageId.NavigateDialog,
-                            Hwnd = targetEdit.ToInt64(),
-                            StringVal1 = path
-                        });
-                    }
-
-                    window.ResetInlineSearchAndFocusDialog();
-                    return;
+                        Id = IpcMessageId.NavigateDialog,
+                        Hwnd = tracker.ActiveHwnd.ToInt64(),
+                        StringVal1 = path
+                    });
                 }
+
+                window.ResetInlineSearchAndFocusDialog();
+                return;
             }
 
             if (Directory.Exists(path)

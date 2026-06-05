@@ -50,5 +50,6 @@
   "Action_Touch": "新建空白文件",
   "Action_Mkdir": "新建文件夹",
   "Command_Name": "系统命令执行器",
-  "Plugins_ExplorerTargetName": "Windows 资源管理器"
+  "Plugins_ExplorerTargetName": "Windows 资源管理器",
+  "Plugins_StandardFileDialogAdapterName": "标准 Windows 文件选择器"
 }
