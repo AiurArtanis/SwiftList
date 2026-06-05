@@ -40,6 +40,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
         {
             var index = new NetworkIndex(store.SourceKey);
             index.RootId = store.RootId;
+            index.LastUpdated = store.LastUpdated;
             lock (index._gate)
                 index._runtime.Load(store);
             return index;
@@ -103,12 +104,14 @@ namespace SwiftList.Core.Indexer.NetworkDrive
         {
             lock (_gate)
             {
-                return _runtime.ToStore(
+                var store = _runtime.ToStore(
                     FileRecordSourceKind.NetworkMappedDrive,
                     FileRecordIdKind.SourceLocalId64,
                     RootId,
                     journalId: 0,
                     nextUsn: 0);
+                store.LastUpdated = LastUpdated;
+                return store;
             }
         }
 

@@ -35,7 +35,11 @@ namespace SwiftList.Core.Indexer.NetworkDrive
             _onPublishCheckpoint = onPublishCheckpoint;
         }
 
-        public void StartRefresh(IReadOnlyList<string> drives, IReadOnlyDictionary<string, string> refreshModes)
+        public void StartRefresh(
+            IReadOnlyList<string> drives,
+            IReadOnlyDictionary<string, string> refreshModes,
+            HashSet<string>? cachedDrives = null,
+            IReadOnlyDictionary<string, DateTime>? lastUpdatedTimes = null)
         {
             _refreshCts?.Cancel();
             _refreshCts?.Dispose();
@@ -63,18 +67,24 @@ namespace SwiftList.Core.Indexer.NetworkDrive
                 foreach (string drive in drives)
                 {
                     string mode = refreshModes.TryGetValue(drive, out var value) ? value : "Manual";
+                    DateTime? lastUpdated = lastUpdatedTimes != null && lastUpdatedTimes.TryGetValue(drive, out var lu) ? lu : (DateTime?)null;
                     _onWatcherEnsure(drive, mode);
-                    EnsurePeriodicRefreshLocked(drive, mode);
+                    EnsurePeriodicRefreshLocked(drive, mode, lastUpdated);
                 }
             }
 
             foreach (string drive in drives)
             {
-                QueueRefreshDrive(drive, "configure");
+                string mode = refreshModes.TryGetValue(drive, out var value) ? value : "Manual";
+                bool needsInitialRefresh = cachedDrives == null || !cachedDrives.Contains(drive) || mode == "startup";
+                if (needsInitialRefresh)
+                {
+                    QueueRefreshDrive(drive, "configure");
+                }
             }
         }
 
-        private void EnsurePeriodicRefreshLocked(string drive, string mode)
+        private void EnsurePeriodicRefreshLocked(string drive, string mode, DateTime? lastUpdated)
         {
             TimeSpan? interval = IndexerHelper.GetRefreshInterval(mode);
             if (interval == null)
@@ -90,11 +100,25 @@ namespace SwiftList.Core.Indexer.NetworkDrive
             _periodicCts[drive] = cts;
             _ = Task.Run(async () =>
             {
+                bool firstRun = true;
                 while (!cts.Token.IsCancellationRequested)
                 {
                     try
                     {
-                        await Task.Delay(interval.Value, cts.Token).ConfigureAwait(false);
+                        TimeSpan delay = interval.Value;
+                        if (firstRun && lastUpdated.HasValue)
+                        {
+                            var timeSinceLastUpdate = DateTime.Now - lastUpdated.Value;
+                            if (timeSinceLastUpdate > TimeSpan.Zero)
+                            {
+                                var remaining = interval.Value - timeSinceLastUpdate;
+                                // If overdue or remaining time is less than 5s, delay for 5s to avoid startup bottleneck
+                                delay = remaining > TimeSpan.FromSeconds(5) ? remaining : TimeSpan.FromSeconds(5);
+                            }
+                        }
+                        firstRun = false;
+
+                        await Task.Delay(delay, cts.Token).ConfigureAwait(false);
                         QueueRefreshDrive(drive, mode);
                     }
                     catch (OperationCanceledException)

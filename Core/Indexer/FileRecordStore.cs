@@ -56,6 +56,7 @@ namespace SwiftList.Core
         public UInt128 RootId { get; set; }
         public ulong JournalId { get; set; }
         public long NextUsn { get; set; }
+        public DateTime LastUpdated { get; set; } = DateTime.Now;
         public List<FileRecord> Records { get; } = new();
     }
 
@@ -144,7 +145,7 @@ namespace SwiftList.Core
                 writer.Write(store.NextUsn);
                 writer.Write(store.Records.Count);
                 writer.Write(store.Records.Count(r => !r.IsDeleted));
-                writer.Write(DateTime.UtcNow.Ticks);
+                writer.Write(store.LastUpdated.ToUniversalTime().Ticks);
             }
 
             Replace(metaTemp, basePath + ".meta");
@@ -177,7 +178,8 @@ namespace SwiftList.Core
                     store.NextUsn = reader.ReadInt64();
                     _ = reader.ReadInt32();
                     _ = reader.ReadInt32();
-                    _ = reader.ReadInt64();
+                    long ticks = reader.ReadInt64();
+                    store.LastUpdated = new DateTime(ticks, DateTimeKind.Utc).ToLocalTime();
                 }
 
                 var names = new List<string>();

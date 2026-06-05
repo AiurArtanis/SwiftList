@@ -52,7 +52,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive
             }
         }
 
-        public void Configure(IEnumerable<NetworkDriveSetting> driveSettings)
+        public void Configure(IEnumerable<NetworkDriveSetting> driveSettings, bool forceRefresh = false)
         {
             var enabledSettings = driveSettings
                 .Where(d => d.Enabled)
@@ -78,6 +78,8 @@ namespace SwiftList.Core.Indexer.NetworkDrive
                 }
             }
 
+            var cachedDrives = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var lastUpdatedTimes = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 
             lock (_gate)
             {
@@ -114,12 +116,19 @@ namespace SwiftList.Core.Indexer.NetworkDrive
                                 CachePath = IndexerHelper.GetCachePath(drive),
                                 LastUpdated = index.LastUpdated
                             };
+                            cachedDrives.Add(drive);
+                            lastUpdatedTimes[drive] = index.LastUpdated;
                         }
+                    }
+                    else
+                    {
+                        cachedDrives.Add(drive);
+                        lastUpdatedTimes[drive] = _indexes[drive].LastUpdated;
                     }
                 }
             }
 
-            _scheduler?.StartRefresh(enabledDrives, refreshModes);
+            _scheduler?.StartRefresh(enabledDrives, refreshModes, forceRefresh ? null : cachedDrives, forceRefresh ? null : lastUpdatedTimes);
         }
 
         public IReadOnlyList<NetworkIndexStatus> GetStatuses()

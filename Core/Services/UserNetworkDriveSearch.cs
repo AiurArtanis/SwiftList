@@ -10,7 +10,7 @@ namespace SwiftList.Core
 
         public static void Refresh()
         {
-            NetworkIndexer.Configure(UserSettings.Load().NetworkDrives);
+            NetworkIndexer.Configure(UserSettings.Load().NetworkDrives, forceRefresh: true);
         }
 
         public static IReadOnlyList<NetworkIndexStatus> GetStatuses()
