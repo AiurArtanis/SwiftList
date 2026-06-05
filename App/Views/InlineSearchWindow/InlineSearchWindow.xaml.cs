@@ -24,6 +24,7 @@ namespace SwiftList.App
         private readonly ShellMenuPresenter _menuPresenter;
         private readonly InlineSearchWindowInputHandler _inputHandler;
         private readonly InlineSearchWindowPositioner _positioner;
+        private readonly DispatcherTimer _activeTimer;
         private string _searchText = string.Empty;
         private IntPtr _originalLayout = IntPtr.Zero;
 
@@ -44,6 +45,22 @@ namespace SwiftList.App
             _menuPresenter = new ShellMenuPresenter(this);
             _inputHandler = new InlineSearchWindowInputHandler(this);
             _positioner = new InlineSearchWindowPositioner(this);
+
+            _activeTimer = new DispatcherTimer(DispatcherPriority.Background);
+            _activeTimer.Interval = TimeSpan.FromMilliseconds(100);
+            _activeTimer.Tick += (s, e) =>
+            {
+                var tracker = _manager.ExplorerTracker;
+                if (tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
+                {
+                    if (!InlineSearchWindowNativeMethods.IsWindow(tracker.ActiveHwnd))
+                    {
+                        _activeTimer.Stop();
+                        _manager.CloseInlineSearch();
+                    }
+                }
+            };
+            _activeTimer.Start();
 
             TxtSearchDisplay.TextChanged += (s, e) =>
             {
@@ -250,6 +267,7 @@ namespace SwiftList.App
 
         protected override void OnClosed(EventArgs e)
         {
+            _activeTimer?.Stop();
             _manager.ExplorerTracker.OnActiveWindowMoved -= HandleActiveWindowMoved;
             _menuPresenter.Dispose();
             if (_originalLayout != IntPtr.Zero)

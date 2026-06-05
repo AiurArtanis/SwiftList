@@ -27,6 +27,11 @@ namespace SwiftList.Core.Hook
 
             try
             {
+                if (_tracker.IsActiveWindowDialog && _tracker.ActiveHwnd != IntPtr.Zero && !ExplorerNativeHooks.IsWindow(_tracker.ActiveHwnd))
+                {
+                    _tracker.Deactivate();
+                }
+
                 if (IsFocusChangeIgnored(hwnd))
                     return;
 

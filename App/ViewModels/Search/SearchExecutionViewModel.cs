@@ -130,7 +130,7 @@ namespace SwiftList.App.ViewModels.Search
 
                 Logger.Log($"[Diagnosis] SearchScope='{SearchScope}', isDialog={isDialog}, lastPath='{lastPath}', dirExists={dirExists}, isSamePath={isSamePath}", LogLevel.Debug);
 
-                if (!string.IsNullOrEmpty(SearchScope) && isDialog && dirExists && !string.IsNullOrEmpty(lastPath) && !isSamePath)
+                if (isDialog && dirExists && !string.IsNullOrEmpty(lastPath) && (string.IsNullOrEmpty(SearchScope) || !isSamePath))
                 {
                     string? targetName = null;
                     string? className = tracker.LastActiveExplorerClassName;
