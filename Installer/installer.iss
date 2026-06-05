@@ -117,7 +117,7 @@ begin
       try
         DownloadPage.Download;
       except
-        Result := 'Failed to download .NET 10.0 Desktop Runtime. Please install it manually.';
+        Result := CustomMessage('DotNetDownloadFailed');
         Exit;
       end;
     finally
@@ -129,7 +129,7 @@ begin
     InstallerPath := ExpandConstant('{tmp}\windowsdesktop-runtime-10-win-x64.exe');
     if not Exec(InstallerPath, '/install /quiet /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
     begin
-      Result := 'Failed to install .NET 10.0 Desktop Runtime (Code: ' + IntToStr(ResultCode) + ').';
+      Result := FmtMessage(CustomMessage('DotNetInstallFailed'), [IntToStr(ResultCode)]);
     end;
   end;
 end;
