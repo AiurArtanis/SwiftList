@@ -160,5 +160,22 @@ namespace SwiftList.App.Views.Settings
                 SwiftList.Core.Logger.Log($"[AboutSettingsPage] Failed to open URL: {ex.Message}", SwiftList.Core.LogLevel.Warn);
             }
         }
+
+        private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = e.Uri.AbsoluteUri,
+                    UseShellExecute = true
+                });
+                e.Handled = true;
+            }
+            catch (Exception ex)
+            {
+                SwiftList.Core.Logger.Log($"[AboutSettingsPage] Failed to open URL: {ex.Message}", SwiftList.Core.LogLevel.Warn);
+            }
+        }
     }
 }

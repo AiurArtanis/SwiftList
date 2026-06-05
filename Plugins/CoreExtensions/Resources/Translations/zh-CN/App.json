@@ -133,6 +133,7 @@
   "About_Desc2": "快速定位应用、文件、目录和当前窗口内容。",
   "About_Desc3": "本软件是专为提升 Windows 使用体验而设计的正式稳定版，具备高能检索与极低系统资源占用。",
   "About_Desc4": "本地磁盘使用 MFT 与 USN 构建索引；网络驱动器使用用户态扫描、缓存和监听。",
+  "About_Homepage": "项目主页：",
   "About_CheckUpdate": "检查更新",
   "About_UpdateStatusHint": "检查是否有可用的新版本并获取自动更新",
   "About_Checking": "正在检查更新...",

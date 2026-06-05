@@ -133,6 +133,7 @@
   "About_Desc2": "Locate applications, files, directories, and active explorer contents rapidly.",
   "About_Desc3": "This software is a stable release version designed to enhance the Windows experience, featuring high-performance search and minimal system resource footprint.",
   "About_Desc4": "Local disks index using MFT/USN; Network drives index via user-mode scanning, caching, and listening.",
+  "About_Homepage": "Project Homepage: ",
   "About_CheckUpdate": "Check for Updates",
   "About_UpdateStatusHint": "Check for new version availability and get automatic updates",
   "About_Checking": "Checking for updates...",
