@@ -30,6 +30,7 @@ namespace SwiftList.App.Services
         private readonly List<SwiftList.PluginSdk.IResultColumnProvider> _resultColumnProviders = new();
         private readonly List<SwiftList.PluginSdk.ITranslationProvider> _translationProviders = new();
         private readonly List<SwiftList.PluginSdk.IThemeProvider> _themeProviders = new();
+        private readonly List<SwiftList.PluginSdk.IActivePathCollector> _pathCollectors = new();
         private uint _nextRuntimeActionId = 0x80000000;
 
         private readonly ComponentFilter _filter = new();
@@ -54,6 +55,11 @@ namespace SwiftList.App.Services
         void PluginRegistry.AddResultColumnProvider(SwiftList.PluginSdk.IResultColumnProvider p) => _resultColumnProviders.Add(p);
         void PluginRegistry.AddTranslationProvider(SwiftList.PluginSdk.ITranslationProvider p) => _translationProviders.Add(p);
         void PluginRegistry.AddThemeProvider(SwiftList.PluginSdk.IThemeProvider p) => _themeProviders.Add(p);
+        void PluginRegistry.AddActivePathCollector(SwiftList.PluginSdk.IActivePathCollector p)
+        {
+            _pathCollectors.Add(p);
+            SwiftList.PluginSdk.ActivePathCollectorRegistry.Register(p);
+        }
 
         // ── Public API ────────────────────────────────────────────────────────
 
@@ -106,6 +112,7 @@ namespace SwiftList.App.Services
 
         public IEnumerable<SwiftList.PluginSdk.ITranslationProvider> TranslationProviders => _translationProviders;
         public IEnumerable<SwiftList.PluginSdk.IThemeProvider> ThemeProviders => _themeProviders;
+        public IEnumerable<SwiftList.PluginSdk.IActivePathCollector> ActivePathCollectors => _pathCollectors;
 
         // ── Unfiltered collections (settings UI ?show disabled as unchecked) ─
 

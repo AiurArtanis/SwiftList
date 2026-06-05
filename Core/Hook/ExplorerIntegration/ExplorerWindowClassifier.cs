@@ -7,7 +7,7 @@ namespace SwiftList.Core.Hook
 {
     /// <summary>
     /// Handles window classification and path tracking for ExplorerTracker,
-    /// extracting the CheckActiveWindow dispatch and all per-window-class tracking methods.
+    /// delegating path collection to registered IActivePathCollector plugins.
     /// </summary>
     internal sealed class ExplorerWindowClassifier
     {
@@ -43,14 +43,81 @@ namespace SwiftList.Core.Hook
                 IntPtr rootHwnd = ExplorerNativeHooks.GetAncestor(hwnd, ExplorerNativeHooks.GA_ROOTOWNER);
                 if (rootHwnd == IntPtr.Zero) rootHwnd = hwnd;
 
-                bool isDesktop = ExplorerNativeHooks.IsDesktopWindow(rootHwnd, out string clsName);
-                Logger.Log($"[ExplorerTracker] Active window: HWND=0x{hwnd:X}, Root=0x{rootHwnd:X}, Class={clsName}, isDesktop={isDesktop}", LogLevel.Debug);
+                bool isDesktop = ExplorerNativeHooks.IsDesktopWindow(rootHwnd, out string windowClassName);
+                Logger.Log($"[ExplorerTracker] Active window: HWND=0x{hwnd:X}, Root=0x{rootHwnd:X}, Class={windowClassName}, isDesktop={isDesktop}", LogLevel.Debug);
 
-                if (isDesktop)
-                    TrackDesktopWindow(rootHwnd, clsName);
-                else if (clsName.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase))
-                    TrackCabinetWindow(rootHwnd, clsName);
-                else if (clsName.Equals("#32770", StringComparison.OrdinalIgnoreCase))
+                // Get active class name (control class name)
+                var sbActiveCls = new StringBuilder(256);
+                ExplorerNativeHooks.GetClassName(hwnd, sbActiveCls, sbActiveCls.Capacity);
+                string activeClassName = sbActiveCls.ToString();
+
+                // Get process name of root window
+                string processName = "Unknown";
+                try
+                {
+                    ExplorerNativeHooks.GetWindowThreadProcessId(rootHwnd, out uint pid);
+                    if (pid != 0)
+                    {
+                        using (var proc = System.Diagnostics.Process.GetProcessById((int)pid))
+                        {
+                            processName = proc.ProcessName;
+                        }
+                    }
+                }
+                catch { }
+
+                // Delegate active path collection to registered plugins
+                var collectors = SwiftList.PluginSdk.ActivePathCollectorRegistry.GetCollectors();
+                bool handledByPlugin = false;
+
+                foreach (var collector in collectors)
+                {
+                    try
+                    {
+                        if (collector.CanHandle(windowClassName))
+                        {
+                            string? activePath = collector.TryGetPath(hwnd, activeClassName, rootHwnd, windowClassName, processName);
+                            if (!string.IsNullOrEmpty(activePath))
+                            {
+                                handledByPlugin = true;
+                                _tracker.IsExplorerOrDesktopActive = true;
+                                _tracker.IsDesktop = isDesktop;
+                                _tracker.IsActiveWindowDialog = false;
+                                _tracker.IsActiveWindowExplorer = !isDesktop && windowClassName.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase);
+                                _tracker.ActiveHwnd = rootHwnd;
+
+                                if (rootHwnd != _tracker.LastActiveHwnd)
+                                {
+                                    _tracker.LastActiveHwnd = rootHwnd;
+                                    var windowTitle = new StringBuilder(256);
+                                    ExplorerNativeHooks.GetWindowText(rootHwnd, windowTitle, windowTitle.Capacity);
+                                    _tracker.RaiseExplorerActivated(rootHwnd, windowTitle.ToString(), windowClassName, isDesktop);
+                                }
+
+                                if (_dialogTracker.LastActiveExplorerPath != activePath)
+                                    _dialogTracker.SetLastActiveExplorerPath(activePath);
+
+                                if (activePath != _tracker.LastPath)
+                                {
+                                    _tracker.LastPath = activePath;
+                                    _tracker.RaisePathCaptured(activePath, isDesktop);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log($"[ExplorerTracker] Error invoking active path collector '{collector.Name}': {ex.Message}", LogLevel.Error);
+                    }
+                }
+
+                if (handledByPlugin)
+                {
+                    return;
+                }
+
+                if (windowClassName.Equals("#32770", StringComparison.OrdinalIgnoreCase))
                 {
                     _tracker.IsExplorerOrDesktopActive = true;
                     _tracker.IsDesktop = false;
@@ -108,66 +175,6 @@ namespace SwiftList.Core.Hook
             }
 
             _tracker.RaisePathCaptured(_tracker.LastPath, false);
-        }
-
-        private void TrackDesktopWindow(IntPtr rootHwnd, string clsName)
-        {
-            _tracker.IsExplorerOrDesktopActive = true;
-            _tracker.IsDesktop = true;
-            _tracker.IsActiveWindowDialog = false;
-            _tracker.IsActiveWindowExplorer = false;
-            _tracker.ActiveHwnd = rootHwnd;
-
-            if (rootHwnd != _tracker.LastActiveHwnd)
-            {
-                _tracker.LastActiveHwnd = rootHwnd;
-                _tracker.RaiseExplorerActivated(rootHwnd, "Desktop", clsName, true);
-
-                ThreadPool.QueueUserWorkItem(_ =>
-                {
-                    string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                    if (_dialogTracker.LastActiveExplorerPath != desktopPath)
-                        _dialogTracker.SetLastActiveExplorerPath(desktopPath);
-                    if (desktopPath != _tracker.LastPath)
-                    {
-                        _tracker.LastPath = desktopPath;
-                        _tracker.RaisePathCaptured(desktopPath, true);
-                    }
-                });
-            }
-        }
-
-        private void TrackCabinetWindow(IntPtr rootHwnd, string clsName)
-        {
-            _tracker.IsExplorerOrDesktopActive = true;
-            _tracker.IsDesktop = false;
-            _tracker.IsActiveWindowDialog = false;
-            _tracker.IsActiveWindowExplorer = true;
-            _tracker.ActiveHwnd = rootHwnd;
-
-            var windowTitle = new StringBuilder(256);
-            ExplorerNativeHooks.GetWindowText(rootHwnd, windowTitle, windowTitle.Capacity);
-
-            if (rootHwnd != _tracker.LastActiveHwnd)
-            {
-                _tracker.LastActiveHwnd = rootHwnd;
-                _tracker.RaiseExplorerActivated(rootHwnd, windowTitle.ToString(), clsName, false);
-            }
-
-            ThreadPool.QueueUserWorkItem(_ =>
-            {
-                string? activePath = ExplorerComNavigator.GetActiveExplorerPath(rootHwnd, msg => _tracker.RaiseError(msg));
-                if (!string.IsNullOrEmpty(activePath))
-                {
-                    if (_dialogTracker.LastActiveExplorerPath != activePath)
-                        _dialogTracker.SetLastActiveExplorerPath(activePath);
-                    if (activePath != _tracker.LastPath)
-                    {
-                        _tracker.LastPath = activePath;
-                        _tracker.RaisePathCaptured(activePath, false);
-                    }
-                }
-            });
         }
     }
 }

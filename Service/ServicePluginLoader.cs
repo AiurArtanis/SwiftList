@@ -51,6 +51,13 @@ namespace SwiftList.Service
                                 translationProviders.Add(provider);
                                 Logger.Log($"[ServicePluginLoader] Loaded translation provider: '{type.Name}' from {Path.GetFileName(dllFile)}");
                             }
+
+                            if (typeof(IActivePathCollector).IsAssignableFrom(type))
+                            {
+                                IActivePathCollector provider = (IActivePathCollector)Activator.CreateInstance(type)!;
+                                ActivePathCollectorRegistry.Register(provider);
+                                Logger.Log($"[ServicePluginLoader] Loaded active path collector: '{type.Name}' from {Path.GetFileName(dllFile)}");
+                            }
                         }
                     }
                     catch (Exception ex)

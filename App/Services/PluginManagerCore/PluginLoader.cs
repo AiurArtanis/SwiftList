@@ -98,6 +98,13 @@ namespace SwiftList.App.Services.PluginManagerCore
                         registry.AddThemeProvider(provider);
                         Logger.Log($"[PluginManager] Loaded theme provider: '{type.Name}' from {fileName}");
                     }
+
+                    if (typeof(SwiftList.PluginSdk.IActivePathCollector).IsAssignableFrom(type))
+                    {
+                        var provider = (SwiftList.PluginSdk.IActivePathCollector)Activator.CreateInstance(type)!;
+                        registry.AddActivePathCollector(provider);
+                        Logger.Log($"[PluginManager] Loaded active path collector: '{type.Name}' from {fileName}");
+                    }
                 }
             }
             catch (Exception ex)
