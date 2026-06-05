@@ -140,25 +140,14 @@ namespace SwiftList.App
             LstResults.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((s, e) => _inputHandler.UpdateShortcutHints()));
             LstResults.SelectionChanged += (s, e) => _inputHandler.SyncExplorerSelection();
 
-            // Mouse actions on results list
-            LstResults.MouseDoubleClick += (s, e) =>
-            {
-                if (LstResults.SelectedItem is AppSearchResult result)
-                {
-                    this.ExecuteSearchResult(result);
-                }
-            };
-
+            // Mouse actions on results list: single click to execute search result
             LstResults.PreviewMouseLeftButtonUp += (s, e) =>
             {
                 var item = InlineSearchWindowInputHandler.FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
                 if (item != null && item.Content is AppSearchResult result)
                 {
-                    if (result.FullPath == "__SHOW_MORE__")
-                    {
-                        e.Handled = true;
-                        this.ExecuteSearchResult(result);
-                    }
+                    e.Handled = true;
+                    this.ExecuteSearchResult(result);
                 }
             };
 
