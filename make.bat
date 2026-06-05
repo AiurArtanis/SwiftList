@@ -98,13 +98,14 @@ if "%ISCC%"=="" (
 echo.
 echo Extracting application version...
 for /f "usebackq tokens=*" %%v in (`powershell -NoProfile -Command "([xml](Get-Content '%ROOT%App\App.csproj')).Project.PropertyGroup.Version"`) do set "APP_VER=%%v"
-echo App Version: %APP_VER%
+for /f "usebackq tokens=*" %%v in (`powershell -NoProfile -Command "$a = '%APP_VER%.0.0.0' -split '\.'; $a[0..3] -join '.'"`) do set "APP_VER_4=%%v"
+echo App Version: %APP_VER% (PE Version: %APP_VER_4%)
 
 :: 9. Compile Inno Setup Installer
 echo.
 echo [6/6] Compiling Inno Setup Installer...
 echo Using Inno Setup compiler: "%ISCC%"
-"%ISCC%" /DAppVersion="%APP_VER%" "%ROOT%Installer\installer.iss"
+"%ISCC%" /DAppVersion="%APP_VER%" /DAppVersion4="%APP_VER_4%" "%ROOT%Installer\installer.iss"
 if errorlevel 1 (
     echo [Error] Inno Setup compilation failed.
     exit /b 1

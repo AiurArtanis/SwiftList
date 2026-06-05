@@ -30,6 +30,8 @@ WizardStyle=modern
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 PrivilegesRequired=admin
+VersionInfoVersion={#AppVersion4}
+VersionInfoTextVersion={#AppVersion}
 ; Automatically check and close running instances of the App
 CloseApplications=yes
 CloseApplicationsFilter={#AppExeName}
