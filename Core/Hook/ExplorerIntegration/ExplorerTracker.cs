@@ -22,6 +22,7 @@ namespace SwiftList.Core.Hook
         public IntPtr LastActiveHwnd { get; set; }
 
         public string? LastActiveExplorerPath => _dialogTracker.LastActiveExplorerPath;
+        public string? LastActiveExplorerClassName { get; set; }
         public bool IsExplorerOrDesktopActive { get; set; }
         public bool IsDesktop { get; set; }
         public bool IsActiveWindowDialog { get; set; }
@@ -43,6 +44,10 @@ namespace SwiftList.Core.Hook
             IsDesktop = isDesktop;
             IsActiveWindowDialog = className.Equals("#32770", StringComparison.OrdinalIgnoreCase);
             IsActiveWindowExplorer = className.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase);
+            if (!IsActiveWindowDialog)
+            {
+                LastActiveExplorerClassName = className;
+            }
             RaiseExplorerActivated(hwnd, title, className, isDesktop);
         }
 

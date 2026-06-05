@@ -132,23 +132,44 @@ namespace SwiftList.App.ViewModels.Search
 
                 if (!string.IsNullOrEmpty(SearchScope) && isDialog && dirExists && !string.IsNullOrEmpty(lastPath) && !isSamePath)
                 {
-                    ReplaceResults(new[]
+                    string? targetName = null;
+                    string? className = tracker.LastActiveExplorerClassName;
+                    if (className != null)
                     {
-                        new AppSearchResult
+                        var collectors = SwiftList.PluginSdk.ActivePathCollectorRegistry.GetCollectors();
+                        foreach (var collector in collectors)
                         {
-                            Name = TranslationManager.Instance["Search_JumpToExplorer"],
-                            FullPath = lastPath,
-                            ParentDir = lastPath,
-                            IsDir = true,
-                            Drive = string.Empty,
-                            ResultKind = "JumpToExplorerPath",
-                            Index = 0,
-                            SearchQuery = string.Empty
+                            if (collector.CanHandle(className))
+                            {
+                                targetName = collector.TargetName;
+                                break;
+                            }
                         }
-                    });
+                    }
 
-                    ResultsPanelVisibility = Visibility.Visible;
-                    ResultsSeparatorVisibility = Visibility.Visible;
+                    if (!string.IsNullOrEmpty(targetName))
+                    {
+                        string format = TranslationManager.Instance["Search_JumpToExplorer"];
+                        string displayName = string.Format(format, targetName);
+
+                        ReplaceResults(new[]
+                        {
+                            new AppSearchResult
+                            {
+                                Name = displayName,
+                                FullPath = lastPath,
+                                ParentDir = lastPath,
+                                IsDir = true,
+                                Drive = string.Empty,
+                                ResultKind = "JumpToExplorerPath",
+                                Index = 0,
+                                SearchQuery = string.Empty
+                            }
+                        });
+
+                        ResultsPanelVisibility = Visibility.Visible;
+                        ResultsSeparatorVisibility = Visibility.Visible;
+                    }
                 }
                 else
                 {

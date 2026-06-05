@@ -32,43 +32,43 @@ namespace SwiftList.Core.Hook
 
                         SetTextAndNotify(targetEdit, fullPath);
 
-                            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                        System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                        {
+                            System.Threading.Thread.Sleep(150);
+                            IntPtr currentActive = ExplorerNativeHooks.GetForegroundWindow();
+                            if (currentActive == dialogHwnd)
                             {
-                                System.Threading.Thread.Sleep(150);
-                                IntPtr currentActive = ExplorerNativeHooks.GetForegroundWindow();
-                                if (currentActive == dialogHwnd)
+                                uint targetThread = ExplorerNativeHooks.GetWindowThreadProcessId(targetEdit, out uint _);
+                                uint currentThread = ExplorerNativeHooks.GetCurrentThreadId();
+                                bool attached = false;
+                                try
                                 {
-                                    uint targetThread = ExplorerNativeHooks.GetWindowThreadProcessId(targetEdit, out uint _);
-                                    uint currentThread = ExplorerNativeHooks.GetCurrentThreadId();
-                                    bool attached = false;
-                                    try
+                                    if (targetThread != 0 && targetThread != currentThread)
                                     {
-                                        if (targetThread != 0 && targetThread != currentThread)
-                                        {
-                                            attached = ExplorerNativeHooks.AttachThreadInput(currentThread, targetThread, true);
-                                        }
-
-                                        ExplorerNativeHooks.SetForegroundWindow(dialogHwnd);
-                                        ExplorerNativeHooks.SetFocus(targetEdit);
-
-                                        // Send Enter key to the focused edit box to trigger the dialog's native navigation.
-                                        // This ensures it enters directories when a trailing \ is present, rather than confirming.
-                                        ExplorerNativeHooks.PostMessage(targetEdit, FileDialogNativeMethods.WM_KEYDOWN, (IntPtr)FileDialogNativeMethods.VK_RETURN, IntPtr.Zero);
-                                        ExplorerNativeHooks.PostMessage(targetEdit, FileDialogNativeMethods.WM_KEYUP, (IntPtr)FileDialogNativeMethods.VK_RETURN, IntPtr.Zero);
-
-                                        ExplorerNativeHooks.PostMessage(targetEdit, ExplorerNativeHooks.WM_LBUTTONDOWN, (IntPtr)1, IntPtr.Zero);
-                                        ExplorerNativeHooks.PostMessage(targetEdit, ExplorerNativeHooks.WM_LBUTTONUP, IntPtr.Zero, IntPtr.Zero);
-                                        ExplorerNativeHooks.PostMessage(targetEdit, ExplorerNativeHooks.EM_SETSEL, IntPtr.Zero, (IntPtr)(-1));
+                                        attached = ExplorerNativeHooks.AttachThreadInput(currentThread, targetThread, true);
                                     }
-                                    finally
+
+                                    ExplorerNativeHooks.SetForegroundWindow(dialogHwnd);
+                                    ExplorerNativeHooks.SetFocus(targetEdit);
+
+                                    // Send Enter key to the focused edit box to trigger the dialog's native navigation.
+                                    // This ensures it enters directories when a trailing \ is present, rather than confirming.
+                                    ExplorerNativeHooks.PostMessage(targetEdit, FileDialogNativeMethods.WM_KEYDOWN, (IntPtr)FileDialogNativeMethods.VK_RETURN, IntPtr.Zero);
+                                    ExplorerNativeHooks.PostMessage(targetEdit, FileDialogNativeMethods.WM_KEYUP, (IntPtr)FileDialogNativeMethods.VK_RETURN, IntPtr.Zero);
+
+                                    ExplorerNativeHooks.PostMessage(targetEdit, ExplorerNativeHooks.WM_LBUTTONDOWN, (IntPtr)1, IntPtr.Zero);
+                                    ExplorerNativeHooks.PostMessage(targetEdit, ExplorerNativeHooks.WM_LBUTTONUP, IntPtr.Zero, IntPtr.Zero);
+                                    ExplorerNativeHooks.PostMessage(targetEdit, ExplorerNativeHooks.EM_SETSEL, IntPtr.Zero, (IntPtr)(-1));
+                                }
+                                finally
+                                {
+                                    if (attached)
                                     {
-                                        if (attached)
-                                        {
-                                            ExplorerNativeHooks.AttachThreadInput(currentThread, targetThread, false);
-                                        }
+                                        ExplorerNativeHooks.AttachThreadInput(currentThread, targetThread, false);
                                     }
                                 }
-                            });
+                            }
+                        });
                     }
                 }
             }
@@ -132,75 +132,6 @@ namespace SwiftList.Core.Hook
             return IntPtr.Zero;
         }
 
-        private static string GetLocalizedFolderName(string physicalPath)
-        {
-            try
-            {
-                var shfi = new FileDialogNativeMethods.SHFILEINFO();
-                IntPtr res = FileDialogNativeMethods.SHGetFileInfo(physicalPath, 0, ref shfi, (uint)Marshal.SizeOf(shfi), FileDialogNativeMethods.SHGFI_DISPLAYNAME);
-                if (res != IntPtr.Zero && !string.IsNullOrEmpty(shfi.szDisplayName))
-                {
-                    return shfi.szDisplayName.Trim();
-                }
-            }
-            catch { }
-            return Path.GetFileName(physicalPath) ?? string.Empty;
-        }
-
-        private static readonly Environment.SpecialFolder[] _trackedSpecialFolders = new[]
-        {
-            Environment.SpecialFolder.Desktop,
-            Environment.SpecialFolder.MyDocuments,
-            Environment.SpecialFolder.MyPictures,
-            Environment.SpecialFolder.MyMusic,
-            Environment.SpecialFolder.MyVideos,
-            Environment.SpecialFolder.UserProfile
-        };
-
-        private static string ResolveSpecialFolder(string name)
-        {
-            name = name.Trim();
-
-            foreach (var folderType in _trackedSpecialFolders)
-            {
-                try
-                {
-                    string path = Environment.GetFolderPath(folderType);
-                    if (string.IsNullOrEmpty(path)) continue;
-
-                    string dirName = Path.GetFileName(path);
-                    string localizedName = GetLocalizedFolderName(path);
-
-                    if (string.Equals(name, dirName, StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(name, localizedName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return path;
-                    }
-                }
-                catch { }
-            }
-
-            try
-            {
-                string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                string downloadsPath = Path.Combine(userProfile, "Downloads");
-                if (Directory.Exists(downloadsPath))
-                {
-                    string dirName = Path.GetFileName(downloadsPath);
-                    string localizedName = GetLocalizedFolderName(downloadsPath);
-
-                    if (string.Equals(name, dirName, StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(name, localizedName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return downloadsPath;
-                    }
-                }
-            }
-            catch { }
-
-            return name;
-        }
-
         public static string? GetDialogFolderPath(IntPtr dialogHwnd)
         {
             try
@@ -239,7 +170,7 @@ namespace SwiftList.Core.Hook
 
                         if (!string.IsNullOrEmpty(potentialPath))
                         {
-                            string resolved = ResolveSpecialFolder(potentialPath);
+                            string resolved = SwiftList.PluginSdk.ShellPathHelper.ResolveSpecialFolder(potentialPath);
                             if (Directory.Exists(resolved))
                             {
                                 return resolved;

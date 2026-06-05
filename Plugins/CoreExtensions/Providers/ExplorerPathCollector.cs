@@ -8,7 +8,9 @@ namespace SwiftList.Plugins.CoreExtensions.Providers
 {
     public class ExplorerPathCollector : IActivePathCollector
     {
-        public string Name => "Windows Explorer and Desktop Path Collector";
+        public string Name => TranslationService.Get("Plugins_ExplorerTargetName");
+
+        public string TargetName => TranslationService.Get("Plugins_ExplorerTargetName");
 
         public bool CanHandle(string className)
         {

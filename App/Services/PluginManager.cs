@@ -43,6 +43,10 @@ namespace SwiftList.App.Services
             AliasProviderRegistry.FilterFunc = prov =>
                 _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.AliasProvider, prov.GetType().Name);
 
+            // Wire up the dynamic filtering delegate for active path collectors
+            SwiftList.PluginSdk.ActivePathCollectorRegistry.FilterFunc = prov =>
+                _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.ActivePathCollector, prov.GetType().Name);
+
             PluginLoader.Load(this);
         }
 

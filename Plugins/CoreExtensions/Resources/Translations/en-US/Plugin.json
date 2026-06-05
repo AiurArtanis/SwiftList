@@ -49,5 +49,6 @@
   "Filter_Date365": "Past Year",
   "Action_Touch": "Create Empty File",
   "Action_Mkdir": "Create Directory",
-  "Command_Name": "System Command Runner"
+  "Command_Name": "System Command Runner",
+  "Plugins_ExplorerTargetName": "Windows File Explorer"
 }

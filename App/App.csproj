@@ -13,7 +13,7 @@
     <RetainVM>false</RetainVM>
     <AssemblyName>SwiftList.App</AssemblyName>
     <RootNamespace>SwiftList.App</RootNamespace>
-    <Version>1.2.5</Version>
+    <Version>1.2.6</Version>
   </PropertyGroup>
 
 
@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <Resource Include="logo.png" />
+    <Resource Include="logo.ico" />
   </ItemGroup>
 
 </Project>

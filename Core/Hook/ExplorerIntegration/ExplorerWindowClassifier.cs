@@ -46,10 +46,31 @@ namespace SwiftList.Core.Hook
                 bool isDesktop = ExplorerNativeHooks.IsDesktopWindow(rootHwnd, out string windowClassName);
                 Logger.Log($"[ExplorerTracker] Active window: HWND=0x{hwnd:X}, Root=0x{rootHwnd:X}, Class={windowClassName}, isDesktop={isDesktop}", LogLevel.Debug);
 
-                // Get active class name (control class name)
-                var sbActiveCls = new StringBuilder(256);
-                ExplorerNativeHooks.GetClassName(hwnd, sbActiveCls, sbActiveCls.Capacity);
-                string activeClassName = sbActiveCls.ToString();
+                // Resolve the actual focused control handle inside the active window's thread
+                IntPtr focusedHwnd = IntPtr.Zero;
+                string activeClassName = string.Empty;
+                try
+                {
+                    uint threadId = KeyboardNativeMethods.GetWindowThreadProcessId(rootHwnd, out _);
+                    var guiInfo = new KeyboardNativeMethods.GUITHREADINFO();
+                    guiInfo.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(guiInfo);
+                    if (KeyboardNativeMethods.GetGUIThreadInfo(threadId, ref guiInfo) && guiInfo.hwndFocus != IntPtr.Zero)
+                    {
+                        focusedHwnd = guiInfo.hwndFocus;
+                        var sbActiveCls = new StringBuilder(256);
+                        KeyboardNativeMethods.GetClassName(focusedHwnd, sbActiveCls, sbActiveCls.Capacity);
+                        activeClassName = sbActiveCls.ToString();
+                    }
+                }
+                catch { }
+
+                if (focusedHwnd == IntPtr.Zero)
+                {
+                    focusedHwnd = hwnd;
+                    var sbActiveCls = new StringBuilder(256);
+                    ExplorerNativeHooks.GetClassName(hwnd, sbActiveCls, sbActiveCls.Capacity);
+                    activeClassName = sbActiveCls.ToString();
+                }
 
                 // Get process name of root window
                 string processName = "Unknown";
@@ -76,7 +97,7 @@ namespace SwiftList.Core.Hook
                     {
                         if (collector.CanHandle(windowClassName))
                         {
-                            string? activePath = collector.TryGetPath(hwnd, activeClassName, rootHwnd, windowClassName, processName);
+                            string? activePath = collector.TryGetPath(focusedHwnd, activeClassName, rootHwnd, windowClassName, processName);
                             if (!string.IsNullOrEmpty(activePath))
                             {
                                 handledByPlugin = true;
@@ -84,6 +105,7 @@ namespace SwiftList.Core.Hook
                                 _tracker.IsDesktop = isDesktop;
                                 _tracker.IsActiveWindowDialog = false;
                                 _tracker.IsActiveWindowExplorer = !isDesktop && windowClassName.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase);
+                                _tracker.LastActiveExplorerClassName = windowClassName;
                                 _tracker.ActiveHwnd = rootHwnd;
 
                                 if (rootHwnd != _tracker.LastActiveHwnd)

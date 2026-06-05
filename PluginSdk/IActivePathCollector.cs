@@ -13,6 +13,11 @@ namespace SwiftList.PluginSdk
         string Name { get; }
 
         /// <summary>
+        /// Gets the localized name of the target file manager (e.g., "Windows File Explorer", "Directory Opus").
+        /// </summary>
+        string TargetName { get; }
+
+        /// <summary>
         /// Checks if this collector can handle the active window with the given class name.
         /// </summary>
         bool CanHandle(string className);

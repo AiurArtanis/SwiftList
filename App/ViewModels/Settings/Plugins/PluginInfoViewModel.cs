@@ -17,6 +17,7 @@ namespace SwiftList.App.ViewModels.Settings.Plugins
         FilterProvider,
         ColumnProvider,
         AliasProvider,
+        ActivePathCollector,
         /// <summary>Translation providers are displayed read-only; they cannot be disabled.</summary>
         TranslationProvider,
         /// <summary>Theme providers are displayed read-only; they cannot be disabled.</summary>

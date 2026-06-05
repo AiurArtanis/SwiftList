@@ -129,6 +129,15 @@ namespace SwiftList.App.ViewModels.Settings.Plugins
                     {
                         pluginName = firstAliasProv.Name;
                     }
+                    else
+                    {
+                        var firstPathCol = ActivePathCollectorRegistry.GetAllCollectors()
+                            .FirstOrDefault(p => p.GetType().Assembly == assembly);
+                        if (firstPathCol != null && !string.IsNullOrWhiteSpace(firstPathCol.Name))
+                        {
+                            pluginName = firstPathCol.Name;
+                        }
+                    }
                 }
 
                 // Format metadata (simply use dllName, SDK version is put on the title card)
@@ -162,6 +171,11 @@ namespace SwiftList.App.ViewModels.Settings.Plugins
             {
                 string id = MakeId(dllName, PluginComponentType.AliasProvider, prov.GetType().Name);
                 components.Add(new PluginComponentViewModel(id, PluginComponentType.AliasProvider, string.IsNullOrWhiteSpace(prov.Name) ? prov.GetType().Name : prov.Name, !disabledSet.Contains(id)));
+            }
+            foreach (var prov in ActivePathCollectorRegistry.GetAllCollectors().Where(p => p.GetType().Assembly == assembly))
+            {
+                string id = MakeId(dllName, PluginComponentType.ActivePathCollector, prov.GetType().Name);
+                components.Add(new PluginComponentViewModel(id, PluginComponentType.ActivePathCollector, string.IsNullOrWhiteSpace(prov.Name) ? prov.GetType().Name : prov.Name, !disabledSet.Contains(id)));
             }
             foreach (var prov in manager.AllInstantResultProviders.Where(p => p.GetType().Assembly == assembly))
             {

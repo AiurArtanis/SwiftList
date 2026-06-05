@@ -50,15 +50,13 @@ namespace SwiftList.App.Services
 
             try
             {
-                var resourceUri = new Uri("pack://application:,,,/SwiftList.App;component/logo.png", UriKind.Absolute);
+                var resourceUri = new Uri("pack://application:,,,/SwiftList.App;component/logo.ico", UriKind.Absolute);
                 var resourceInfo = Application.GetResourceStream(resourceUri);
 
                 if (resourceInfo != null)
                 {
                     using var stream = resourceInfo.Stream;
-                    using var bitmap = new Bitmap(stream);
-                    IntPtr hIcon = bitmap.GetHicon();
-                    _notifyIcon.Icon = Icon.FromHandle(hIcon);
+                    _notifyIcon.Icon = new Icon(stream);
                 }
                 else
                 {

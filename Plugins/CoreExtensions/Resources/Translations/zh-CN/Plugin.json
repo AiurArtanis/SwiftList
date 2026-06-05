@@ -49,5 +49,6 @@
   "Filter_Date365": "最近 365 天",
   "Action_Touch": "新建空白文件",
   "Action_Mkdir": "新建文件夹",
-  "Command_Name": "系统命令执行器"
+  "Command_Name": "系统命令执行器",
+  "Plugins_ExplorerTargetName": "Windows 资源管理器"
 }
