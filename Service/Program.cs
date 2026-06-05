@@ -12,6 +12,7 @@ namespace SwiftList.Service
 {
     static class Program
     {
+        [STAThread]
         static void Main(string[] args)
         {
             // Set up global exception handlers
