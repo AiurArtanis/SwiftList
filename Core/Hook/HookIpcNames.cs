@@ -9,12 +9,11 @@ namespace SwiftList.Core.Hook
     /// </summary>
     public static class HookIpcNames
     {
-        /// <summary>
-        /// The pipe name used to send notifications from the hook process to the App.
-        /// Format: SwiftList_Hook_{Username}_{SessionId}
-        /// </summary>
-        public static string NotifyPipeName =>
-            $"SwiftList_Hook_{SanitizeForPipeName(Environment.UserName)}_{GetCurrentSessionId()}";
+        public static string EventPipeName =>
+            $"SwiftList_Hook_Events_{SanitizeForPipeName(Environment.UserName)}_{GetCurrentSessionId()}";
+
+        public static string CmdPipeName =>
+            $"SwiftList_Hook_Cmds_{SanitizeForPipeName(Environment.UserName)}_{GetCurrentSessionId()}";
 
         private static string SanitizeForPipeName(string value)
         {

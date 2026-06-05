@@ -9,45 +9,6 @@ namespace SwiftList.App.Services
     {
         public static string GetServiceExePath()
         {
-            try
-            {
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\SwiftListService"))
-                {
-                    if (key != null)
-                    {
-                        var imagePathObj = key.GetValue("ImagePath");
-                        if (imagePathObj is string imagePath && !string.IsNullOrWhiteSpace(imagePath))
-                        {
-                            string exePath = imagePath.Trim();
-                            if (exePath.StartsWith("\""))
-                            {
-                                int nextQuote = exePath.IndexOf("\"", 1);
-                                if (nextQuote > 0)
-                                {
-                                    exePath = exePath.Substring(1, nextQuote - 1);
-                                }
-                            }
-                            else
-                            {
-                                int spaceIdx = exePath.IndexOf(" ");
-                                if (spaceIdx > 0)
-                                {
-                                    exePath = exePath.Substring(0, spaceIdx);
-                                }
-                            }
-                            if (File.Exists(exePath))
-                            {
-                                return Path.GetFullPath(exePath);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"[ServiceInstallManager] Failed to read service path from registry: {ex.Message}", SwiftList.Core.LogLevel.Warn);
-            }
-
             string serviceExePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SwiftList.Service.exe");
             if (!File.Exists(serviceExePath))
             {

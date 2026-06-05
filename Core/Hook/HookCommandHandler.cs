@@ -1,0 +1,133 @@
+using System;
+using System.Text;
+using SwiftList.Core.Hook.InlineSearch;
+using SwiftList.PluginSdk;
+
+namespace SwiftList.Core.Hook
+{
+    public sealed class HookCommandHandler
+    {
+        private readonly HookProcess _process;
+
+        public HookCommandHandler(HookProcess process)
+        {
+            _process = process;
+        }
+
+        public void HandleAppCommand(IpcMessage msg)
+        {
+            try
+            {
+                switch (msg.Id)
+                {
+                    case IpcMessageId.SetQuickSearchVisible:
+                        if (_process.KeyboardHook != null)
+                            _process.KeyboardHook.IsQuickSearchWindowVisible = msg.BoolVal;
+                        break;
+                    case IpcMessageId.SetInlineSearchVisible:
+                        if (_process.KeyboardHook != null)
+                            _process.KeyboardHook.IsInlineSearchVisible = msg.BoolVal;
+                        break;
+                    case IpcMessageId.SetAppProcessId:
+                        _process.AppProcessId = msg.ProcessId;
+                        if (_process.KeyboardHook != null)
+                            _process.KeyboardHook.AppProcessId = msg.ProcessId;
+                        if (_process.ExplorerTracker != null)
+                            _process.ExplorerTracker.AppProcessId = msg.ProcessId;
+                        break;
+                    case IpcMessageId.NavigateDialog:
+                        {
+                            IntPtr dialogHwnd = (IntPtr)msg.Hwnd;
+                            string? navPath = msg.StringVal1;
+                            if (dialogHwnd != IntPtr.Zero && !string.IsNullOrEmpty(navPath))
+                            {
+                                System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                                {
+                                    var adapter = (_process.ExplorerTracker != null && _process.ExplorerTracker.ActiveHwnd == dialogHwnd)
+                                        ? _process.ExplorerTracker.ActiveAdapter
+                                        : null;
+
+                                    if (adapter == null)
+                                    {
+                                        var sbClass = new StringBuilder(256);
+                                        ExplorerNativeHooks.GetClassName(dialogHwnd, sbClass, sbClass.Capacity);
+                                        string className = sbClass.ToString();
+                                        string processName = "Unknown";
+                                        try
+                                        {
+                                            ExplorerNativeHooks.GetWindowThreadProcessId(dialogHwnd, out uint pid);
+                                            if (pid != 0)
+                                            {
+                                                using (var proc = System.Diagnostics.Process.GetProcessById((int)pid))
+                                                    processName = proc.ProcessName;
+                                            }
+                                        }
+                                        catch { }
+                                        adapter = FileDialogAdapterRegistry.GetMatchingAdapter(dialogHwnd, className, processName);
+                                    }
+
+                                    if (adapter != null)
+                                    {
+                                        adapter.NavigateTo(dialogHwnd, navPath);
+                                    }
+                                });
+                            }
+                        }
+                        break;
+                    case IpcMessageId.RestoreDialogFocus:
+                        {
+                            IntPtr activeHwnd = (IntPtr)msg.Hwnd;
+                            if (activeHwnd != IntPtr.Zero)
+                            {
+                                System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                                {
+                                    var adapter = (_process.ExplorerTracker != null && _process.ExplorerTracker.ActiveHwnd == activeHwnd)
+                                        ? _process.ExplorerTracker.ActiveAdapter
+                                        : null;
+
+                                    if (adapter == null)
+                                    {
+                                        var sbClass = new StringBuilder(256);
+                                        ExplorerNativeHooks.GetClassName(activeHwnd, sbClass, sbClass.Capacity);
+                                        string className = sbClass.ToString();
+                                        string processName = "Unknown";
+                                        try
+                                        {
+                                            ExplorerNativeHooks.GetWindowThreadProcessId(activeHwnd, out uint pid);
+                                            if (pid != 0)
+                                            {
+                                                using (var proc = System.Diagnostics.Process.GetProcessById((int)pid))
+                                                    processName = proc.ProcessName;
+                                            }
+                                        }
+                                        catch { }
+                                        adapter = FileDialogAdapterRegistry.GetMatchingAdapter(activeHwnd, className, processName);
+                                    }
+
+                                    if (adapter != null)
+                                    {
+                                        adapter.RestoreFocus(activeHwnd);
+                                    }
+                                });
+                            }
+                        }
+                        break;
+
+                    case IpcMessageId.ReloadSettings:
+                        if (_process.KeyboardHook != null)
+                            _process.KeyboardHook.ReloadSettings();
+                        break;
+                    case IpcMessageId.SetHotkeysDisabled:
+                        _process.IsHotkeysDisabledTemporarily = msg.BoolVal;
+                        if (_process.KeyboardHook != null)
+                            _process.KeyboardHook.IsHotkeysDisabledTemporarily = msg.BoolVal;
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[HookCommandHandler] Error parsing IPC command {msg.Id}: {ex.Message}", LogLevel.Warn);
+            }
+        }
+    }
+}

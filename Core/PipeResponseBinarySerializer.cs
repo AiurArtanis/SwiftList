@@ -10,10 +10,18 @@ namespace SwiftList.Core
 
         public static void WriteText(Stream stream, string text)
         {
+            using var ms = new MemoryStream();
+            using (var msWriter = new BinaryWriter(ms, Encoding.UTF8))
+            {
+                msWriter.Write(text ?? string.Empty);
+            }
+            byte[] payload = ms.ToArray();
+
             using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
             writer.Write(Magic);
             writer.Write(Version);
-            writer.Write(text ?? string.Empty);
+            writer.Write(payload.Length);
+            writer.Write(payload);
             writer.Flush();
         }
 
@@ -28,7 +36,28 @@ namespace SwiftList.Core
             if (version != Version)
                 throw new InvalidDataException($"Unsupported pipe response binary version: {version}.");
 
-            return reader.ReadString();
+            int length = reader.ReadInt32();
+            if (length < 0 || length > 10 * 1024 * 1024) // 10MB limit
+                throw new InvalidDataException($"Invalid response payload length: {length}");
+
+            byte[] payload = ReadExactly(reader, length);
+            using var ms = new MemoryStream(payload);
+            using var msReader = new BinaryReader(ms, Encoding.UTF8);
+            return msReader.ReadString();
+        }
+
+        private static byte[] ReadExactly(BinaryReader reader, int count)
+        {
+            byte[] buffer = new byte[count];
+            int offset = 0;
+            while (offset < count)
+            {
+                int read = reader.Read(buffer, offset, count - offset);
+                if (read <= 0)
+                    throw new EndOfStreamException($"End of stream reached. Read {offset} of {count} bytes.");
+                offset += read;
+            }
+            return buffer;
         }
     }
 }

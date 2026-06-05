@@ -17,7 +17,10 @@ namespace SwiftList.Core.Hook
         private readonly string _serviceExePath;
         private readonly bool _autoElevate;
         private Process? _hookProcess;
-        private NamedPipeClientStream? _pipe;
+        private NamedPipeClientStream? _eventPipe;
+        private NamedPipeClientStream? _cmdPipe;
+        private BinaryWriter? _writer;
+        private BinaryReader? _reader;
         private CancellationTokenSource? _cts;
         private Task? _listenTask;
         private readonly object _writeLock = new object();
@@ -84,8 +87,10 @@ namespace SwiftList.Core.Hook
             {
                 lock (_writeLock)
                 {
-                    _pipe?.Dispose();
-                    _pipe = null;
+                    _eventPipe?.Dispose();
+                    _eventPipe = null;
+                    _cmdPipe?.Dispose();
+                    _cmdPipe = null;
                 }
             }
         }
@@ -99,10 +104,10 @@ namespace SwiftList.Core.Hook
             {
                 lock (_writeLock)
                 {
-                    if (_pipe != null && _pipe.IsConnected)
+                    if (_cmdPipe != null && _cmdPipe.IsConnected && _writer != null)
                     {
-                        PipeRequestBinarySerializer.WriteMessage(_pipe, msg);
-                        _pipe.Flush();
+                        PipeRequestBinarySerializer.WriteMessage(_writer, msg);
+                        _cmdPipe.Flush();
                     }
                 }
             }
@@ -114,8 +119,6 @@ namespace SwiftList.Core.Hook
 
         private async Task RunLoop(CancellationToken token)
         {
-            string pipeName = HookIpcNames.NotifyPipeName;
-
             while (!token.IsCancellationRequested)
             {
                 try
@@ -129,27 +132,39 @@ namespace SwiftList.Core.Hook
                     }
 
                     ServiceProcessId = _hookProcess.Id;
-                    Logger.Log($"[HookIpcClient] Hook process launched (PID {_hookProcess.Id}), connecting to pipe '{pipeName}'...", LogLevel.Debug);
+                    Logger.Log($"[HookIpcClient] Hook process launched (PID {_hookProcess.Id}), connecting to Event and Cmd pipes...", LogLevel.Debug);
 
                     await Task.Delay(500, token);
 
-                    using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+                    using var eventPipe = new NamedPipeClientStream(".", HookIpcNames.EventPipeName, PipeDirection.In, PipeOptions.Asynchronous);
+                    using var cmdPipe = new NamedPipeClientStream(".", HookIpcNames.CmdPipeName, PipeDirection.Out, PipeOptions.Asynchronous);
                     lock (_writeLock)
                     {
-                        _pipe = pipe;
+                        _eventPipe = eventPipe;
+                        _cmdPipe = cmdPipe;
                     }
 
-                    await pipe.ConnectAsync(5000, token);
-                    Logger.Log("[HookIpcClient] Connected to hook pipe.", LogLevel.Debug);
+                    await Task.WhenAll(
+                        eventPipe.ConnectAsync(5000, token),
+                        cmdPipe.ConnectAsync(5000, token)
+                    ).ConfigureAwait(false);
+
+                    Logger.Log("[HookIpcClient] Connected to hook pipes.", LogLevel.Debug);
+
+                    lock (_writeLock)
+                    {
+                        _writer = new BinaryWriter(cmdPipe, System.Text.Encoding.UTF8, leaveOpen: true);
+                        _reader = new BinaryReader(eventPipe, System.Text.Encoding.UTF8, leaveOpen: true);
+                    }
 
                     // Send initial process ID of the App so the Service can ignore it
                     SendMessage(new IpcMessage { Id = IpcMessageId.SetAppProcessId, ProcessId = (uint)Environment.ProcessId });
                     SendMessage(new IpcMessage { Id = IpcMessageId.SetHotkeysDisabled, BoolVal = _isHotkeysDisabled });
 
                     // Listen for events from Hook Service
-                    while (!token.IsCancellationRequested && pipe.IsConnected && !_hookProcess.HasExited)
+                    while (!token.IsCancellationRequested && eventPipe.IsConnected && !_hookProcess.HasExited)
                     {
-                        IpcMessage msg = await Task.Run(() => PipeRequestBinarySerializer.ReadMessage(pipe), token);
+                        IpcMessage msg = await Task.Run(() => PipeRequestBinarySerializer.ReadMessage(_reader), token);
                         DispatchEvent(msg);
                     }
                 }
@@ -177,7 +192,12 @@ namespace SwiftList.Core.Hook
                 {
                     lock (_writeLock)
                     {
-                        _pipe = null;
+                        try { _writer?.Dispose(); } catch { }
+                        _writer = null;
+                        try { _reader?.Dispose(); } catch { }
+                        _reader = null;
+                        _eventPipe = null;
+                        _cmdPipe = null;
                     }
                     try { _hookProcess?.Kill(); } catch { }
                     _hookProcess = null;

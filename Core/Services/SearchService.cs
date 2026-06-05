@@ -127,7 +127,7 @@ namespace SwiftList.Core
                 if (verboseLog)
                     Logger.Log("[PipeClient] Connected. Writing command...", LogLevel.Debug);
                 
-                PipeRequestBinarySerializer.WriteSearchRequest(pipe, msg);
+                SearchRequestBinarySerializer.WriteSearchRequest(pipe, msg);
                 if (verboseLog)
                     Logger.Log("[PipeClient] Command written. Reading response...", LogLevel.Debug);
                 
@@ -149,7 +149,7 @@ namespace SwiftList.Core
             using var pipe = new NamedPipeClientStream(".", "SwiftListPipe", PipeDirection.InOut);
             pipe.Connect(1000);
 
-            PipeRequestBinarySerializer.WriteSearchRequest(pipe, msg);
+            SearchRequestBinarySerializer.WriteSearchRequest(pipe, msg);
 
             SearchResponseBinarySerializer.Read(pipe, (result, isApp) =>
             {

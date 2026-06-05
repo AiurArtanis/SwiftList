@@ -3,20 +3,24 @@ using System.IO;
 using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Channels;
 
 namespace SwiftList.Core.Hook
 {
     /// <summary>
     /// Runs inside the hook process.
     /// Connects back to the App's pipe server and sends notifications.
-    /// Uses full binary stream protocol (PipeRequestBinarySerializer).
+    /// Uses two isolated named pipes for physically decoupled Event (Out) and Command (In) streams.
     /// </summary>
     public sealed class HookIpcServer : IDisposable
     {
-        private readonly string _pipeName;
-        private NamedPipeServerStream? _pipe;
+        private NamedPipeServerStream? _eventPipe;
+        private NamedPipeServerStream? _cmdPipe;
+        private BinaryWriter? _writer;
+        private BinaryReader? _reader;
         private CancellationTokenSource? _cts;
         private Task? _listenTask;
+        private readonly Channel<IpcMessage> _sendChannel;
 
         // Fired when the App sends us a "STOP" command
         public event Action? OnStopRequested;
@@ -26,7 +30,11 @@ namespace SwiftList.Core.Hook
 
         public HookIpcServer()
         {
-            _pipeName = HookIpcNames.NotifyPipeName;
+            _sendChannel = Channel.CreateUnbounded<IpcMessage>(new UnboundedChannelOptions
+            {
+                SingleWriter = false,
+                SingleReader = true
+            });
         }
 
         public void Start()
@@ -37,25 +45,11 @@ namespace SwiftList.Core.Hook
 
         /// <summary>
         /// Sends a binary message to the connected App.
-        /// Thread-safe: uses a write lock.
+        /// Thread-safe and completely non-blocking: writes to a high-performance Channel.
         /// </summary>
         public void SendMessage(IpcMessage msg)
         {
-            try
-            {
-                lock (_writeLock)
-                {
-                    if (_pipe != null && _pipe.IsConnected)
-                    {
-                        PipeRequestBinarySerializer.WriteMessage(_pipe, msg);
-                        _pipe.Flush();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"[HookIpcServer] Failed to send IPC message {msg.Id}: {ex.Message}", LogLevel.Warn);
-            }
+            _sendChannel.Writer.TryWrite(msg);
         }
 
         public void SendActivate()
@@ -65,9 +59,36 @@ namespace SwiftList.Core.Hook
 
         private readonly object _writeLock = new object();
 
+        private async Task ProcessWriteQueueAsync(NamedPipeServerStream pipe, CancellationToken token)
+        {
+            try
+            {
+                var reader = _sendChannel.Reader;
+                while (await reader.WaitToReadAsync(token).ConfigureAwait(false))
+                {
+                    while (reader.TryRead(out var msg))
+                    {
+                        lock (_writeLock)
+                        {
+                            if (pipe.IsConnected && _writer != null)
+                            {
+                                PipeRequestBinarySerializer.WriteMessage(_writer, msg);
+                                pipe.Flush();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                Logger.Log($"[HookIpcServer] Write queue error: {ex.Message}", LogLevel.Warn);
+            }
+        }
+
         private async Task ServerLoop(CancellationToken token)
         {
-            Logger.Log($"[HookIpcServer] Starting server on pipe '{_pipeName}'.", LogLevel.Debug);
+            Logger.Log("[HookIpcServer] Starting dual-pipe server loops.", LogLevel.Debug);
 
             System.IO.Pipes.PipeSecurity? pipeSecurity = null;
             try
@@ -86,7 +107,6 @@ namespace SwiftList.Core.Hook
                     System.IO.Pipes.PipeAccessRights.ReadWrite | System.IO.Pipes.PipeAccessRights.CreateNewInstance,
                     System.Security.AccessControl.AccessControlType.Allow
                 ));
-                Logger.Log("[HookIpcServer] PipeSecurity successfully configured.", LogLevel.Debug);
             }
             catch (Exception ex)
             {
@@ -97,12 +117,22 @@ namespace SwiftList.Core.Hook
             {
                 try
                 {
-                    NamedPipeServerStream pipe;
+                    NamedPipeServerStream eventPipe;
+                    NamedPipeServerStream cmdPipe;
                     if (pipeSecurity != null)
                     {
-                        pipe = NamedPipeServerStreamAcl.Create(
-                            _pipeName,
-                            PipeDirection.InOut,
+                        eventPipe = NamedPipeServerStreamAcl.Create(
+                            HookIpcNames.EventPipeName,
+                            PipeDirection.Out,
+                            1,
+                            PipeTransmissionMode.Byte,
+                            PipeOptions.Asynchronous,
+                            4096, 4096,
+                            pipeSecurity
+                        );
+                        cmdPipe = NamedPipeServerStreamAcl.Create(
+                            HookIpcNames.CmdPipeName,
+                            PipeDirection.In,
                             1,
                             PipeTransmissionMode.Byte,
                             PipeOptions.Asynchronous,
@@ -112,26 +142,51 @@ namespace SwiftList.Core.Hook
                     }
                     else
                     {
-                        pipe = new NamedPipeServerStream(
-                            _pipeName,
-                            PipeDirection.InOut,
+                        eventPipe = new NamedPipeServerStream(
+                            HookIpcNames.EventPipeName,
+                            PipeDirection.Out,
+                            1,
+                            PipeTransmissionMode.Byte,
+                            PipeOptions.Asynchronous,
+                            4096, 4096);
+                        cmdPipe = new NamedPipeServerStream(
+                            HookIpcNames.CmdPipeName,
+                            PipeDirection.In,
                             1,
                             PipeTransmissionMode.Byte,
                             PipeOptions.Asynchronous,
                             4096, 4096);
                     }
 
+                    Logger.Log("[HookIpcServer] Waiting for App to connect on both pipes...", LogLevel.Debug);
+                    await Task.WhenAll(
+                        eventPipe.WaitForConnectionAsync(token),
+                        cmdPipe.WaitForConnectionAsync(token)
+                    ).ConfigureAwait(false);
+                    Logger.Log("[HookIpcServer] App connected on both pipes.", LogLevel.Debug);
+
                     lock (_writeLock)
                     {
-                        _pipe = pipe;
+                        _eventPipe = eventPipe;
+                        _cmdPipe = cmdPipe;
+                        _writer = new BinaryWriter(eventPipe, System.Text.Encoding.UTF8, leaveOpen: true);
+                        _reader = new BinaryReader(cmdPipe, System.Text.Encoding.UTF8, leaveOpen: true);
                     }
 
-                    Logger.Log("[HookIpcServer] Waiting for App to connect...", LogLevel.Debug);
-                    await pipe.WaitForConnectionAsync(token);
-                    Logger.Log("[HookIpcServer] App connected.", LogLevel.Debug);
+                    while (_sendChannel.Reader.TryRead(out _)) { }
 
-                    // Listen for commands from App
-                    await ListenForCommands(pipe, token);
+                    using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    var writeTask = ProcessWriteQueueAsync(eventPipe, writeCts.Token);
+
+                    try
+                    {
+                        await ListenForCommands(_reader, cmdPipe, token).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        writeCts.Cancel();
+                        try { await writeTask.ConfigureAwait(false); } catch { }
+                    }
                 }
                 catch (OperationCanceledException)
                 {
@@ -146,21 +201,27 @@ namespace SwiftList.Core.Hook
                 {
                     lock (_writeLock)
                     {
-                        _pipe?.Dispose();
-                        _pipe = null;
+                        try { _writer?.Dispose(); } catch { }
+                        _writer = null;
+                        try { _reader?.Dispose(); } catch { }
+                        _reader = null;
+                        try { _eventPipe?.Dispose(); } catch { }
+                        _eventPipe = null;
+                        try { _cmdPipe?.Dispose(); } catch { }
+                        _cmdPipe = null;
                     }
                 }
             }
-            Logger.Log("[HookIpcServer] Server loop stopped.", LogLevel.Debug);
+            Logger.Log("[HookIpcServer] Server loops stopped.", LogLevel.Debug);
         }
 
-        private async Task ListenForCommands(NamedPipeServerStream pipe, CancellationToken token)
+        private async Task ListenForCommands(BinaryReader reader, NamedPipeServerStream pipe, CancellationToken token)
         {
             try
             {
                 while (!token.IsCancellationRequested && pipe.IsConnected)
                 {
-                    IpcMessage msg = await Task.Run(() => PipeRequestBinarySerializer.ReadMessage(pipe), token);
+                    IpcMessage msg = await Task.Run(() => PipeRequestBinarySerializer.ReadMessage(reader), token);
                     Logger.Log($"[HookIpcServer] Received IPC command: {msg.Id}", LogLevel.Debug);
                     if (msg.Id == IpcMessageId.Stop)
                     {
@@ -188,8 +249,14 @@ namespace SwiftList.Core.Hook
             Stop();
             lock (_writeLock)
             {
-                _pipe?.Dispose();
-                _pipe = null;
+                try { _writer?.Dispose(); } catch { }
+                _writer = null;
+                try { _reader?.Dispose(); } catch { }
+                _reader = null;
+                try { _eventPipe?.Dispose(); } catch { }
+                _eventPipe = null;
+                try { _cmdPipe?.Dispose(); } catch { }
+                _cmdPipe = null;
             }
             _cts?.Dispose();
         }

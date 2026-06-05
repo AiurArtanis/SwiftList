@@ -24,13 +24,13 @@ namespace SwiftList.Service
             bool isHook = args.Length > 0 && args[0].Equals("--hook", StringComparison.OrdinalIgnoreCase);
             if (isHook)
             {
-                Logger.Initialize("hook.log", Logger.UserDataDir, overwrite: true);
+                Logger.Initialize("hook.log", Logger.UserDataDir, overwrite: false);
                 Logger.Log("=========================================");
                 Logger.Log($"Hook starting with arguments: {string.Join(" ", args)}");
             }
             else
             {
-                Logger.Initialize("service.log", Logger.SharedDataDir, overwrite: true);
+                Logger.Initialize("service.log", Logger.SharedDataDir, overwrite: false);
                 Logger.Log("=========================================");
                 Logger.Log($"Service starting with arguments: {string.Join(" ", args)}");
             }

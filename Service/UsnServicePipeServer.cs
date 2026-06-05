@@ -108,7 +108,7 @@ namespace SwiftList.Service
                 {
                     while (!token.IsCancellationRequested && pipe.IsConnected)
                     {
-                        var request = await Task.Run(() => PipeRequestBinarySerializer.ReadSearchRequest(pipe), token);
+                        var request = await Task.Run(() => SearchRequestBinarySerializer.ReadSearchRequest(pipe), token);
 
                         bool verboseLog = request.Id != SearchRequestId.Search && request.Id != SearchRequestId.SearchDir;
                         if (verboseLog)
