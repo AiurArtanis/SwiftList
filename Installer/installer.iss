@@ -56,9 +56,6 @@ Name: "{commonprograms}\{#AppName}\{cm:UninstallProgram,{#AppName}}"; Filename: 
 Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
-; Install the service using sc.exe
-Filename: "sc.exe"; Parameters: "create {#ServiceName} binPath= ""\""{app}\{#ServiceExeName}""\"" start= auto DisplayName= ""SwiftList Background Service"""; Flags: runhidden; StatusMsg: "{cm:InstallService}"
-Filename: "sc.exe"; Parameters: "description {#ServiceName} ""SwiftList NTFS USN Journal file indexing and real-time monitoring service."""; Flags: runhidden
 ; Run the app as original non-elevated user at the end
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchApp}"; Flags: postinstall nowait runasoriginaluser
 
