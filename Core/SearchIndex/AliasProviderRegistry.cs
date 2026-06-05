@@ -15,7 +15,7 @@ namespace SwiftList.Core
         {
             if (provider == null) return;
             Providers.Add(provider);
-            Logger.Log($"[AliasProviderRegistry] Registered alias provider: {provider.Name} ({provider.Id})");
+            Logger.Log($"[AliasProviderRegistry] Registered alias provider: {provider.Name}");
         }
 
         public static IEnumerable<IAliasProvider> GetActiveProviders()

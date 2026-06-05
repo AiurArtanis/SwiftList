@@ -1,14 +1,39 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text.Json;
 using SwiftList.PluginSdk;
 
 namespace SwiftList.Plugins.PinyinAlias
 {
-    public class PinyinAliasProvider : IAliasProvider
+    public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
     {
-        public string Id => "pinyin";
         public string Name => TranslationService.Get("Plugins_PinyinAliasPluginName");
+
+        string ITranslationProvider.Name => "Pinyin Translation Provider";
+
+        public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(System.Reflection.Assembly.GetExecutingAssembly());
+
+        private static readonly Dictionary<string, Dictionary<string, string>> Cache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly object LockObj = new();
+
+        public IReadOnlyDictionary<string, string> GetTranslations(string cultureName)
+        {
+            lock (LockObj)
+            {
+                if (Cache.TryGetValue(cultureName, out var cached))
+                {
+                    return cached;
+                }
+
+                var translations = TranslationService.LoadEmbeddedTranslations(System.Reflection.Assembly.GetExecutingAssembly(), cultureName, "Plugin");
+                Cache[cultureName] = translations;
+                return translations;
+            }
+        }
 
         public bool CanHandle(string text)
         {

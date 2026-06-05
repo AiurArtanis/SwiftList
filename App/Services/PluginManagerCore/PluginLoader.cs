@@ -61,7 +61,7 @@ namespace SwiftList.App.Services.PluginManagerCore
                     {
                         var provider = (SwiftList.PluginSdk.IAliasProvider)Activator.CreateInstance(type)!;
                         AliasProviderRegistry.Register(provider);
-                        Logger.Log($"[PluginManager] Loaded alias provider: '{type.Name}' ({provider.Id}) from {fileName}");
+                        Logger.Log($"[PluginManager] Loaded alias provider: '{type.Name}' from {fileName}");
                     }
 
                     if (typeof(SwiftList.PluginSdk.IInstantResultProvider).IsAssignableFrom(type))

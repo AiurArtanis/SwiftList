@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Collections.Generic;
 using SwiftList.Core;
 using SwiftList.PluginSdk;
 using Logger = SwiftList.Core.Logger;
@@ -24,6 +25,9 @@ namespace SwiftList.Service
                     return;
                 }
 
+                var translationProviders = new List<ITranslationProvider>();
+                var aliasProviders = new List<IAliasProvider>();
+
                 string[] dllFiles = Directory.GetFiles(pluginsDir, "*.dll");
                 foreach (string dllFile in dllFiles)
                 {
@@ -38,8 +42,14 @@ namespace SwiftList.Service
                             if (typeof(IAliasProvider).IsAssignableFrom(type))
                             {
                                 IAliasProvider provider = (IAliasProvider)Activator.CreateInstance(type)!;
-                                AliasProviderRegistry.Register(provider);
-                                Logger.Log($"[ServicePluginLoader] Loaded alias provider: '{type.Name}' ({provider.Id}) from {Path.GetFileName(dllFile)}");
+                                aliasProviders.Add(provider);
+                            }
+
+                            if (typeof(ITranslationProvider).IsAssignableFrom(type))
+                            {
+                                ITranslationProvider provider = (ITranslationProvider)Activator.CreateInstance(type)!;
+                                translationProviders.Add(provider);
+                                Logger.Log($"[ServicePluginLoader] Loaded translation provider: '{type.Name}' from {Path.GetFileName(dllFile)}");
                             }
                         }
                     }
@@ -47,6 +57,37 @@ namespace SwiftList.Service
                     {
                         Logger.Log($"[ServicePluginLoader] Failed to load plugin assembly {Path.GetFileName(dllFile)}: {ex.Message}", SwiftList.Core.LogLevel.Error);
                     }
+                }
+
+                // Initialize TranslationService LookupFunc in the service process using the loaded translation providers
+                var translations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                string cultureName = System.Globalization.CultureInfo.CurrentUICulture.Name;
+                foreach (var provider in translationProviders)
+                {
+                    try
+                    {
+                        var dict = provider.GetTranslations(cultureName);
+                        if (dict != null)
+                        {
+                            foreach (var kvp in dict)
+                            {
+                                translations[kvp.Key] = kvp.Value;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log($"[ServicePluginLoader] Failed to load translations from '{provider.Name}': {ex.Message}", SwiftList.Core.LogLevel.Error);
+                    }
+                }
+
+                TranslationService.LookupFunc = key => translations.TryGetValue(key, out var val) ? val : $"[{key}]";
+
+                // Now register alias providers (this will trigger provider.Name evaluation)
+                foreach (var provider in aliasProviders)
+                {
+                    AliasProviderRegistry.Register(provider);
+                    Logger.Log($"[ServicePluginLoader] Loaded alias provider: '{provider.GetType().Name}'");
                 }
             }
             catch (Exception ex)

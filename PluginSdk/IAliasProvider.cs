@@ -8,11 +8,6 @@ namespace SwiftList.PluginSdk
     public interface IAliasProvider
     {
         /// <summary>
-        /// A unique identifier for the provider (e.g., "pinyin", "romaji").
-        /// </summary>
-        string Id { get; }
-
-        /// <summary>
         /// A display name for the provider.
         /// </summary>
         string Name { get; }

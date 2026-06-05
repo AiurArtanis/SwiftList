@@ -1,4 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 
 namespace SwiftList.PluginSdk
 {
@@ -31,6 +35,95 @@ namespace SwiftList.PluginSdk
             {
                 return fmt;
             }
+        }
+
+        /// <summary>
+        /// Detects supported culture names by scanning embedded resource filenames under the prefix "Resources.Translations."
+        /// </summary>
+        public static IReadOnlyList<string> GetSupportedCultures(Assembly assembly)
+        {
+            var cultures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                string prefix = "Resources.Translations.";
+                var resourceNames = assembly.GetManifestResourceNames();
+                foreach (var name in resourceNames)
+                {
+                    int index = name.IndexOf(prefix, StringComparison.OrdinalIgnoreCase);
+                    if (index >= 0)
+                    {
+                        string sub = name.Substring(index + prefix.Length);
+                        int nextDot = sub.IndexOf('.');
+                        if (nextDot > 0)
+                        {
+                            string cultureKey = sub.Substring(0, nextDot).Replace('_', '-');
+                            if (cultureKey.Contains("-") && cultureKey.Length >= 5)
+                            {
+                                cultures.Add(cultureKey);
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return cultures.ToList();
+        }
+
+        /// <summary>
+        /// Loads translations from a JSON file embedded as resource in the specified assembly.
+        /// Expected naming suffix: {cultureKey}.{typeName}.json or {cultureKey_with_underscore}.{typeName}.json
+        /// </summary>
+        public static Dictionary<string, string> LoadEmbeddedTranslations(Assembly assembly, string cultureKey, string typeName)
+        {
+            var target = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            string cultureKeyUnderscore = cultureKey.Replace('-', '_');
+            
+            string suffix1 = $"{cultureKey}.{typeName}.json";
+            string suffix2 = $"{cultureKeyUnderscore}.{typeName}.json";
+
+            string? matchedResourceName = null;
+            try
+            {
+                var resourceNames = assembly.GetManifestResourceNames();
+                foreach (var name in resourceNames)
+                {
+                    if (name.EndsWith(suffix1, StringComparison.OrdinalIgnoreCase) || 
+                        name.EndsWith(suffix2, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matchedResourceName = name;
+                        break;
+                    }
+                }
+            }
+            catch { }
+
+            if (string.IsNullOrEmpty(matchedResourceName)) return target;
+
+            try
+            {
+                using (var stream = assembly.GetManifestResourceStream(matchedResourceName))
+                {
+                    if (stream != null)
+                    {
+                        using (var reader = new StreamReader(stream))
+                        {
+                            string json = reader.ReadToEnd();
+                            var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                            if (dict != null)
+                            {
+                                foreach (var kvp in dict)
+                                {
+                                    target[kvp.Key] = kvp.Value;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return target;
         }
     }
 }
