@@ -41,6 +41,18 @@ namespace SwiftList.Core.Hook.InlineSearch
                 int count = (int)ListSearchNativeMethods.SendMessage(hwnd, ListSearchNativeMethods.LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero);
                 if (count <= 0) return result;
 
+                // Query multi-column headers
+                int colCount = 1;
+                IntPtr hwndHeader = ListSearchNativeMethods.SendMessage(hwnd, 0x1000 + 31, IntPtr.Zero, IntPtr.Zero); // LVM_GETHEADER
+                if (hwndHeader != IntPtr.Zero)
+                {
+                    int headerItems = (int)ListSearchNativeMethods.SendMessage(hwndHeader, 0x1200 + 0, IntPtr.Zero, IntPtr.Zero); // HDM_GETITEMCOUNT
+                    if (headerItems > 1)
+                    {
+                        colCount = Math.Min(headerItems, 10); // Cap at 10 columns for performance
+                    }
+                }
+
                 ListSearchNativeMethods.GetWindowThreadProcessId(hwnd, out uint pid);
                 IntPtr hProcess = ListSearchNativeMethods.OpenProcess(
                     ListSearchNativeMethods.PROCESS_VM_OPERATION | 
@@ -60,26 +72,34 @@ namespace SwiftList.Core.Hook.InlineSearch
 
                     for (int i = 0; i < count; i++)
                     {
-                        var item = new ListSearchNativeMethods.LVITEM
+                        var colTexts = new List<string>(colCount);
+                        for (int col = 0; col < colCount; col++)
                         {
-                            mask = ListSearchNativeMethods.LVIF_TEXT,
-                            iItem = i,
-                            iSubItem = 0,
-                            pszText = remoteBufferPtr,
-                            cchTextMax = (int)bufferSize / 2
-                        };
+                            var item = new ListSearchNativeMethods.LVITEM
+                            {
+                                mask = ListSearchNativeMethods.LVIF_TEXT,
+                                iItem = i,
+                                iSubItem = col,
+                                pszText = remoteBufferPtr,
+                                cchTextMax = (int)bufferSize / 2
+                            };
 
-                        ListSearchNativeMethods.WriteProcessMemory(hProcess, remoteLvItemPtr, ref item, lvItemSize, out _);
-                        ListSearchNativeMethods.SendMessage(hwnd, ListSearchNativeMethods.LVM_GETITEMTEXTW, (IntPtr)i, remoteLvItemPtr);
-                        ListSearchNativeMethods.ReadProcessMemory(hProcess, remoteBufferPtr, localBuffer, bufferSize, out _);
+                            ListSearchNativeMethods.WriteProcessMemory(hProcess, remoteLvItemPtr, ref item, lvItemSize, out _);
+                            ListSearchNativeMethods.SendMessage(hwnd, ListSearchNativeMethods.LVM_GETITEMTEXTW, (IntPtr)i, remoteLvItemPtr);
+                            ListSearchNativeMethods.ReadProcessMemory(hProcess, remoteBufferPtr, localBuffer, bufferSize, out _);
 
-                        string text = Encoding.Unicode.GetString(localBuffer);
-                        int nullIndex = text.IndexOf('\0');
-                        if (nullIndex >= 0)
-                        {
-                            text = text.Substring(0, nullIndex);
+                            string text = Encoding.Unicode.GetString(localBuffer);
+                            int nullIndex = text.IndexOf('\0');
+                            if (nullIndex >= 0)
+                            {
+                                text = text.Substring(0, nullIndex);
+                            }
+                            if (!string.IsNullOrWhiteSpace(text))
+                            {
+                                colTexts.Add(text);
+                            }
                         }
-                        result.Add(text);
+                        result.Add(string.Join("\t", colTexts));
                     }
                 }
 

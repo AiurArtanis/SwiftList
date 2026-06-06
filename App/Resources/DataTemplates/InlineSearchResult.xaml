@@ -6,6 +6,8 @@
         <ResourceDictionary Source="../Styles/Colors.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
+    <local:SplitColumnsConverter x:Key="SplitColumnsConverter"/>
+
     <!-- ═══════════ Inline Search Result Item Template ═══════════ -->
     <DataTemplate x:Key="InlineSearchResultTemplate" DataType="{x:Type app:AppSearchResult}">
         <Grid>
@@ -81,6 +83,7 @@
                         </Style.Triggers>
                     </Style>
                 </StackPanel.Style>
+                <!-- Standard text block (for normal search results) -->
                 <TextBlock FontFamily="Microsoft YaHei UI, Segoe UI"
                            Foreground="{DynamicResource TextPrimary}"
                            TextTrimming="CharacterEllipsis"
@@ -96,10 +99,64 @@
                                     <Setter Property="FontSize" Value="18"/>
                                     <Setter Property="TextAlignment" Value="Center"/>
                                 </DataTrigger>
+                                <DataTrigger Binding="{Binding IsListItem}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
+
+                <!-- Custom multi-column renderer (only for list items) -->
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled"
+                              Focusable="False"
+                              local:ScrollViewerHelper.ShiftWheelScrollsHorizontally="True">
+                    <ScrollViewer.Style>
+                        <Style TargetType="ScrollViewer">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsListItem}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ScrollViewer.Style>
+                    <ItemsControl ItemsSource="{Binding Name, Converter={StaticResource SplitColumnsConverter}}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <!-- Separator line (hidden for the first column) -->
+                                    <TextBlock Text="  │  " Foreground="{DynamicResource TextSecondary}" Opacity="0.4" VerticalAlignment="Center" FontSize="13">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <!-- If it is the first item, hide separator -->
+                                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <!-- Column text -->
+                                    <TextBlock FontFamily="Microsoft YaHei UI, Segoe UI"
+                                               FontSize="14"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               VerticalAlignment="Center"
+                                               local:TextHighlighter.Text="{Binding}"
+                                               local:TextHighlighter.HighlightText="{Binding DataContext.SearchQuery, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                               local:TextHighlighter.HighlightBrush="{DynamicResource AccentBlue}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
                 <TextBlock FontSize="11"
                            FontFamily="Microsoft YaHei UI, Segoe UI"
                            Foreground="{DynamicResource TextSecondary}"

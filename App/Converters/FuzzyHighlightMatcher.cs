@@ -174,7 +174,8 @@ namespace SwiftList.App.Converters
 
         private static bool IsDelimiter(char c)
         {
-            return c == '.' || c == '_' || c == '-' || c == ' ' || c == '/' || c == '\\' || c == '(' || c == ')' || c == '[' || c == ']';
+            return c == '.' || c == '_' || c == '-' || c == ' ' || c == '/' || c == '\\' ||
+                   c == '(' || c == ')' || c == '[' || c == ']' || c == '|' || c == '│' || c == '\t';
         }
 
         private static string[] GetPinyinSegments(char c)

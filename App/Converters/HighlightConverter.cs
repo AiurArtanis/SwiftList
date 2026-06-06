@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
@@ -182,6 +183,62 @@ namespace SwiftList.App.Converters
             }
 
             return false;
+        }
+    }
+
+    public class SplitColumnsConverter : System.Windows.Data.IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            if (value is string str)
+            {
+                return str.Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            }
+            return Array.Empty<string>();
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public static class ScrollViewerHelper
+    {
+        public static readonly DependencyProperty ShiftWheelScrollsHorizontallyProperty =
+            DependencyProperty.RegisterAttached("ShiftWheelScrollsHorizontally", typeof(bool), typeof(ScrollViewerHelper),
+                new PropertyMetadata(false, OnShiftWheelScrollsHorizontallyChanged));
+
+        public static bool GetShiftWheelScrollsHorizontally(DependencyObject obj) => (bool)obj.GetValue(ShiftWheelScrollsHorizontallyProperty);
+        public static void SetShiftWheelScrollsHorizontally(DependencyObject obj, bool value) => obj.SetValue(ShiftWheelScrollsHorizontallyProperty, value);
+
+        private static void OnShiftWheelScrollsHorizontallyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is not ScrollViewer scrollViewer) return;
+
+            scrollViewer.PreviewMouseWheel -= OnPreviewMouseWheel;
+            if ((bool)e.NewValue)
+            {
+                scrollViewer.PreviewMouseWheel += OnPreviewMouseWheel;
+            }
+        }
+
+        private static void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (sender is not ScrollViewer scrollViewer) return;
+
+            if (Keyboard.Modifiers == ModifierKeys.Shift)
+            {
+                if (e.Delta > 0)
+                {
+                    scrollViewer.LineLeft();
+                }
+                else
+                {
+                    scrollViewer.LineRight();
+                }
+                e.Handled = true;
+            }
         }
     }
 }
