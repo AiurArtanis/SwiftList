@@ -49,6 +49,8 @@ When using the project's toolchains, compiling code, or performing development, 
    * All `.cs` and `.xaml` code files must be strictly kept under **300 lines**.
    * Before every compilation/build, you must check the line counts. If any file exceeds 300 lines, it must be modularized and decoupled.
    * **Do not use `partial` classes or partial views as a shortcut to bypass this limit**. Instead, perform structural decoupling by extracting clean helper classes, utilizing C# extension methods, or grouping logical subcomponents into subfolders.
+   * **Exemptions** — the following files are permanently excluded from line count checks because they contain embedded binary/data payloads that cannot be structurally decoupled:
+     * `Plugins/PinyinAlias/PinyinEngine.cs` — contains an embedded Pinyin dictionary as a raw byte array.
 
 7. **Clean File Naming and Directory Namespace Hierarchy**
    * Do not create multi-dot source code files such as `aa.bb.cs` or `SomeFeature.Helper.cs`.
