@@ -9,7 +9,7 @@ using SwiftList.Plugins.CoreExtensions.Providers;
 
 namespace SwiftList.Plugins.CoreExtensions.InlineSearch
 {
-    public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
+    public class ExplorerInlineSearchAdapter : IInlineSearchAdapter, SwiftList.PluginSdk.IInlineSearchListProvider
     {
         public string Name => TranslationService.Get("Plugins_ExplorerTargetName");
 
@@ -101,6 +101,59 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
             }
             catch { }
             return false;
+        }
+
+        public System.Collections.Generic.IEnumerable<string> GetListItems(IntPtr hwnd)
+        {
+            var results = new System.Collections.Generic.List<string>();
+            if (hwnd == IntPtr.Zero) return results;
+
+            try
+            {
+                var sbClass = new StringBuilder(256);
+                GetClassName(hwnd, sbClass, sbClass.Capacity);
+                string cls = sbClass.ToString();
+                bool isDesktop = cls.Equals("Progman", StringComparison.OrdinalIgnoreCase)
+                              || cls.Equals("WorkerW", StringComparison.OrdinalIgnoreCase);
+                // 桌面暂不走列表搜索，由原有 ExecuteItem 处理
+                if (isDesktop) return results;
+
+                var shellWindowsType = Type.GetTypeFromCLSID(new Guid("9BA05972-F6A8-11CF-A442-00A0C90A8F39"));
+                if (shellWindowsType == null) return results;
+
+                dynamic shellWindows = Activator.CreateInstance(shellWindowsType)!;
+                int count = shellWindows.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    try
+                    {
+                        dynamic? window = shellWindows.Item(i);
+                        if (window == null) continue;
+
+                        var windowHwnd = new IntPtr(Convert.ToInt64(window.HWND));
+                        if (windowHwnd != hwnd) continue;
+
+                        dynamic folderItems = window.Document.Folder.Items();
+                        int itemCount = folderItems.Count;
+                        for (int j = 0; j < itemCount; j++)
+                        {
+                            dynamic? fi = folderItems.Item(j);
+                            if (fi == null) continue;
+                            string path = fi.Path;
+                            if (string.IsNullOrWhiteSpace(path)) continue;
+                            if (path.StartsWith("::", StringComparison.Ordinal)
+                             || path.Contains("::{", StringComparison.Ordinal)
+                             || path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
+                                continue;
+                            results.Add(path);
+                        }
+                        break;
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+            return results;
         }
 
         public bool GetDockBounds(IntPtr hwnd, out AdapterRect rect)

@@ -85,16 +85,6 @@ namespace SwiftList.App.ViewModels.Search
                     }
 
                     bool isExplorer = tracker.IsActiveWindowExplorer;
-                    if (isInlineSearchContext && isExplorer && !tracker.IsDesktop && !tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
-                    {
-                        string? explorerPath = !string.IsNullOrWhiteSpace(searchScope) ? searchScope : tracker.ActivePath;
-                        if (!string.IsNullOrWhiteSpace(explorerPath))
-                        {
-                            PerformExplorerListSearch(query, explorerPath, tracker.ActiveHwnd, searchVersion, onResultsUpdated, token);
-                            return;
-                        }
-                    }
-
                     string? scope = isExplorer ? searchScope : null;
                     string? contextDirectory = isInlineSearchContext
                         ? (!string.IsNullOrWhiteSpace(searchScope) ? searchScope : tracker.ActivePath ?? tracker.LastActiveExplorerPath)
@@ -123,37 +113,6 @@ namespace SwiftList.App.ViewModels.Search
             }, token);
         }
 
-        private void PerformExplorerListSearch(
-            string query,
-            string explorerPath,
-            IntPtr explorerHwnd,
-            int searchVersion,
-            Action<List<AppSearchResult>, string, bool> onResultsUpdated,
-            CancellationToken token)
-        {
-            token.ThrowIfCancellationRequested();
-            var uiResults = new List<AppSearchResult>();
-            bool hasPluginSearchActions = PluginSearchResultMapper.AddPluginSearchActionResults(uiResults, query, explorerPath, isInlineWindow: true);
-            var listResults = ExplorerListSearchService.Search(explorerHwnd, explorerPath, query, 9);
-            if (hasPluginSearchActions && listResults.Count > 0)
-                SearchResultMapper.AddSectionHeader(uiResults, TranslationManager.Instance["Search_SectionHeader"], query);
-
-            uiResults.AddRange(listResults);
-            if (uiResults.Count == 0)
-                uiResults.Add(SearchResultMapper.CreateNoResultsResult(query));
-
-            System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
-            {
-                if (searchVersion != Volatile.Read(ref _searchVersion) || token.IsCancellationRequested)
-                    return;
-
-                string statusText = uiResults.Count == 1 && uiResults[0].IsEmptyResult
-                    ? "No matching results"
-                    : string.Format(TranslationManager.Instance["Search_StatsFilesOnly"], uiResults.Count);
-
-                onResultsUpdated(uiResults, statusText, true);
-            }));
-        }
 
         private void PerformStreamingSearch(
             string query,
@@ -259,22 +218,51 @@ namespace SwiftList.App.ViewModels.Search
             try
             {
                 var rawItems = listProvider.GetListItems(targetHwnd);
+                int index = 0;
                 foreach (var item in rawItems)
                 {
                     if (string.IsNullOrWhiteSpace(item))
                         continue;
 
-                    // 判断是否匹配 query（不区分大小写，也可以包含中文拼音匹配，但这里进行经典的快速检索）
-                    if (item.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    bool isFullPath = Path.IsPathRooted(item);
+                    string displayName = isFullPath
+                        ? Path.GetFileName(item.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+                        : item;
+                    if (string.IsNullOrWhiteSpace(displayName))
+                        displayName = item;
+
+                    if (displayName.Contains(query, StringComparison.OrdinalIgnoreCase))
                     {
-                        var result = new AppSearchResult
+                        AppSearchResult result;
+                        if (isFullPath)
                         {
-                            Name = item,
-                            FullPath = item, // 这样在 ExecuteItem 中可以直接比对
-                            ResultKind = "InstantResult", // 用作即时列表结果展示
-                            SearchQuery = query
-                        };
+                            bool isDir = Directory.Exists(item);
+                            result = new AppSearchResult
+                            {
+                                Name = displayName,
+                                FullPath = item,
+                                ParentDir = string.Empty,
+                                ContextDirectory = isDir ? item : (Path.GetDirectoryName(item) ?? string.Empty),
+                                IsDir = isDir,
+                                Drive = Path.GetPathRoot(item)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, Path.VolumeSeparatorChar) ?? string.Empty,
+                                ResultKind = "File",
+                                Index = index,
+                                SearchQuery = query
+                            };
+                        }
+                        else
+                        {
+                            result = new AppSearchResult
+                            {
+                                Name = displayName,
+                                FullPath = item,
+                                ResultKind = "InstantResult",
+                                Index = index,
+                                SearchQuery = query
+                            };
+                        }
                         uiResults.Add(result);
+                        index++;
                     }
                 }
             }
@@ -300,6 +288,7 @@ namespace SwiftList.App.ViewModels.Search
                 onResultsUpdated(uiResults, statusText, true);
             }));
         }
+
 
         public void CancelPendingSearch()
         {
