@@ -33,7 +33,7 @@ sequenceDiagram
 
 ## 2. Solution Structure & Project Layering
 
-The codebase is split into two visual studio solution files:
+The codebase is split into two Visual Studio solution files:
 * **`SwiftList.slnx`**: Contains the core program components.
 * **`SwiftList.Plugins.slnx`**: Contains core and third-party extension plugins.
 
@@ -45,6 +45,7 @@ The heart of the application, managing storage, indexing, FZF matching, and comm
 * `SearchIndex/RecordIndex/UpdateExtensions.cs`: Handles real-time incremental index updates (upsert/delete).
 * `SearchIndex/Fzf/`: Features a custom C# port of the FZF fuzzy matching algorithm, including scoring (`FzfScoring.cs`), exact matches (`FzfExactMatcher.cs`), fuzzy matching DP (`FzfFuzzyMatcher.cs`), and top-N heap (`FzfTopN.cs`).
 * `Ipc/`: Standard named-pipe communication server and client.
+* `Hook/InlineSearch/`: Manages system-wide low-level keyboard hooks and active control focus detection.
 
 ### 2.2 SwiftList.Service
 A Windows background service executing in **Session 0**.
@@ -57,14 +58,15 @@ A Windows background service executing in **Session 0**.
 The WPF Desktop user interface executing in the interactive **Session 1**.
 * `App.xaml.cs`: Application lifecycle, named-pipe server for single-instance enforcement, and loading settings/plugins.
 * `QuickSearchWindow.xaml`: Main search launch dialog.
-* `InlineSearchWindow.xaml`: Overlays Explorer dialog boxes using native Windows positioning hook coordinates.
+* `InlineSearchWindow.xaml`: Overlays Explorer dialog boxes or target list views using native Windows positioning hook coordinates.
 * `Services/ThemeManager.cs` & `TranslationManager.cs`: Controls styling themes (Light/Dark) and dynamic translation switching.
 
 ### 2.4 SwiftList.PluginSdk & Plugins
 A highly decoupled plugin ecosystem:
-* `PluginSdk`: Defines interfaces for Actions (`ISearchResultAction`), instant results (`IInstantResultProvider`), and dynamic context menus (`IDynamicActionProvider`).
+* `PluginSdk`: Defines interfaces for Actions (`ISearchResultAction`), instant results (`IInstantResultProvider`), dynamic context menus (`IDynamicActionProvider`), and inline search adapters (`IInlineSearchAdapter`).
 * `Plugins/PinyinAlias`: Leverages `TinyPinyin` to generate Hanzi-to-Pinyin alias lookups.
-* `Plugins/CoreExtensions`: Standard plugins including a calculator (`CalculatorInstantProvider`) and an environment variable path resolver (`EnvironmentVariableInstantProvider`).
+* `Plugins/ListSearch`: Intercepts native standard lists (`SysListView32` and `ListBox`), retrieves multi-column text records, concatenates them using `\t` delimiters, and feeds them into the inline search engine.
+* `Plugins/CoreExtensions`: Standard plugins including a calculator (`CalculatorInstantProvider`), an environment variable path resolver (`EnvironmentVariableInstantProvider`), and Explorer window hooks.
 
 ---
 
@@ -117,7 +119,35 @@ SwiftList's search pipeline is designed for massive datasets. When a query is ex
 
 ---
 
-## 5. Developer Guidelines & Architectural Constraints
+## 5. UI Layout Helpers & Scroll Behaviors
+
+For rendering complex multi-column list search results without overloading the UI thread, SwiftList uses helper converters and attached properties.
+
+### 5.1 SplitColumnsConverter (`HighlightConverter.cs`)
+* Splits multi-column search results joined by `\t` into an array of strings.
+* Feeds the strings into an horizontal `ItemsControl` inside the data template, separated visually by static divider text (`  │  `).
+
+### 5.2 ScrollViewerHelper.ShiftWheelScrollsHorizontally (`HighlightConverter.cs`)
+* WPF `ScrollViewer` controls do not natively route mouse wheel events horizontally when the `Shift` modifier key is pressed.
+* This attached behavior hooks the `PreviewMouseWheel` event. If `Keyboard.Modifiers == ModifierKeys.Shift`, it consumes the event, translates the delta, and calls `LineLeft()` or `LineRight()`.
+
+---
+
+## 6. Keyboard Hook Filters & Focus Checking
+
+To prevent interrupting standard user interactions or causing security issues:
+
+### 6.1 InputFocusEvaluator (`InputFocusEvaluator.cs`)
+* Queries thread focus state via Win32 `GetGUIThreadInfo`.
+* Checks if the active control is an input control (e.g. `Edit`, `RichEdit20W`, `RichEdit50W`, `TextBox`) or has an active caret caret (`info.hwndCaret != IntPtr.Zero`).
+* If true, SwiftList suspends inline keyboard hooks so typing does not open search overlays.
+
+### 6.2 Blacklist and UAC Checks (`KeyboardHookService.cs`)
+* Disables hooks on UAC Dialogs (`_explorerTracker.IsActiveWindowDialog`) or processes in the user's blacklist configuration.
+
+---
+
+## 7. Developer Guidelines & Architectural Constraints
 
 When writing code or refactoring SwiftList, you **MUST** strictly adhere to the following rules:
 

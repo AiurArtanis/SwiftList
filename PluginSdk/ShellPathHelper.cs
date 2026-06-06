@@ -56,7 +56,7 @@ namespace SwiftList.PluginSdk
         }
 
         /// <summary>
-        /// Resolves a localized folder name (e.g. "桌面", "Desktop", "下载") to its absolute physical path.
+        /// Resolves a localized folder name (e.g. "Desktop", "Downloads") to its absolute physical path.
         /// </summary>
         public static string ResolveSpecialFolder(string name)
         {

@@ -28,15 +28,25 @@ By directly parsing NTFS **USN Journal (Update Sequence Number)** logs and inter
 
 ### 4. 🖥️ 3-in-1 Multidimensional Interaction
 * **Quick Search Window (QuickSearchPanel)**: A classic, minimalist floating launcher panel. Supports global shortcuts (**Double-click the Ctrl key** to show/hide) and quick selection using `Ctrl+1` to `Ctrl+9` for blind operation.
-* **Inline Explorer-Docked Window (InlineSearchPanel)**: An innovative overlay panel that automatically docks above Windows Explorer or system file open/save dialogs. Press `Tab` to trigger directory navigation and instant directory jumps.
+* **Inline Explorer-Docked Window (InlineSearchPanel)**: An innovative overlay panel that automatically docks above Windows Explorer, system file open/save dialogs, or custom list views. Press `Tab` to trigger directory navigation and instant directory jumps.
   * **Native Explorer Focus Adaption**: Optimizes keyboard hooks on Windows 10/11, adapting flawlessly to explorer views such as `DirectUIHWND` and `SHELLDLL_DefView`.
 * **Control Panel & Settings (SettingsWindow)**: Visually manages exclusions, network drives, and background service status.
 
-### 5. 🎨 Theme Customization & i18n localization
+### 5. 🔍 Multi-Column List Search Support
+* **`SysListView32` & `ListBox` Hooking**: Seamlessly intercepts native standard `SysListView32` and `ListBox` controls. When the inline panel attaches to these list components, users can filter list items interactively.
+* **Multi-Column Data Merging**: Automatically retrieves text from all available columns. Columns are joined backend-side using Tab (`\t`) delimiters, allowing the FZF algorithm to match queries across columns simultaneously (e.g. typing username or PID in Task Manager filters the row).
+* **Elegant Visual Separators**: Custom XAML template parses tab-delimited items via a `SplitColumnsConverter` and renders them with horizontal layout wrappers using premium visual dividers (`  │  `).
+* **Shift + Mouse Wheel Horizontal Scrolling**: Multi-column text fields display horizontal scrollbars if they exceed the width. Supports Shift + Mouse Wheel for smooth horizontal panning via an attached behavior (`ScrollViewerHelper`).
+
+### 6. 🛡️ Target Focus & UAC Exclusion Guard
+* **UAC Prompt Exclusion**: Prevents global hotkeys or inline overlays from intercepting keys when a system UAC elevation prompt dialog is in the foreground.
+* **Smart Input Focus Detection**: Automatically skips hook interception when a text input control (like native `Edit`, `RichEdit`, or custom `TextBox` controls) is focused, or when a blinking cursor caret is active, ensuring normal text typing is never interrupted.
+
+### 7. 🎨 Theme Customization & i18n localization
 * **Dynamic Themes**: Supports visual theme injection via `IThemeProvider` (built-in themes include Nord, Sakura, Cyberpunk, Light, and Dark). Supports dynamic recoloring, path fill bindings, and active selection text foreground inheritance.
 * **Internationalization**: Leverages `ITranslationProvider` to support dynamic localization resource loading (e.g., English `en-US` and Simplified Chinese `zh-CN`).
 
-### 6. 🧩 Fully Decoupled Plugin Ecosystem
+### 8. 🧩 Fully Decoupled Plugin Ecosystem
 Features a lightweight, reusable **Plugin SDK** that enables seamless third-party extensions. The core project currently ships with five built-in extension groups:
 * **`ISearchResultAction` (Actions Menu)**: Defines right-click/Tab actions for search results, such as "Open File Location" or "Copy Path". It also registers dedicated context-aware commands inside the inline docked window.
 * **`IDynamicActionProvider` (Dynamic Menu)**: Interacts with the native Windows shell to reproduce Windows Right-Click Context Menus with pixel-perfection.
@@ -49,7 +59,7 @@ Features a lightweight, reusable **Plugin SDK** that enables seamless third-part
 
 ## 📖 Detailed User Manual
 
-### 1.唤醒 & Basic Interactions
+### 1. Wakeup & Basic Interactions
 * **Triggering Search Panel**: In any environment, **double-click the `Ctrl` key** rapidly to show the floating Quick Search Window at the center of the screen. Double-click `Ctrl` again or press `Esc` to hide it.
 * **Blind Selection**: 
   * Shortcuts indicator (`Ctrl+1` through `Ctrl+9`) are permanently docked on the right side of the list.
@@ -98,11 +108,11 @@ SwiftList splits its logic into highly-decoupled projects:
 
 ```mermaid
 graph TD
-    App[SwiftList.App - WPF Client UI] -->|Ref/Calls| Core[SwiftList.Core - Engine/USN Monitor/FZF Core]
-    Service[SwiftList.Service - Background Windows Daemon] -->|Shared Base| Core
-    Plugins[SwiftList.Plugins - Pinyin/Core Actions] -->|Implements| PluginSdk[SwiftList.PluginSdk - Lightweight SDK]
-    App -.->|Reflective Loading| Plugins
-    Core -.->|Ref| PluginSdk
+	App[SwiftList.App - WPF Client UI] -->|Ref/Calls| Core[SwiftList.Core - Engine/USN Monitor/FZF Core]
+	Service[SwiftList.Service - Background Windows Daemon] -->|Shared Base| Core
+	Plugins[SwiftList.Plugins - Pinyin/Core Actions] -->|Implements| PluginSdk[SwiftList.PluginSdk - Lightweight SDK]
+	App -.->|Reflective Loading| Plugins
+	Core -.->|Ref| PluginSdk
 ```
 
 * **`SwiftList.slnx`**: Main Solution structure (App, Core, Service, PluginSdk).
