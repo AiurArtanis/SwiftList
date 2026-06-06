@@ -114,8 +114,13 @@ namespace SwiftList.Core.Hook
                         break;
 
                     case IpcMessageId.ReloadSettings:
-                        if (_process.KeyboardHook != null)
-                            _process.KeyboardHook.ReloadSettings();
+                        {
+                            var newSettings = UserSettings.ForceReload();
+                            if (Enum.TryParse<LogLevel>(newSettings.LogLevel, ignoreCase: true, out var newLogLevel))
+                                Logger.MinimumLevel = newLogLevel;
+                            if (_process.KeyboardHook != null)
+                                _process.KeyboardHook.ReloadSettings();
+                        }
                         break;
                     case IpcMessageId.SetHotkeysDisabled:
                         _process.IsHotkeysDisabledTemporarily = msg.BoolVal;

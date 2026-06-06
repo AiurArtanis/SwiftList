@@ -64,6 +64,8 @@ namespace SwiftList.App.ViewModels.Settings
                     if (isLogLevelChanged)
                     {
                         Logger.MinimumLevel = ParseLogLevel(value.Value);
+                        // Propagate to hook process so hook.log also respects the new level
+                        App.HookClient?.SendMessage(new Core.IpcMessage { Id = Core.IpcMessageId.ReloadSettings });
                     }
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(LogLevel));
