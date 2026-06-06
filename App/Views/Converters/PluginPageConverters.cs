@@ -63,6 +63,7 @@ namespace SwiftList.App.Views.Converters
                 PluginComponentType.AliasProvider       => new SolidColorBrush(WpfColor.FromRgb(0xEC, 0x48, 0x99)),
                 PluginComponentType.ActivePathCollector => new SolidColorBrush(WpfColor.FromRgb(0x0D, 0x94, 0x88)),
                 PluginComponentType.FileDialogAdapter   => new SolidColorBrush(WpfColor.FromRgb(0xF9, 0x73, 0x16)),
+                PluginComponentType.InlineSearchAdapter => new SolidColorBrush(WpfColor.FromRgb(0xEF, 0x44, 0x44)),
                 _                                       => new SolidColorBrush(WpfColor.FromRgb(0x6B, 0x72, 0x80))
             };
         }

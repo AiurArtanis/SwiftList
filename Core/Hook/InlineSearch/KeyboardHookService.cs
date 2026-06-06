@@ -136,13 +136,30 @@ namespace SwiftList.Core.Hook.InlineSearch
 
         private bool HandleInlineSearchKeys(int vkCode, KeyboardNativeMethods.KBDLLHOOKSTRUCT hookStruct, IntPtr fgHwnd)
         {
-            if (_explorerTracker.IsExplorerOrDesktopActive || IsInlineSearchVisible)
+            bool isAdapterActive = _explorerTracker.ActiveInlineAdapter != null;
+            if (IsInlineSearchVisible || isAdapterActive)
             {
-                if (!IsInlineSearchVisible &&
-                    _explorerTracker.IsActiveWindowExplorer &&
-                    !FocusTargetEvaluator.IsExplorerFileViewFocused(fgHwnd))
+
+                if (!IsInlineSearchVisible && isAdapterActive)
                 {
-                    return false;
+                    IntPtr targetFocus = fgHwnd;
+                    uint threadId = KeyboardNativeMethods.GetWindowThreadProcessId(fgHwnd, out _);
+                    var guiInfo = new KeyboardNativeMethods.GUITHREADINFO
+                    {
+                        cbSize = Marshal.SizeOf<KeyboardNativeMethods.GUITHREADINFO>()
+                    };
+                    if (KeyboardNativeMethods.GetGUIThreadInfo(threadId, ref guiInfo) && guiInfo.hwndFocus != IntPtr.Zero)
+                    {
+                        targetFocus = guiInfo.hwndFocus;
+                    }
+
+                    var sbClass = new StringBuilder(256);
+                    KeyboardNativeMethods.GetClassName(targetFocus, sbClass, sbClass.Capacity);
+                    string className = sbClass.ToString();
+                    if (!_explorerTracker.ActiveInlineAdapter!.CanTrigger(targetFocus, className))
+                    {
+                        return false;
+                    }
                 }
 
                 bool isIndexModifierDown = KeyboardUtils.CheckModifiersMatchOnly(_settings.SelectIndexModifier);

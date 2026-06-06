@@ -65,6 +65,13 @@ namespace SwiftList.Service
                                 FileDialogAdapterRegistry.Register(provider);
                                 Logger.Log($"[ServicePluginLoader] Loaded file dialog adapter: '{type.Name}' from {Path.GetFileName(dllFile)}");
                             }
+
+                            if (typeof(IInlineSearchAdapter).IsAssignableFrom(type))
+                            {
+                                IInlineSearchAdapter provider = (IInlineSearchAdapter)Activator.CreateInstance(type)!;
+                                InlineSearchAdapterRegistry.Register(provider);
+                                Logger.Log($"[ServicePluginLoader] Loaded inline search adapter: '{type.Name}' from {Path.GetFileName(dllFile)}");
+                            }
                         }
                     }
                     catch (Exception ex)

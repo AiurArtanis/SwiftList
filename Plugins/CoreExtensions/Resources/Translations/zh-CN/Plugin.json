@@ -51,7 +51,7 @@
   "Action_Mkdir": "新建文件夹",
   "Command_Name": "系统命令执行器",
   "Plugins_ExplorerTargetName": "Windows 资源管理器",
-  "Plugins_StandardFileDialogAdapterName": "标准 Windows 文件选择器",
-  "Plugins_FolderBrowserDialogAdapterName": "标准 Windows 文件夹选择器",
-  "Plugins_ClassicFileDialogAdapterName": "经典 Windows 文件选择器"
+  "Plugins_StandardFileDialogAdapterName": "现代Windows文件(夹)选择器",
+  "Plugins_FolderBrowserDialogAdapterName": "经典Windows 文件夹选择器",
+  "Plugins_ClassicFileDialogAdapterName": "经典Windows 文件选择器"
 }

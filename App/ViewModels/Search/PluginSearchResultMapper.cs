@@ -75,7 +75,7 @@ namespace SwiftList.App.ViewModels.Search
         {
             string? currentGroup = null;
             bool added = false;
-            foreach (var match in PluginManager.Instance.SearchActionItems(query, isInlineWindow))
+            foreach (var match in PluginManager.Instance.SearchActionItems(query, isInlineWindow, contextDirectory))
             {
                 var action = match.Registration.Action;
                 string group = string.IsNullOrWhiteSpace(action.GroupName) ? TranslationManager.Instance["Action_DefaultGroup"] : action.GroupName;

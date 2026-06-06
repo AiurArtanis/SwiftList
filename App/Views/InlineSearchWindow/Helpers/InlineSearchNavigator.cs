@@ -62,6 +62,15 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
         private static void OpenPathFromInline(this global::SwiftList.App.InlineSearchWindow window, string path)
         {
             var tracker = window.Manager.ExplorerTracker;
+            if (path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero)
+            {
+                if (tracker.ActiveInlineAdapter.ExecuteItem(tracker.ActiveHwnd, path, window.SearchText))
+                {
+                    window.HideWindow();
+                    return;
+                }
+            }
+
             if (path != "__SHOW_MORE__" && tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
             {
                 if (App.HookClient != null)

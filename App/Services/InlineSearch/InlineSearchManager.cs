@@ -173,7 +173,12 @@ namespace SwiftList.App.Services
             if (_window != null) return;
 
             var viewModel = new QuickSearchViewModel();
-            viewModel.SearchScope = _explorerTracker.ActivePath;
+            string? scope = _explorerTracker.ActivePath;
+            if (_explorerTracker.ActiveInlineAdapter != null && _explorerTracker.ActiveHwnd != IntPtr.Zero)
+            {
+                scope = _explorerTracker.ActiveInlineAdapter.GetSearchScope(_explorerTracker.ActiveHwnd);
+            }
+            viewModel.SearchScope = scope;
             viewModel.IsInlineSearchContext = true;
 
             _window = new InlineSearchWindow(viewModel, this);

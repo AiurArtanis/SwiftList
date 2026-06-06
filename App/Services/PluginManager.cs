@@ -51,6 +51,10 @@ namespace SwiftList.App.Services
             SwiftList.PluginSdk.FileDialogAdapterRegistry.FilterFunc = prov =>
                 _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.FileDialogAdapter, prov.GetType().Name);
 
+            // Wire up the dynamic filtering delegate for inline search adapters
+            SwiftList.PluginSdk.InlineSearchAdapterRegistry.FilterFunc = prov =>
+                _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.InlineSearchAdapter, prov.GetType().Name);
+
             PluginLoader.Load(this);
         }
 
@@ -134,16 +138,24 @@ namespace SwiftList.App.Services
 
         // ── Search and execution ──────────────────────────────────────────────
 
-        public IEnumerable<PluginSearchActionMatch> SearchActionItems(string query, bool isInlineWindow)
+        public IEnumerable<PluginSearchActionMatch> SearchActionItems(string query, bool isInlineWindow, string? contextDirectory = null)
         {
             if (string.IsNullOrWhiteSpace(query)) yield break;
             if (isInlineWindow && InlineSearchManager.Instance.ExplorerTracker.IsActiveWindowDialog) yield break;
+
+            var tempResult = new SimpleSearchResult
+            {
+                ContextDirectory = contextDirectory ?? string.Empty,
+                FullPath = string.Empty,
+                IsDir = false
+            };
 
             foreach (var action in _actions)
             {
                 if (action.Action.Keywords.Count == 0) continue;
                 if (action.Action.InlineWindowOnly && !isInlineWindow) continue;
                 if (!_filter.IsEnabled(ComponentFilter.GetDllName(action.Plugin), PluginComponentType.Action, action.Action.Id)) continue;
+                if (!action.Action.CanExecute(tempResult)) continue;
 
                 var match = KeywordMatcher.TryMatchKeyword(query, action.Action.Keywords);
                 if (match == null) continue;
@@ -227,5 +239,15 @@ namespace SwiftList.App.Services
 
         public PluginActionRegistration? GetActionByRuntimeId(uint runtimeActionId)
             => _actions.FirstOrDefault(x => x.RuntimeActionId == runtimeActionId);
+    }
+
+    internal class SimpleSearchResult : SwiftList.PluginSdk.ISearchResult
+    {
+        public string Name { get; set; } = string.Empty;
+        public string FullPath { get; set; } = string.Empty;
+        public string ContextDirectory { get; set; } = string.Empty;
+        public bool IsDir { get; set; }
+        public bool IsApplication { get; set; }
+        public System.DateTime DateModified { get; set; } = System.DateTime.Now;
     }
 }

@@ -51,7 +51,7 @@
   "Action_Mkdir": "Create Directory",
   "Command_Name": "System Command Runner",
   "Plugins_ExplorerTargetName": "Windows File Explorer",
-  "Plugins_StandardFileDialogAdapterName": "Standard Windows File Dialog",
-  "Plugins_FolderBrowserDialogAdapterName": "Standard Windows Folder Browser Dialog",
+  "Plugins_StandardFileDialogAdapterName": "Modern Windows File (Folder) Dialog",
+  "Plugins_FolderBrowserDialogAdapterName": "Classic Windows Folder Browser Dialog",
   "Plugins_ClassicFileDialogAdapterName": "Classic Windows File Dialog"
 }

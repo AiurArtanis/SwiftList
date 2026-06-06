@@ -23,7 +23,7 @@ namespace SwiftList.Plugins.CoreExtensions.Actions
 
         public bool CanExecute(ISearchResult result)
         {
-            return result != null;
+            return result != null && !string.IsNullOrWhiteSpace(result.ContextDirectory) && System.IO.Directory.Exists(result.ContextDirectory);
         }
 
         public void Execute(ISearchResult result, IPluginSearchWindow view)

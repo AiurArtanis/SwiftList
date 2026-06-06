@@ -112,6 +112,13 @@ namespace SwiftList.App.Services.PluginManagerCore
                         SwiftList.PluginSdk.FileDialogAdapterRegistry.Register(provider);
                         Logger.Log($"[PluginManager] Loaded file dialog adapter: '{type.Name}' from {fileName}");
                     }
+
+                    if (typeof(SwiftList.PluginSdk.IInlineSearchAdapter).IsAssignableFrom(type))
+                    {
+                        var provider = (SwiftList.PluginSdk.IInlineSearchAdapter)Activator.CreateInstance(type)!;
+                        SwiftList.PluginSdk.InlineSearchAdapterRegistry.Register(provider);
+                        Logger.Log($"[PluginManager] Loaded inline search adapter: '{type.Name}' from {fileName}");
+                    }
                 }
             }
             catch (Exception ex)

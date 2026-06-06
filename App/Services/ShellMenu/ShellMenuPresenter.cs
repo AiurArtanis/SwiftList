@@ -39,6 +39,12 @@ namespace SwiftList.App.Services
 
         public void EnterActionsMode(AppSearchResult result)
         {
+            var tracker = InlineSearchManager.Instance.ExplorerTracker;
+            if (tracker.ActiveInlineAdapter != null && !tracker.ActiveInlineAdapter.CanEnterActionsMode(tracker.ActiveHwnd))
+            {
+                return;
+            }
+
             if (result == null
                 || result.FullPath == "__SHOW_MORE__"
                 || result.IsEmptyResult

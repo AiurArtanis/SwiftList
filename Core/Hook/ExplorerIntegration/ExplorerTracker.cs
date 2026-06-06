@@ -32,6 +32,7 @@ namespace SwiftList.Core.Hook
         public bool IsActiveWindowExplorer { get; set; }
 
         public IFileDialogAdapter? ActiveAdapter { get; private set; }
+        public IInlineSearchAdapter? ActiveInlineAdapter { get; private set; }
 
         private IntPtr _activeHwnd;
         public IntPtr ActiveHwnd
@@ -48,11 +49,13 @@ namespace SwiftList.Core.Hook
                     string processName = GetProcessName(_activeHwnd);
                     ActiveAdapter = FileDialogAdapterRegistry.GetMatchingAdapter(_activeHwnd, className, processName);
                     _isActiveWindowDialog = ActiveAdapter != null;
+                    ActiveInlineAdapter = InlineSearchAdapterRegistry.GetMatchingAdapter(_activeHwnd, className, processName);
                 }
                 else
                 {
                     ActiveAdapter = null;
                     _isActiveWindowDialog = false;
+                    ActiveInlineAdapter = null;
                 }
             }
         }
@@ -210,6 +213,16 @@ namespace SwiftList.Core.Hook
                 return false;
             }
 
+            if (ActiveInlineAdapter != null)
+            {
+                if (ActiveInlineAdapter.GetDockBounds(ActiveHwnd, out var adapterRect))
+                {
+                    rect = new RECT { Left = adapterRect.Left, Top = adapterRect.Top, Right = adapterRect.Right, Bottom = adapterRect.Bottom };
+                    return true;
+                }
+                return false;
+            }
+
             var nativeRect = new ExplorerNativeHooks.RECT();
             int result = ExplorerNativeHooks.DwmGetWindowAttribute(ActiveHwnd, ExplorerNativeHooks.DWMWA_EXTENDED_FRAME_BOUNDS, out nativeRect, System.Runtime.InteropServices.Marshal.SizeOf<ExplorerNativeHooks.RECT>());
             if (result == 0)
@@ -255,13 +268,26 @@ namespace SwiftList.Core.Hook
                 ExplorerNativeHooks.GetClassName(currentFg, sbClass, sbClass.Capacity);
                 string className = sbClass.ToString();
                 string processName = GetProcessName(currentFg);
-                if (FileDialogAdapterRegistry.GetMatchingAdapter(currentFg, className, processName) != null)
+                if (FileDialogAdapterRegistry.GetMatchingAdapter(currentFg, className, processName) != null ||
+                    InlineSearchAdapterRegistry.GetMatchingAdapter(currentFg, className, processName) != null)
+                {
                     _classifier.CheckActiveWindow(currentFg);
+                }
             }
 
             if (IsActiveWindowDialog && ActiveHwnd != IntPtr.Zero && ActiveAdapter != null)
             {
                 string? activePath = ActiveAdapter.GetCurrentPath(ActiveHwnd);
+                if (!string.IsNullOrEmpty(activePath) && activePath != LastPath)
+                {
+                    LastPath = activePath;
+                    OnPathCaptured?.Invoke(activePath, false);
+                }
+            }
+
+            if (ActiveInlineAdapter != null && ActiveHwnd != IntPtr.Zero)
+            {
+                string? activePath = ActiveInlineAdapter.GetSearchScope(ActiveHwnd);
                 if (!string.IsNullOrEmpty(activePath) && activePath != LastPath)
                 {
                     LastPath = activePath;

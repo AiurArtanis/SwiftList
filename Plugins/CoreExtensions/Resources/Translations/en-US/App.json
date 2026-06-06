@@ -263,6 +263,7 @@
   "Plugins_TypeAliasProvider": "Alias Provider",
   "Plugins_TypeActivePathCollector": "Path Collector",
   "Plugins_TypeFileDialogAdapter": "File Dialog Adapter",
+  "Plugins_TypeInlineSearchAdapter": "Inline Search Adapter",
   "Plugins_TypeTranslationProvider": "Language Packs",
   "Plugins_TypeThemeProvider": "Theme Packs",
   "Theme_Light": "Light",

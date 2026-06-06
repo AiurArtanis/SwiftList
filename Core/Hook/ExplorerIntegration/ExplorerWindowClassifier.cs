@@ -151,7 +151,26 @@ namespace SwiftList.Core.Hook
                 }
                 else
                 {
-                    _tracker.Deactivate();
+                    var matchedInlineAdapter = InlineSearchAdapterRegistry.GetMatchingAdapter(rootHwnd, windowClassName, processName);
+                    if (matchedInlineAdapter != null)
+                    {
+                        _tracker.IsExplorerOrDesktopActive = false;
+                        _tracker.IsDesktop = false;
+                        _tracker.IsActiveWindowExplorer = false;
+                        _tracker.ActiveHwnd = rootHwnd;
+
+                        if (rootHwnd != _tracker.LastActiveHwnd)
+                        {
+                            _tracker.LastActiveHwnd = rootHwnd;
+                            var windowTitle = new StringBuilder(256);
+                            ExplorerNativeHooks.GetWindowText(rootHwnd, windowTitle, windowTitle.Capacity);
+                            _tracker.RaiseExplorerActivated(rootHwnd, windowTitle.ToString(), windowClassName, false);
+                        }
+                    }
+                    else
+                    {
+                        _tracker.Deactivate();
+                    }
                 }
             }
             catch (Exception ex)

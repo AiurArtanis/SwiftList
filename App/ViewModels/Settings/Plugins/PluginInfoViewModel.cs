@@ -19,6 +19,7 @@ namespace SwiftList.App.ViewModels.Settings.Plugins
         AliasProvider,
         ActivePathCollector,
         FileDialogAdapter,
+        InlineSearchAdapter,
         /// <summary>Translation providers are displayed read-only; they cannot be disabled.</summary>
         TranslationProvider,
         /// <summary>Theme providers are displayed read-only; they cannot be disabled.</summary>

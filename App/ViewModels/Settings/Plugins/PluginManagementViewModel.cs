@@ -145,6 +145,15 @@ namespace SwiftList.App.ViewModels.Settings.Plugins
                             {
                                 pluginName = firstAdapter.Name;
                             }
+                            else
+                            {
+                                var firstInlineAdapter = InlineSearchAdapterRegistry.GetAllAdapters()
+                                    .FirstOrDefault(p => p.GetType().Assembly == assembly);
+                                if (firstInlineAdapter != null && !string.IsNullOrWhiteSpace(firstInlineAdapter.Name))
+                                {
+                                    pluginName = firstInlineAdapter.Name;
+                                }
+                            }
                         }
                     }
                 }
@@ -190,6 +199,11 @@ namespace SwiftList.App.ViewModels.Settings.Plugins
             {
                 string id = MakeId(dllName, PluginComponentType.FileDialogAdapter, prov.GetType().Name);
                 components.Add(new PluginComponentViewModel(id, PluginComponentType.FileDialogAdapter, string.IsNullOrWhiteSpace(prov.Name) ? prov.GetType().Name : prov.Name, !disabledSet.Contains(id)));
+            }
+            foreach (var prov in InlineSearchAdapterRegistry.GetAllAdapters().Where(p => p.GetType().Assembly == assembly))
+            {
+                string id = MakeId(dllName, PluginComponentType.InlineSearchAdapter, prov.GetType().Name);
+                components.Add(new PluginComponentViewModel(id, PluginComponentType.InlineSearchAdapter, string.IsNullOrWhiteSpace(prov.Name) ? prov.GetType().Name : prov.Name, !disabledSet.Contains(id)));
             }
             foreach (var prov in manager.AllInstantResultProviders.Where(p => p.GetType().Assembly == assembly))
             {
