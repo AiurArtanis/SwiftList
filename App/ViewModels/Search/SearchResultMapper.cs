@@ -200,7 +200,7 @@ namespace SwiftList.App.ViewModels.Search
                 Drive = string.Empty,
                 ResultKind = "Empty",
                 Index = 0,
-                SearchQuery = query
+                SearchQuery = string.Empty
             };
         }
 

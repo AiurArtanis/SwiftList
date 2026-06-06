@@ -27,6 +27,7 @@ namespace SwiftList.App
         public bool IsJumpToExplorerPath => ResultKind == "JumpToExplorerPath";
         public bool IsEmptyResult => ResultKind == "Empty";
         public bool IsInstantResult => ResultKind == "InstantResult";
+        public bool IsListItem => ResultKind == "ListItem";
         public string ResultTypeText => IsInstantResult ? TranslationManager.Instance["Model_TypePlugin"] : (IsApplication ? TranslationManager.Instance["Model_TypeApp"] : (IsDir ? TranslationManager.Instance["Model_TypeFolder"] : TranslationManager.Instance["Model_TypeFile"]));
         public string DisplayPath => IsApplication ? ParentDir : FullPath;
         public uint PluginActionId { get; set; }
@@ -53,7 +54,7 @@ namespace SwiftList.App
         {
             get
             {
-                if (IsEmptyResult)
+                if (IsEmptyResult || IsListItem)
                     return null;
                 if (IconOverride != null)
                     return IconOverride;

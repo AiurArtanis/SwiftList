@@ -18,6 +18,7 @@ namespace SwiftList.Plugins.ListSearch
         public bool CanHandle(IntPtr hwnd, string className, string processName)
         {
             if (string.IsNullOrEmpty(className)) return false;
+            if (processName.Equals("explorer", StringComparison.OrdinalIgnoreCase)) return false;
 
             return className.Contains("SysListView32", StringComparison.OrdinalIgnoreCase) ||
                    className.Contains("ListBox", StringComparison.OrdinalIgnoreCase);
@@ -25,7 +26,7 @@ namespace SwiftList.Plugins.ListSearch
 
         public bool CanTrigger(IntPtr focusedHwnd, string className)
         {
-            if (focusedHwnd == IntPtr.Zero || string.IsNullOrEmpty(className)) 
+            if (focusedHwnd == IntPtr.Zero || string.IsNullOrEmpty(className))
                 return false;
 
             return className.Contains("SysListView32", StringComparison.OrdinalIgnoreCase) ||
@@ -59,23 +60,33 @@ namespace SwiftList.Plugins.ListSearch
                 }
             }
 
-            var items = ListControlHelper.GetListItemsInternal(targetHwnd, className);
-            int matchedIndex = -1;
-            for (int i = 0; i < items.Count; i++)
-            {
-                if (items[i].Equals(path, StringComparison.OrdinalIgnoreCase))
-                {
-                    matchedIndex = i;
-                    break;
-                }
-            }
+            int matchedIndex = DecodeIndex(path);
 
             if (matchedIndex != -1)
             {
-                ListControlHelper.SelectItem(targetHwnd, className, matchedIndex, clearOthers: false, selectState: true);
-                _originallySelectedIndices.Add(matchedIndex);
+                bool isMulti = ListControlHelper.IsMultiSelect(targetHwnd, className);
+                if (isMulti)
+                {
+                    // Toggle: if the item was originally selected, deselect it; otherwise select it.
+                    bool wasSelected = _originallySelectedIndices.Contains(matchedIndex);
+                    ListControlHelper.SelectItem(targetHwnd, className, matchedIndex,
+                        clearOthers: false,
+                        selectState: !wasSelected);
+                    if (wasSelected)
+                        _originallySelectedIndices.Remove(matchedIndex);
+                    else
+                        _originallySelectedIndices.Add(matchedIndex);
+                }
+                else
+                {
+                    ListControlHelper.SelectItem(targetHwnd, className, matchedIndex,
+                        clearOthers: true,
+                        selectState: true);
+                    _originallySelectedIndices.Clear();
+                    _originallySelectedIndices.Add(matchedIndex);
+                }
+
                 _lastPreviewIndex = -1;
-                ListControlHelper.PostEnterKey(targetHwnd);
                 return true;
             }
 
@@ -158,7 +169,12 @@ namespace SwiftList.Plugins.ListSearch
             catch { }
 
             var items = ListControlHelper.GetListItemsInternal(targetHwnd, className);
-            return items;
+            var result = new List<string>(items.Count);
+            for (int i = 0; i < items.Count; i++)
+            {
+                result.Add(items[i] + new string('\u200B', i + 1));
+            }
+            return result;
         }
 
         public void OnSelectionChanged(IntPtr hwnd, string path)
@@ -183,16 +199,7 @@ namespace SwiftList.Plugins.ListSearch
                 }
             }
 
-            var items = ListControlHelper.GetListItemsInternal(targetHwnd, className);
-            int matchedIndex = -1;
-            for (int i = 0; i < items.Count; i++)
-            {
-                if (items[i].Equals(path, StringComparison.OrdinalIgnoreCase))
-                {
-                    matchedIndex = i;
-                    break;
-                }
-            }
+            int matchedIndex = DecodeIndex(path);
 
             if (matchedIndex != -1)
             {
@@ -240,33 +247,7 @@ namespace SwiftList.Plugins.ListSearch
                 bool isMulti = ListControlHelper.IsMultiSelect(targetHwnd, className);
                 if (isMulti)
                 {
-                    if (className.Contains("ListBox", StringComparison.OrdinalIgnoreCase))
-                    {
-                        Win32Api.SendMessage(targetHwnd, Win32Api.LB_SETSEL, IntPtr.Zero, (IntPtr)(-1));
-                    }
-                    else if (className.Contains("SysListView32", StringComparison.OrdinalIgnoreCase))
-                    {
-                        Win32Api.GetWindowThreadProcessId(targetHwnd, out uint pid);
-                        IntPtr hProcess = Win32Api.OpenProcess(Win32Api.PROCESS_VM_OPERATION | Win32Api.PROCESS_VM_WRITE, false, pid);
-                        if (hProcess != IntPtr.Zero)
-                        {
-                            uint lvItemSize = (uint)Marshal.SizeOf<Win32Api.LVITEM>();
-                            IntPtr remoteLvItemPtr = Win32Api.VirtualAllocEx(hProcess, IntPtr.Zero, lvItemSize, Win32Api.MEM_COMMIT, Win32Api.PAGE_READWRITE);
-                            if (remoteLvItemPtr != IntPtr.Zero)
-                            {
-                                var clearAllItem = new Win32Api.LVITEM
-                                {
-                                    state = 0,
-                                    stateMask = Win32Api.LVIS_SELECTED | Win32Api.LVIS_FOCUSED
-                                };
-                                Win32Api.WriteProcessMemory(hProcess, remoteLvItemPtr, ref clearAllItem, lvItemSize, out _);
-                                Win32Api.SendMessage(targetHwnd, Win32Api.LVM_SETITEMSTATE, (IntPtr)(-1), remoteLvItemPtr);
-                                Win32Api.VirtualFreeEx(hProcess, remoteLvItemPtr, 0, Win32Api.MEM_RELEASE);
-                            }
-                            Win32Api.CloseHandle(hProcess);
-                        }
-                    }
-
+                    ListControlHelper.ClearSelection(targetHwnd, className);
                     foreach (int idx in _originallySelectedIndices)
                     {
                         ListControlHelper.SelectItem(targetHwnd, className, idx, clearOthers: false, selectState: true);
@@ -288,6 +269,20 @@ namespace SwiftList.Plugins.ListSearch
             _originallySelectedIndices.Clear();
             _lastPreviewIndex = -1;
             _lastHwnd = IntPtr.Zero;
+        }
+
+        private int DecodeIndex(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return -1;
+            int count = 0;
+            for (int i = path.Length - 1; i >= 0; i--)
+            {
+                if (path[i] == '\u200B')
+                    count++;
+                else
+                    break;
+            }
+            return count - 1;
         }
     }
 }
