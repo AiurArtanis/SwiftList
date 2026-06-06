@@ -9,7 +9,7 @@ using SwiftList.Plugins.CoreExtensions.Providers;
 
 namespace SwiftList.Plugins.CoreExtensions.InlineSearch
 {
-    public class ExplorerInlineSearchAdapter : IInlineSearchAdapter, SwiftList.PluginSdk.IInlineSearchListProvider
+    public class ExplorerInlineSearchAdapter : IInlineSearchAdapter, IInlineSearchListProvider, IInlineSearchSelectionFollower
     {
         public string Name => TranslationService.Get("Plugins_ExplorerTargetName");
 
@@ -101,6 +101,35 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
             }
             catch { }
             return false;
+        }
+
+        public void OnSelectionChanged(IntPtr hwnd, string path)
+        {
+            if (hwnd == IntPtr.Zero || string.IsNullOrEmpty(path)) return;
+            try
+            {
+                dynamic? window = FindExplorerWindow(hwnd);
+                if (window == null) return;
+
+                string name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                if (string.IsNullOrEmpty(name)) return;
+
+                dynamic folder = window.Document.Folder;
+                dynamic? item = folder.ParseName(name);
+                if (item == null) return;
+
+                const int svsiSelect = 0x1;
+                const int svsiDeselectOthers = 0x4;
+                const int svsiEnsureVisible = 0x8;
+                window.Document.SelectItem(item, svsiSelect | svsiDeselectOthers | svsiEnsureVisible);
+            }
+            catch { }
+        }
+
+        public void OnSearchFinished(IntPtr hwnd, bool executed)
+        {
+            // executed=true: ExecuteItem already handles the final action.
+            // executed=false (cancelled): leave Explorer selection as-is.
         }
 
         public System.Collections.Generic.IEnumerable<string> GetListItems(IntPtr hwnd)
