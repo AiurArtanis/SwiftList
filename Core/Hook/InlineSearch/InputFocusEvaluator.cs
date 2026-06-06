@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SwiftList.Core.Hook
 {
-    internal static class FocusTargetEvaluator
+    internal static class InputFocusEvaluator
     {
         public static bool IsForegroundTextInputFocused(IntPtr foregroundHwnd)
         {

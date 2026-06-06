@@ -104,6 +104,32 @@ namespace SwiftList.Service
 
                 TranslationService.LookupFunc = key => translations.TryGetValue(key, out var val) ? val : $"[{key}]";
 
+                // Wire up FilterFuncs so the hook process respects enabled/disabled state.
+                // The lambda reads UserSettings.Load() (cached) on every call, so after a
+                // ReloadSettings command triggers UserSettings.ForceReload() the next adapter
+                // lookup will automatically reflect the new disabled-components list.
+                static bool IsAdapterEnabled(object obj)
+                {
+                    try
+                    {
+                        string dllName = System.IO.Path.GetFileName(obj.GetType().Assembly.Location);
+                        string typeName = obj.GetType().Name;
+                        var settings = UserSettings.Load();
+                        // Match the same ID format used by App's ComponentFilter
+                        string idInlineSearch = $"{dllName}::InlineSearchAdapter::{typeName}";
+                        string idFileDialog   = $"{dllName}::FileDialogAdapter::{typeName}";
+                        string idPathCollect  = $"{dllName}::ActivePathCollector::{typeName}";
+                        return !settings.DisabledPluginComponents.Contains(idInlineSearch, StringComparer.OrdinalIgnoreCase)
+                            && !settings.DisabledPluginComponents.Contains(idFileDialog,   StringComparer.OrdinalIgnoreCase)
+                            && !settings.DisabledPluginComponents.Contains(idPathCollect,  StringComparer.OrdinalIgnoreCase);
+                    }
+                    catch { return true; }
+                }
+
+                InlineSearchAdapterRegistry.FilterFunc  = a => IsAdapterEnabled(a);
+                FileDialogAdapterRegistry.FilterFunc    = a => IsAdapterEnabled(a);
+                ActivePathCollectorRegistry.FilterFunc  = a => IsAdapterEnabled(a);
+
                 // Now register alias providers (this will trigger provider.Name evaluation)
                 foreach (var provider in aliasProviders)
                 {

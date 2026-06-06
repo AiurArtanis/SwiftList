@@ -127,6 +127,58 @@ namespace SwiftList.Core.Hook
                         if (_process.KeyboardHook != null)
                             _process.KeyboardHook.IsHotkeysDisabledTemporarily = msg.BoolVal;
                         break;
+                    case IpcMessageId.GetListItems:
+                        {
+                            IntPtr hwnd = (IntPtr)msg.Hwnd;
+                            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                            {
+                                var items = ElevatedListControlHelper.GetListItems(hwnd);
+                                _process.IpcServer.SendMessage(new IpcMessage
+                                {
+                                    Id = IpcMessageId.GetListItemsResponse,
+                                    StringArray = items.ToArray()
+                                });
+                            });
+                        }
+                        break;
+                    case IpcMessageId.SelectItem:
+                        {
+                            IntPtr hwnd = (IntPtr)msg.Hwnd;
+                            string className = msg.StringVal1 ?? string.Empty;
+                            int index = msg.IntVal;
+                            bool clearOthers = msg.BoolVal;
+                            bool selectState = msg.IsDesktop;
+                            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                            {
+                                ElevatedListControlHelper.SelectItem(hwnd, className, index, clearOthers, selectState);
+                            });
+                        }
+                        break;
+                    case IpcMessageId.ClearSelection:
+                        {
+                            IntPtr hwnd = (IntPtr)msg.Hwnd;
+                            string className = msg.StringVal1 ?? string.Empty;
+                            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                            {
+                                ElevatedListControlHelper.ClearSelection(hwnd, className);
+                            });
+                        }
+                        break;
+                    case IpcMessageId.GetSelectedIndices:
+                        {
+                            IntPtr hwnd = (IntPtr)msg.Hwnd;
+                            string className = msg.StringVal1 ?? string.Empty;
+                            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                            {
+                                var indices = ElevatedListControlHelper.GetSelectedIndices(hwnd, className);
+                                _process.IpcServer.SendMessage(new IpcMessage
+                                {
+                                    Id = IpcMessageId.GetSelectedIndicesResponse,
+                                    IntArray = indices.ToArray()
+                                });
+                            });
+                        }
+                        break;
                 }
             }
             catch (Exception ex)

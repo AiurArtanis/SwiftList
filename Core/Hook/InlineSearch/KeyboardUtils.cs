@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace SwiftList.Core.Hook.InlineSearch
 {
-    public static class KeyboardUtils
+    internal static class KeyboardUtils
     {
         public static int GetKeyVirtualCode(string key)
         {
@@ -151,6 +151,48 @@ namespace SwiftList.Core.Hook.InlineSearch
             {
                 return null;
             }
+        }
+
+        public static string GetProcessNameWithoutExtension(uint processId)
+        {
+            try
+            {
+                using var process = System.Diagnostics.Process.GetProcessById((int)processId);
+                return process.ProcessName;
+            }
+            catch
+            {
+                return "Unknown";
+            }
+        }
+
+        public static bool IsChineseImeActive(IntPtr fgHwnd)
+        {
+            if (fgHwnd == IntPtr.Zero) return false;
+            uint fgThread = KeyboardNativeMethods.GetWindowThreadProcessId(fgHwnd, out _);
+            if (fgThread != 0)
+            {
+                IntPtr hkl = KeyboardNativeMethods.GetKeyboardLayout(fgThread);
+                int langId = (int)((long)hkl & 0xFFFF);
+                if (langId == 0x0804 || langId == 0x0404 || langId == 0x0C04 || langId == 0x1004 || langId == 0x1404)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static char GetUnicodeChar(KeyboardNativeMethods.KBDLLHOOKSTRUCT hookStruct)
+        {
+            var keyboardState = new byte[256];
+            KeyboardNativeMethods.GetKeyboardState(keyboardState);
+            var sb = new System.Text.StringBuilder(2);
+            int result = KeyboardNativeMethods.ToUnicode(hookStruct.vkCode, hookStruct.scanCode, keyboardState, sb, sb.Capacity, 0);
+            if (result == 1 && !char.IsControl(sb[0]))
+            {
+                return sb[0];
+            }
+            return '\0';
         }
     }
 }

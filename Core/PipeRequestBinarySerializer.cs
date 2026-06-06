@@ -126,6 +126,52 @@ namespace SwiftList.Core
                     case IpcMessageId.Error:
                         msWriter.Write(msg.StringVal1 ?? string.Empty);
                         break;
+                    case IpcMessageId.GetListItems:
+                        msWriter.Write(msg.Hwnd);
+                        break;
+                    case IpcMessageId.SelectItem:
+                        msWriter.Write(msg.Hwnd);
+                        msWriter.Write(msg.StringVal1 ?? string.Empty);
+                        msWriter.Write(msg.IntVal);
+                        msWriter.Write(msg.BoolVal);
+                        msWriter.Write(msg.IsDesktop);
+                        break;
+                    case IpcMessageId.ClearSelection:
+                        msWriter.Write(msg.Hwnd);
+                        msWriter.Write(msg.StringVal1 ?? string.Empty);
+                        break;
+                    case IpcMessageId.GetSelectedIndices:
+                        msWriter.Write(msg.Hwnd);
+                        msWriter.Write(msg.StringVal1 ?? string.Empty);
+                        break;
+                    case IpcMessageId.GetListItemsResponse:
+                        if (msg.StringArray != null)
+                        {
+                            msWriter.Write(msg.StringArray.Length);
+                            foreach (var s in msg.StringArray)
+                            {
+                                msWriter.Write(s ?? string.Empty);
+                            }
+                        }
+                        else
+                        {
+                            msWriter.Write(0);
+                        }
+                        break;
+                    case IpcMessageId.GetSelectedIndicesResponse:
+                        if (msg.IntArray != null)
+                        {
+                            msWriter.Write(msg.IntArray.Length);
+                            foreach (var val in msg.IntArray)
+                            {
+                                msWriter.Write(val);
+                            }
+                        }
+                        else
+                        {
+                            msWriter.Write(0);
+                        }
+                        break;
                 }
             }
             byte[] payload = ms.ToArray();
@@ -210,6 +256,46 @@ namespace SwiftList.Core
                     break;
                 case IpcMessageId.Error:
                     msg.StringVal1 = msReader.ReadString();
+                    break;
+                case IpcMessageId.GetListItems:
+                    msg.Hwnd = msReader.ReadInt64();
+                    break;
+                case IpcMessageId.SelectItem:
+                    msg.Hwnd = msReader.ReadInt64();
+                    msg.StringVal1 = msReader.ReadString();
+                    msg.IntVal = msReader.ReadInt32();
+                    msg.BoolVal = msReader.ReadBoolean();
+                    msg.IsDesktop = msReader.ReadBoolean();
+                    break;
+                case IpcMessageId.ClearSelection:
+                    msg.Hwnd = msReader.ReadInt64();
+                    msg.StringVal1 = msReader.ReadString();
+                    break;
+                case IpcMessageId.GetSelectedIndices:
+                    msg.Hwnd = msReader.ReadInt64();
+                    msg.StringVal1 = msReader.ReadString();
+                    break;
+                case IpcMessageId.GetListItemsResponse:
+                    {
+                        int count = msReader.ReadInt32();
+                        var arr = new string[count];
+                        for (int i = 0; i < count; i++)
+                        {
+                            arr[i] = msReader.ReadString();
+                        }
+                        msg.StringArray = arr;
+                    }
+                    break;
+                case IpcMessageId.GetSelectedIndicesResponse:
+                    {
+                        int count = msReader.ReadInt32();
+                        var arr = new int[count];
+                        for (int i = 0; i < count; i++)
+                        {
+                            arr[i] = msReader.ReadInt32();
+                        }
+                        msg.IntArray = arr;
+                    }
                     break;
             }
             return msg;

@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using SwiftList.PluginSdk;
 using SwiftList.Plugins.CoreExtensions.Providers;
 
@@ -28,12 +27,11 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
         {
             if (focusedHwnd == IntPtr.Zero) return false;
 
-            // Check if focus is in an Explorer file view (list, grid, etc.)
             IntPtr current = focusedHwnd;
             for (int depth = 0; depth < 12 && current != IntPtr.Zero; depth++)
             {
                 var sbClass = new StringBuilder(128);
-                if (GetClassName(current, sbClass, sbClass.Capacity) > 0)
+                if (ExplorerAdapterHelpers.GetClassName(current, sbClass, sbClass.Capacity) > 0)
                 {
                     string cls = sbClass.ToString();
                     if (cls.Equals("SHELLDLL_DefView", StringComparison.OrdinalIgnoreCase) ||
@@ -43,7 +41,7 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
                         return true;
                     }
                 }
-                current = GetParent(current);
+                current = ExplorerAdapterHelpers.GetParent(current);
             }
             return false;
         }
@@ -51,9 +49,9 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
         public string? GetSearchScope(IntPtr hwnd)
         {
             var sbClass = new StringBuilder(256);
-            GetClassName(hwnd, sbClass, sbClass.Capacity);
+            ExplorerAdapterHelpers.GetClassName(hwnd, sbClass, sbClass.Capacity);
             string className = sbClass.ToString();
-            string processName = GetProcessName(hwnd);
+            string processName = ExplorerAdapterHelpers.GetProcessName(hwnd);
 
             var collector = new ExplorerPathCollector();
             return collector.TryGetPath(hwnd, className, hwnd, className, processName);
@@ -64,7 +62,7 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
             try
             {
                 var sbClass = new StringBuilder(256);
-                GetClassName(hwnd, sbClass, sbClass.Capacity);
+                ExplorerAdapterHelpers.GetClassName(hwnd, sbClass, sbClass.Capacity);
                 string className = sbClass.ToString();
 
                 bool isDesktop = className.Equals("Progman", StringComparison.OrdinalIgnoreCase) ||
@@ -108,7 +106,7 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
             if (hwnd == IntPtr.Zero || string.IsNullOrEmpty(path)) return;
             try
             {
-                dynamic? window = FindExplorerWindow(hwnd);
+                dynamic? window = ExplorerAdapterHelpers.FindExplorerWindow(hwnd);
                 if (window == null) return;
 
                 string name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
@@ -128,8 +126,6 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
 
         public void OnSearchFinished(IntPtr hwnd, bool executed)
         {
-            // executed=true: ExecuteItem already handles the final action.
-            // executed=false (cancelled): leave Explorer selection as-is.
         }
 
         public System.Collections.Generic.IEnumerable<string> GetListItems(IntPtr hwnd)
@@ -139,14 +135,6 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
 
             try
             {
-                var sbClass = new StringBuilder(256);
-                GetClassName(hwnd, sbClass, sbClass.Capacity);
-                string cls = sbClass.ToString();
-                bool isDesktop = cls.Equals("Progman", StringComparison.OrdinalIgnoreCase)
-                              || cls.Equals("WorkerW", StringComparison.OrdinalIgnoreCase);
-                // 桌面暂不走列表搜索，由原有 ExecuteItem 处理
-                if (isDesktop) return results;
-
                 var shellWindowsType = Type.GetTypeFromCLSID(new Guid("9BA05972-F6A8-11CF-A442-00A0C90A8F39"));
                 if (shellWindowsType == null) return results;
 
@@ -189,14 +177,14 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
         {
             rect = default;
             if (hwnd == IntPtr.Zero) return false;
-            var nativeRect = new RECT();
-            int result = DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out nativeRect, Marshal.SizeOf<RECT>());
+            var nativeRect = new ExplorerAdapterHelpers.RECT();
+            int result = ExplorerAdapterHelpers.DwmGetWindowAttribute(hwnd, ExplorerAdapterHelpers.DWMWA_EXTENDED_FRAME_BOUNDS, out nativeRect, Marshal.SizeOf<ExplorerAdapterHelpers.RECT>());
             if (result == 0)
             {
                 rect = new AdapterRect { Left = nativeRect.Left, Top = nativeRect.Top, Right = nativeRect.Right, Bottom = nativeRect.Bottom };
                 return true;
             }
-            if (GetWindowRect(hwnd, out nativeRect))
+            if (ExplorerAdapterHelpers.GetWindowRect(hwnd, out nativeRect))
             {
                 rect = new AdapterRect { Left = nativeRect.Left, Top = nativeRect.Top, Right = nativeRect.Right, Bottom = nativeRect.Bottom };
                 return true;
@@ -209,50 +197,12 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
             return true;
         }
 
-        #region Win32 API and COM Helper
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetParent(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-        [DllImport("user32.dll")]
-        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-        [DllImport("dwmapi.dll")]
-        private static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
-
-        private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct RECT { public int Left, Top, Right, Bottom; }
-
-        private string GetProcessName(IntPtr hwnd)
-        {
-            try
-            {
-                GetWindowThreadProcessId(hwnd, out uint pid);
-                if (pid != 0)
-                {
-                    using (var proc = Process.GetProcessById((int)pid))
-                    {
-                        return proc.ProcessName;
-                    }
-                }
-            }
-            catch { }
-            return "explorer";
-        }
-
         private bool TryLocateInExistingExplorer(string path, IntPtr explorerHwnd)
         {
             if (explorerHwnd == IntPtr.Zero) return false;
             try
             {
-                dynamic? window = FindExplorerWindow(explorerHwnd);
+                dynamic? window = ExplorerAdapterHelpers.FindExplorerWindow(explorerHwnd);
                 if (window == null) return false;
 
                 string? targetFolder = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
@@ -263,7 +213,7 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
 
                 if (File.Exists(path))
                 {
-                    SelectItemInExplorerLater(path, explorerHwnd);
+                    ExplorerAdapterHelpers.SelectItemInExplorerLater(path, explorerHwnd);
                 }
                 return true;
             }
@@ -272,54 +222,5 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
                 return false;
             }
         }
-
-        private dynamic? FindExplorerWindow(IntPtr explorerHwnd)
-        {
-            var shellWindowsType = Type.GetTypeFromCLSID(new Guid("9BA05972-F6A8-11CF-A442-00A0C90A8F39"));
-            if (shellWindowsType == null) return null;
-
-            dynamic shellWindows = Activator.CreateInstance(shellWindowsType)!;
-            int count = shellWindows.Count;
-
-            for (int i = 0; i < count; i++)
-            {
-                try
-                {
-                    dynamic? window = shellWindows.Item(i);
-                    if (window == null) continue;
-
-                    if ((IntPtr)window.HWND == explorerHwnd)
-                    {
-                        return window;
-                    }
-                }
-                catch { }
-            }
-            return null;
-        }
-
-        private async void SelectItemInExplorerLater(string path, IntPtr explorerHwnd)
-        {
-            await Task.Delay(250);
-            try
-            {
-                dynamic? window = FindExplorerWindow(explorerHwnd);
-                if (window == null) return;
-
-                string name = Path.GetFileName(path);
-                if (string.IsNullOrEmpty(name)) return;
-
-                dynamic folder = window.Document.Folder;
-                dynamic? item = folder.ParseName(name);
-                if (item == null) return;
-
-                const int svsiSelect = 0x1;
-                const int svsiDeselectOthers = 0x4;
-                const int svsiEnsureVisible = 0x8;
-                window.Document.SelectItem(item, svsiSelect | svsiDeselectOthers | svsiEnsureVisible);
-            }
-            catch { }
-        }
-        #endregion
     }
 }

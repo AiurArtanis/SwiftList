@@ -62,6 +62,31 @@ namespace SwiftList.App
 
             string serviceExe = ServiceInstallManager.GetServiceExePath();
             HookClient = new SwiftList.Core.Hook.HookIpcClient(serviceExe, settings.AutoElevateIfAdmin);
+
+            SwiftList.PluginSdk.ListControlIpcBridge.GetListItemsFunc = hwnd =>
+                HookClient != null ? SwiftList.Core.Hook.ListIpcCoordinator.GetListItems(hwnd, HookClient.SendMessage) : Array.Empty<string>();
+
+            SwiftList.PluginSdk.ListControlIpcBridge.GetSelectedIndicesFunc = (hwnd, className) =>
+                HookClient != null ? SwiftList.Core.Hook.ListIpcCoordinator.GetSelectedIndices(hwnd, className, HookClient.SendMessage) : Array.Empty<int>();
+
+            SwiftList.PluginSdk.ListControlIpcBridge.SelectItemAction = (hwnd, className, index, clearOthers, selectState) =>
+                HookClient?.SendMessage(new SwiftList.Core.IpcMessage
+                {
+                    Id = SwiftList.Core.IpcMessageId.SelectItem,
+                    Hwnd = hwnd.ToInt64(),
+                    StringVal1 = className,
+                    IntVal = index,
+                    BoolVal = clearOthers,
+                    IsDesktop = selectState
+                });
+
+            SwiftList.PluginSdk.ListControlIpcBridge.ClearSelectionAction = (hwnd, className) =>
+                HookClient?.SendMessage(new SwiftList.Core.IpcMessage
+                {
+                    Id = SwiftList.Core.IpcMessageId.ClearSelection,
+                    Hwnd = hwnd.ToInt64(),
+                    StringVal1 = className
+                });
             HookClient.OnActivated += () =>
             {
                 Dispatcher.BeginInvoke(new Action(() =>

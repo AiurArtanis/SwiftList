@@ -87,18 +87,24 @@ namespace SwiftList.App.ViewModels.Search
                         // fall back to streaming search when the list is empty.
                         if (listItems.Any())
                         {
-                            PerformInlineListProviderSearch(query, adapter, tracker.ActiveHwnd, listItems, searchVersion, onResultsUpdated, token);
+                            string? contextDirectory = !string.IsNullOrWhiteSpace(searchScope)
+                                ? searchScope
+                                : (tracker.ActivePath ?? tracker.LastActiveExplorerPath);
+                            InlineListSearchHelper.PerformInlineListProviderSearch(query, adapter, tracker.ActiveHwnd, listItems, contextDirectory, searchVersion, () => Volatile.Read(ref _searchVersion), onResultsUpdated, token);
                             return;
                         }
                     }
 
                     // Fall through to streaming search when the adapter provides no list items
                     // (e.g. desktop, or adapters that only implement ExecuteItem).
-                    string? contextDirectory = isInlineSearchContext
+                    // Only restrict scope to the current directory when an actual Explorer window is active;
+                    // for all other contexts (desktop, dialog, etc.) scope must be null so global search runs.
+                    string? streamingScope = tracker.IsActiveWindowExplorer ? searchScope : null;
+                    string? streamingContextDirectory = isInlineSearchContext
                         ? (!string.IsNullOrWhiteSpace(searchScope) ? searchScope : tracker.ActivePath ?? tracker.LastActiveExplorerPath)
                         : tracker.LastActiveExplorerPath;
 
-                    PerformStreamingSearch(query, searchScope, contextDirectory, isInlineSearchContext, searchVersion, onResultsUpdated, onServiceUnavailable, token);
+                    PerformStreamingSearch(query, streamingScope, streamingContextDirectory, isInlineSearchContext, searchVersion, onResultsUpdated, onServiceUnavailable, token);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception ex)
@@ -210,91 +216,6 @@ namespace SwiftList.App.ViewModels.Search
             token.ThrowIfCancellationRequested();
             Interlocked.Exchange(ref hasRenderedFirstBatch, 1);
             RenderSnapshot(final: true);
-        }
-
-        private void PerformInlineListProviderSearch(
-            string query,
-            SwiftList.PluginSdk.IInlineSearchAdapter adapter,
-            IntPtr targetHwnd,
-            System.Collections.Generic.IEnumerable<string> rawItems,
-            int searchVersion,
-            Action<List<AppSearchResult>, string, bool> onResultsUpdated,
-            CancellationToken token)
-        {
-            token.ThrowIfCancellationRequested();
-            var uiResults = new List<AppSearchResult>();
-
-            try
-            {
-                int index = 0;
-                foreach (var item in rawItems)
-                {
-                    if (string.IsNullOrWhiteSpace(item))
-                        continue;
-
-                    bool isFullPath = Path.IsPathRooted(item);
-                    string displayName = isFullPath
-                        ? Path.GetFileName(item.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-                        : item;
-                    if (string.IsNullOrWhiteSpace(displayName))
-                        displayName = item;
-
-                    if (displayName.Contains(query, StringComparison.OrdinalIgnoreCase))
-                    {
-                        AppSearchResult result;
-                        if (isFullPath)
-                        {
-                            bool isDir = Directory.Exists(item);
-                            result = new AppSearchResult
-                            {
-                                Name = displayName,
-                                FullPath = item,
-                                ParentDir = string.Empty,
-                                ContextDirectory = isDir ? item : (Path.GetDirectoryName(item) ?? string.Empty),
-                                IsDir = isDir,
-                                Drive = Path.GetPathRoot(item)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, Path.VolumeSeparatorChar) ?? string.Empty,
-                                ResultKind = "File",
-                                Index = index,
-                                SearchQuery = query
-                            };
-                        }
-                        else
-                        {
-                            result = new AppSearchResult
-                            {
-                                Name = displayName,
-                                FullPath = item,
-                                ResultKind = "InstantResult",
-                                Index = index,
-                                SearchQuery = query
-                            };
-                        }
-                        uiResults.Add(result);
-                        index++;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"[SearchExecutionEngine] ListProvider search error: {ex.Message}", LogLevel.Error);
-            }
-
-            if (uiResults.Count == 0)
-            {
-                uiResults.Add(SearchResultMapper.CreateNoResultsResult(query));
-            }
-
-            System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
-            {
-                if (searchVersion != Volatile.Read(ref _searchVersion) || token.IsCancellationRequested)
-                    return;
-
-                string statusText = uiResults.Count == 1 && uiResults[0].IsEmptyResult
-                    ? "No matching results"
-                    : string.Format(TranslationManager.Instance["Search_StatsFilesOnly"], uiResults.Count);
-
-                onResultsUpdated(uiResults, statusText, true);
-            }));
         }
 
 

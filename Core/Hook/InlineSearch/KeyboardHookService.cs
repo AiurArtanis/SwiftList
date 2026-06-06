@@ -114,7 +114,7 @@ namespace SwiftList.Core.Hook.InlineSearch
                 }
 
                 // If text input is focused, bypass
-                if (fgHwnd != IntPtr.Zero && FocusTargetEvaluator.IsForegroundTextInputFocused(fgHwnd))
+                if (fgHwnd != IntPtr.Zero && InputFocusEvaluator.IsForegroundTextInputFocused(fgHwnd))
                 {
                     return KeyboardNativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
                 }
@@ -151,18 +151,7 @@ namespace SwiftList.Core.Hook.InlineSearch
             KeyboardNativeMethods.GetClassName(targetFocus, sbClass, sbClass.Capacity);
             string className = sbClass.ToString();
 
-            string processName = "Unknown";
-            try
-            {
-                if (fgPid != 0)
-                {
-                    using (var proc = System.Diagnostics.Process.GetProcessById((int)fgPid))
-                    {
-                        processName = proc.ProcessName;
-                    }
-                }
-            }
-            catch { }
+            string processName = KeyboardUtils.GetProcessNameWithoutExtension(fgPid);
 
             if (_explorerTracker.ActiveInlineAdapter == null)
             {
@@ -268,20 +257,7 @@ namespace SwiftList.Core.Hook.InlineSearch
 
                 if (isTriggerKey && !IsInlineSearchVisible)
                 {
-                    bool isChineseImeActive = false;
-                    if (fgHwnd != IntPtr.Zero)
-                    {
-                        uint fgThread = KeyboardNativeMethods.GetWindowThreadProcessId(fgHwnd, out _);
-                        if (fgThread != 0)
-                        {
-                            IntPtr hkl = KeyboardNativeMethods.GetKeyboardLayout(fgThread);
-                            int langId = (int)((long)hkl & 0xFFFF);
-                            if (langId == 0x0804 || langId == 0x0404 || langId == 0x0C04 || langId == 0x1004 || langId == 0x1404)
-                            {
-                                isChineseImeActive = true;
-                            }
-                        }
-                    }
+                    bool isChineseImeActive = KeyboardUtils.IsChineseImeActive(fgHwnd);
 
                     if (isChineseImeActive || vkCode == KeyboardNativeMethods.VK_PROCESSKEY)
                     {
@@ -289,18 +265,8 @@ namespace SwiftList.Core.Hook.InlineSearch
                     }
                     else
                     {
-                        var keyboardState = new byte[256];
-                        KeyboardNativeMethods.GetKeyboardState(keyboardState);
-                        var sb = new StringBuilder(2);
-                        int result = KeyboardNativeMethods.ToUnicode(hookStruct.vkCode, hookStruct.scanCode, keyboardState, sb, sb.Capacity, 0);
-                        if (result == 1 && !char.IsControl(sb[0]))
-                        {
-                            OnCharacterTyped?.Invoke(sb[0]);
-                        }
-                        else
-                        {
-                            OnCharacterTyped?.Invoke('\0');
-                        }
+                        char ch = KeyboardUtils.GetUnicodeChar(hookStruct);
+                        OnCharacterTyped?.Invoke(ch);
                     }
                     return true;
                 }

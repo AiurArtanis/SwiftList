@@ -11,24 +11,30 @@ namespace SwiftList.Core
         RestoreDialogFocus = 6,
         ReloadSettings = 7,
         SetHotkeysDisabled = 8,
+        GetListItems = 9,
+        SelectItem = 10,
+        ClearSelection = 11,
+        GetSelectedIndices = 12,
 
         // Hook -> App
-        Activate = 10,
-        ExplorerDeactivated = 11,
-        ActiveWindowMoved = 12,
-        KeyBackspace = 13,
-        KeyEscape = 14,
-        KeyEnter = 15,
-        KeyUp = 16,
-        KeyDown = 17,
-        KeyLeft = 18,
-        KeyRight = 19,
-        KeyChar = 20,
-        KeyCtrlNumber = 21,
-        MouseClick = 22,
-        ExplorerActivated = 23,
-        PathCaptured = 24,
-        Error = 25
+        Activate = 20,
+        ExplorerDeactivated = 21,
+        ActiveWindowMoved = 22,
+        KeyBackspace = 23,
+        KeyEscape = 24,
+        KeyEnter = 25,
+        KeyUp = 26,
+        KeyDown = 27,
+        KeyLeft = 28,
+        KeyRight = 29,
+        KeyChar = 30,
+        KeyCtrlNumber = 31,
+        MouseClick = 32,
+        ExplorerActivated = 33,
+        PathCaptured = 34,
+        Error = 35,
+        GetListItemsResponse = 36,
+        GetSelectedIndicesResponse = 37
     }
 
     public struct IpcMessage
@@ -44,5 +50,7 @@ namespace SwiftList.Core
         public string? StringVal1 { get; set; }
         public string? StringVal2 { get; set; }
         public bool IsDesktop { get; set; }
+        public string[]? StringArray { get; set; }
+        public int[]? IntArray { get; set; }
     }
 }

@@ -46,6 +46,7 @@ namespace SwiftList.Core.Hook
 
         internal KeyboardHookService? KeyboardHook => _keyboardHook;
         internal ExplorerTracker? ExplorerTracker => _explorerTracker;
+        internal HookIpcServer IpcServer => _ipcServer;
 
         internal uint AppProcessId
         {

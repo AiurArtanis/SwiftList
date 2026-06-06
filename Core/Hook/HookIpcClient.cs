@@ -246,6 +246,12 @@ namespace SwiftList.Core.Hook
                     case IpcMessageId.Error:
                         OnError?.Invoke(msg.StringVal1 ?? string.Empty);
                         break;
+                    case IpcMessageId.GetListItemsResponse:
+                        ListIpcCoordinator.SetListItemsResult(msg.StringArray);
+                        break;
+                    case IpcMessageId.GetSelectedIndicesResponse:
+                        ListIpcCoordinator.SetSelectedIndicesResult(msg.IntArray);
+                        break;
                 }
             }
             catch (Exception ex)
@@ -264,19 +270,13 @@ namespace SwiftList.Core.Hook
                     return null;
                 }
 
-                var psi = new ProcessStartInfo
+                var psi = new ProcessStartInfo(_serviceExePath, "--hook")
                 {
-                    FileName = _serviceExePath,
-                    Arguments = "--hook",
                     UseShellExecute = _autoElevate,
                     CreateNoWindow = !_autoElevate,
-                    WindowStyle = ProcessWindowStyle.Hidden
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    Verb = _autoElevate ? "runas" : string.Empty
                 };
-
-                if (_autoElevate)
-                {
-                    psi.Verb = "runas";
-                }
 
                 return Process.Start(psi);
             }
