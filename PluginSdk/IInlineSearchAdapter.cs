@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace SwiftList.PluginSdk
 {
@@ -39,5 +40,26 @@ namespace SwiftList.PluginSdk
         /// Check if the secondary actions menu can be entered for the active window.
         /// </summary>
         bool CanEnterActionsMode(IntPtr hwnd);
+
+        /// <summary>
+        /// Returns the full list of items currently available in the target control.
+        /// When non-empty, the inline search filters this list instead of querying the
+        /// global search service. Return an empty enumerable (default) to fall back to
+        /// the normal streaming search.
+        /// </summary>
+        IEnumerable<string> GetListItems(IntPtr hwnd) => Array.Empty<string>();
+
+        /// <summary>
+        /// Called when the highlighted result in the inline search window changes,
+        /// so the adapter can mirror the selection in the host control in real time.
+        /// </summary>
+        void OnSelectionChanged(IntPtr hwnd, string path) { }
+
+        /// <summary>
+        /// Called when the search session ends.
+        /// <paramref name="executed"/> is true when the user confirmed a result,
+        /// false when the session was cancelled or the window was closed.
+        /// </summary>
+        void OnSearchFinished(IntPtr hwnd, bool executed) { }
     }
 }

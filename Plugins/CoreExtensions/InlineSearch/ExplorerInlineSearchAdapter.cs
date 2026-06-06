@@ -9,7 +9,7 @@ using SwiftList.Plugins.CoreExtensions.Providers;
 
 namespace SwiftList.Plugins.CoreExtensions.InlineSearch
 {
-    public class ExplorerInlineSearchAdapter : IInlineSearchAdapter, IInlineSearchListProvider, IInlineSearchSelectionFollower
+    public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
     {
         public string Name => TranslationService.Get("Plugins_ExplorerTargetName");
 

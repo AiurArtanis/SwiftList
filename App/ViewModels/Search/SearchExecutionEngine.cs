@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -78,10 +79,17 @@ namespace SwiftList.App.ViewModels.Search
                     token.ThrowIfCancellationRequested();
 
                     var tracker = InlineSearchManager.Instance.ExplorerTracker;
-                    if (isInlineSearchContext && tracker.ActiveInlineAdapter is SwiftList.PluginSdk.IInlineSearchListProvider listProvider && tracker.ActiveHwnd != IntPtr.Zero)
+                    var adapter = tracker.ActiveInlineAdapter;
+                    if (isInlineSearchContext && adapter != null && tracker.ActiveHwnd != IntPtr.Zero)
                     {
-                        PerformInlineListProviderSearch(query, listProvider, tracker.ActiveHwnd, searchVersion, onResultsUpdated, token);
-                        return;
+                        var listItems = adapter.GetListItems(tracker.ActiveHwnd);
+                        // Use list-based search when the adapter provides items;
+                        // fall back to streaming search when the list is empty.
+                        if (listItems.Any())
+                        {
+                            PerformInlineListProviderSearch(query, adapter, tracker.ActiveHwnd, listItems, searchVersion, onResultsUpdated, token);
+                            return;
+                        }
                     }
 
                     bool isExplorer = tracker.IsActiveWindowExplorer;
@@ -206,8 +214,9 @@ namespace SwiftList.App.ViewModels.Search
 
         private void PerformInlineListProviderSearch(
             string query,
-            SwiftList.PluginSdk.IInlineSearchListProvider listProvider,
+            SwiftList.PluginSdk.IInlineSearchAdapter adapter,
             IntPtr targetHwnd,
+            System.Collections.Generic.IEnumerable<string> rawItems,
             int searchVersion,
             Action<List<AppSearchResult>, string, bool> onResultsUpdated,
             CancellationToken token)
@@ -217,7 +226,6 @@ namespace SwiftList.App.ViewModels.Search
 
             try
             {
-                var rawItems = listProvider.GetListItems(targetHwnd);
                 int index = 0;
                 foreach (var item in rawItems)
                 {

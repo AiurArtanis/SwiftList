@@ -7,7 +7,7 @@ using SwiftList.Plugins.ListSearch.Helpers;
 
 namespace SwiftList.Plugins.ListSearch
 {
-    public class ListSearchInlineSearchAdapter : IInlineSearchAdapter, IInlineSearchListProvider, IInlineSearchSelectionFollower
+    public class ListSearchInlineSearchAdapter : IInlineSearchAdapter
     {
         public string Name => TranslationService.Get("Plugins_ListSearchTargetName");
 

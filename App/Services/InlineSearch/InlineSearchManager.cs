@@ -229,11 +229,11 @@ namespace SwiftList.App.Services
         {
             if (_window == null) return;
 
-            if (_explorerTracker.ActiveInlineAdapter is SwiftList.PluginSdk.IInlineSearchSelectionFollower follower && _explorerTracker.ActiveHwnd != IntPtr.Zero)
+            if (_explorerTracker.ActiveInlineAdapter != null && _explorerTracker.ActiveHwnd != IntPtr.Zero)
             {
                 try
                 {
-                    follower.OnSearchFinished(_explorerTracker.ActiveHwnd, IsExecuting);
+                    _explorerTracker.ActiveInlineAdapter.OnSearchFinished(_explorerTracker.ActiveHwnd, IsExecuting);
                 }
                 catch (Exception ex)
                 {
