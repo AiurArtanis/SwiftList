@@ -64,11 +64,13 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
             var tracker = window.Manager.ExplorerTracker;
             if (path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero)
             {
+                window.Manager.IsExecuting = true;
                 if (tracker.ActiveInlineAdapter.ExecuteItem(tracker.ActiveHwnd, path, window.SearchText))
                 {
                     window.HideWindow();
                     return;
                 }
+                window.Manager.IsExecuting = false;
             }
 
             if (path != "__SHOW_MORE__" && tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)

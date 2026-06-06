@@ -78,6 +78,12 @@ namespace SwiftList.App.ViewModels.Search
                     token.ThrowIfCancellationRequested();
 
                     var tracker = InlineSearchManager.Instance.ExplorerTracker;
+                    if (isInlineSearchContext && tracker.ActiveInlineAdapter is SwiftList.PluginSdk.IInlineSearchListProvider listProvider && tracker.ActiveHwnd != IntPtr.Zero)
+                    {
+                        PerformInlineListProviderSearch(query, listProvider, tracker.ActiveHwnd, searchVersion, onResultsUpdated, token);
+                        return;
+                    }
+
                     bool isExplorer = tracker.IsActiveWindowExplorer;
                     if (isInlineSearchContext && isExplorer && !tracker.IsDesktop && !tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
                     {
@@ -237,6 +243,62 @@ namespace SwiftList.App.ViewModels.Search
             token.ThrowIfCancellationRequested();
             Interlocked.Exchange(ref hasRenderedFirstBatch, 1);
             RenderSnapshot(final: true);
+        }
+
+        private void PerformInlineListProviderSearch(
+            string query,
+            SwiftList.PluginSdk.IInlineSearchListProvider listProvider,
+            IntPtr targetHwnd,
+            int searchVersion,
+            Action<List<AppSearchResult>, string, bool> onResultsUpdated,
+            CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            var uiResults = new List<AppSearchResult>();
+
+            try
+            {
+                var rawItems = listProvider.GetListItems(targetHwnd);
+                foreach (var item in rawItems)
+                {
+                    if (string.IsNullOrWhiteSpace(item))
+                        continue;
+
+                    // 判断是否匹配 query（不区分大小写，也可以包含中文拼音匹配，但这里进行经典的快速检索）
+                    if (item.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var result = new AppSearchResult
+                        {
+                            Name = item,
+                            FullPath = item, // 这样在 ExecuteItem 中可以直接比对
+                            ResultKind = "InstantResult", // 用作即时列表结果展示
+                            SearchQuery = query
+                        };
+                        uiResults.Add(result);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[SearchExecutionEngine] ListProvider search error: {ex.Message}", LogLevel.Error);
+            }
+
+            if (uiResults.Count == 0)
+            {
+                uiResults.Add(SearchResultMapper.CreateNoResultsResult(query));
+            }
+
+            System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                if (searchVersion != Volatile.Read(ref _searchVersion) || token.IsCancellationRequested)
+                    return;
+
+                string statusText = uiResults.Count == 1 && uiResults[0].IsEmptyResult
+                    ? "No matching results"
+                    : string.Format(TranslationManager.Instance["Search_StatsFilesOnly"], uiResults.Count);
+
+                onResultsUpdated(uiResults, statusText, true);
+            }));
         }
 
         public void CancelPendingSearch()

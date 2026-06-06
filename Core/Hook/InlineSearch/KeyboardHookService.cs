@@ -136,27 +136,50 @@ namespace SwiftList.Core.Hook.InlineSearch
 
         private bool HandleInlineSearchKeys(int vkCode, KeyboardNativeMethods.KBDLLHOOKSTRUCT hookStruct, IntPtr fgHwnd)
         {
+            IntPtr targetFocus = fgHwnd;
+            uint threadId = KeyboardNativeMethods.GetWindowThreadProcessId(fgHwnd, out uint fgPid);
+            var guiInfo = new KeyboardNativeMethods.GUITHREADINFO
+            {
+                cbSize = Marshal.SizeOf<KeyboardNativeMethods.GUITHREADINFO>()
+            };
+            if (KeyboardNativeMethods.GetGUIThreadInfo(threadId, ref guiInfo) && guiInfo.hwndFocus != IntPtr.Zero)
+            {
+                targetFocus = guiInfo.hwndFocus;
+            }
+
+            var sbClass = new StringBuilder(256);
+            KeyboardNativeMethods.GetClassName(targetFocus, sbClass, sbClass.Capacity);
+            string className = sbClass.ToString();
+
+            string processName = "Unknown";
+            try
+            {
+                if (fgPid != 0)
+                {
+                    using (var proc = System.Diagnostics.Process.GetProcessById((int)fgPid))
+                    {
+                        processName = proc.ProcessName;
+                    }
+                }
+            }
+            catch { }
+
+            if (_explorerTracker.ActiveInlineAdapter == null)
+            {
+                var matched = SwiftList.PluginSdk.InlineSearchAdapterRegistry.GetMatchingAdapter(targetFocus, className, processName);
+                if (matched != null)
+                {
+                    _explorerTracker.SetActiveInlineAdapterDirectly(matched, targetFocus);
+                }
+            }
+
             bool isAdapterActive = _explorerTracker.ActiveInlineAdapter != null;
             if (IsInlineSearchVisible || isAdapterActive)
             {
-
                 if (!IsInlineSearchVisible && isAdapterActive)
                 {
-                    IntPtr targetFocus = fgHwnd;
-                    uint threadId = KeyboardNativeMethods.GetWindowThreadProcessId(fgHwnd, out _);
-                    var guiInfo = new KeyboardNativeMethods.GUITHREADINFO
-                    {
-                        cbSize = Marshal.SizeOf<KeyboardNativeMethods.GUITHREADINFO>()
-                    };
-                    if (KeyboardNativeMethods.GetGUIThreadInfo(threadId, ref guiInfo) && guiInfo.hwndFocus != IntPtr.Zero)
-                    {
-                        targetFocus = guiInfo.hwndFocus;
-                    }
-
-                    var sbClass = new StringBuilder(256);
-                    KeyboardNativeMethods.GetClassName(targetFocus, sbClass, sbClass.Capacity);
-                    string className = sbClass.ToString();
-                    if (!_explorerTracker.ActiveInlineAdapter!.CanTrigger(targetFocus, className))
+                    bool canTrigger = _explorerTracker.ActiveInlineAdapter!.CanTrigger(targetFocus, className);
+                    if (!canTrigger)
                     {
                         return false;
                     }

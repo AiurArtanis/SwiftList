@@ -186,6 +186,12 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
             if (result.FullPath == "__SHOW_MORE__") return;
 
             var tracker = _window.Manager.ExplorerTracker;
+            if (tracker.ActiveInlineAdapter is SwiftList.PluginSdk.IInlineSearchSelectionFollower follower && tracker.ActiveHwnd != IntPtr.Zero)
+            {
+                follower.OnSelectionChanged(tracker.ActiveHwnd, result.FullPath);
+                return;
+            }
+
             if (!tracker.IsExplorerOrDesktopActive || tracker.IsDesktop || tracker.ActiveHwnd == IntPtr.Zero)
             {
                 return;

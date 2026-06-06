@@ -59,6 +59,24 @@ namespace SwiftList.Core.Hook
                 }
             }
         }
+        public void SetActiveInlineAdapterDirectly(IInlineSearchAdapter? adapter, IntPtr hwnd)
+        {
+            ActiveInlineAdapter = adapter;
+            _activeHwnd = hwnd;
+            IsExplorerOrDesktopActive = adapter != null;
+
+            if (adapter != null && hwnd != IntPtr.Zero)
+            {
+                var windowTitle = new StringBuilder(256);
+                ExplorerNativeHooks.GetWindowText(hwnd, windowTitle, windowTitle.Capacity);
+                
+                var sbClass = new StringBuilder(256);
+                ExplorerNativeHooks.GetClassName(hwnd, sbClass, sbClass.Capacity);
+
+                RaiseExplorerActivated(hwnd, windowTitle.ToString(), sbClass.ToString(), false);
+            }
+        }
+
         public string? ActivePath => LastPath;
         public uint AppProcessId { get; set; }
 

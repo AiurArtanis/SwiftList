@@ -191,7 +191,9 @@ namespace SwiftList.App.Services
                 _window.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     if (_window == null || !_window.IsVisible)
+                    {
                         return;
+                    }
 
                     if (_window.ActivateAndFocusSearchBox())
                     {
@@ -221,9 +223,24 @@ namespace SwiftList.App.Services
             Logger.Log($"[InlineSearchManager] Created and shown new InlineSearchWindow. Scope: {viewModel.SearchScope}", LogLevel.Debug);
         }
 
+        public bool IsExecuting { get; set; }
+
         public void CloseInlineSearch()
         {
             if (_window == null) return;
+
+            if (_explorerTracker.ActiveInlineAdapter is SwiftList.PluginSdk.IInlineSearchSelectionFollower follower && _explorerTracker.ActiveHwnd != IntPtr.Zero)
+            {
+                try
+                {
+                    follower.OnSearchFinished(_explorerTracker.ActiveHwnd, IsExecuting);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"[InlineSearchManager] Error calling OnSearchFinished: {ex.Message}", LogLevel.Error);
+                }
+            }
+            IsExecuting = false;
 
             _mouseHook.Stop();
             _keyboardHook.IsInlineSearchVisible = false;
