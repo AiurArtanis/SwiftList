@@ -17,6 +17,7 @@
                     <Border x:Name="ItemBorder"
                             Background="Transparent"
                             Padding="18,7,18,7"
+                            Height="{TemplateBinding Height}"
                             Cursor="Hand">
                         <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                     </Border>
@@ -31,6 +32,10 @@
                             <Setter TargetName="ItemBorder" Property="Background" Value="Transparent"/>
                             <Setter Property="IsHitTestVisible" Value="False"/>
                             <Setter Property="Focusable" Value="False"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsListItem}" Value="True">
+                            <Setter Property="Height" Value="34"/>
+                            <Setter TargetName="ItemBorder" Property="Padding" Value="18,4,18,4"/>
                         </DataTrigger>
                         <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="Transparent"/>

@@ -186,7 +186,11 @@ namespace SwiftList.App.Services
             _mouseHook.Start();
 
             _window.Show();
-            if (!_explorerTracker.IsActiveWindowDialog)
+            
+            IntPtr fgHwnd = ExplorerNativeHooks.GetForegroundWindow();
+            bool isTextInputFocused = fgHwnd != IntPtr.Zero && InputFocusEvaluator.IsForegroundTextInputFocused(fgHwnd);
+            
+            if (!isTextInputFocused)
             {
                 _window.Dispatcher.BeginInvoke(new Action(() =>
                 {
@@ -204,9 +208,8 @@ namespace SwiftList.App.Services
             }
             else
             {
-                // In dialog (file picker) mode: show window without stealing focus.
-                // Immediately restore foreground to the dialog so the user can still
-                // type in the file picker's edit box uninterrupted.
+                // If a text input is already focused, show the window without stealing focus,
+                // and restore focus to the edit box.
                 IntPtr dialogHwnd = _explorerTracker.ActiveHwnd;
                 _window.Dispatcher.BeginInvoke(new Action(() =>
                 {

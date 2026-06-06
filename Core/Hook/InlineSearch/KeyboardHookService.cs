@@ -79,7 +79,9 @@ namespace SwiftList.Core.Hook.InlineSearch
                 uint time = hookStruct.time;
 
                 // 1. Detect Toggle Window Hotkey
-                bool bypassToggleHotkey = IsHotkeysDisabledTemporarily || KeyboardUtils.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses);
+                bool isProcessBlacklisted = KeyboardUtils.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses)
+                                            && !_explorerTracker.IsActiveWindowDialog;
+                bool bypassToggleHotkey = IsHotkeysDisabledTemporarily || isProcessBlacklisted;
                 if (!bypassToggleHotkey && _hotkeyDetector.CheckToggleWindowHotkey(vkCode, time, out bool consumeToggleKey, OnDoubleCtrl))
                 {
                     if (consumeToggleKey)
@@ -125,7 +127,7 @@ namespace SwiftList.Core.Hook.InlineSearch
                 }
 
                 // 4. Handle Inline Search key events
-                if (HandleInlineSearchKeys(vkCode, hookStruct, fgHwnd))
+                if (!isProcessBlacklisted && HandleInlineSearchKeys(vkCode, hookStruct, fgHwnd))
                 {
                     return (IntPtr)1;
                 }

@@ -34,7 +34,12 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
 
                 int count = _window.ViewModel.Results.Count;
                 int selectableCount = CountSelectableResults();
-                double resultsHeight = Math.Min(count, 9) * UiMetrics.SearchResultItemHeight;
+                double itemHeight = UiMetrics.SearchResultItemHeight;
+                if (count > 0 && _window.ViewModel.Results[0].IsListItem)
+                {
+                    itemHeight = 34;
+                }
+                double resultsHeight = Math.Min(count, 9) * itemHeight;
                 bool heightChanged = !AreClose(_lastResultsHeight, resultsHeight);
                 if (heightChanged)
                 {

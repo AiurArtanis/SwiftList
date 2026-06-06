@@ -50,13 +50,16 @@
                             <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
+                            <DataTrigger Binding="{Binding IsListItem}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Image.Style>
             </Image>
-
+ 
             <!-- Name -->
-            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+            <StackPanel VerticalAlignment="Center">
                 <StackPanel.Style>
                     <Style TargetType="StackPanel">
                         <Setter Property="Grid.Column" Value="1"/>
@@ -70,6 +73,10 @@
                             </DataTrigger>
                             <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsListItem}" Value="True">
+                                <Setter Property="Grid.Column" Value="0"/>
+                                <Setter Property="Grid.ColumnSpan" Value="2"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>

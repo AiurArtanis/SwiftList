@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using SwiftList.Core;
 using SwiftList.PluginSdk;
 using SwiftList.App.Services;
+using SwiftList.App.Converters;
 
 namespace SwiftList.App.ViewModels.Search
 {
@@ -42,7 +44,15 @@ namespace SwiftList.App.ViewModels.Search
                     if (string.IsNullOrWhiteSpace(displayName))
                         displayName = item;
 
-                    if (displayName.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    bool isMatch = displayName.Contains(query, StringComparison.OrdinalIgnoreCase);
+                    if (!isMatch)
+                    {
+                        var highlights = new bool[displayName.Length];
+                        FuzzyHighlightMatcher.MarkFuzzyMatch(displayName, query, highlights);
+                        isMatch = highlights.Any(h => h);
+                    }
+
+                    if (isMatch)
                     {
                         AppSearchResult result;
                         if (isFullPath)
