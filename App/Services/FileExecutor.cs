@@ -112,34 +112,6 @@ namespace SwiftList.App.Services
             }
         }
 
-        public static bool TrySelectItemInExistingExplorer(string path, IntPtr explorerHwnd)
-        {
-            if (explorerHwnd == IntPtr.Zero) return false;
-
-            try
-            {
-                dynamic? window = FindExplorerWindow(explorerHwnd);
-                if (window == null) return false;
-
-                string name = Path.GetFileName(path);
-                if (string.IsNullOrEmpty(name)) return false;
-
-                dynamic folder = window.Document.Folder;
-                dynamic? item = folder.ParseName(name);
-                if (item == null) return false;
-
-                const int svsiSelect = 0x1;
-                const int svsiDeselectOthers = 0x4;
-                const int svsiEnsureVisible = 0x8;
-                window.Document.SelectItem(item, svsiSelect | svsiDeselectOthers | svsiEnsureVisible);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"[FileExecutor] Select item in existing explorer failed for '{path}': {ex.Message}", SwiftList.Core.LogLevel.Error);
-                return false;
-            }
-        }
 
         private static dynamic? FindExplorerWindow(IntPtr explorerHwnd)
         {

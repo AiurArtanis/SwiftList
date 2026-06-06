@@ -92,13 +92,13 @@ namespace SwiftList.App.ViewModels.Search
                         }
                     }
 
-                    bool isExplorer = tracker.IsActiveWindowExplorer;
-                    string? scope = isExplorer ? searchScope : null;
+                    // Fall through to streaming search when the adapter provides no list items
+                    // (e.g. desktop, or adapters that only implement ExecuteItem).
                     string? contextDirectory = isInlineSearchContext
                         ? (!string.IsNullOrWhiteSpace(searchScope) ? searchScope : tracker.ActivePath ?? tracker.LastActiveExplorerPath)
                         : tracker.LastActiveExplorerPath;
 
-                    PerformStreamingSearch(query, scope, contextDirectory, isInlineSearchContext, searchVersion, onResultsUpdated, onServiceUnavailable, token);
+                    PerformStreamingSearch(query, searchScope, contextDirectory, isInlineSearchContext, searchVersion, onResultsUpdated, onServiceUnavailable, token);
                 }
                 catch (OperationCanceledException) { }
                 catch (Exception ex)

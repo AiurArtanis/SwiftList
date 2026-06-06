@@ -189,20 +189,7 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
             if (tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero)
             {
                 tracker.ActiveInlineAdapter.OnSelectionChanged(tracker.ActiveHwnd, result.FullPath);
-                return;
             }
-
-            if (!tracker.IsExplorerOrDesktopActive || tracker.IsDesktop || tracker.ActiveHwnd == IntPtr.Zero)
-            {
-                return;
-            }
-
-            if (!string.IsNullOrEmpty(result.ParentDir))
-            {
-                return;
-            }
-
-            FileExecutor.TrySelectItemInExistingExplorer(result.FullPath, tracker.ActiveHwnd);
         }
 
         public void SuppressExplorerSelectionSyncForResultRefresh()
