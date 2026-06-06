@@ -58,7 +58,6 @@ namespace SwiftList.App
         // ==========================================
         public TextBox TxtSearch => SearchBox.SearchTextBox;
         public TextBlock TxtPlaceholder => SearchBox.PlaceholderTextBlock;
-        public Button BtnOpenMore => SearchBox.OpenMoreButton;
 
         public UIElement ResultsPanel => ResultsPanelControl;
         public Border GridLoading => ResultsPanelControl.LoadingBorder;

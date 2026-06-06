@@ -2,10 +2,12 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:SwiftList.App"
+        xmlns:services="clr-namespace:SwiftList.App.Services"
         Title="SwiftList"
         Width="680" SizeToContent="Height"
         WindowStyle="None"
         AllowsTransparency="True"
+        ResizeMode="NoResize"
         Background="Transparent"
         ShowInTaskbar="False"
         Topmost="True"
@@ -14,13 +16,49 @@
         Deactivated="Window_Deactivated"
         PreviewKeyDown="Window_PreviewKeyDown">
 
+    <Window.Resources>
+        <!-- Floating circle button style with hover & press states + premium shadow -->
+        <Style x:Key="FloatingCircleButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource BadgeBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BadgeBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                CornerRadius="14.5"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                SnapsToDevicePixels="True">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.15" Color="{DynamicResource ShadowColor}"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource HoverBackground}"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
 
-    <!-- Main card container with drop shadow -->
-    <Border Margin="24,40,24,24" CornerRadius="12" Background="{DynamicResource CardBackground}"
-            BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="32" ShadowDepth="4" Opacity="0.25" Color="{DynamicResource ShadowColor}"/>
-        </Border.Effect>
+    <Grid>
+        <!-- Main card container with drop shadow -->
+        <Border Margin="24,40,24,24" CornerRadius="12" Background="{DynamicResource CardBackground}"
+                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="32" ShadowDepth="4" Opacity="0.25" Color="{DynamicResource ShadowColor}"/>
+            </Border.Effect>
 
         <Grid>
             <Grid.RowDefinitions>
@@ -53,4 +91,23 @@
                                     Visibility="{Binding StatusBarVisibility}"/>
         </Grid>
     </Border>
+
+    <!-- Floating Open full search window button -->
+    <Button x:Name="BtnOpenMore"
+            Style="{StaticResource FloatingCircleButtonStyle}"
+            Width="29"
+            Height="29"
+            Margin="0,32,16,0"
+            Padding="0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[QuickSearch_OpenMore]}">
+        <Viewbox Width="16" Height="16" Opacity="0.85">
+            <Canvas Width="24" Height="24">
+                <Path Data="M7 7h10v10h-2V10.41l-8.29 8.3-1.42-1.42 8.3-8.29H7V7z"
+                      Fill="{DynamicResource BadgeText}"/>
+            </Canvas>
+        </Viewbox>
+    </Button>
+</Grid>
 </Window>

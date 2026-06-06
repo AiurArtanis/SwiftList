@@ -14,6 +14,5 @@ namespace SwiftList.App
 
         public TextBox SearchTextBox => TxtSearch;
         public TextBlock PlaceholderTextBlock => TxtPlaceholder;
-        public Button OpenMoreButton => BtnOpenMore;
     }
 }

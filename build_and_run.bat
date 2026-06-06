@@ -35,6 +35,18 @@ if %errorLevel% neq 0 (
     exit /b
 )
 
+echo.
+echo Reorganizing compilation artifacts into root debug directory...
+if exist "%~dp0debug" (
+    rmdir /s /q "%~dp0debug" >nul 2>&1
+    if exist "%~dp0debug" (
+        timeout /t 1 >nul
+        rmdir /s /q "%~dp0debug" >nul 2>&1
+    )
+)
+mkdir "%~dp0debug"
+xcopy "%~dp0App\bin\Debug\net10.0-windows\*.*" "%~dp0debug\" /s /e /y /i >nul 2>&1
+xcopy "%~dp0Service\bin\Debug\net10.0-windows\*.*" "%~dp0debug\" /s /e /y /i >nul 2>&1
 
 echo ==========================================
 echo 3. Starting background service...
@@ -46,7 +58,7 @@ ping 127.0.0.1 -n 2 >nul
 echo ==========================================
 echo 4. Launching WPF frontend application with standard user privileges...
 echo ==========================================
-start "" "%~dp0App\bin\Debug\net10.0-windows\SwiftList.App.exe"
+powershell -Command "Start-Process -FilePath '%~dp0debug\SwiftList.App.exe' -WorkingDirectory '%~dp0debug'"
 
 echo Build and run script completed successfully.
-ping 127.0.0.1 -n 4 >nul
+

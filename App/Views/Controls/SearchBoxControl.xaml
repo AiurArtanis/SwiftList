@@ -11,7 +11,6 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
         <!-- TextBox -->
@@ -84,31 +83,5 @@
                 </Control.Style>
             </Control>
         </Grid>
- 
-        <!-- Open full search window -->
-        <Button x:Name="BtnOpenMore"
-                Grid.Column="2"
-                Width="29"
-                Height="29"
-                Margin="13,0,0,0"
-                Padding="0"
-                VerticalAlignment="Center"
-                ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[QuickSearch_OpenMore]}"
-                Cursor="Hand"
-                Background="{DynamicResource BadgeBackground}"
-                BorderBrush="{DynamicResource BadgeBorderBrush}"
-                BorderThickness="1">
-            <Button.Resources>
-                <Style TargetType="Border">
-                    <Setter Property="CornerRadius" Value="14.5"/>
-                </Style>
-            </Button.Resources>
-            <Viewbox Width="16" Height="16" Opacity="0.85">
-                <Canvas Width="24" Height="24">
-                    <Path Data="M7 7h10v10h-2V10.41l-8.29 8.3-1.42-1.42 8.3-8.29H7V7z"
-                          Fill="{DynamicResource BadgeText}"/>
-                </Canvas>
-            </Viewbox>
-        </Button>
     </Grid>
 </UserControl>
