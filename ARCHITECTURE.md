@@ -63,10 +63,10 @@ The WPF Desktop user interface executing in the interactive **Session 1**.
 
 ### 2.4 SwiftList.PluginSdk & Plugins
 A highly decoupled plugin ecosystem:
-* `PluginSdk`: Defines interfaces for Actions (`ISearchResultAction`), instant results (`IInstantResultProvider`), dynamic context menus (`IDynamicActionProvider`), and inline search adapters (`IInlineSearchAdapter`).
+* `PluginSdk`: Defines interfaces for Actions (`ISearchResultAction`), instant results (`IInstantResultProvider`), dynamic context menus (`IDynamicActionProvider`), inline search adapters (`IInlineSearchAdapter`), and file previews (`IFilePreviewProvider`).
 * `Plugins/PinyinAlias`: Leverages `TinyPinyin` to generate Hanzi-to-Pinyin alias lookups.
 * `Plugins/ListSearch`: Intercepts native standard lists (`SysListView32` and `ListBox`), retrieves multi-column text records, concatenates them using `\t` delimiters, and feeds them into the inline search engine.
-* `Plugins/CoreExtensions`: Standard plugins including a calculator (`CalculatorInstantProvider`), an environment variable path resolver (`EnvironmentVariableInstantProvider`), and Explorer window hooks.
+* `Plugins/CoreExtensions`: Standard plugins including a calculator (`CalculatorInstantProvider`), an environment variable path resolver (`EnvironmentVariableInstantProvider`), Explorer window hooks, and modular file preview providers (Folder, Image, Text, PE).
 
 ---
 

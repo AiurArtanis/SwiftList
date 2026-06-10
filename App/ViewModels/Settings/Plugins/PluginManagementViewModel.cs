@@ -233,6 +233,11 @@ namespace SwiftList.App.ViewModels.Settings.Plugins
                     components.Add(new PluginComponentViewModel(id, PluginComponentType.ColumnProvider, col.HeaderText, !disabledSet.Contains(id)));
                 }
             }
+            foreach (var prov in manager.AllFilePreviewProviders.Where(p => p.GetType().Assembly == assembly))
+            {
+                string id = MakeId(dllName, PluginComponentType.FilePreviewProvider, prov.GetType().Name);
+                components.Add(new PluginComponentViewModel(id, PluginComponentType.FilePreviewProvider, prov.Name, !disabledSet.Contains(id)));
+            }
             foreach (var prov in manager.AllTranslationProviders.Where(p => p.GetType().Assembly == assembly))
             {
                 string id = MakeId(dllName, PluginComponentType.TranslationProvider, prov.GetType().Name);

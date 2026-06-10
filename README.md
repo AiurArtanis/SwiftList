@@ -38,15 +38,21 @@ By directly parsing NTFS **USN Journal (Update Sequence Number)** logs and inter
 * **Elegant Visual Separators**: Custom XAML template parses tab-delimited items via a `SplitColumnsConverter` and renders them with horizontal layout wrappers using premium visual dividers (`  │  `).
 * **Shift + Mouse Wheel Horizontal Scrolling**: Multi-column text fields display horizontal scrollbars if they exceed the width. Supports Shift + Mouse Wheel for smooth horizontal panning via an attached behavior (`ScrollViewerHelper`).
 
-### 6. 🛡️ Target Focus & UAC Exclusion Guard
+### 6. 👁️ Modular File QuickLook (File Preview)
+* **Instant File Preview**: Supports seamless quick file content previews for folders, images, text documents, and PE binaries without launching heavy external editors.
+* **Smart Selection Sync**: Selection change in both the Quick Search Window (`QuickSearchWindow`) and the Full Search Window (`SearchWindow`) automatically loads or closes the preview pane. Non-previewable items like applications or section headers automatically hide the preview.
+* **Custom Shortcuts**: Press `Function Key Modifier + Space` or `Function Key Modifier + P` to toggle the preview window. The modifier key can be customized by the user in settings.
+* **Smooth Text Panning**: The text previewer supports `Shift + Mouse Wheel` to horizontally pan wide logs or source code files.
+
+### 7. 🛡️ Target Focus & UAC Exclusion Guard
 * **UAC Prompt Exclusion**: Prevents global hotkeys or inline overlays from intercepting keys when a system UAC elevation prompt dialog is in the foreground.
 * **Smart Input Focus Detection**: Automatically skips hook interception when a text input control (like native `Edit`, `RichEdit`, or custom `TextBox` controls) is focused, or when a blinking cursor caret is active, ensuring normal text typing is never interrupted.
 
-### 7. 🎨 Theme Customization & i18n localization
+### 8. 🎨 Theme Customization & i18n localization
 * **Dynamic Themes**: Supports visual theme injection via `IThemeProvider` (built-in themes include Nord, Sakura, Cyberpunk, Light, and Dark). Supports dynamic recoloring, path fill bindings, and active selection text foreground inheritance.
 * **Internationalization**: Leverages `ITranslationProvider` to support dynamic localization resource loading (e.g., English `en-US` and Simplified Chinese `zh-CN`).
 
-### 8. 🧩 Fully Decoupled Plugin Ecosystem
+### 9. 🧩 Fully Decoupled Plugin Ecosystem
 Features a lightweight, reusable **Plugin SDK** that enables seamless third-party extensions. The core project currently ships with five built-in extension groups:
 * **`ISearchResultAction` (Actions Menu)**: Defines right-click/Tab actions for search results, such as "Open File Location" or "Copy Path". It also registers dedicated context-aware commands inside the inline docked window.
 * **`IDynamicActionProvider` (Dynamic Menu)**: Interacts with the native Windows shell to reproduce Windows Right-Click Context Menus with pixel-perfection.
@@ -93,7 +99,12 @@ SwiftList allows you to perform calculations, resolve paths, and invoke terminal
   * **Standard Execution ($)**: Prefix with `$` (e.g., `$ping google.com`) to execute standard shell commands. The cmd terminal will stay open after execution.
   * **Elevated Execution (#)**: Prefix with `#` (e.g., `#net start mssqlserver`) to trigger Windows UAC elevation and execute the command as Administrator. The terminal stays open.
 
-### 4. Auto Updates & Silent Upgrades
+### 4. File QuickLook (File Preview)
+* **Activating Preview**: Select any file or folder and press `Function Key Modifier + Space` or `Function Key Modifier + P` (e.g., `Alt + Space` if Alt is your Function Key Modifier) to pop up the premium side-docked QuickLook preview.
+* **Selection Syncing**: Once activated, moving the selection up/down using arrow keys will dynamically update the preview content in real-time. If you highlight an application or section header, the preview automatically closes itself, and will automatically restore when you move back to a previewable file.
+* **Modular Configuration**: Previewers are loaded dynamically as plugins. You can enable/disable individual preview providers (Folder, Image, Text, PE) on the "Plugin Management" settings page.
+
+### 5. Auto Updates & Silent Upgrades
 * **Auto Check Updates**: Enabling this in settings causes the App to silently fetch metadata of the latest GitHub Release on startup.
 * **Auto Silent Update**:
   * **Permission Guard**: Due to Windows system security and service requirements, **non-administrator users cannot configure or enable Auto Silent Updates** (the checkbox is disabled).

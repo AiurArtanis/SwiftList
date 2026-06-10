@@ -139,6 +139,9 @@ namespace SwiftList.App
 
                 SwiftList.PluginSdk.TranslationService.LookupFunc = key => SwiftList.App.Services.TranslationManager.Instance[key];
 
+                // Register IconService delegate for decoupled plugins
+                SwiftList.PluginSdk.IconService.GetIconFunc = (path, isDir) => ShellIconHelper.GetIconForPath(path, isDir);
+
                 // Register Logger delegate for decoupled plugins
 
                 SwiftList.PluginSdk.Logger.LogAction = (msg, lvl) =>

@@ -61,6 +61,17 @@ namespace SwiftList.App
             activeList.PreviewMouseLeftButtonUp += LstGridResults_PreviewMouseLeftButtonUp;
             activeList.PreviewMouseRightButtonUp += LstGridResults_PreviewMouseRightButtonUp;
             activeList.PreviewMouseWheel += LstGridResults_PreviewMouseWheel;
+            activeList.SelectionChanged += (s, e) =>
+            {
+                if (activeList.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult && !result.IsApplication && result.FullPath != "__SHOW_MORE__")
+                {
+                    QuickLookManager.Instance.UpdateOrShow(this, result.FullPath);
+                }
+                else
+                {
+                    QuickLookManager.Instance.Hide();
+                }
+            };
 
             ResultsPanelControl.ActionsListBox.PreviewMouseLeftButtonUp += _menuPresenter.HandleActionsPreviewMouseLeftButtonUp;
         }

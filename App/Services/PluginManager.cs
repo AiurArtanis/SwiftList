@@ -31,6 +31,7 @@ namespace SwiftList.App.Services
         private readonly List<SwiftList.PluginSdk.ITranslationProvider> _translationProviders = new();
         private readonly List<SwiftList.PluginSdk.IThemeProvider> _themeProviders = new();
         private readonly List<SwiftList.PluginSdk.IActivePathCollector> _pathCollectors = new();
+        private readonly List<SwiftList.PluginSdk.IFilePreviewProvider> _previewProviders = new();
         private uint _nextRuntimeActionId = 0x80000000;
 
         private readonly ComponentFilter _filter = new();
@@ -72,6 +73,7 @@ namespace SwiftList.App.Services
             _pathCollectors.Add(p);
             SwiftList.PluginSdk.ActivePathCollectorRegistry.Register(p);
         }
+        void PluginRegistry.AddFilePreviewProvider(SwiftList.PluginSdk.IFilePreviewProvider p) => _previewProviders.Add(p);
 
         // ── Public API ────────────────────────────────────────────────────────
 
@@ -125,8 +127,14 @@ namespace SwiftList.App.Services
         public IEnumerable<SwiftList.PluginSdk.ITranslationProvider> TranslationProviders => _translationProviders;
         public IEnumerable<SwiftList.PluginSdk.IThemeProvider> ThemeProviders => _themeProviders;
         public IEnumerable<SwiftList.PluginSdk.IActivePathCollector> ActivePathCollectors => _pathCollectors;
+        public IEnumerable<SwiftList.PluginSdk.IFilePreviewProvider> FilePreviewProviders
+            => _previewProviders
+                .Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.FilePreviewProvider, p.GetType().Name))
+                .OrderByDescending(p => p.Priority);
 
         // ── Unfiltered collections (settings UI ?show disabled as unchecked) ─
+
+        public IEnumerable<SwiftList.PluginSdk.IFilePreviewProvider> AllFilePreviewProviders => _previewProviders;
 
         public IEnumerable<PluginActionRegistration> AllActions => _actions;
         public IEnumerable<SwiftList.PluginSdk.IDynamicActionProvider> AllDynamicProviders => _dynamicProviders;

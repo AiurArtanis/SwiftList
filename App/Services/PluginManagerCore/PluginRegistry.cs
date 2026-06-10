@@ -15,5 +15,6 @@ namespace SwiftList.App.Services.PluginManagerCore
         void AddTranslationProvider(ITranslationProvider provider);
         void AddThemeProvider(IThemeProvider provider);
         void AddActivePathCollector(IActivePathCollector provider);
+        void AddFilePreviewProvider(IFilePreviewProvider provider);
     }
 }

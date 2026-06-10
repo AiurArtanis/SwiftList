@@ -92,6 +92,18 @@ namespace SwiftList.App
             {
                 _layoutManager.QueueResultsLayoutUpdate();
             };
+
+            LstResults.SelectionChanged += (s, e) =>
+            {
+                if (LstResults.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult && !result.IsApplication && result.FullPath != "__SHOW_MORE__")
+                {
+                    QuickLookManager.Instance.UpdateOrShow(this, result.FullPath);
+                }
+                else
+                {
+                    QuickLookManager.Instance.Hide();
+                }
+            };
         }
 
         private void QueueResultsLayoutUpdate() => _layoutManager.QueueResultsLayoutUpdate();

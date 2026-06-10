@@ -106,6 +106,13 @@ namespace SwiftList.App.Services.PluginManagerCore
                         Logger.Log($"[PluginManager] Loaded active path collector: '{type.Name}' from {fileName}");
                     }
 
+                    if (typeof(SwiftList.PluginSdk.IFilePreviewProvider).IsAssignableFrom(type))
+                    {
+                        var provider = (SwiftList.PluginSdk.IFilePreviewProvider)Activator.CreateInstance(type)!;
+                        registry.AddFilePreviewProvider(provider);
+                        Logger.Log($"[PluginManager] Loaded file preview provider: '{type.Name}' from {fileName}");
+                    }
+
                     if (typeof(SwiftList.PluginSdk.IFileDialogAdapter).IsAssignableFrom(type))
                     {
                         var provider = (SwiftList.PluginSdk.IFileDialogAdapter)Activator.CreateInstance(type)!;
