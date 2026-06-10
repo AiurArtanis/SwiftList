@@ -49,9 +49,9 @@ namespace SwiftList.Plugins.CoreExtensions.FileDialog
                     SendMessage(parent, WM_COMMAND, wParamChange, targetEdit);
                 }
 
-                System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                System.Threading.Tasks.Task.Run(async () =>
                 {
-                    System.Threading.Thread.Sleep(150);
+                    await System.Threading.Tasks.Task.Delay(150);
                     IntPtr currentActive = GetForegroundWindow();
                     if (currentActive == hwnd)
                     {

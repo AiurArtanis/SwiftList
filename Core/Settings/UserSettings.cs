@@ -114,7 +114,7 @@ namespace SwiftList.Core
                 {
                     retries--;
                     if (retries <= 0) throw;
-                    System.Threading.Thread.Sleep(50);
+                    System.Threading.Tasks.Task.Delay(50).Wait();
                 }
                 catch (Exception ex)
                 {
@@ -145,7 +145,7 @@ namespace SwiftList.Core
                 {
                     retries--;
                     if (retries <= 0) throw;
-                    System.Threading.Thread.Sleep(50);
+                    System.Threading.Tasks.Task.Delay(50).Wait();
                 }
             }
 

@@ -190,7 +190,7 @@ namespace SwiftList.App.Services
             IntPtr fgHwnd = ExplorerNativeHooks.GetForegroundWindow();
             bool isTextInputFocused = fgHwnd != IntPtr.Zero && InputFocusEvaluator.IsForegroundTextInputFocused(fgHwnd);
 
-            if (!isTextInputFocused)
+            if (!isTextInputFocused && !_explorerTracker.IsActiveWindowDialog)
             {
                 _window.Dispatcher.BeginInvoke(new Action(() =>
                 {

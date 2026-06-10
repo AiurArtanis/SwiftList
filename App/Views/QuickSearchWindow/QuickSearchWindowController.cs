@@ -1,4 +1,6 @@
 using System;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
@@ -11,49 +13,27 @@ namespace SwiftList.App.Views.QuickSearchWindow
     {
         private readonly SwiftList.App.QuickSearchWindow _window;
 
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern IntPtr GetForegroundWindow();
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)] bool fAttach);
-
-        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
-        private static extern uint GetCurrentThreadId();
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern IntPtr SetActiveWindow(IntPtr hWnd);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern IntPtr SetFocus(IntPtr hWnd);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc,
-            WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-        private static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder lpClassName, int nMaxCount);
+        [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+        [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+        [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, [MarshalAs(UnmanagedType.Bool)] bool fAttach);
+        [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
+        [DllImport("user32.dll")] private static extern IntPtr SetActiveWindow(IntPtr hWnd);
+        [DllImport("user32.dll")] private static extern IntPtr SetFocus(IntPtr hWnd);
+        [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        [DllImport("user32.dll")] private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+        [DllImport("user32.dll")] private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)] private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+        [DllImport("user32.dll")] private static extern IntPtr GetShellWindow();
+        [DllImport("user32.dll")] private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, IntPtr dwExtraInfo);
 
         private const int SW_RESTORE = 9;
         private const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
         private const uint WINEVENT_OUTOFCONTEXT = 0;
+        private const byte VK_MENU = 0x12;
+        private const uint KEYEVENTF_KEYUP = 0x0002;
 
-        private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
-            int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+        private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
 
         private WinEventDelegate? _foregroundHookDelegate;
         private IntPtr _hForegroundHook = IntPtr.Zero;
@@ -62,11 +42,8 @@ namespace SwiftList.App.Views.QuickSearchWindow
         private void StartForegroundHook()
         {
             if (_hForegroundHook != IntPtr.Zero) return;
-
-            _foregroundHookDelegate = new WinEventDelegate(ForegroundEventProc);
-            _hForegroundHook = SetWinEventHook(
-                EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND,
-                IntPtr.Zero, _foregroundHookDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
+            _foregroundHookDelegate = ForegroundEventProc;
+            _hForegroundHook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, _foregroundHookDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
         }
 
         private void StopForegroundHook()
@@ -79,37 +56,19 @@ namespace SwiftList.App.Views.QuickSearchWindow
             _foregroundHookDelegate = null;
         }
 
-        private void ForegroundEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
-            int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
+        private void ForegroundEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
         {
             if (hwnd == IntPtr.Zero) return;
-
             try
             {
-                // Ignore focus changes to Input Switch windows (like Shell_InputSwitchTopLevelWindow)
-                var sbClass = new System.Text.StringBuilder(256);
+                var sbClass = new StringBuilder(256);
                 GetClassName(hwnd, sbClass, sbClass.Capacity);
-                string cls = sbClass.ToString();
-                if (cls.Contains("InputSwitch", System.StringComparison.OrdinalIgnoreCase))
-                {
-                    return;
-                }
+                if (sbClass.ToString().Contains("InputSwitch", StringComparison.OrdinalIgnoreCase)) return;
 
-                // Ignore focus changes to our own process's windows (e.g. QuickSearchWindow or InlineSearchWindow)
                 GetWindowThreadProcessId(hwnd, out uint activePid);
-                if (activePid == (uint)Environment.ProcessId)
-                {
-                    return;
-                }
+                if (activePid == (uint)Environment.ProcessId) return;
 
-                // Any foreground switch to another process's window should hide us
-                _window.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (_window.IsVisible)
-                    {
-                        HideWindow();
-                    }
-                }), DispatcherPriority.Background);
+                _window.Dispatcher.BeginInvoke(new Action(() => { if (_window.IsVisible) HideWindow(); }), DispatcherPriority.Background);
             }
             catch { }
         }
@@ -117,36 +76,43 @@ namespace SwiftList.App.Views.QuickSearchWindow
         public static void ForceForeground(IntPtr hwnd)
         {
             if (hwnd == IntPtr.Zero) return;
-
-            // Restore window if minimized, and make sure it is shown
             ShowWindow(hwnd, SW_RESTORE);
 
             IntPtr fgHwnd = GetForegroundWindow();
             if (fgHwnd == hwnd) return;
 
+            keybd_event(VK_MENU, 0, 0, IntPtr.Zero);
+            keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
+
             uint fgThreadId = GetWindowThreadProcessId(fgHwnd, out _);
             uint appThreadId = GetCurrentThreadId();
 
-            if (fgThreadId != appThreadId && fgThreadId != 0)
+            bool attached = fgThreadId != appThreadId && fgThreadId != 0 && AttachThreadInput(appThreadId, fgThreadId, true);
+            bool shellAttached = false;
+            IntPtr shellHwnd = GetShellWindow();
+            if (shellHwnd != IntPtr.Zero)
             {
-                AttachThreadInput(appThreadId, fgThreadId, true);
-                SetForegroundWindow(hwnd);
-                SetActiveWindow(hwnd);
-                SetFocus(hwnd);
-                AttachThreadInput(appThreadId, fgThreadId, false);
+                uint shellThreadId = GetWindowThreadProcessId(shellHwnd, out _);
+                if (shellThreadId != appThreadId && shellThreadId != fgThreadId && shellThreadId != 0)
+                {
+                    shellAttached = AttachThreadInput(appThreadId, shellThreadId, true);
+                }
             }
-            else
+
+            try
             {
                 SetForegroundWindow(hwnd);
                 SetActiveWindow(hwnd);
                 SetFocus(hwnd);
+            }
+            finally
+            {
+                if (attached) AttachThreadInput(appThreadId, fgThreadId, false);
+                if (shellAttached) AttachThreadInput(appThreadId, GetWindowThreadProcessId(shellHwnd, out _), false);
             }
         }
 
-        public QuickSearchWindowController(SwiftList.App.QuickSearchWindow window)
-        {
-            _window = window;
-        }
+        public QuickSearchWindowController(SwiftList.App.QuickSearchWindow window) => _window = window;
 
         public void PositionWindow()
         {
@@ -171,43 +137,28 @@ namespace SwiftList.App.Views.QuickSearchWindow
         {
             _window.Dispatcher.Invoke(() =>
             {
-                if (_window.IsVisible && _window.WindowState != WindowState.Minimized)
-                {
-                    HideWindow();
-                }
-                else
-                {
-                    ShowWindow();
-                }
+                if (_window.IsVisible && _window.WindowState != WindowState.Minimized) HideWindow();
+                else ShowWindow();
             });
         }
 
         public void ShowWindow(string? initialQuery = null)
         {
-            // Capture the currently active window before we show up and steal focus
             _lastActiveHwnd = GetForegroundWindow();
             if (_lastActiveHwnd != IntPtr.Zero)
             {
                 GetWindowThreadProcessId(_lastActiveHwnd, out uint activePid);
-                if (activePid == (uint)Environment.ProcessId)
-                {
-                    _lastActiveHwnd = IntPtr.Zero;
-                }
+                if (activePid == (uint)Environment.ProcessId) _lastActiveHwnd = IntPtr.Zero;
             }
 
             _window.ViewModel.IsInlineSearchContext = false;
-
-            // Hide and clear inline search window data
             App.HideInlineSearch();
 
-            // Disable inline keyboard hook completely while the quick window owns input.
             InlineSearchManager.Instance.KeyboardHook.IsQuickSearchWindowVisible = true;
             InlineSearchManager.Instance.KeyboardHook.Stop();
 
             _window.ViewModel.SearchQuery = initialQuery ?? string.Empty;
-
             _window.UpdateLayout();
-
             _window.Topmost = false;
             _window.Topmost = true;
             _window.Show();
@@ -215,31 +166,27 @@ namespace SwiftList.App.Views.QuickSearchWindow
             PositionWindow();
 
             _window.ViewModel.TriggerIndexBuild();
-
-            // Start foreground active window monitoring hook to automatically hide when clicking away
             StartForegroundHook();
 
             _window.Dispatcher.BeginInvoke(new Action(() =>
             {
+                var hwnd = new WindowInteropHelper(_window).Handle;
+                if (hwnd != IntPtr.Zero) ForceForeground(hwnd);
+
                 _window.Activate();
                 _window.Focus();
 
-                var hwnd = new WindowInteropHelper(_window).Handle;
-                if (hwnd != IntPtr.Zero)
+                _window.Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    ForceForeground(hwnd);
-                }
-
-                _window.TxtSearch.Focus();
-                System.Windows.Input.Keyboard.Focus(_window.TxtSearch);
+                    _window.TxtSearch.Focus();
+                    System.Windows.Input.Keyboard.Focus(_window.TxtSearch);
+                }), DispatcherPriority.Background);
             }), DispatcherPriority.Input);
         }
 
         public void HideWindow(bool restoreFocus = true)
         {
-            // Stop foreground window hook
             StopForegroundHook();
-
             if (_window.MenuPresenter != null && _window.MenuPresenter.IsInActionsMode)
             {
                 _window.MenuPresenter.ExitActionsMode();
@@ -254,29 +201,18 @@ namespace SwiftList.App.Views.QuickSearchWindow
             catch { }
 
             _window.UpdateLayout();
-
             _window.Hide();
 
-            // Re-enable inline keyboard hook when the quick window no longer owns input.
             InlineSearchManager.Instance.KeyboardHook.IsQuickSearchWindowVisible = false;
             InlineSearchManager.Instance.KeyboardHook.Start();
 
-            // Restore focus to the previously active window
-            if (restoreFocus && _lastActiveHwnd != IntPtr.Zero)
-            {
-                SetForegroundWindow(_lastActiveHwnd);
-            }
+            if (restoreFocus && _lastActiveHwnd != IntPtr.Zero) SetForegroundWindow(_lastActiveHwnd);
             _lastActiveHwnd = IntPtr.Zero;
 
-            // Trim working set in the background after transition
-            System.Threading.Tasks.Task.Run(() =>
+            System.Threading.Tasks.Task.Run(async () =>
             {
-                System.Threading.Thread.Sleep(100);
-                try
-                {
-                    SwiftList.Core.Win32Api.TrimWorkingSet();
-                }
-                catch { }
+                await System.Threading.Tasks.Task.Delay(100);
+                try { SwiftList.Core.Win32Api.TrimWorkingSet(); } catch { }
             });
         }
     }

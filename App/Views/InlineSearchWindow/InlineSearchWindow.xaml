@@ -13,7 +13,7 @@
         Topmost="True"
         WindowStartupLocation="Manual"
         Focusable="True"
-        ShowActivated="True">
+        ShowActivated="False">
     <!-- Main card - inverted layout: results on top, search box at bottom -->
     <Border x:Name="MainBorder" Margin="12" CornerRadius="8"
             Background="{DynamicResource ContentBg}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"

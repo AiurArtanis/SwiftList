@@ -21,7 +21,6 @@ namespace SwiftList.App.Services
         private System.Windows.Controls.MenuItem? _wpfItemToggleHotkeys;
         private System.Windows.Controls.MenuItem? _wpfItemSettings;
         private System.Windows.Controls.MenuItem? _wpfItemAbout;
-        private System.Windows.Controls.Separator? _wpfCleanExitSeparator;
         private System.Windows.Controls.MenuItem? _wpfItemCleanExit;
         private System.Windows.Controls.MenuItem? _wpfItemExit;
         private Window? _dummyWindow;
@@ -122,15 +121,12 @@ namespace SwiftList.App.Services
             };
             _wpfItemExit.Click += (s, e) => Application.Current.Shutdown();
 
-            _wpfCleanExitSeparator = new System.Windows.Controls.Separator();
-
             _wpfContextMenu.Items.Add(_wpfItemShowWindow);
             _wpfContextMenu.Items.Add(_wpfItemToggleHotkeys);
             _wpfContextMenu.Items.Add(_wpfItemSettings);
             _wpfContextMenu.Items.Add(new System.Windows.Controls.Separator());
             _wpfContextMenu.Items.Add(_wpfItemAbout);
             _wpfContextMenu.Items.Add(new System.Windows.Controls.Separator());
-            _wpfContextMenu.Items.Add(_wpfCleanExitSeparator);
             _wpfContextMenu.Items.Add(_wpfItemCleanExit);
             _wpfContextMenu.Items.Add(_wpfItemExit);
 
@@ -250,10 +246,6 @@ namespace SwiftList.App.Services
             if (_wpfItemCleanExit == null) return;
             var visibility = TrayCleanExitHelper.IsOnlyAppProcessRunning() ? Visibility.Visible : Visibility.Collapsed;
             _wpfItemCleanExit.Visibility = visibility;
-            if (_wpfCleanExitSeparator != null)
-            {
-                _wpfCleanExitSeparator.Visibility = visibility;
-            }
         }
 
         public void Dispose()
