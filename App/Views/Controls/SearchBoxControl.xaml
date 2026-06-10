@@ -8,8 +8,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="50" d:DesignWidth="600">
     
-    <Border Padding="{Binding Padding, ElementName=root}">
-        <Grid>
+    <Grid>
             <Grid.ColumnDefinitions>
                 <!-- Left Icon Column -->
                 <ColumnDefinition Width="Auto"/>
@@ -144,5 +143,4 @@
                 </Control>
             </Grid>
         </Grid>
-    </Border>
 </UserControl>
