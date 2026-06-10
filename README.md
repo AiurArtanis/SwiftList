@@ -28,7 +28,7 @@ By directly parsing NTFS **USN Journal (Update Sequence Number)** logs and inter
 
 ### 4. 🖥️ 3-in-1 Multidimensional Interaction
 * **Quick Search Window (QuickSearchPanel)**: A classic, minimalist floating launcher panel. Supports global shortcuts (**Double-click the Ctrl key** to show/hide) and quick selection using `Ctrl+1` to `Ctrl+9` for blind operation.
-* **Inline Explorer-Docked Window (InlineSearchPanel)**: An innovative overlay panel that automatically docks above Windows Explorer, system file open/save dialogs, or custom list views. Press `Tab` to trigger directory navigation and instant directory jumps.
+* **Inline Explorer-Docked Window (InlineSearchPanel)**: An innovative overlay panel that automatically docks above Windows Explorer, system file open/save dialogs, or custom list views. Trigger directory navigation and instant directory jumps.
   * **Native Explorer Focus Adaption**: Optimizes keyboard hooks on Windows 10/11, adapting flawlessly to explorer views such as `DirectUIHWND` and `SHELLDLL_DefView`.
 * **Control Panel & Settings (SettingsWindow)**: Visually manages exclusions, network drives, and background service status.
 
@@ -82,7 +82,7 @@ The Inline Search panel seamlessly docks onto native system file windows:
 * **Smart Docking**: Whenever you open Windows Explorer or any standard system File Open/Save Dialog, SwiftList automatically overlays a thin "Inline Search Panel" at the top of that window.
 * **Directory Jumping (Tab/Enter)**:
   * To jump folders inside Explorer, type keywords in the Inline Search bar.
-  * Select your target folder and press Enter or `Tab`. Explorer will **instantly jump** to that folder, eliminating tedious manual navigation.
+  * Select your target folder and press Enter. Explorer will **instantly jump** to that folder, eliminating tedious manual navigation.
 * **Save Dialog Redirection**:
   * This also applies to Save As dialogs (e.g., downloading files in a browser).
   * Type your target folder in the inline bar and hit Enter. The dialog will immediately redirect its saving destination, allowing you to save files to the correct place instantly.
