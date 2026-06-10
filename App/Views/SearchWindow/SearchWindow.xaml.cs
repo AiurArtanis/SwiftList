@@ -37,6 +37,8 @@ namespace SwiftList.App
             _viewModel = new SearchViewModel(initialQuery);
             this.DataContext = _viewModel;
 
+            QuickLookManager.Instance.Reset();
+
             this.Loaded += (s, e) =>
             {
                 this.Activate();

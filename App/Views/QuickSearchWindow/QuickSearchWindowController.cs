@@ -153,6 +153,7 @@ namespace SwiftList.App.Views.QuickSearchWindow
 
             _window.ViewModel.IsInlineSearchContext = false;
             App.HideInlineSearch();
+            QuickLookManager.Instance.Reset();
 
             InlineSearchManager.Instance.KeyboardHook.IsQuickSearchWindowVisible = true;
             InlineSearchManager.Instance.KeyboardHook.Stop();

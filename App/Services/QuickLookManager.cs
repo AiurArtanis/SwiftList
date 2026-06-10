@@ -16,6 +16,12 @@ namespace SwiftList.App.Services
 
         public bool IsVisible => _window != null && _window.IsVisible;
 
+        public void Reset()
+        {
+            _userWantsPreview = false;
+            Hide();
+        }
+
         public void Toggle(Window owner, string path)
         {
             if (string.IsNullOrEmpty(path)) return;
