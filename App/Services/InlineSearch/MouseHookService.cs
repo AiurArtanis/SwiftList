@@ -1,39 +1,32 @@
-using System;
-using SwiftList.Core;
+namespace SwiftList.App.Services;
 
-namespace SwiftList.App.Services
+public class MouseHookService : IDisposable
 {
-    public class MouseHookService : IDisposable
+    private readonly Func<int, int, bool> _checkInsideWindowCallback;
+
+    public event Action? OnClickOutside;
+
+    public MouseHookService(Func<int, int, bool> checkInsideWindowCallback)
     {
-        private readonly Func<int, int, bool> _checkInsideWindowCallback;
-
-        public event Action? OnClickOutside;
-
-        public MouseHookService(Func<int, int, bool> checkInsideWindowCallback)
-        {
-            _checkInsideWindowCallback = checkInsideWindowCallback;
-            if (App.HookClient != null)
+        _checkInsideWindowCallback = checkInsideWindowCallback;
+        App.HookClient?.OnMouseClick += (x, y) =>
             {
-                App.HookClient.OnMouseClick += (x, y) =>
+                if (!_checkInsideWindowCallback(x, y))
                 {
-                    if (!_checkInsideWindowCallback(x, y))
-                    {
-                        OnClickOutside?.Invoke();
-                    }
-                };
-            }
-        }
+                    OnClickOutside?.Invoke();
+                }
+            };
+    }
 
-        public void Start()
-        {
-        }
+    public void Start()
+    {
+    }
 
-        public void Stop()
-        {
-        }
+    public void Stop()
+    {
+    }
 
-        public void Dispose()
-        {
-        }
+    public void Dispose()
+    {
     }
 }

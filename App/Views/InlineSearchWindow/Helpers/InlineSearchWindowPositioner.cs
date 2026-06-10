@@ -1,153 +1,144 @@
-using System;
-using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using SwiftList.App.Services;
-using SwiftList.PluginSdk;
 
-namespace SwiftList.App.Views.InlineSearchWindow.Helpers
+namespace SwiftList.App.Views.InlineSearchWindow.Helpers;
+
+public class InlineSearchWindowPositioner
 {
-    public class InlineSearchWindowPositioner
+    private readonly SwiftList.App.InlineSearchWindow _window;
+    private int _positionUpdateQueued;
+
+    public InlineSearchWindowPositioner(SwiftList.App.InlineSearchWindow window) => _window = window ?? throw new ArgumentNullException(nameof(window));
+
+    public void PositionWindow()
     {
-        private readonly SwiftList.App.InlineSearchWindow _window;
-        private int _positionUpdateQueued;
+        if (Interlocked.Exchange(ref _positionUpdateQueued, 1) == 1)
+            return;
 
-        public InlineSearchWindowPositioner(SwiftList.App.InlineSearchWindow window)
+        _window.Dispatcher.BeginInvoke(new Action(() =>
         {
-            _window = window ?? throw new ArgumentNullException(nameof(window));
+            Interlocked.Exchange(ref _positionUpdateQueued, 0);
+            if (_window.IsVisible)
+                PositionWindowCore();
+        }), DispatcherPriority.Render);
+    }
+
+    private void PositionWindowCore()
+    {
+        var dpiScaleX = 1.0;
+        var dpiScaleY = 1.0;
+        var source = PresentationSource.FromVisual(_window);
+        if (source != null && source.CompositionTarget != null)
+        {
+            dpiScaleX = source.CompositionTarget.TransformFromDevice.M11;
+            dpiScaleY = source.CompositionTarget.TransformFromDevice.M22;
+        }
+        else
+        {
+            try
+            {
+                var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(_window);
+                dpiScaleX = 1.0 / dpi.DpiScaleX;
+                dpiScaleY = 1.0 / dpi.DpiScaleY;
+            }
+            catch
+            {
+                // Fallback
+            }
         }
 
-        public void PositionWindow()
-        {
-            if (Interlocked.Exchange(ref _positionUpdateQueued, 1) == 1)
-                return;
+        var windowHeight = _window.ActualHeight > 0 ? _window.ActualHeight : 60;
+        var windowWidth = _window.Width;
 
-            _window.Dispatcher.BeginInvoke(new Action(() =>
-            {
-                Interlocked.Exchange(ref _positionUpdateQueued, 0);
-                if (_window.IsVisible)
-                    PositionWindowCore();
-            }), DispatcherPriority.Render);
+        // MainBorder in XAML has Margin="12" to make room for drop shadow.
+        // We want the visible border to be exactly aligned to the screen/window corner.
+        const double xamlMargin = 12;
+        const double visibleMargin = 0;
+
+        var tracker = _window.Manager.ExplorerTracker;
+
+        if (tracker.IsDesktop)
+        {
+            // Standard layout: Results on top (Row 0), Search Box on bottom (Row 2)
+            Grid.SetRow(_window.ResultsPanelControl, 0);
+            Grid.SetRow(_window.ResultsSeparator, 1);
+            Grid.SetRow(_window.SearchBoxBorder, 2);
+
+            var screen = Screen.PrimaryScreen ?? Screen.AllScreens[0];
+            var workingArea = screen.WorkingArea;
+            var targetLeft = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
+            var targetTop = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
+
+            if (Math.Abs(_window.Left - targetLeft) > 0.5) _window.Left = targetLeft;
+            if (Math.Abs(_window.Top - targetTop) > 0.5) _window.Top = targetTop;
         }
-
-        private void PositionWindowCore()
+        else if (tracker.ActiveHwnd != IntPtr.Zero)
         {
-            double dpiScaleX = 1.0;
-            double dpiScaleY = 1.0;
-            var source = PresentationSource.FromVisual(_window);
-            if (source != null && source.CompositionTarget != null)
+            // Check if TryGetActiveWindowRect succeeds AND returns a valid non-empty window size (width and height > 100)
+            var hasValidRect = tracker.TryGetActiveWindowRect(out var rect) && (rect.Right - rect.Left > 100 && rect.Bottom - rect.Top > 100);
+
+            if (hasValidRect)
             {
-                dpiScaleX = source.CompositionTarget.TransformFromDevice.M11;
-                dpiScaleY = source.CompositionTarget.TransformFromDevice.M22;
-            }
-            else
-            {
-                try
+                var winLeft = rect.Left * dpiScaleX;
+                var winTop = rect.Top * dpiScaleY;
+                var winRight = rect.Right * dpiScaleX;
+                var winBottom = rect.Bottom * dpiScaleY;
+
+                double targetLeft = 0;
+                double targetTop = 0;
+
+                if (tracker.IsActiveWindowDialog)
                 {
-                    var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(_window);
-                    dpiScaleX = 1.0 / dpi.DpiScaleX;
-                    dpiScaleY = 1.0 / dpi.DpiScaleY;
+                    // Swap layout: Search Box on top (Row 0), Results on bottom (Row 2)
+                    Grid.SetRow(_window.SearchBoxBorder, 0);
+                    Grid.SetRow(_window.ResultsSeparator, 1);
+                    Grid.SetRow(_window.ResultsPanelControl, 2);
+
+                    var winWidth = (rect.Right - rect.Left) * dpiScaleX;
+                    targetLeft = winLeft + (winWidth - windowWidth) / 2;
+                    // Align top of search window to bottom of dialog
+                    targetTop = winBottom - xamlMargin + visibleMargin;
                 }
-                catch
+                else
                 {
-                    // Fallback
+                    // Standard layout: Results on top (Row 0), Search Box on bottom (Row 2)
+                    Grid.SetRow(_window.ResultsPanelControl, 0);
+                    Grid.SetRow(_window.ResultsSeparator, 1);
+                    Grid.SetRow(_window.SearchBoxBorder, 2);
+
+                    targetLeft = winRight - windowWidth + xamlMargin - visibleMargin;
+                    targetTop = winBottom - windowHeight + xamlMargin - visibleMargin;
                 }
-            }
 
-            double windowHeight = _window.ActualHeight > 0 ? _window.ActualHeight : 60;
-            double windowWidth = _window.Width;
-
-            // MainBorder in XAML has Margin="12" to make room for drop shadow.
-            // We want the visible border to be exactly aligned to the screen/window corner.
-            const double xamlMargin = 12;
-            const double visibleMargin = 0;
-
-            var tracker = _window.Manager.ExplorerTracker;
-
-            if (tracker.IsDesktop)
-            {
-                // Standard layout: Results on top (Row 0), Search Box on bottom (Row 2)
-                Grid.SetRow(_window.ResultsPanelControl, 0);
-                Grid.SetRow(_window.ResultsSeparator, 1);
-                Grid.SetRow(_window.SearchBoxBorder, 2);
-
-                var screen = System.Windows.Forms.Screen.PrimaryScreen ?? System.Windows.Forms.Screen.AllScreens[0];
+                // Constrain within the monitor work area where the active window is located
+                var screen = Screen.FromHandle(tracker.ActiveHwnd);
                 var workingArea = screen.WorkingArea;
-                double targetLeft = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
-                double targetTop = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
+                var minLeft = workingArea.Left * dpiScaleX + visibleMargin - xamlMargin;
+                var minTop = workingArea.Top * dpiScaleY + visibleMargin - xamlMargin;
+                var maxLeft = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
+                var maxTop = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
+
+                if (targetLeft < minLeft) targetLeft = minLeft;
+                if (targetTop < minTop) targetTop = minTop;
+                if (targetLeft > maxLeft) targetLeft = maxLeft;
+                if (targetTop > maxTop) targetTop = maxTop;
 
                 if (Math.Abs(_window.Left - targetLeft) > 0.5) _window.Left = targetLeft;
                 if (Math.Abs(_window.Top - targetTop) > 0.5) _window.Top = targetTop;
             }
-            else if (tracker.ActiveHwnd != IntPtr.Zero)
+            else
             {
-                SwiftList.Core.Hook.ExplorerTracker.RECT rect;
-                // Check if TryGetActiveWindowRect succeeds AND returns a valid non-empty window size (width and height > 100)
-                bool hasValidRect = tracker.TryGetActiveWindowRect(out rect) && (rect.Right - rect.Left > 100 && rect.Bottom - rect.Top > 100);
+                // Fallback: place the window safely in the bottom-right corner of the active window's monitor work area so it is fully visible
+                var screen = tracker.ActiveHwnd != IntPtr.Zero
+                    ? Screen.FromHandle(tracker.ActiveHwnd)
+                    : Screen.PrimaryScreen ?? Screen.AllScreens[0];
+                var workingArea = screen.WorkingArea;
+                var targetLeft = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
+                var targetTop = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
 
-                if (hasValidRect)
-                {
-                    double winLeft = rect.Left * dpiScaleX;
-                    double winTop = rect.Top * dpiScaleY;
-                    double winRight = rect.Right * dpiScaleX;
-                    double winBottom = rect.Bottom * dpiScaleY;
-
-                    double targetLeft = 0;
-                    double targetTop = 0;
-
-                    if (tracker.IsActiveWindowDialog)
-                    {
-                        // Swap layout: Search Box on top (Row 0), Results on bottom (Row 2)
-                        Grid.SetRow(_window.SearchBoxBorder, 0);
-                        Grid.SetRow(_window.ResultsSeparator, 1);
-                        Grid.SetRow(_window.ResultsPanelControl, 2);
-
-                        double winWidth = (rect.Right - rect.Left) * dpiScaleX;
-                        targetLeft = winLeft + (winWidth - windowWidth) / 2;
-                        // Align top of search window to bottom of dialog
-                        targetTop = winBottom - xamlMargin + visibleMargin;
-                    }
-                    else
-                    {
-                        // Standard layout: Results on top (Row 0), Search Box on bottom (Row 2)
-                        Grid.SetRow(_window.ResultsPanelControl, 0);
-                        Grid.SetRow(_window.ResultsSeparator, 1);
-                        Grid.SetRow(_window.SearchBoxBorder, 2);
-
-                        targetLeft = winRight - windowWidth + xamlMargin - visibleMargin;
-                        targetTop = winBottom - windowHeight + xamlMargin - visibleMargin;
-                    }
-
-                    // Constrain within the monitor work area where the active window is located
-                    var screen = System.Windows.Forms.Screen.FromHandle(tracker.ActiveHwnd);
-                    var workingArea = screen.WorkingArea;
-                    double minLeft = workingArea.Left * dpiScaleX + visibleMargin - xamlMargin;
-                    double minTop = workingArea.Top * dpiScaleY + visibleMargin - xamlMargin;
-                    double maxLeft = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
-                    double maxTop = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
-
-                    if (targetLeft < minLeft) targetLeft = minLeft;
-                    if (targetTop < minTop) targetTop = minTop;
-                    if (targetLeft > maxLeft) targetLeft = maxLeft;
-                    if (targetTop > maxTop) targetTop = maxTop;
-
-                    if (Math.Abs(_window.Left - targetLeft) > 0.5) _window.Left = targetLeft;
-                    if (Math.Abs(_window.Top - targetTop) > 0.5) _window.Top = targetTop;
-                }
-                else
-                {
-                    // Fallback: place the window safely in the bottom-right corner of the active window's monitor work area so it is fully visible
-                    var screen = tracker.ActiveHwnd != IntPtr.Zero
-                        ? System.Windows.Forms.Screen.FromHandle(tracker.ActiveHwnd)
-                        : System.Windows.Forms.Screen.PrimaryScreen ?? System.Windows.Forms.Screen.AllScreens[0];
-                    var workingArea = screen.WorkingArea;
-                    double targetLeft = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
-                    double targetTop = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
-
-                    if (Math.Abs(_window.Left - targetLeft) > 0.5) _window.Left = targetLeft;
-                    if (Math.Abs(_window.Top - targetTop) > 0.5) _window.Top = targetTop;
-                }
+                if (Math.Abs(_window.Left - targetLeft) > 0.5) _window.Left = targetLeft;
+                if (Math.Abs(_window.Top - targetTop) > 0.5) _window.Top = targetTop;
             }
         }
     }

@@ -1,74 +1,62 @@
-using System;
-using System.Diagnostics;
 using System.IO.Pipes;
-using System.Threading;
-using System.Threading.Tasks;
 using SwiftList.Core;
-namespace SwiftList.App.Services
-{
-    public static class AppPipeService
-    {
-        private static bool _keepRunningPipeServer = true;
+namespace SwiftList.App.Services;
 
-        public static void StopServer()
+public static class AppPipeService
+{
+    private static bool _keepRunningPipeServer = true;
+
+    public static void StopServer() => _keepRunningPipeServer = false;
+
+    public static async Task SendActivateSignalAsync(CancellationToken token = default)
+    {
+        var pipeName = $"SwiftList_App_Pipe_{Environment.UserName}";
+
+        try
         {
-            _keepRunningPipeServer = false;
+            using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, PipeOptions.Asynchronous);
+
+            await client.ConnectAsync(500, token).ConfigureAwait(false);
+            await PipeRequestBinarySerializer.WriteStringAsync(client, "ACTIVATE", token).ConfigureAwait(false);
         }
 
-        public static async Task SendActivateSignalAsync(CancellationToken token = default)
+        catch (Exception ex)
         {
-            string pipeName = $"SwiftList_App_Pipe_{Environment.UserName}";
+            Logger.Log($"Failed to send activation signal: {ex.Message}", LogLevel.Error);
+        }
+    }
 
+    public static Task StartPipeServerAsync() => RunPipeServerAsync();
+
+    private static async Task RunPipeServerAsync()
+    {
+        var pipeName = $"SwiftList_App_Pipe_{Environment.UserName}";
+        while (_keepRunningPipeServer)
+        {
             try
             {
-                using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, PipeOptions.Asynchronous);
+                using var server = new NamedPipeServerStream(pipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
 
-                await client.ConnectAsync(500, token).ConfigureAwait(false);
-                await PipeRequestBinarySerializer.WriteStringAsync(client, "ACTIVATE", token).ConfigureAwait(false);
+                await server.WaitForConnectionAsync();
+                var msg = await PipeRequestBinarySerializer.ReadStringAsync(server);
+                if (msg == "ACTIVATE")
+                {
+                    _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (System.Windows.Application.Current.MainWindow is QuickSearchWindow quickSearchWindow)
+                        {
+                            quickSearchWindow.ShowWindow();
+                        }
+
+                    }));
+                }
             }
 
             catch (Exception ex)
             {
-                Logger.Log($"Failed to send activation signal: {ex.Message}", SwiftList.Core.LogLevel.Error);
-            }
-        }
+                Logger.Log($"[AppPipeService] Named pipe server error: {ex.Message}", LogLevel.Error);
 
-        public static Task StartPipeServerAsync()
-        {
-            return RunPipeServerAsync();
-        }
-
-        private static async Task RunPipeServerAsync()
-        {
-            string pipeName = $"SwiftList_App_Pipe_{Environment.UserName}";
-            while (_keepRunningPipeServer)
-            {
-                try
-                {
-                    using var server = new NamedPipeServerStream(pipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-
-                    await server.WaitForConnectionAsync();
-                    string msg = await PipeRequestBinarySerializer.ReadStringAsync(server);
-                    if (msg == "ACTIVATE")
-                    {
-                        _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                        {
-                            var quickSearchWindow = System.Windows.Application.Current.MainWindow as QuickSearchWindow;
-                            if (quickSearchWindow != null)
-                            {
-                                quickSearchWindow.ShowWindow();
-                            }
-
-                        }));
-                    }
-                }
-
-                catch (Exception ex)
-                {
-                    Logger.Log($"[AppPipeService] Named pipe server error: {ex.Message}", SwiftList.Core.LogLevel.Error);
-
-                    await Task.Delay(1000); // Prevent tight loop on error
-                }
+                await Task.Delay(1000); // Prevent tight loop on error
             }
         }
     }

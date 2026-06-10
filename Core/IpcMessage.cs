@@ -1,56 +1,55 @@
-namespace SwiftList.Core
+namespace SwiftList.Core;
+
+public enum IpcMessageId : byte
 {
-    public enum IpcMessageId : byte
-    {
-        // App -> Hook
-        Stop = 1,
-        SetAppProcessId = 2,
-        SetQuickSearchVisible = 3,
-        SetInlineSearchVisible = 4,
-        NavigateDialog = 5,
-        RestoreDialogFocus = 6,
-        ReloadSettings = 7,
-        SetHotkeysDisabled = 8,
-        GetListItems = 9,
-        SelectItem = 10,
-        ClearSelection = 11,
-        GetSelectedIndices = 12,
+    // App -> Hook
+    Stop = 1,
+    SetAppProcessId = 2,
+    SetQuickSearchVisible = 3,
+    SetInlineSearchVisible = 4,
+    NavigateDialog = 5,
+    RestoreDialogFocus = 6,
+    ReloadSettings = 7,
+    SetHotkeysDisabled = 8,
+    GetListItems = 9,
+    SelectItem = 10,
+    ClearSelection = 11,
+    GetSelectedIndices = 12,
 
-        // Hook -> App
-        Activate = 20,
-        ExplorerDeactivated = 21,
-        ActiveWindowMoved = 22,
-        KeyBackspace = 23,
-        KeyEscape = 24,
-        KeyEnter = 25,
-        KeyUp = 26,
-        KeyDown = 27,
-        KeyLeft = 28,
-        KeyRight = 29,
-        KeyChar = 30,
-        KeyCtrlNumber = 31,
-        MouseClick = 32,
-        ExplorerActivated = 33,
-        PathCaptured = 34,
-        Error = 35,
-        GetListItemsResponse = 36,
-        GetSelectedIndicesResponse = 37
-    }
+    // Hook -> App
+    Activate = 20,
+    ExplorerDeactivated = 21,
+    ActiveWindowMoved = 22,
+    KeyBackspace = 23,
+    KeyEscape = 24,
+    KeyEnter = 25,
+    KeyUp = 26,
+    KeyDown = 27,
+    KeyLeft = 28,
+    KeyRight = 29,
+    KeyChar = 30,
+    KeyCtrlNumber = 31,
+    MouseClick = 32,
+    ExplorerActivated = 33,
+    PathCaptured = 34,
+    Error = 35,
+    GetListItemsResponse = 36,
+    GetSelectedIndicesResponse = 37
+}
 
-    public struct IpcMessage
-    {
-        public IpcMessageId Id { get; set; }
-        public uint ProcessId { get; set; }
-        public bool BoolVal { get; set; }
-        public char CharVal { get; set; }
-        public int IntVal { get; set; }
-        public int MouseX { get; set; }
-        public int MouseY { get; set; }
-        public long Hwnd { get; set; }
-        public string? StringVal1 { get; set; }
-        public string? StringVal2 { get; set; }
-        public bool IsDesktop { get; set; }
-        public string[]? StringArray { get; set; }
-        public int[]? IntArray { get; set; }
-    }
+public struct IpcMessage
+{
+    public IpcMessageId Id { get; set; }
+    public uint ProcessId { get; set; }
+    public bool BoolVal { get; set; }
+    public char CharVal { get; set; }
+    public int IntVal { get; set; }
+    public int MouseX { get; set; }
+    public int MouseY { get; set; }
+    public long Hwnd { get; set; }
+    public string? StringVal1 { get; set; }
+    public string? StringVal2 { get; set; }
+    public bool IsDesktop { get; set; }
+    public string[]? StringArray { get; set; }
+    public int[]? IntArray { get; set; }
 }

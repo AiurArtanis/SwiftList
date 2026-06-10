@@ -1,54 +1,52 @@
-using System;
 using System.Diagnostics;
 using System.Security.Principal;
 
-namespace SwiftList.Core.Services
+namespace SwiftList.Core.Services;
+
+public static class ElevationManager
 {
-    public static class ElevationManager
+    public static bool IsRunningAsAdmin()
     {
-        public static bool IsRunningAsAdmin()
+        try
         {
-            try
-            {
-                using var identity = WindowsIdentity.GetCurrent();
-                var principal = new WindowsPrincipal(identity);
-                return principal.IsInRole(WindowsBuiltInRole.Administrator);
-            }
-            catch
-            {
-                return false;
-            }
+            using var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
         }
-
-        public static bool TryElevateProcess(string exePath, string[] args)
+        catch
         {
-            try
-            {
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = exePath,
-                    UseShellExecute = true,
-                    Verb = "runas"
-                };
+            return false;
+        }
+    }
 
-                if (args != null && args.Length > 0)
-                {
-                    startInfo.Arguments = string.Join(" ", args);
-                }
+    public static bool TryElevateProcess(string exePath, string[] args)
+    {
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = exePath,
+                UseShellExecute = true,
+                Verb = "runas"
+            };
 
-                Process.Start(startInfo);
-                return true;
-            }
-            catch (System.ComponentModel.Win32Exception ex)
+            if (args != null && args.Length > 0)
             {
-                Logger.Log($"[ElevationManager] UAC elevation prompt was declined: {ex.Message}", LogLevel.Info);
-                return false;
+                startInfo.Arguments = string.Join(" ", args);
             }
-            catch (Exception ex)
-            {
-                Logger.Log($"[ElevationManager] Failed to relaunch elevated: {ex.Message}", LogLevel.Error);
-                return false;
-            }
+
+            Process.Start(startInfo);
+            return true;
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            Logger.Log($"[ElevationManager] UAC elevation prompt was declined: {ex.Message}", LogLevel.Info);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[ElevationManager] Failed to relaunch elevated: {ex.Message}", LogLevel.Error);
+            return false;
         }
     }
 }

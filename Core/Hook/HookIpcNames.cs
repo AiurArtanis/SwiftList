@@ -1,36 +1,31 @@
-using System;
+namespace SwiftList.Core.Hook;
 
-namespace SwiftList.Core.Hook
+/// <summary>
+/// Centralized pipe naming for the hook IPC channel.
+/// Each (user, Windows session) pair gets its own pipe name, preventing
+/// conflicts between multiple logged-in users or Fast-User-Switching sessions.
+/// </summary>
+public static class HookIpcNames
 {
-    /// <summary>
-    /// Centralized pipe naming for the hook IPC channel.
-    /// Each (user, Windows session) pair gets its own pipe name, preventing
-    /// conflicts between multiple logged-in users or Fast-User-Switching sessions.
-    /// </summary>
-    public static class HookIpcNames
+    public static string EventPipeName =>
+        $"SwiftList_Hook_Events_{SanitizeForPipeName(Environment.UserName)}_{GetCurrentSessionId()}";
+
+    public static string CmdPipeName =>
+        $"SwiftList_Hook_Cmds_{SanitizeForPipeName(Environment.UserName)}_{GetCurrentSessionId()}";
+
+    private static string SanitizeForPipeName(string value) =>
+        // Named pipe names cannot contain backslashes (domain\user); replace with underscore.
+        value.Replace('\\', '_').Replace('/', '_');
+
+    private static int GetCurrentSessionId()
     {
-        public static string EventPipeName =>
-            $"SwiftList_Hook_Events_{SanitizeForPipeName(Environment.UserName)}_{GetCurrentSessionId()}";
-
-        public static string CmdPipeName =>
-            $"SwiftList_Hook_Cmds_{SanitizeForPipeName(Environment.UserName)}_{GetCurrentSessionId()}";
-
-        private static string SanitizeForPipeName(string value)
+        try
         {
-            // Named pipe names cannot contain backslashes (domain\user); replace with underscore.
-            return value.Replace('\\', '_').Replace('/', '_');
+            return System.Diagnostics.Process.GetCurrentProcess().SessionId;
         }
-
-        private static int GetCurrentSessionId()
+        catch
         {
-            try
-            {
-                return System.Diagnostics.Process.GetCurrentProcess().SessionId;
-            }
-            catch
-            {
-                return 0;
-            }
+            return 0;
         }
     }
 }

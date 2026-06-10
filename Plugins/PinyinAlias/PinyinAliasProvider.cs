@@ -1,179 +1,171 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text.Json;
 using SwiftList.PluginSdk;
 
-namespace SwiftList.Plugins.PinyinAlias
+namespace SwiftList.Plugins.PinyinAlias;
+
+public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
 {
-    public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
+    public string Name => TranslationService.Get("Plugins_PinyinAliasPluginName");
+
+    string ITranslationProvider.Name => "Pinyin Translation Provider";
+
+    public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(System.Reflection.Assembly.GetExecutingAssembly());
+
+    private static readonly Dictionary<string, Dictionary<string, string>> Cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly object LockObj = new();
+
+    public IReadOnlyDictionary<string, string> GetTranslations(string cultureName)
     {
-        public string Name => TranslationService.Get("Plugins_PinyinAliasPluginName");
-
-        string ITranslationProvider.Name => "Pinyin Translation Provider";
-
-        public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(System.Reflection.Assembly.GetExecutingAssembly());
-
-        private static readonly Dictionary<string, Dictionary<string, string>> Cache = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly object LockObj = new();
-
-        public IReadOnlyDictionary<string, string> GetTranslations(string cultureName)
+        lock (LockObj)
         {
-            lock (LockObj)
+            if (Cache.TryGetValue(cultureName, out var cached))
             {
-                if (Cache.TryGetValue(cultureName, out var cached))
-                {
-                    return cached;
-                }
-
-                var translations = TranslationService.LoadEmbeddedTranslations(System.Reflection.Assembly.GetExecutingAssembly(), cultureName, "Plugin");
-                Cache[cultureName] = translations;
-                return translations;
+                return cached;
             }
+
+            var translations = TranslationService.LoadEmbeddedTranslations(System.Reflection.Assembly.GetExecutingAssembly(), cultureName, "Plugin");
+            Cache[cultureName] = translations;
+            return translations;
         }
+    }
 
-        public bool CanHandle(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-                return false;
-
-            for (int i = 0; i < text.Length; i++)
-            {
-                if (PinyinEngine.IsChinese(text[i]))
-                    return true;
-            }
-
+    public bool CanHandle(string text)
+    {
+        if (string.IsNullOrEmpty(text))
             return false;
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (PinyinEngine.IsChinese(text[i]))
+                return true;
         }
 
-        public IEnumerable<string> GetAliases(string text)
+        return false;
+    }
+
+    public IEnumerable<string> GetAliases(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            yield break;
+
+        if (text.Length == 1)
         {
-            if (string.IsNullOrEmpty(text))
-                yield break;
-
-            if (text.Length == 1)
+            // Single character fallback (needed for FuzzyHighlightMatcher and single-character queries)
+            if (PinyinEngine.TryGetPinyins(text[0], out var pinyins))
             {
-                // Single character fallback (needed for FuzzyHighlightMatcher and single-character queries)
-                if (PinyinEngine.TryGetPinyins(text[0], out var pinyins))
+                foreach (var p in pinyins)
                 {
-                    foreach (var p in pinyins)
-                    {
-                        yield return p.ToLowerInvariant();
-                    }
-                }
-                yield break;
-            }
-
-            string[][] lists = GetSyllableLists(text);
-            var fullPinyins = new List<string>();
-            var initials = new List<string>();
-            int count = 0;
-
-            char[] fullBuffer = new char[256];
-            char[] initialsBuffer = new char[lists.Length];
-
-            // Generate combinations. Since we concatenate them, we can safely allow up to 32 combinations
-            // to support longer polyphonic names without database explosion.
-            GenerateCombinations(lists, 0, 0, fullPinyins, initials, fullBuffer, initialsBuffer, ref count);
-
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            // 1. Yield the concatenated initials string (e.g. "cqs|zqs")
-            var uniqueInitials = new List<string>();
-            foreach (var init in initials)
-            {
-                if (!string.IsNullOrWhiteSpace(init))
-                {
-                    string lowerInit = init.ToLowerInvariant();
-                    if (!uniqueInitials.Contains(lowerInit))
-                        uniqueInitials.Add(lowerInit);
+                    yield return p.ToLowerInvariant();
                 }
             }
-            if (uniqueInitials.Count > 0)
-            {
-                string joinedInitials = string.Join("|", uniqueInitials);
-                if (seen.Add(joinedInitials))
-                {
-                    yield return joinedInitials;
-                }
-            }
+            yield break;
+        }
 
-            // 2. Yield the concatenated full pinyin string (e.g. "chongqingshi|zhongqingshi")
-            var uniqueFulls = new List<string>();
-            foreach (var fp in fullPinyins)
+        var lists = GetSyllableLists(text);
+        var fullPinyins = new List<string>();
+        var initials = new List<string>();
+        var count = 0;
+
+        var fullBuffer = new char[256];
+        var initialsBuffer = new char[lists.Length];
+
+        // Generate combinations. Since we concatenate them, we can safely allow up to 32 combinations
+        // to support longer polyphonic names without database explosion.
+        GenerateCombinations(lists, 0, 0, fullPinyins, initials, fullBuffer, initialsBuffer, ref count);
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // 1. Yield the concatenated initials string (e.g. "cqs|zqs")
+        var uniqueInitials = new List<string>();
+        foreach (var init in initials)
+        {
+            if (!string.IsNullOrWhiteSpace(init))
             {
-                if (!string.IsNullOrWhiteSpace(fp))
-                {
-                    string lowerFp = fp.ToLowerInvariant();
-                    if (!uniqueFulls.Contains(lowerFp))
-                        uniqueFulls.Add(lowerFp);
-                }
+                var lowerInit = init.ToLowerInvariant();
+                if (!uniqueInitials.Contains(lowerInit))
+                    uniqueInitials.Add(lowerInit);
             }
-            if (uniqueFulls.Count > 0)
+        }
+        if (uniqueInitials.Count > 0)
+        {
+            var joinedInitials = string.Join("|", uniqueInitials);
+            if (seen.Add(joinedInitials))
             {
-                string joinedFulls = string.Join("|", uniqueFulls);
-                if (seen.Add(joinedFulls))
-                {
-                    yield return joinedFulls;
-                }
+                yield return joinedInitials;
             }
         }
 
-        private static string[][] GetSyllableLists(string text)
+        // 2. Yield the concatenated full pinyin string (e.g. "chongqingshi|zhongqingshi")
+        var uniqueFulls = new List<string>();
+        foreach (var fp in fullPinyins)
         {
-            var lists = new string[text.Length][];
-            for (int i = 0; i < text.Length; i++)
+            if (!string.IsNullOrWhiteSpace(fp))
             {
-                char c = text[i];
-                if (PinyinEngine.TryGetPinyins(c, out var pinyins))
-                {
-                    var pList = new string[pinyins.Length];
-                    for (int j = 0; j < pinyins.Length; j++)
-                    {
-                        pList[j] = pinyins[j].ToUpperInvariant();
-                    }
-                    lists[i] = pList;
-                }
-                else
-                {
-                    lists[i] = new string[] { c.ToString().ToUpperInvariant() };
-                }
+                var lowerFp = fp.ToLowerInvariant();
+                if (!uniqueFulls.Contains(lowerFp))
+                    uniqueFulls.Add(lowerFp);
             }
-            return lists;
+        }
+        if (uniqueFulls.Count > 0)
+        {
+            var joinedFulls = string.Join("|", uniqueFulls);
+            if (seen.Add(joinedFulls))
+            {
+                yield return joinedFulls;
+            }
+        }
+    }
+
+    private static string[][] GetSyllableLists(string text)
+    {
+        var lists = new string[text.Length][];
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (PinyinEngine.TryGetPinyins(c, out var pinyins))
+            {
+                var pList = new string[pinyins.Length];
+                for (var j = 0; j < pinyins.Length; j++)
+                {
+                    pList[j] = pinyins[j].ToUpperInvariant();
+                }
+                lists[i] = pList;
+            }
+            else
+            {
+                lists[i] = new string[] { c.ToString().ToUpperInvariant() };
+            }
+        }
+        return lists;
+    }
+
+    private static void GenerateCombinations(
+        string[][] lists,
+        int index,
+        int currentFullLength,
+        List<string> fullPinyins,
+        List<string> initials,
+        char[] fullBuffer,
+        char[] initialsBuffer,
+        ref int count)
+    {
+        if (count >= 32) return; // Limit to 32 combinations to prevent combinatorial explosion
+
+        if (index == lists.Length)
+        {
+            fullPinyins.Add(new string(fullBuffer, 0, currentFullLength));
+            initials.Add(new string(initialsBuffer, 0, lists.Length));
+            count++;
+            return;
         }
 
-        private static void GenerateCombinations(
-            string[][] lists,
-            int index,
-            int currentFullLength,
-            List<string> fullPinyins,
-            List<string> initials,
-            char[] fullBuffer,
-            char[] initialsBuffer,
-            ref int count)
+        var elements = lists[index];
+        foreach (var element in elements)
         {
-            if (count >= 32) return; // Limit to 32 combinations to prevent combinatorial explosion
-
-            if (index == lists.Length)
+            if (currentFullLength + element.Length <= fullBuffer.Length)
             {
-                fullPinyins.Add(new string(fullBuffer, 0, currentFullLength));
-                initials.Add(new string(initialsBuffer, 0, lists.Length));
-                count++;
-                return;
-            }
-
-            var elements = lists[index];
-            foreach (var element in elements)
-            {
-                if (currentFullLength + element.Length <= fullBuffer.Length)
-                {
-                    element.CopyTo(0, fullBuffer, currentFullLength, element.Length);
-                    initialsBuffer[index] = element.Length > 0 ? element[0] : '\0';
-                    GenerateCombinations(lists, index + 1, currentFullLength + element.Length, fullPinyins, initials, fullBuffer, initialsBuffer, ref count);
-                }
+                element.CopyTo(0, fullBuffer, currentFullLength, element.Length);
+                initialsBuffer[index] = element.Length > 0 ? element[0] : '\0';
+                GenerateCombinations(lists, index + 1, currentFullLength + element.Length, fullPinyins, initials, fullBuffer, initialsBuffer, ref count);
             }
         }
     }

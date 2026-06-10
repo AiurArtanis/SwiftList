@@ -1,249 +1,216 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
-using SwiftList.PluginSdk;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
 using SwiftList.Core.Indexer.NetworkDrive;
 using System.ComponentModel;
-using SwiftList.App.ViewModels;
 using SwiftList.App.ViewModels.Settings.Plugins;
-namespace SwiftList.App.ViewModels.Settings
+namespace SwiftList.App.ViewModels.Settings;
+
+public class SettingsViewModel : ViewModelBase
 {
-    public class SettingsViewModel : ViewModelBase
+    private readonly SearchService _searchService = new();
+    private readonly UserSettings _userSettings = UserSettings.Load();
+    private readonly System.Windows.Threading.DispatcherTimer _refreshTimer;
+    private bool _canApply = true;
+    private bool _isBusy;
+    private bool _isServiceReady = true;
+
+    public SettingsViewModel()
     {
-        private readonly SearchService _searchService = new();
-        private readonly UserSettings _userSettings = UserSettings.Load();
-        private readonly System.Windows.Threading.DispatcherTimer _refreshTimer;
-        private bool _canApply = true;
-        private bool _isBusy;
-        private bool _isServiceReady = true;
+        Service = new ServiceSettingsViewModel(_searchService, Refresh);
 
-        public SettingsViewModel()
+        LocalDrive = new LocalDriveSettingsViewModel(_searchService, () => _refreshTimer?.Interval = TimeSpan.FromMilliseconds(100));
+
+        NetworkDrive = new NetworkDriveSettingsViewModel(_searchService, _userSettings, () => _refreshTimer?.Interval = TimeSpan.FromMilliseconds(100));
+        Experience = new ExperienceSettingsViewModel(_userSettings);
+        Exclusions = new ExclusionSettingsViewModel(_userSettings);
+        Plugins = new PluginManagementViewModel(_userSettings);
+        Hotkeys = new HotkeySettingsViewModel(_userSettings);
+        Blacklist = new BlacklistSettingsViewModel(_userSettings);
+        RefreshCommand = new RelayCommand(Refresh);
+        ApplyCommand = new RelayCommand(Apply, () => CanApply);
+
+        _refreshTimer = new System.Windows.Threading.DispatcherTimer
         {
-            Service = new ServiceSettingsViewModel(_searchService, Refresh);
+            Interval = TimeSpan.FromSeconds(5) // Start with slow refresh
 
-            LocalDrive = new LocalDriveSettingsViewModel(_searchService, () =>
-            {
-                if (_refreshTimer != null)
-                {
-                    _refreshTimer.Interval = TimeSpan.FromMilliseconds(100);
-                }
+        };
+        _refreshTimer.Tick += (s, e) => Refresh();
+        _refreshTimer.Start();
+        TranslationManager.Instance.PropertyChanged += OnLanguageChanged;
+        Refresh();
+    }
 
-            });
+    private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e) => Refresh();
 
-            NetworkDrive = new NetworkDriveSettingsViewModel(_searchService, _userSettings, () =>
-            {
-                if (_refreshTimer != null)
-                {
-                    _refreshTimer.Interval = TimeSpan.FromMilliseconds(100);
-                }
+    public ServiceSettingsViewModel Service { get; }
+    public LocalDriveSettingsViewModel LocalDrive { get; }
+    public NetworkDriveSettingsViewModel NetworkDrive { get; }
+    public ExperienceSettingsViewModel Experience { get; }
+    public ExclusionSettingsViewModel Exclusions { get; }
+    public PluginManagementViewModel Plugins { get; }
+    public HotkeySettingsViewModel Hotkeys { get; }
+    public BlacklistSettingsViewModel Blacklist { get; }
+    public ICommand RefreshCommand { get; }
+    public ICommand ApplyCommand { get; }
 
-            });
-            Experience = new ExperienceSettingsViewModel(_userSettings);
-            Exclusions = new ExclusionSettingsViewModel(_userSettings);
-            Plugins = new PluginManagementViewModel(_userSettings);
-            Hotkeys = new HotkeySettingsViewModel(_userSettings);
-            Blacklist = new BlacklistSettingsViewModel(_userSettings);
-            RefreshCommand = new RelayCommand(Refresh);
-            ApplyCommand = new RelayCommand(Apply, () => CanApply);
+    public bool CanApply
+    {
+        get => _canApply;
 
-            _refreshTimer = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(5) // Start with slow refresh
-
-            };
-            _refreshTimer.Tick += (s, e) => Refresh();
-            _refreshTimer.Start();
-            TranslationManager.Instance.PropertyChanged += OnLanguageChanged;
-            Refresh();
-        }
-
-        private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e)
+        set
         {
-            Refresh();
-        }
-
-        public ServiceSettingsViewModel Service { get; }
-        public LocalDriveSettingsViewModel LocalDrive { get; }
-        public NetworkDriveSettingsViewModel NetworkDrive { get; }
-        public ExperienceSettingsViewModel Experience { get; }
-        public ExclusionSettingsViewModel Exclusions { get; }
-        public PluginManagementViewModel Plugins { get; }
-        public HotkeySettingsViewModel Hotkeys { get; }
-        public BlacklistSettingsViewModel Blacklist { get; }
-        public ICommand RefreshCommand { get; }
-        public ICommand ApplyCommand { get; }
-
-        public bool CanApply
-        {
-            get => _canApply;
-
-            set
-            {
-                if (SetProperty(ref _canApply, value))
-                    CommandManager.InvalidateRequerySuggested();
-            }
-        }
-
-        public bool IsBusy
-        {
-            get => _isBusy;
-            set => SetProperty(ref _isBusy, value);
-        }
-
-        public bool IsServiceReady
-        {
-            get => _isServiceReady;
-            set => SetProperty(ref _isServiceReady, value);
-        }
-
-        public void Cleanup()
-        {
-            _refreshTimer?.Stop();
-            TranslationManager.Instance.PropertyChanged -= OnLanguageChanged;
-        }
-
-        public void Refresh()
-        {
-            _ = System.Threading.Tasks.Task.Run(async () =>
-            {
-                UsnIndexer.IndexerStatus status;
-                MachineSettings settings;
-                IReadOnlyList<NetworkIndexStatus> networkStatuses;
-
-                try
-                {
-                    status = await _searchService.GetStatusAsync();
-                    settings = await _searchService.GetMachineSettingsAsync();
-                    networkStatuses = _searchService.GetNetworkIndexStatuses();
-                }
-
-                catch
-                {
-                    status = new UsnIndexer.IndexerStatus { State = "error" };
-                    settings = new MachineSettings();
-                    networkStatuses = Array.Empty<NetworkIndexStatus>();
-                }
-
-                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    // Update sub-viewmodels
-
-                    Service.UpdateStatus(status);
-                    LocalDrive.UpdateStatus(status, settings);
-                    NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses);
-                    bool isServiceReady = status.State != "error";
-                    IsServiceReady = isServiceReady;
-                    bool isNetworkBusy = networkStatuses.Any(s => s.State is "indexing" or "pending");
-                    bool isBusy = status.State is "indexing" or "loading-cache" or "pending" || isNetworkBusy;
-                    IsBusy = isBusy;
-                    CanApply = isServiceReady && !isBusy;
-                    if (_refreshTimer != null)
-                    {
-                        _refreshTimer.Interval = isBusy ? TimeSpan.FromMilliseconds(500) : TimeSpan.FromSeconds(5);
-                    }
-
-                }));
-            });
-        }
-
-        public async void Apply()
-        {
-            if (!CanApply)
-                return;
-
-            var previousNetworkDrives = _userSettings.NetworkDrives
-
-                .Select(d => new NetworkDriveSetting
-                {
-                    Drive = d.Drive,
-                    Enabled = d.Enabled,
-                    RefreshMode = d.RefreshMode
-
-                })
-
-                .ToList();
-            var previousExcludedPaths = _userSettings.ExcludedPaths.ToList();
-            var previousIgnoredGlobs = _userSettings.IgnoredPathGlobs.ToList();
-            var previousIgnoredRegexes = _userSettings.IgnoredPathRegexes.ToList();
-
-            var machineSettings = new MachineSettings
-            {
-                EnabledLocalDrives = LocalDrive.LocalDrives.Where(d => d.IsEnabled).Select(d => d.Drive).ToList()
-
-            };
-            await _searchService.SaveMachineSettingsAsync(machineSettings);
-
-            _userSettings.NetworkDrives = NetworkDrive.NetworkDrives.Select(d => new NetworkDriveSetting
-            {
-                Drive = d.Drive,
-                Enabled = d.IsEnabled,
-                RefreshMode = d.RefreshMode
-
-            }).ToList();
-            Exclusions.Save();
-            Experience.Apply();
-            Plugins.Save();
-            Hotkeys.Apply();
-            Blacklist.Save();
-            _userSettings.Save();
-            App.HookClient?.SendMessage(new IpcMessage { Id = IpcMessageId.ReloadSettings });
-            PluginManager.Instance.RefreshDisabledComponents();
-            NetworkDrive.ResetPendingEdits();
-            if (NetworkSettingsChanged(previousNetworkDrives, _userSettings.NetworkDrives) ||
-                StringListChanged(previousExcludedPaths, _userSettings.ExcludedPaths) ||
-
-                StringListChanged(previousIgnoredGlobs, _userSettings.IgnoredPathGlobs) ||
-
-                StringListChanged(previousIgnoredRegexes, _userSettings.IgnoredPathRegexes))
-            {
-                _searchService.RefreshNetworkIndexes();
-            }
-
-            Refresh();
-        }
-
-        private static bool NetworkSettingsChanged(IReadOnlyList<NetworkDriveSetting> oldSettings, IReadOnlyList<NetworkDriveSetting> newSettings)
-        {
-            var oldOrdered = oldSettings
-
-                .OrderBy(d => d.Drive, StringComparer.OrdinalIgnoreCase)
-
-                .Select(d => $"{d.Drive}|{d.Enabled}|{d.RefreshMode}");
-
-            var newOrdered = newSettings
-
-                .OrderBy(d => d.Drive, StringComparer.OrdinalIgnoreCase)
-
-                .Select(d => $"{d.Drive}|{d.Enabled}|{d.RefreshMode}");
-            return !oldOrdered.SequenceEqual(newOrdered, StringComparer.OrdinalIgnoreCase);
-        }
-
-        private static bool StringListChanged(IReadOnlyList<string> oldValues, IReadOnlyList<string> newValues)
-        {
-            return !oldValues
-
-                .Where(v => !string.IsNullOrWhiteSpace(v))
-
-                .Select(v => v.Trim())
-
-                .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
-
-                .SequenceEqual(
-
-                    newValues
-
-                        .Where(v => !string.IsNullOrWhiteSpace(v))
-
-                        .Select(v => v.Trim())
-
-                        .OrderBy(v => v, StringComparer.OrdinalIgnoreCase),
-                    StringComparer.OrdinalIgnoreCase);
+            if (SetProperty(ref _canApply, value))
+                CommandManager.InvalidateRequerySuggested();
         }
     }
+
+    public bool IsBusy
+    {
+        get => _isBusy;
+        set => SetProperty(ref _isBusy, value);
+    }
+
+    public bool IsServiceReady
+    {
+        get => _isServiceReady;
+        set => SetProperty(ref _isServiceReady, value);
+    }
+
+    public void Cleanup()
+    {
+        _refreshTimer?.Stop();
+        TranslationManager.Instance.PropertyChanged -= OnLanguageChanged;
+    }
+
+    public void Refresh() => _ = Task.Run(async () =>
+                                  {
+                                      UsnIndexer.IndexerStatus status;
+                                      MachineSettings settings;
+                                      IReadOnlyList<NetworkIndexStatus> networkStatuses;
+
+                                      try
+                                      {
+                                          status = await _searchService.GetStatusAsync();
+                                          settings = await _searchService.GetMachineSettingsAsync();
+                                          networkStatuses = _searchService.GetNetworkIndexStatuses();
+                                      }
+
+                                      catch
+                                      {
+                                          status = new UsnIndexer.IndexerStatus { State = "error" };
+                                          settings = new MachineSettings();
+                                          networkStatuses = Array.Empty<NetworkIndexStatus>();
+                                      }
+
+                                      _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                                      {
+                                          // Update sub-viewmodels
+
+                                          Service.UpdateStatus(status);
+                                          LocalDrive.UpdateStatus(status, settings);
+                                          NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses);
+                                          var isServiceReady = status.State != "error";
+                                          IsServiceReady = isServiceReady;
+                                          var isNetworkBusy = networkStatuses.Any(s => s.State is "indexing" or "pending");
+                                          var isBusy = status.State is "indexing" or "loading-cache" or "pending" || isNetworkBusy;
+                                          IsBusy = isBusy;
+                                          CanApply = isServiceReady && !isBusy;
+                                          _refreshTimer?.Interval = isBusy ? TimeSpan.FromMilliseconds(500) : TimeSpan.FromSeconds(5);
+
+                                      }));
+                                  });
+
+    public async void Apply()
+    {
+        if (!CanApply)
+            return;
+
+        var previousNetworkDrives = _userSettings.NetworkDrives
+
+            .Select(d => new NetworkDriveSetting
+            {
+                Drive = d.Drive,
+                Enabled = d.Enabled,
+                RefreshMode = d.RefreshMode
+
+            })
+
+            .ToList();
+        var previousExcludedPaths = _userSettings.ExcludedPaths.ToList();
+        var previousIgnoredGlobs = _userSettings.IgnoredPathGlobs.ToList();
+        var previousIgnoredRegexes = _userSettings.IgnoredPathRegexes.ToList();
+
+        var machineSettings = new MachineSettings
+        {
+            EnabledLocalDrives = LocalDrive.LocalDrives.Where(d => d.IsEnabled).Select(d => d.Drive).ToList()
+
+        };
+        await _searchService.SaveMachineSettingsAsync(machineSettings);
+
+        _userSettings.NetworkDrives = NetworkDrive.NetworkDrives.Select(d => new NetworkDriveSetting
+        {
+            Drive = d.Drive,
+            Enabled = d.IsEnabled,
+            RefreshMode = d.RefreshMode
+
+        }).ToList();
+        Exclusions.Save();
+        Experience.Apply();
+        Plugins.Save();
+        Hotkeys.Apply();
+        Blacklist.Save();
+        _userSettings.Save();
+        App.HookClient?.SendMessage(new IpcMessage { Id = IpcMessageId.ReloadSettings });
+        PluginManager.Instance.RefreshDisabledComponents();
+        NetworkDrive.ResetPendingEdits();
+        if (NetworkSettingsChanged(previousNetworkDrives, _userSettings.NetworkDrives) ||
+            StringListChanged(previousExcludedPaths, _userSettings.ExcludedPaths) ||
+
+            StringListChanged(previousIgnoredGlobs, _userSettings.IgnoredPathGlobs) ||
+
+            StringListChanged(previousIgnoredRegexes, _userSettings.IgnoredPathRegexes))
+        {
+            _searchService.RefreshNetworkIndexes();
+        }
+
+        Refresh();
+    }
+
+    private static bool NetworkSettingsChanged(IReadOnlyList<NetworkDriveSetting> oldSettings, IReadOnlyList<NetworkDriveSetting> newSettings)
+    {
+        var oldOrdered = oldSettings
+
+            .OrderBy(d => d.Drive, StringComparer.OrdinalIgnoreCase)
+
+            .Select(d => $"{d.Drive}|{d.Enabled}|{d.RefreshMode}");
+
+        var newOrdered = newSettings
+
+            .OrderBy(d => d.Drive, StringComparer.OrdinalIgnoreCase)
+
+            .Select(d => $"{d.Drive}|{d.Enabled}|{d.RefreshMode}");
+        return !oldOrdered.SequenceEqual(newOrdered, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool StringListChanged(IReadOnlyList<string> oldValues, IReadOnlyList<string> newValues) => !oldValues
+
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+
+            .Select(v => v.Trim())
+
+            .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+
+            .SequenceEqual(
+
+                newValues
+
+                    .Where(v => !string.IsNullOrWhiteSpace(v))
+
+                    .Select(v => v.Trim())
+
+                    .OrderBy(v => v, StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
 }

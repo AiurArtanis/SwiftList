@@ -1,308 +1,300 @@
-using System;
 using System.Text;
-using System.Threading;
-using SwiftList.Core;
 using SwiftList.PluginSdk;
 
-namespace SwiftList.Core.Hook
+namespace SwiftList.Core.Hook;
+
+/// <summary>
+/// Handles window classification and path tracking for ExplorerTracker,
+/// delegating path collection to registered IActivePathCollector plugins.
+/// </summary>
+internal sealed class ExplorerWindowClassifier
 {
-    /// <summary>
-    /// Handles window classification and path tracking for ExplorerTracker,
-    /// delegating path collection to registered IActivePathCollector plugins.
-    /// </summary>
-    internal sealed class ExplorerWindowClassifier
+    private readonly ExplorerTracker _tracker;
+    private readonly FileDialogNavigationTracker _dialogTracker;
+
+    public ExplorerWindowClassifier(ExplorerTracker tracker, FileDialogNavigationTracker dialogTracker)
     {
-        private readonly ExplorerTracker _tracker;
-        private readonly FileDialogNavigationTracker _dialogTracker;
+        _tracker = tracker;
+        _dialogTracker = dialogTracker;
+    }
 
-        public ExplorerWindowClassifier(ExplorerTracker tracker, FileDialogNavigationTracker dialogTracker)
+    public void CheckActiveWindow(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return;
+
+        try
         {
-            _tracker = tracker;
-            _dialogTracker = dialogTracker;
-        }
+            if (_tracker.IsActiveWindowDialog && _tracker.ActiveHwnd != IntPtr.Zero && !ExplorerNativeHooks.IsWindow(_tracker.ActiveHwnd))
+            {
+                _tracker.Deactivate();
+            }
 
-        public void CheckActiveWindow(IntPtr hwnd)
-        {
-            if (hwnd == IntPtr.Zero) return;
+            if (IsFocusChangeIgnored(hwnd))
+                return;
 
+            var dialogHwnd = FindMatchingDialogWindow(hwnd, out var adapter);
+            if (dialogHwnd != IntPtr.Zero && adapter != null)
+            {
+                TrackFileDialogWindow(dialogHwnd);
+                return;
+            }
+
+            var rootHwnd = ExplorerNativeHooks.GetAncestor(hwnd, ExplorerNativeHooks.GA_ROOTOWNER);
+            if (rootHwnd == IntPtr.Zero) rootHwnd = hwnd;
+
+            var isDesktop = ExplorerNativeHooks.IsDesktopWindow(rootHwnd, out var windowClassName);
+            Logger.Log($"[ExplorerTracker] Active window: HWND=0x{hwnd:X}, Root=0x{rootHwnd:X}, Class={windowClassName}, isDesktop={isDesktop}", LogLevel.Debug);
+
+            // Resolve the actual focused control handle inside the active window's thread
+            var focusedHwnd = IntPtr.Zero;
+            var activeClassName = string.Empty;
             try
             {
-                if (_tracker.IsActiveWindowDialog && _tracker.ActiveHwnd != IntPtr.Zero && !ExplorerNativeHooks.IsWindow(_tracker.ActiveHwnd))
+                var threadId = KeyboardNativeMethods.GetWindowThreadProcessId(rootHwnd, out _);
+                var guiInfo = new KeyboardNativeMethods.GUITHREADINFO();
+                guiInfo.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(guiInfo);
+                if (KeyboardNativeMethods.GetGUIThreadInfo(threadId, ref guiInfo) && guiInfo.hwndFocus != IntPtr.Zero)
                 {
-                    _tracker.Deactivate();
-                }
-
-                if (IsFocusChangeIgnored(hwnd))
-                    return;
-
-                IntPtr dialogHwnd = FindMatchingDialogWindow(hwnd, out var adapter);
-                if (dialogHwnd != IntPtr.Zero && adapter != null)
-                {
-                    TrackFileDialogWindow(dialogHwnd);
-                    return;
-                }
-
-                IntPtr rootHwnd = ExplorerNativeHooks.GetAncestor(hwnd, ExplorerNativeHooks.GA_ROOTOWNER);
-                if (rootHwnd == IntPtr.Zero) rootHwnd = hwnd;
-
-                bool isDesktop = ExplorerNativeHooks.IsDesktopWindow(rootHwnd, out string windowClassName);
-                Logger.Log($"[ExplorerTracker] Active window: HWND=0x{hwnd:X}, Root=0x{rootHwnd:X}, Class={windowClassName}, isDesktop={isDesktop}", LogLevel.Debug);
-
-                // Resolve the actual focused control handle inside the active window's thread
-                IntPtr focusedHwnd = IntPtr.Zero;
-                string activeClassName = string.Empty;
-                try
-                {
-                    uint threadId = KeyboardNativeMethods.GetWindowThreadProcessId(rootHwnd, out _);
-                    var guiInfo = new KeyboardNativeMethods.GUITHREADINFO();
-                    guiInfo.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(guiInfo);
-                    if (KeyboardNativeMethods.GetGUIThreadInfo(threadId, ref guiInfo) && guiInfo.hwndFocus != IntPtr.Zero)
-                    {
-                        focusedHwnd = guiInfo.hwndFocus;
-                        var sbActiveCls = new StringBuilder(256);
-                        KeyboardNativeMethods.GetClassName(focusedHwnd, sbActiveCls, sbActiveCls.Capacity);
-                        activeClassName = sbActiveCls.ToString();
-                    }
-                }
-                catch { }
-
-                if (focusedHwnd == IntPtr.Zero)
-                {
-                    focusedHwnd = hwnd;
+                    focusedHwnd = guiInfo.hwndFocus;
                     var sbActiveCls = new StringBuilder(256);
-                    ExplorerNativeHooks.GetClassName(hwnd, sbActiveCls, sbActiveCls.Capacity);
+                    KeyboardNativeMethods.GetClassName(focusedHwnd, sbActiveCls, sbActiveCls.Capacity);
                     activeClassName = sbActiveCls.ToString();
                 }
+            }
+            catch { }
 
-                // Get process name of root window
-                string processName = "Unknown";
+            if (focusedHwnd == IntPtr.Zero)
+            {
+                focusedHwnd = hwnd;
+                var sbActiveCls = new StringBuilder(256);
+                ExplorerNativeHooks.GetClassName(hwnd, sbActiveCls, sbActiveCls.Capacity);
+                activeClassName = sbActiveCls.ToString();
+            }
+
+            // Get process name of root window
+            var processName = "Unknown";
+            try
+            {
+                ExplorerNativeHooks.GetWindowThreadProcessId(rootHwnd, out var pid);
+                if (pid != 0)
+                {
+                    using var proc = System.Diagnostics.Process.GetProcessById((int)pid);
+                    processName = proc.ProcessName;
+                }
+            }
+            catch { }
+
+            // Delegate active path collection to registered plugins
+            var collectors = ActivePathCollectorRegistry.GetCollectors();
+            var handledByPlugin = false;
+
+            foreach (var collector in collectors)
+            {
                 try
                 {
-                    ExplorerNativeHooks.GetWindowThreadProcessId(rootHwnd, out uint pid);
-                    if (pid != 0)
+                    if (collector.CanHandle(windowClassName))
                     {
-                        using (var proc = System.Diagnostics.Process.GetProcessById((int)pid))
+                        var activePath = collector.TryGetPath(focusedHwnd, activeClassName, rootHwnd, windowClassName, processName);
+                        if (!string.IsNullOrEmpty(activePath))
                         {
-                            processName = proc.ProcessName;
-                        }
-                    }
-                }
-                catch { }
+                            handledByPlugin = true;
+                            _tracker.IsExplorerOrDesktopActive = true;
+                            _tracker.IsDesktop = isDesktop;
+                            _tracker.IsActiveWindowDialog = false;
+                            _tracker.IsActiveWindowExplorer = !isDesktop && windowClassName.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase);
+                            _tracker.LastActiveExplorerClassName = windowClassName;
+                            _tracker.ActiveHwnd = rootHwnd;
 
-                // Delegate active path collection to registered plugins
-                var collectors = SwiftList.PluginSdk.ActivePathCollectorRegistry.GetCollectors();
-                bool handledByPlugin = false;
-
-                foreach (var collector in collectors)
-                {
-                    try
-                    {
-                        if (collector.CanHandle(windowClassName))
-                        {
-                            string? activePath = collector.TryGetPath(focusedHwnd, activeClassName, rootHwnd, windowClassName, processName);
-                            if (!string.IsNullOrEmpty(activePath))
+                            if (rootHwnd != _tracker.LastActiveHwnd)
                             {
-                                handledByPlugin = true;
-                                _tracker.IsExplorerOrDesktopActive = true;
-                                _tracker.IsDesktop = isDesktop;
-                                _tracker.IsActiveWindowDialog = false;
-                                _tracker.IsActiveWindowExplorer = !isDesktop && windowClassName.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase);
-                                _tracker.LastActiveExplorerClassName = windowClassName;
-                                _tracker.ActiveHwnd = rootHwnd;
-
-                                if (rootHwnd != _tracker.LastActiveHwnd)
-                                {
-                                    _tracker.LastActiveHwnd = rootHwnd;
-                                    var windowTitle = new StringBuilder(256);
-                                    ExplorerNativeHooks.GetWindowText(rootHwnd, windowTitle, windowTitle.Capacity);
-                                    _tracker.RaiseExplorerActivated(rootHwnd, windowTitle.ToString(), windowClassName, isDesktop);
-                                }
-
-                                if (_dialogTracker.LastActiveExplorerPath != activePath)
-                                    _dialogTracker.SetLastActiveExplorerPath(activePath);
-
-                                if (activePath != _tracker.LastPath)
-                                {
-                                    _tracker.LastPath = activePath;
-                                    _tracker.RaisePathCaptured(activePath, isDesktop);
-                                }
-                                break;
+                                _tracker.LastActiveHwnd = rootHwnd;
+                                var windowTitle = new StringBuilder(256);
+                                ExplorerNativeHooks.GetWindowText(rootHwnd, windowTitle, windowTitle.Capacity);
+                                _tracker.RaiseExplorerActivated(rootHwnd, windowTitle.ToString(), windowClassName, isDesktop);
                             }
+
+                            if (_dialogTracker.LastActiveExplorerPath != activePath)
+                                _dialogTracker.SetLastActiveExplorerPath(activePath);
+
+                            if (activePath != _tracker.LastPath)
+                            {
+                                _tracker.LastPath = activePath;
+                                _tracker.RaisePathCaptured(activePath, isDesktop);
+                            }
+                            break;
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        Logger.Log($"[ExplorerTracker] Error invoking active path collector '{collector.Name}': {ex.Message}", LogLevel.Error);
-                    }
                 }
-
-                if (handledByPlugin)
+                catch (Exception ex)
                 {
-                    return;
+                    Logger.Log($"[ExplorerTracker] Error invoking active path collector '{collector.Name}': {ex.Message}", LogLevel.Error);
                 }
+            }
 
-                var matchedAdapter = FileDialogAdapterRegistry.GetMatchingAdapter(rootHwnd, windowClassName, processName);
-                if (matchedAdapter != null)
+            if (handledByPlugin)
+            {
+                return;
+            }
+
+            var matchedAdapter = FileDialogAdapterRegistry.GetMatchingAdapter(rootHwnd, windowClassName, processName);
+            if (matchedAdapter != null)
+            {
+                _tracker.IsExplorerOrDesktopActive = true;
+                _tracker.IsDesktop = false;
+                _tracker.ActiveHwnd = rootHwnd;
+                _tracker.IsActiveWindowExplorer = false;
+            }
+            else
+            {
+                var matchedInlineAdapter = InlineSearchAdapterRegistry.GetMatchingAdapter(rootHwnd, windowClassName, processName);
+                if (matchedInlineAdapter != null)
                 {
-                    _tracker.IsExplorerOrDesktopActive = true;
+                    _tracker.IsExplorerOrDesktopActive = false;
                     _tracker.IsDesktop = false;
-                    _tracker.ActiveHwnd = rootHwnd;
                     _tracker.IsActiveWindowExplorer = false;
+                    _tracker.ActiveHwnd = rootHwnd;
+
+                    if (rootHwnd != _tracker.LastActiveHwnd)
+                    {
+                        _tracker.LastActiveHwnd = rootHwnd;
+                        var windowTitle = new StringBuilder(256);
+                        ExplorerNativeHooks.GetWindowText(rootHwnd, windowTitle, windowTitle.Capacity);
+                        _tracker.RaiseExplorerActivated(rootHwnd, windowTitle.ToString(), windowClassName, false);
+                    }
                 }
                 else
                 {
-                    var matchedInlineAdapter = InlineSearchAdapterRegistry.GetMatchingAdapter(rootHwnd, windowClassName, processName);
-                    if (matchedInlineAdapter != null)
+                    if (_tracker.IsActiveWindowDialog && _tracker.ActiveHwnd != IntPtr.Zero)
                     {
-                        _tracker.IsExplorerOrDesktopActive = false;
-                        _tracker.IsDesktop = false;
-                        _tracker.IsActiveWindowExplorer = false;
-                        _tracker.ActiveHwnd = rootHwnd;
-
-                        if (rootHwnd != _tracker.LastActiveHwnd)
+                        var fgHwnd = ExplorerNativeHooks.GetForegroundWindow();
+                        if (IsDescendantOrOwned(_tracker.ActiveHwnd, fgHwnd) || IsImeWindow(fgHwnd))
                         {
-                            _tracker.LastActiveHwnd = rootHwnd;
-                            var windowTitle = new StringBuilder(256);
-                            ExplorerNativeHooks.GetWindowText(rootHwnd, windowTitle, windowTitle.Capacity);
-                            _tracker.RaiseExplorerActivated(rootHwnd, windowTitle.ToString(), windowClassName, false);
+                            return;
                         }
                     }
-                    else
-                    {
-                        if (_tracker.IsActiveWindowDialog && _tracker.ActiveHwnd != IntPtr.Zero)
-                        {
-                            IntPtr fgHwnd = ExplorerNativeHooks.GetForegroundWindow();
-                            if (IsDescendantOrOwned(_tracker.ActiveHwnd, fgHwnd) || IsImeWindow(fgHwnd))
-                            {
-                                return;
-                            }
-                        }
-                        _tracker.Deactivate();
-                    }
+                    _tracker.Deactivate();
                 }
             }
-            catch (Exception ex)
-            {
-                _tracker.RaiseError(ex.Message);
-            }
+        }
+        catch (Exception ex)
+        {
+            _tracker.RaiseError(ex.Message);
+        }
+    }
+
+    private bool IsFocusChangeIgnored(IntPtr hwnd)
+    {
+        var sbClass = new StringBuilder(256);
+        ExplorerNativeHooks.GetClassName(hwnd, sbClass, sbClass.Capacity);
+        if (sbClass.ToString().Contains("InputSwitch", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        ExplorerNativeHooks.GetWindowThreadProcessId(hwnd, out var activePid);
+        if (activePid == Environment.ProcessId || (activePid != 0 && activePid == _tracker.AppProcessId))
+            return true;
+
+        // If there is an active tracked window, ignore focus changes to other windows in the SAME process.
+        // This prevents false deactivation when autocomplete dropdowns, tooltips, or child controls of the active dialog are shown or updated.
+        if (_tracker.ActiveHwnd != IntPtr.Zero)
+        {
+            ExplorerNativeHooks.GetWindowThreadProcessId(_tracker.ActiveHwnd, out var activeTrackerPid);
+            if (activePid != 0 && activePid == activeTrackerPid)
+                return true;
         }
 
-        private bool IsFocusChangeIgnored(IntPtr hwnd)
+        return false;
+    }
+
+    private void TrackFileDialogWindow(IntPtr mainDialog)
+    {
+        _tracker.IsExplorerOrDesktopActive = true;
+        _tracker.IsDesktop = false;
+        _tracker.ActiveHwnd = mainDialog;
+
+        _dialogTracker.HandleDialogSeen(mainDialog, _tracker.ActiveAdapter);
+
+        var activePath = _tracker.ActiveAdapter?.GetCurrentPath(mainDialog);
+        _tracker.LastPath = !string.IsNullOrEmpty(activePath) ? activePath : string.Empty;
+
+        var windowTitle = new StringBuilder(256);
+        ExplorerNativeHooks.GetWindowText(mainDialog, windowTitle, windowTitle.Capacity);
+
+        var sbCls2 = new StringBuilder(256);
+        ExplorerNativeHooks.GetClassName(mainDialog, sbCls2, sbCls2.Capacity);
+
+        if (mainDialog != _tracker.LastActiveHwnd)
+        {
+            _tracker.LastActiveHwnd = mainDialog;
+            _tracker.RaiseExplorerActivated(mainDialog, windowTitle.ToString(), sbCls2.ToString(), false);
+        }
+
+        _tracker.RaisePathCaptured(_tracker.LastPath, false);
+    }
+
+    private IntPtr FindMatchingDialogWindow(IntPtr hwnd, out IFileDialogAdapter? adapter)
+    {
+        var current = hwnd;
+        while (current != IntPtr.Zero)
         {
             var sbClass = new StringBuilder(256);
-            ExplorerNativeHooks.GetClassName(hwnd, sbClass, sbClass.Capacity);
-            if (sbClass.ToString().Contains("InputSwitch", StringComparison.OrdinalIgnoreCase))
-                return true;
+            ExplorerNativeHooks.GetClassName(current, sbClass, sbClass.Capacity);
+            var className = sbClass.ToString();
 
-            ExplorerNativeHooks.GetWindowThreadProcessId(hwnd, out uint activePid);
-            if (activePid == Environment.ProcessId || (activePid != 0 && activePid == _tracker.AppProcessId))
-                return true;
-
-            // If there is an active tracked window, ignore focus changes to other windows in the SAME process.
-            // This prevents false deactivation when autocomplete dropdowns, tooltips, or child controls of the active dialog are shown or updated.
-            if (_tracker.ActiveHwnd != IntPtr.Zero)
+            ExplorerNativeHooks.GetWindowThreadProcessId(current, out var pid);
+            var processName = "Unknown";
+            if (pid != 0)
             {
-                ExplorerNativeHooks.GetWindowThreadProcessId(_tracker.ActiveHwnd, out uint activeTrackerPid);
-                if (activePid != 0 && activePid == activeTrackerPid)
-                    return true;
-            }
-
-            return false;
-        }
-
-        private void TrackFileDialogWindow(IntPtr mainDialog)
-        {
-            _tracker.IsExplorerOrDesktopActive = true;
-            _tracker.IsDesktop = false;
-            _tracker.ActiveHwnd = mainDialog;
-
-            _dialogTracker.HandleDialogSeen(mainDialog, _tracker.ActiveAdapter);
-
-            string? activePath = _tracker.ActiveAdapter?.GetCurrentPath(mainDialog);
-            _tracker.LastPath = !string.IsNullOrEmpty(activePath) ? activePath : string.Empty;
-
-            var windowTitle = new StringBuilder(256);
-            ExplorerNativeHooks.GetWindowText(mainDialog, windowTitle, windowTitle.Capacity);
-
-            StringBuilder sbCls2 = new StringBuilder(256);
-            ExplorerNativeHooks.GetClassName(mainDialog, sbCls2, sbCls2.Capacity);
-
-            if (mainDialog != _tracker.LastActiveHwnd)
-            {
-                _tracker.LastActiveHwnd = mainDialog;
-                _tracker.RaiseExplorerActivated(mainDialog, windowTitle.ToString(), sbCls2.ToString(), false);
-            }
-
-            _tracker.RaisePathCaptured(_tracker.LastPath, false);
-        }
-
-        private IntPtr FindMatchingDialogWindow(IntPtr hwnd, out IFileDialogAdapter? adapter)
-        {
-            IntPtr current = hwnd;
-            while (current != IntPtr.Zero)
-            {
-                var sbClass = new StringBuilder(256);
-                ExplorerNativeHooks.GetClassName(current, sbClass, sbClass.Capacity);
-                string className = sbClass.ToString();
-
-                ExplorerNativeHooks.GetWindowThreadProcessId(current, out uint pid);
-                string processName = "Unknown";
-                if (pid != 0)
+                try
                 {
-                    try
-                    {
-                        using (var proc = System.Diagnostics.Process.GetProcessById((int)pid))
-                        {
-                            processName = proc.ProcessName;
-                        }
-                    }
-                    catch { }
+                    using var proc = System.Diagnostics.Process.GetProcessById((int)pid);
+                    processName = proc.ProcessName;
                 }
-
-                var matched = FileDialogAdapterRegistry.GetMatchingAdapter(current, className, processName);
-                if (matched != null)
-                {
-                    adapter = matched;
-                    return current;
-                }
-
-                current = ExplorerNativeHooks.GetParent(current);
+                catch { }
             }
 
-            adapter = null;
-            return IntPtr.Zero;
-        }
-
-        private bool IsDescendantOrOwned(IntPtr parent, IntPtr child)
-        {
-            if (parent == IntPtr.Zero || child == IntPtr.Zero) return false;
-            if (parent == child) return true;
-
-            IntPtr current = child;
-            while (current != IntPtr.Zero)
+            var matched = FileDialogAdapterRegistry.GetMatchingAdapter(current, className, processName);
+            if (matched != null)
             {
-                if (current == parent) return true;
-                IntPtr temp = ExplorerNativeHooks.GetParent(current);
-                if (temp == IntPtr.Zero || temp == current) break;
-                current = temp;
+                adapter = matched;
+                return current;
             }
 
-            IntPtr rootOwner = ExplorerNativeHooks.GetAncestor(child, ExplorerNativeHooks.GA_ROOTOWNER);
-            if (rootOwner == parent) return true;
-
-            return false;
+            current = ExplorerNativeHooks.GetParent(current);
         }
 
-        private bool IsImeWindow(IntPtr hwnd)
+        adapter = null;
+        return IntPtr.Zero;
+    }
+
+    private bool IsDescendantOrOwned(IntPtr parent, IntPtr child)
+    {
+        if (parent == IntPtr.Zero || child == IntPtr.Zero) return false;
+        if (parent == child) return true;
+
+        var current = child;
+        while (current != IntPtr.Zero)
         {
-            if (hwnd == IntPtr.Zero) return false;
-            var sbClass = new StringBuilder(256);
-            ExplorerNativeHooks.GetClassName(hwnd, sbClass, sbClass.Capacity);
-            string fgClass = sbClass.ToString();
-            return fgClass.Contains("IME", StringComparison.OrdinalIgnoreCase) ||
-                   fgClass.Contains("Candidate", StringComparison.OrdinalIgnoreCase) ||
-                   fgClass.Contains("InputTip", StringComparison.OrdinalIgnoreCase) ||
-                   fgClass.Contains("InputSwitch", StringComparison.OrdinalIgnoreCase);
+            if (current == parent) return true;
+            var temp = ExplorerNativeHooks.GetParent(current);
+            if (temp == IntPtr.Zero || temp == current) break;
+            current = temp;
         }
+
+        var rootOwner = ExplorerNativeHooks.GetAncestor(child, ExplorerNativeHooks.GA_ROOTOWNER);
+        if (rootOwner == parent) return true;
+
+        return false;
+    }
+
+    private bool IsImeWindow(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return false;
+        var sbClass = new StringBuilder(256);
+        ExplorerNativeHooks.GetClassName(hwnd, sbClass, sbClass.Capacity);
+        var fgClass = sbClass.ToString();
+        return fgClass.Contains("IME", StringComparison.OrdinalIgnoreCase) ||
+               fgClass.Contains("Candidate", StringComparison.OrdinalIgnoreCase) ||
+               fgClass.Contains("InputTip", StringComparison.OrdinalIgnoreCase) ||
+               fgClass.Contains("InputSwitch", StringComparison.OrdinalIgnoreCase);
     }
 }

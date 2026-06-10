@@ -1,22 +1,16 @@
-using System;
+namespace SwiftList.PluginSdk;
 
-namespace SwiftList.PluginSdk
+public enum LogLevel
 {
-    public enum LogLevel
-    {
-        Error = 0,
-        Warn = 1,
-        Info = 2,
-        Debug = 3
-    }
+    Error = 0,
+    Warn = 1,
+    Info = 2,
+    Debug = 3
+}
 
-    public static class Logger
-    {
-        public static Action<string, LogLevel>? LogAction { get; set; }
+public static class Logger
+{
+    public static Action<string, LogLevel>? LogAction { get; set; }
 
-        public static void Log(string message, LogLevel level = LogLevel.Info)
-        {
-            LogAction?.Invoke(message, level);
-        }
-    }
+    public static void Log(string message, LogLevel level = LogLevel.Info) => LogAction?.Invoke(message, level);
 }

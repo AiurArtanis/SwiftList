@@ -1,50 +1,48 @@
-using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SwiftList.Core.Hook
+namespace SwiftList.Core.Hook;
+
+public static class InputFocusEvaluator
 {
-    public static class InputFocusEvaluator
+    public static bool IsForegroundTextInputFocused(IntPtr foregroundHwnd)
     {
-        public static bool IsForegroundTextInputFocused(IntPtr foregroundHwnd)
+        var threadId = KeyboardNativeMethods.GetWindowThreadProcessId(foregroundHwnd, out _);
+        if (threadId == 0)
+            return false;
+
+        var info = new KeyboardNativeMethods.GUITHREADINFO
         {
-            uint threadId = KeyboardNativeMethods.GetWindowThreadProcessId(foregroundHwnd, out _);
-            if (threadId == 0)
-                return false;
+            cbSize = Marshal.SizeOf<KeyboardNativeMethods.GUITHREADINFO>()
+        };
 
-            var info = new KeyboardNativeMethods.GUITHREADINFO
-            {
-                cbSize = Marshal.SizeOf<KeyboardNativeMethods.GUITHREADINFO>()
-            };
+        if (!KeyboardNativeMethods.GetGUIThreadInfo(threadId, ref info) || info.hwndFocus == IntPtr.Zero)
+            return false;
 
-            if (!KeyboardNativeMethods.GetGUIThreadInfo(threadId, ref info) || info.hwndFocus == IntPtr.Zero)
-                return false;
+        var className = new StringBuilder(128);
+        if (KeyboardNativeMethods.GetClassName(info.hwndFocus, className, className.Capacity) == 0)
+            return false;
 
-            var className = new StringBuilder(128);
-            if (KeyboardNativeMethods.GetClassName(info.hwndFocus, className, className.Capacity) == 0)
-                return false;
-
-            string cls = className.ToString();
-            if (cls.Equals("Edit", StringComparison.OrdinalIgnoreCase) ||
-                cls.Equals("RichEdit20W", StringComparison.OrdinalIgnoreCase) ||
-                cls.Equals("RichEdit50W", StringComparison.OrdinalIgnoreCase) ||
-                cls.Contains("TextBox", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            return HasActiveCaret(foregroundHwnd, info);
+        var cls = className.ToString();
+        if (cls.Equals("Edit", StringComparison.OrdinalIgnoreCase) ||
+            cls.Equals("RichEdit20W", StringComparison.OrdinalIgnoreCase) ||
+            cls.Equals("RichEdit50W", StringComparison.OrdinalIgnoreCase) ||
+            cls.Contains("TextBox", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
         }
 
-        private static bool HasActiveCaret(IntPtr foregroundHwnd, KeyboardNativeMethods.GUITHREADINFO info)
-        {
-            if (info.hwndCaret == IntPtr.Zero)
-                return false;
+        return HasActiveCaret(foregroundHwnd, info);
+    }
 
-            if (info.rcCaret.Right <= info.rcCaret.Left && info.rcCaret.Bottom <= info.rcCaret.Top)
-                return false;
+    private static bool HasActiveCaret(IntPtr foregroundHwnd, KeyboardNativeMethods.GUITHREADINFO info)
+    {
+        if (info.hwndCaret == IntPtr.Zero)
+            return false;
 
-            return info.hwndCaret == foregroundHwnd || KeyboardNativeMethods.IsChild(foregroundHwnd, info.hwndCaret);
-        }
+        if (info.rcCaret.Right <= info.rcCaret.Left && info.rcCaret.Bottom <= info.rcCaret.Top)
+            return false;
+
+        return info.hwndCaret == foregroundHwnd || KeyboardNativeMethods.IsChild(foregroundHwnd, info.hwndCaret);
     }
 }

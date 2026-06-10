@@ -1,101 +1,94 @@
-using System;
-using System.IO;
+namespace SwiftList.Core.Indexer.NetworkDrive;
 
-namespace SwiftList.Core.Indexer.NetworkDrive
+internal readonly struct NetworkIgnoreRuleSet
 {
-    internal readonly struct NetworkIgnoreRuleSet
+    public static readonly NetworkIgnoreRuleSet Empty = new(Array.Empty<NetworkIgnoreRule>());
+    private readonly NetworkIgnoreRule[] _rules;
+
+    private NetworkIgnoreRuleSet(NetworkIgnoreRule[] rules) => _rules = rules;
+
+    public NetworkIgnoreRuleSet Add(NetworkIgnoreRule rule)
     {
-        public static readonly NetworkIgnoreRuleSet Empty = new(Array.Empty<NetworkIgnoreRule>());
-        private readonly NetworkIgnoreRule[] _rules;
-
-        private NetworkIgnoreRuleSet(NetworkIgnoreRule[] rules)
-        {
-            _rules = rules;
-        }
-
-        public NetworkIgnoreRuleSet Add(NetworkIgnoreRule rule)
-        {
-            var next = new NetworkIgnoreRule[_rules.Length + 1];
-            Array.Copy(_rules, next, _rules.Length);
-            next[^1] = rule;
-            return new NetworkIgnoreRuleSet(next);
-        }
-
-        public bool IsIgnored(string fullPath, string name, bool isDirectory)
-        {
-            bool ignored = false;
-            foreach (var rule in _rules)
-            {
-                if (rule.Matches(fullPath, name, isDirectory))
-                    ignored = !rule.Negated;
-            }
-
-            return ignored;
-        }
+        var next = new NetworkIgnoreRule[_rules.Length + 1];
+        Array.Copy(_rules, next, _rules.Length);
+        next[^1] = rule;
+        return new NetworkIgnoreRuleSet(next);
     }
 
-    internal readonly struct NetworkIgnoreRule
+    public bool IsIgnored(string fullPath, string name, bool isDirectory)
     {
-        private readonly NetworkGlobPattern _pattern;
-
-        private NetworkIgnoreRule(
-            string basePath,
-            string pattern,
-            bool negated,
-            bool directoryOnly,
-            bool anchored)
+        var ignored = false;
+        foreach (var rule in _rules)
         {
-            BasePath = basePath;
-            Pattern = pattern;
-            Negated = negated;
-            DirectoryOnly = directoryOnly;
-            Anchored = anchored;
-            _pattern = GlobMatcher.Compile(pattern);
+            if (rule.Matches(fullPath, name, isDirectory))
+                ignored = !rule.Negated;
         }
 
-        public string BasePath { get; }
-        public string Pattern { get; }
-        public bool Negated { get; }
-        public bool DirectoryOnly { get; }
-        public bool Anchored { get; }
+        return ignored;
+    }
+}
 
-        public static NetworkIgnoreRule? Parse(string basePath, string line)
-        {
-            string pattern = line.Trim();
-            if (pattern.Length == 0 || pattern.StartsWith("#", StringComparison.Ordinal))
-                return null;
+internal readonly struct NetworkIgnoreRule
+{
+    private readonly NetworkGlobPattern _pattern;
 
-            bool negated = pattern.StartsWith("!", StringComparison.Ordinal);
-            if (negated)
-                pattern = pattern.Substring(1).Trim();
+    private NetworkIgnoreRule(
+        string basePath,
+        string pattern,
+        bool negated,
+        bool directoryOnly,
+        bool anchored)
+    {
+        BasePath = basePath;
+        Pattern = pattern;
+        Negated = negated;
+        DirectoryOnly = directoryOnly;
+        Anchored = anchored;
+        _pattern = GlobMatcher.Compile(pattern);
+    }
 
-            if (pattern.Length == 0)
-                return null;
+    public string BasePath { get; }
+    public string Pattern { get; }
+    public bool Negated { get; }
+    public bool DirectoryOnly { get; }
+    public bool Anchored { get; }
 
-            bool directoryOnly = pattern.EndsWith("/", StringComparison.Ordinal) ||
-                                 pattern.EndsWith("\\", StringComparison.Ordinal);
-            bool anchored = pattern.StartsWith("/", StringComparison.Ordinal) ||
-                            pattern.StartsWith("\\", StringComparison.Ordinal);
-            pattern = pattern.Trim(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+    public static NetworkIgnoreRule? Parse(string basePath, string line)
+    {
+        var pattern = line.Trim();
+        if (pattern.Length == 0 || pattern.StartsWith("#", StringComparison.Ordinal))
+            return null;
 
-            return new NetworkIgnoreRule(basePath, pattern, negated, directoryOnly, anchored);
-        }
+        var negated = pattern.StartsWith("!", StringComparison.Ordinal);
+        if (negated)
+            pattern = pattern.Substring(1).Trim();
 
-        public bool Matches(string fullPath, string name, bool isDirectory)
-        {
-            if (DirectoryOnly && !isDirectory)
-                return false;
+        if (pattern.Length == 0)
+            return null;
 
-            string normalized = PathHelpers.NormalizePath(fullPath, isDirectory);
-            if (!normalized.StartsWith(BasePath, StringComparison.OrdinalIgnoreCase))
-                return false;
+        var directoryOnly = pattern.EndsWith("/", StringComparison.Ordinal) ||
+                             pattern.EndsWith("\\", StringComparison.Ordinal);
+        var anchored = pattern.StartsWith("/", StringComparison.Ordinal) ||
+                        pattern.StartsWith("\\", StringComparison.Ordinal);
+        pattern = pattern.Trim(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
 
-            string relative = normalized.Substring(BasePath.Length).TrimEnd(Path.DirectorySeparatorChar);
-            if (relative.Length == 0)
-                return false;
+        return new NetworkIgnoreRule(basePath, pattern, negated, directoryOnly, anchored);
+    }
 
-            return _pattern.IsMatch(relative);
-        }
+    public bool Matches(string fullPath, string name, bool isDirectory)
+    {
+        if (DirectoryOnly && !isDirectory)
+            return false;
+
+        var normalized = PathHelpers.NormalizePath(fullPath, isDirectory);
+        if (!normalized.StartsWith(BasePath, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var relative = normalized.Substring(BasePath.Length).TrimEnd(Path.DirectorySeparatorChar);
+        if (relative.Length == 0)
+            return false;
+
+        return _pattern.IsMatch(relative);
     }
 }

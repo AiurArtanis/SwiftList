@@ -1,38 +1,30 @@
-using System.Collections.Generic;
 using SwiftList.Plugins.CoreExtensions.Actions;
 using SwiftList.Plugins.CoreExtensions.Shell;
 using SwiftList.PluginSdk;
-namespace SwiftList.Plugins.CoreExtensions
+namespace SwiftList.Plugins.CoreExtensions;
+
+public class CoreExtensionsPlugin : IActionPlugin
 {
-    public class CoreExtensionsPlugin : IActionPlugin
-    {
-        public string Name => TranslationService.Get("Plugins_CoreActionPluginName");
+    public string Name => TranslationService.Get("Plugins_CoreActionPluginName");
 
-        public IEnumerable<ISearchResultAction> GetActions()
+    public IEnumerable<ISearchResultAction> GetActions() => new ISearchResultAction[]
         {
-            return new ISearchResultAction[]
-            {
-                new OpenResultAction(),
-                new OpenResultAsAdminAction(),
-                new LocateInExplorerAction(),
-                new CopyPathAction(),
-                new CopyFileAction(),
-                new CutFileAction(),
-                new OpenCommandPromptAction(),
-                new OpenAdminCommandPromptAction(),
-                new TouchAction(),
-                new MkdirAction()
+            new OpenResultAction(),
+            new OpenResultAsAdminAction(),
+            new LocateInExplorerAction(),
+            new CopyPathAction(),
+            new CopyFileAction(),
+            new CutFileAction(),
+            new OpenCommandPromptAction(),
+            new OpenAdminCommandPromptAction(),
+            new TouchAction(),
+            new MkdirAction()
 
-            };
-        }
+        };
 
-        public IEnumerable<IDynamicActionProvider> GetDynamicProviders()
+    public IEnumerable<IDynamicActionProvider> GetDynamicProviders() => new IDynamicActionProvider[]
         {
-            return new IDynamicActionProvider[]
-            {
-                new ShellMenuActionProvider()
+            new ShellMenuActionProvider()
 
-            };
-        }
-    }
+        };
 }

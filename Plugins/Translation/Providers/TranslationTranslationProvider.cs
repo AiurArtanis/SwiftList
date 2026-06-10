@@ -1,32 +1,29 @@
-using System;
-using System.Collections.Generic;
 using System.Reflection;
 using SwiftList.PluginSdk;
 
-namespace SwiftList.Plugins.Translation.Providers
+namespace SwiftList.Plugins.Translation.Providers;
+
+public class TranslationTranslationProvider : ITranslationProvider
 {
-    public class TranslationTranslationProvider : ITranslationProvider
+    public string Name => "Translation Plugin Translation Provider";
+
+    public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(Assembly.GetExecutingAssembly());
+
+    private static readonly Dictionary<string, Dictionary<string, string>> Cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly object LockObj = new();
+
+    public IReadOnlyDictionary<string, string> GetTranslations(string cultureName)
     {
-        public string Name => "Translation Plugin Translation Provider";
-
-        public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(Assembly.GetExecutingAssembly());
-
-        private static readonly Dictionary<string, Dictionary<string, string>> Cache = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly object LockObj = new();
-
-        public IReadOnlyDictionary<string, string> GetTranslations(string cultureName)
+        lock (LockObj)
         {
-            lock (LockObj)
+            if (Cache.TryGetValue(cultureName, out var cached))
             {
-                if (Cache.TryGetValue(cultureName, out var cached))
-                {
-                    return cached;
-                }
-
-                var dict = TranslationService.LoadEmbeddedTranslations(Assembly.GetExecutingAssembly(), cultureName, "Plugin");
-                Cache[cultureName] = dict;
-                return dict;
+                return cached;
             }
+
+            var dict = TranslationService.LoadEmbeddedTranslations(Assembly.GetExecutingAssembly(), cultureName, "Plugin");
+            Cache[cultureName] = dict;
+            return dict;
         }
     }
 }

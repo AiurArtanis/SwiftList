@@ -1,71 +1,67 @@
-using System;
-using System.Collections.Generic;
+namespace SwiftList.PluginSdk;
 
-namespace SwiftList.PluginSdk
+public static class InlineSearchAdapterRegistry
 {
-    public static class InlineSearchAdapterRegistry
+    private static readonly List<IInlineSearchAdapter> Adapters = new();
+
+    /// <summary>
+    /// Delegate to determine if an adapter is enabled.
+    /// </summary>
+    public static Func<IInlineSearchAdapter, bool> FilterFunc { get; set; } = _ => true;
+
+    public static void Register(IInlineSearchAdapter adapter)
     {
-        private static readonly List<IInlineSearchAdapter> Adapters = new();
-
-        /// <summary>
-        /// Delegate to determine if an adapter is enabled.
-        /// </summary>
-        public static Func<IInlineSearchAdapter, bool> FilterFunc { get; set; } = _ => true;
-
-        public static void Register(IInlineSearchAdapter adapter)
+        lock (Adapters)
         {
-            lock (Adapters)
+            if (!Adapters.Contains(adapter))
             {
-                if (!Adapters.Contains(adapter))
+                Adapters.Add(adapter);
+            }
+        }
+    }
+
+    public static IInlineSearchAdapter? GetMatchingAdapter(IntPtr hwnd, string className, string processName)
+    {
+        lock (Adapters)
+        {
+            foreach (var adapter in Adapters)
+            {
+                if (FilterFunc(adapter) && adapter.CanHandle(hwnd, className, processName))
                 {
-                    Adapters.Add(adapter);
+                    return adapter;
                 }
             }
         }
+        return null;
+    }
 
-        public static IInlineSearchAdapter? GetMatchingAdapter(IntPtr hwnd, string className, string processName)
+    /// <summary>
+    /// Retrieves only active (enabled) adapters.
+    /// </summary>
+    public static IReadOnlyList<IInlineSearchAdapter> GetAdapters()
+    {
+        lock (Adapters)
         {
-            lock (Adapters)
+            var active = new List<IInlineSearchAdapter>();
+            foreach (var a in Adapters)
             {
-                foreach (var adapter in Adapters)
+                if (FilterFunc(a))
                 {
-                    if (FilterFunc(adapter) && adapter.CanHandle(hwnd, className, processName))
-                    {
-                        return adapter;
-                    }
+                    active.Add(a);
                 }
             }
-            return null;
+            return active;
         }
+    }
 
-        /// <summary>
-        /// Retrieves only active (enabled) adapters.
-        /// </summary>
-        public static IReadOnlyList<IInlineSearchAdapter> GetAdapters()
+    /// <summary>
+    /// Retrieves all registered adapters, regardless of enabled status.
+    /// </summary>
+    public static IReadOnlyList<IInlineSearchAdapter> GetAllAdapters()
+    {
+        lock (Adapters)
         {
-            lock (Adapters)
-            {
-                var active = new List<IInlineSearchAdapter>();
-                foreach (var a in Adapters)
-                {
-                    if (FilterFunc(a))
-                    {
-                        active.Add(a);
-                    }
-                }
-                return active;
-            }
-        }
-
-        /// <summary>
-        /// Retrieves all registered adapters, regardless of enabled status.
-        /// </summary>
-        public static IReadOnlyList<IInlineSearchAdapter> GetAllAdapters()
-        {
-            lock (Adapters)
-            {
-                return Adapters.ToArray();
-            }
+            return Adapters.ToArray();
         }
     }
 }

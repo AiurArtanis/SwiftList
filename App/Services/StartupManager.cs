@@ -1,50 +1,48 @@
-using System;
 using Microsoft.Win32;
 using SwiftList.Core;
 
-namespace SwiftList.App.Services
-{
-    public static class StartupManager
-    {
-        private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-        private const string ValueName = "SwiftList";
+namespace SwiftList.App.Services;
 
-        public static bool IsEnabled()
+public static class StartupManager
+{
+    private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    private const string ValueName = "SwiftList";
+
+    public static bool IsEnabled()
+    {
+        try
         {
-            try
+            using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: false);
+            return key?.GetValue(ValueName) is string value && !string.IsNullOrWhiteSpace(value);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[StartupManager] Failed to read startup setting: {ex.Message}", LogLevel.Warn);
+            return false;
+        }
+    }
+
+    public static void SetEnabled(bool enabled)
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: true)
+                ?? Registry.CurrentUser.CreateSubKey(RunKeyPath, writable: true);
+
+            if (enabled)
             {
-                using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: false);
-                return key?.GetValue(ValueName) is string value && !string.IsNullOrWhiteSpace(value);
+                var exePath = Environment.ProcessPath ?? System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(exePath))
+                    key.SetValue(ValueName, $"\"{exePath}\"", RegistryValueKind.String);
             }
-            catch (Exception ex)
+            else
             {
-                Logger.Log($"[StartupManager] Failed to read startup setting: {ex.Message}", LogLevel.Warn);
-                return false;
+                key.DeleteValue(ValueName, throwOnMissingValue: false);
             }
         }
-
-        public static void SetEnabled(bool enabled)
+        catch (Exception ex)
         {
-            try
-            {
-                using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: true)
-                    ?? Registry.CurrentUser.CreateSubKey(RunKeyPath, writable: true);
-
-                if (enabled)
-                {
-                    string exePath = Environment.ProcessPath ?? System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
-                    if (!string.IsNullOrWhiteSpace(exePath))
-                        key.SetValue(ValueName, $"\"{exePath}\"", RegistryValueKind.String);
-                }
-                else
-                {
-                    key.DeleteValue(ValueName, throwOnMissingValue: false);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"[StartupManager] Failed to update startup setting: {ex.Message}", LogLevel.Warn);
-            }
+            Logger.Log($"[StartupManager] Failed to update startup setting: {ex.Message}", LogLevel.Warn);
         }
     }
 }

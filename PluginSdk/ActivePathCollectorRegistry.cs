@@ -1,63 +1,59 @@
-using System;
-using System.Collections.Generic;
+namespace SwiftList.PluginSdk;
 
-namespace SwiftList.PluginSdk
+/// <summary>
+/// Registry for active path collectors loaded from plugins.
+/// </summary>
+public static class ActivePathCollectorRegistry
 {
+    private static readonly List<IActivePathCollector> Collectors = new();
+
     /// <summary>
-    /// Registry for active path collectors loaded from plugins.
+    /// Delegate to determine if a path collector is enabled.
     /// </summary>
-    public static class ActivePathCollectorRegistry
+    public static Func<IActivePathCollector, bool> FilterFunc { get; set; } = _ => true;
+
+    /// <summary>
+    /// Registers a new active path collector.
+    /// </summary>
+    public static void Register(IActivePathCollector collector)
     {
-        private static readonly List<IActivePathCollector> Collectors = new();
-
-        /// <summary>
-        /// Delegate to determine if a path collector is enabled.
-        /// </summary>
-        public static Func<IActivePathCollector, bool> FilterFunc { get; set; } = _ => true;
-
-        /// <summary>
-        /// Registers a new active path collector.
-        /// </summary>
-        public static void Register(IActivePathCollector collector)
+        if (collector == null) return;
+        lock (Collectors)
         {
-            if (collector == null) return;
-            lock (Collectors)
+            if (!Collectors.Contains(collector))
             {
-                if (!Collectors.Contains(collector))
-                {
-                    Collectors.Add(collector);
-                }
+                Collectors.Add(collector);
             }
         }
+    }
 
-        /// <summary>
-        /// Retrieves all active (enabled) path collectors.
-        /// </summary>
-        public static IReadOnlyList<IActivePathCollector> GetCollectors()
+    /// <summary>
+    /// Retrieves all active (enabled) path collectors.
+    /// </summary>
+    public static IReadOnlyList<IActivePathCollector> GetCollectors()
+    {
+        lock (Collectors)
         {
-            lock (Collectors)
+            var active = new List<IActivePathCollector>();
+            foreach (var c in Collectors)
             {
-                var active = new List<IActivePathCollector>();
-                foreach (var c in Collectors)
+                if (FilterFunc(c))
                 {
-                    if (FilterFunc(c))
-                    {
-                        active.Add(c);
-                    }
+                    active.Add(c);
                 }
-                return active;
             }
+            return active;
         }
+    }
 
-        /// <summary>
-        /// Retrieves all registered path collectors, regardless of enabled status.
-        /// </summary>
-        public static IReadOnlyList<IActivePathCollector> GetAllCollectors()
+    /// <summary>
+    /// Retrieves all registered path collectors, regardless of enabled status.
+    /// </summary>
+    public static IReadOnlyList<IActivePathCollector> GetAllCollectors()
+    {
+        lock (Collectors)
         {
-            lock (Collectors)
-            {
-                return Collectors.ToArray();
-            }
+            return Collectors.ToArray();
         }
     }
 }

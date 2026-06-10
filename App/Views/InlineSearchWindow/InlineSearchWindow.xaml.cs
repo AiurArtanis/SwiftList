@@ -1,286 +1,279 @@
-using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Windows.Input;
 using SwiftList.App.Services;
-using SwiftList.PluginSdk;
-using SwiftList.App.ViewModels;
 using ListBox = System.Windows.Controls.ListBox;
 using SwiftList.App.Views.InlineSearchWindow.Helpers;
 using SwiftList.App.ViewModels.Search;
-namespace SwiftList.App
+namespace SwiftList.App;
+
+/// <summary>
+/// Compact inline search window that appears at the bottom-right corner of
+/// the active Explorer window or Desktop when the user types any character.
+/// Results expand upward, search box stays anchored at bottom.
+/// </summary>
+public partial class InlineSearchWindow : Window, ISearchWindow
 {
-    /// <summary>
-    /// Compact inline search window that appears at the bottom-right corner of
-    /// the active Explorer window or Desktop when the user types any character.
-    /// Results expand upward, search box stays anchored at bottom.
-    /// </summary>
-    public partial class InlineSearchWindow : Window, ISearchWindow
+    private readonly QuickSearchViewModel _viewModel;
+    private readonly InlineSearchManager _manager;
+    private readonly ShellMenuPresenter _menuPresenter;
+    private readonly InlineSearchWindowInputHandler _inputHandler;
+    private readonly InlineSearchWindowPositioner _positioner;
+    private readonly DispatcherTimer _activeTimer;
+    private string _searchText = string.Empty;
+    private IntPtr _originalLayout = IntPtr.Zero;
+    public ShellMenuPresenter MenuPresenter => _menuPresenter;
+    public QuickSearchViewModel ViewModel => _viewModel;
+    public InlineSearchManager Manager => _manager;
+    public InlineSearchWindowInputHandler InputHandler => _inputHandler;
+    public InlineSearchWindowPositioner Positioner => _positioner;
+
+    public InlineSearchWindow(QuickSearchViewModel viewModel, InlineSearchManager manager)
     {
-        private readonly QuickSearchViewModel _viewModel;
-        private readonly InlineSearchManager _manager;
-        private readonly ShellMenuPresenter _menuPresenter;
-        private readonly InlineSearchWindowInputHandler _inputHandler;
-        private readonly InlineSearchWindowPositioner _positioner;
-        private readonly DispatcherTimer _activeTimer;
-        private string _searchText = string.Empty;
-        private IntPtr _originalLayout = IntPtr.Zero;
-        public ShellMenuPresenter MenuPresenter => _menuPresenter;
-        public QuickSearchViewModel ViewModel => _viewModel;
-        public InlineSearchManager Manager => _manager;
-        public InlineSearchWindowInputHandler InputHandler => _inputHandler;
-        public InlineSearchWindowPositioner Positioner => _positioner;
+        InitializeComponent();
+        _viewModel = viewModel;
+        _manager = manager;
+        this.DataContext = _viewModel;
+        _menuPresenter = new ShellMenuPresenter(this);
+        _inputHandler = new InlineSearchWindowInputHandler(this);
+        _positioner = new InlineSearchWindowPositioner(this);
+        _activeTimer = new DispatcherTimer(DispatcherPriority.Background);
+        _activeTimer.Interval = TimeSpan.FromMilliseconds(100);
 
-        public InlineSearchWindow(QuickSearchViewModel viewModel, InlineSearchManager manager)
+        _activeTimer.Tick += (s, e) =>
         {
-            InitializeComponent();
-            _viewModel = viewModel;
-            _manager = manager;
-            this.DataContext = _viewModel;
-            _menuPresenter = new ShellMenuPresenter(this);
-            _inputHandler = new InlineSearchWindowInputHandler(this);
-            _positioner = new InlineSearchWindowPositioner(this);
-            _activeTimer = new DispatcherTimer(DispatcherPriority.Background);
-            _activeTimer.Interval = TimeSpan.FromMilliseconds(100);
-
-            _activeTimer.Tick += (s, e) =>
+            var tracker = _manager.ExplorerTracker;
+            if (tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
             {
-                var tracker = _manager.ExplorerTracker;
-                if (tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
+                if (!InlineSearchWindowNativeMethods.IsWindow(tracker.ActiveHwnd))
                 {
-                    if (!InlineSearchWindowNativeMethods.IsWindow(tracker.ActiveHwnd))
-                    {
-                        _activeTimer.Stop();
-                        _manager.CloseInlineSearch();
-                    }
+                    _activeTimer.Stop();
+                    _manager.CloseInlineSearch();
                 }
-
-            };
-            _activeTimer.Start();
-
-            SearchBox.SearchTextBox.TextChanged += (s, e) =>
-            {
-                if (_searchText != SearchBox.SearchTextBox.Text)
-                {
-                    _viewModel.IsInlineSearchContext = true;
-                    _searchText = SearchBox.SearchTextBox.Text;
-                    SearchBox.PlaceholderTextBlock.Visibility = string.IsNullOrEmpty(_searchText) ? Visibility.Visible : Visibility.Collapsed;
-                    LstResults.SelectedIndex = -1;
-                    _inputHandler.ResetUserNavigation();
-                    _viewModel.SearchQuery = _searchText;
-                }
-
-            };
-            this.PreviewKeyDown += (s, e) => _inputHandler.HandlePreviewKeyDown(e);
-
-            // Use custom template for inline search that hides path/ParentDir
-
-            if (TryFindResource("InlineSearchResultTemplate") is DataTemplate inlineTemplate)
-            {
-                LstResults.ItemTemplate = inlineTemplate;
             }
 
-            _manager.ExplorerTracker.OnActiveWindowMoved += HandleActiveWindowMoved;
+        };
+        _activeTimer.Start();
 
-            this.IsVisibleChanged += (s, e) =>
-            {
-                if (IsVisible)
-                {
-                    _positioner.PositionWindow();
-                }
-
-            };
-
-            this.SourceInitialized += (s, e) =>
-            {
-                var helper = new System.Windows.Interop.WindowInteropHelper(this);
-                IntPtr hwnd = helper.Handle;
-                if (hwnd != IntPtr.Zero)
-                {
-                    // 1. Decouple window hierarchy: Set active Explorer/Desktop as native owner HWND
-
-                    var tracker = _manager.ExplorerTracker;
-                    if (tracker.ActiveHwnd != IntPtr.Zero)
-                    {
-                        InlineSearchWindowNativeMethods.SetWindowLongPtr(hwnd, InlineSearchWindowNativeMethods.GWL_HWNDPARENT, tracker.ActiveHwnd);
-                    }
-
-                    // 2. Set Extended Styles: WS_EX_TOOLWINDOW (hide from Alt+Tab)
-
-                    IntPtr exStyle = InlineSearchWindowNativeMethods.GetWindowLongPtr(hwnd, InlineSearchWindowNativeMethods.GWL_EXSTYLE);
-                    exStyle = new IntPtr(exStyle.ToInt64() | InlineSearchWindowNativeMethods.WS_EX_TOOLWINDOW);
-                    InlineSearchWindowNativeMethods.SetWindowLongPtr(hwnd, InlineSearchWindowNativeMethods.GWL_EXSTYLE, exStyle);
-
-                    // 3. Ensure topmost
-
-                    InlineSearchWindowNativeMethods.SetWindowPos(hwnd, InlineSearchWindowNativeMethods.HWND_TOPMOST, 0, 0, 0, 0,
-                        InlineSearchWindowNativeMethods.SWP_NOMOVE | InlineSearchWindowNativeMethods.SWP_NOSIZE | InlineSearchWindowNativeMethods.SWP_SHOWWINDOW);
-                }
-
-                if (IsVisible) _positioner.PositionWindow();
-            };
-
-            this.Loaded += (s, e) =>
-            {
-                if (IsVisible) _positioner.PositionWindow();
-            };
-
-            this.SizeChanged += (s, e) =>
-            {
-                if (IsVisible)
-                {
-                    _positioner.PositionWindow();
-                }
-
-            };
-
-            _viewModel.Results.CollectionChanged += (s, e) =>
-            {
-                _inputHandler.SuppressExplorerSelectionSyncForResultRefresh();
-                _inputHandler.QueueResultsLayoutUpdate();
-            };
-
-            // Wire scroll handler to update shortcut keys dynamically when scrolling
-
-            LstResults.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((s, e) => _inputHandler.UpdateShortcutHints()));
-            LstResults.SelectionChanged += (s, e) => _inputHandler.SyncExplorerSelection();
-
-            // Mouse actions on results list: single click to execute search result
-
-            LstResults.PreviewMouseLeftButtonUp += (s, e) =>
-            {
-                var item = InlineSearchWindowInputHandler.FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
-                if (item != null && item.Content is AppSearchResult result)
-                {
-                    e.Handled = true;
-                    bool asAdmin = Keyboard.Modifiers == SwiftList.App.Helpers.WpfUiHelper.GetWpfModifier(SwiftList.Core.UserSettings.Load().SelectIndexModifier);
-                    InlineSearchNavigator.ExecuteSearchResult(this, result, asAdmin);
-                }
-
-            };
-
-            LstResults.PreviewMouseRightButtonUp += (s, e) =>
-            {
-                var item = InlineSearchWindowInputHandler.FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
-                if (item != null && item.Content is AppSearchResult result)
-                {
-                    e.Handled = true;
-                    LstResults.SelectedItem = result;
-                    _menuPresenter.EnterActionsMode(result);
-                }
-
-            };
-
-            // Actions list double-click and click wiring
-
-            LstActions.PreviewMouseLeftButtonUp += _menuPresenter.HandleActionsPreviewMouseLeftButtonUp;
-
-            // Trigger connection/build in view model
-
-            _viewModel.TriggerIndexBuild();
-        }
-
-        // ==========================================
-
-        // Exposed Child Controls matching QuickSearchWindow for ShellMenuPresenter
-
-        // ==========================================
-
-        public UIElement ResultsPanel => ResultsPanelControl;
-        public ListBox LstResults => ResultsPanelControl.ResultsListBox;
-        public Grid GridSearchResults => ResultsPanelControl.SearchResultsGrid;
-        public Grid GridActions => ResultsPanelControl.ActionsGrid;
-        public TextBlock TxtActionsTarget => ResultsPanelControl.ActionsTargetTextBlock;
-        public ListBox LstActions => ResultsPanelControl.LstActions;
-        public string SearchText => _searchText;
-
-        public bool ActivateAndFocusSearchBox()
+        SearchBox.SearchTextBox.TextChanged += (s, e) =>
         {
-            IntPtr foreground = InlineSearchWindowNativeMethods.GetForegroundWindow();
-            uint currentThread = InlineSearchWindowNativeMethods.GetCurrentThreadId();
-
-            uint foregroundThread = foreground != IntPtr.Zero
-
-                ? InlineSearchWindowNativeMethods.GetWindowThreadProcessId(foreground, out _)
-
-                : 0;
-            bool attached = false;
-
-            try
+            if (_searchText != SearchBox.SearchTextBox.Text)
             {
-                if (foregroundThread != 0 && foregroundThread != currentThread)
-                    attached = InlineSearchWindowNativeMethods.AttachThreadInput(currentThread, foregroundThread, true);
-                Activate();
-                SearchBox.SearchTextBox.Focus();
-                Keyboard.Focus(SearchBox.SearchTextBox);
-                SearchBox.SearchTextBox.CaretIndex = SearchBox.SearchTextBox.Text.Length;
-                if (foreground != IntPtr.Zero && foregroundThread != 0)
-                {
-                    _originalLayout = InlineSearchWindowNativeMethods.GetKeyboardLayout(currentThread);
-                    IntPtr layout = InlineSearchWindowNativeMethods.GetKeyboardLayout(foregroundThread);
-                    if (layout != IntPtr.Zero)
-                    {
-                        InlineSearchWindowNativeMethods.ActivateKeyboardLayout(layout, 0);
-                    }
-                }
-
-                return IsActive && SearchBox.SearchTextBox.IsKeyboardFocusWithin;
+                _viewModel.IsInlineSearchContext = true;
+                _searchText = SearchBox.SearchTextBox.Text;
+                SearchBox.PlaceholderTextBlock.Visibility = string.IsNullOrEmpty(_searchText) ? Visibility.Visible : Visibility.Collapsed;
+                LstResults.SelectedIndex = -1;
+                _inputHandler.ResetUserNavigation();
+                _viewModel.SearchQuery = _searchText;
             }
 
-            finally
-            {
-                if (attached)
-                    InlineSearchWindowNativeMethods.AttachThreadInput(currentThread, foregroundThread, false);
-            }
-        }
+        };
+        this.PreviewKeyDown += (s, e) => _inputHandler.HandlePreviewKeyDown(e);
 
-        public void HideWindow() => _manager.CloseInlineSearch();
+        // Use custom template for inline search that hides path/ParentDir
 
-        public void UpdateSearchDisplay(string text)
+        if (TryFindResource("InlineSearchResultTemplate") is DataTemplate inlineTemplate)
         {
-            _searchText = text;
-            LstResults.SelectedIndex = -1;
-            _inputHandler.ResetUserNavigation();
-            SearchBox.SearchTextBox.Text = text;
-            SearchBox.SearchTextBox.CaretIndex = SearchBox.SearchTextBox.Text.Length;
-            SearchBox.PlaceholderTextBlock.Visibility = string.IsNullOrEmpty(text) ? Visibility.Visible : Visibility.Collapsed;
-            _viewModel.SearchQuery = text;
+            LstResults.ItemTemplate = inlineTemplate;
         }
 
-        public void UpdateActionsLayout() => _inputHandler.UpdateActionsLayout();
-        public void LaunchByShortcutIndex(int num) => _inputHandler.LaunchByShortcutIndex(num);
-        public void OpenFileOrFolderExternal(string path) => InlineSearchNavigator.OpenFileOrFolderExternal(this, path);
-        public void OpenFileOrFolderAsAdminExternal(string path) => InlineSearchNavigator.OpenFileOrFolderAsAdminExternal(this, path);
-        public void LocateInExplorerExternal(string path) => InlineSearchNavigator.LocateInExplorerExternal(this, path);
-        public void ExecuteSearchResult(AppSearchResult result) => InlineSearchNavigator.ExecuteSearchResult(this, result);
-        public void ExecuteSearchResultAsAdmin(AppSearchResult result) => InlineSearchNavigator.ExecuteSearchResult(this, result, asAdmin: true);
+        _manager.ExplorerTracker.OnActiveWindowMoved += HandleActiveWindowMoved;
 
-        public bool IsPointInsideWindowExternal(int x, int y)
-        {
-            return InlineSearchWindowNativeMethods.IsPointInsideWindow(x, y);
-        }
-
-        private void HandleActiveWindowMoved()
+        this.IsVisibleChanged += (s, e) =>
         {
             if (IsVisible)
             {
                 _positioner.PositionWindow();
             }
-        }
 
-        protected override void OnClosed(EventArgs e)
+        };
+
+        this.SourceInitialized += (s, e) =>
         {
-            _activeTimer?.Stop();
-            _manager.ExplorerTracker.OnActiveWindowMoved -= HandleActiveWindowMoved;
-            _menuPresenter.Dispose();
-            if (_originalLayout != IntPtr.Zero)
+            var helper = new System.Windows.Interop.WindowInteropHelper(this);
+            var hwnd = helper.Handle;
+            if (hwnd != IntPtr.Zero)
             {
-                InlineSearchWindowNativeMethods.ActivateKeyboardLayout(_originalLayout, 0);
-                _originalLayout = IntPtr.Zero;
+                // 1. Decouple window hierarchy: Set active Explorer/Desktop as native owner HWND
+
+                var tracker = _manager.ExplorerTracker;
+                if (tracker.ActiveHwnd != IntPtr.Zero)
+                {
+                    InlineSearchWindowNativeMethods.SetWindowLongPtr(hwnd, InlineSearchWindowNativeMethods.GWL_HWNDPARENT, tracker.ActiveHwnd);
+                }
+
+                // 2. Set Extended Styles: WS_EX_TOOLWINDOW (hide from Alt+Tab)
+
+                var exStyle = InlineSearchWindowNativeMethods.GetWindowLongPtr(hwnd, InlineSearchWindowNativeMethods.GWL_EXSTYLE);
+                exStyle = new IntPtr(exStyle.ToInt64() | InlineSearchWindowNativeMethods.WS_EX_TOOLWINDOW);
+                InlineSearchWindowNativeMethods.SetWindowLongPtr(hwnd, InlineSearchWindowNativeMethods.GWL_EXSTYLE, exStyle);
+
+                // 3. Ensure topmost
+
+                InlineSearchWindowNativeMethods.SetWindowPos(hwnd, InlineSearchWindowNativeMethods.HWND_TOPMOST, 0, 0, 0, 0,
+                    InlineSearchWindowNativeMethods.SWP_NOMOVE | InlineSearchWindowNativeMethods.SWP_NOSIZE | InlineSearchWindowNativeMethods.SWP_SHOWWINDOW);
             }
 
-            base.OnClosed(e);
+            if (IsVisible) _positioner.PositionWindow();
+        };
+
+        this.Loaded += (s, e) =>
+        {
+            if (IsVisible) _positioner.PositionWindow();
+        };
+
+        this.SizeChanged += (s, e) =>
+        {
+            if (IsVisible)
+            {
+                _positioner.PositionWindow();
+            }
+
+        };
+
+        _viewModel.Results.CollectionChanged += (s, e) =>
+        {
+            _inputHandler.SuppressExplorerSelectionSyncForResultRefresh();
+            _inputHandler.QueueResultsLayoutUpdate();
+        };
+
+        // Wire scroll handler to update shortcut keys dynamically when scrolling
+
+        LstResults.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((s, e) => _inputHandler.UpdateShortcutHints()));
+        LstResults.SelectionChanged += (s, e) => _inputHandler.SyncExplorerSelection();
+
+        // Mouse actions on results list: single click to execute search result
+
+        LstResults.PreviewMouseLeftButtonUp += (s, e) =>
+        {
+            var item = InlineSearchWindowInputHandler.FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
+            if (item != null && item.Content is AppSearchResult result)
+            {
+                e.Handled = true;
+                var asAdmin = Keyboard.Modifiers == Helpers.WpfUiHelper.GetWpfModifier(Core.UserSettings.Load().SelectIndexModifier);
+                InlineSearchNavigator.ExecuteSearchResult(this, result, asAdmin);
+            }
+
+        };
+
+        LstResults.PreviewMouseRightButtonUp += (s, e) =>
+        {
+            var item = InlineSearchWindowInputHandler.FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
+            if (item != null && item.Content is AppSearchResult result)
+            {
+                e.Handled = true;
+                LstResults.SelectedItem = result;
+                _menuPresenter.EnterActionsMode(result);
+            }
+
+        };
+
+        // Actions list double-click and click wiring
+
+        LstActions.PreviewMouseLeftButtonUp += _menuPresenter.HandleActionsPreviewMouseLeftButtonUp;
+
+        // Trigger connection/build in view model
+
+        _viewModel.TriggerIndexBuild();
+    }
+
+    // ==========================================
+
+    // Exposed Child Controls matching QuickSearchWindow for ShellMenuPresenter
+
+    // ==========================================
+
+    public UIElement ResultsPanel => ResultsPanelControl;
+    public ListBox LstResults => ResultsPanelControl.ResultsListBox;
+    public Grid GridSearchResults => ResultsPanelControl.SearchResultsGrid;
+    public Grid GridActions => ResultsPanelControl.ActionsGrid;
+    public TextBlock TxtActionsTarget => ResultsPanelControl.ActionsTargetTextBlock;
+    public ListBox LstActions => ResultsPanelControl.LstActions;
+    public string SearchText => _searchText;
+
+    public bool ActivateAndFocusSearchBox()
+    {
+        var foreground = InlineSearchWindowNativeMethods.GetForegroundWindow();
+        var currentThread = InlineSearchWindowNativeMethods.GetCurrentThreadId();
+
+        var foregroundThread = foreground != IntPtr.Zero
+
+            ? InlineSearchWindowNativeMethods.GetWindowThreadProcessId(foreground, out _)
+
+            : 0;
+        var attached = false;
+
+        try
+        {
+            if (foregroundThread != 0 && foregroundThread != currentThread)
+                attached = InlineSearchWindowNativeMethods.AttachThreadInput(currentThread, foregroundThread, true);
+            Activate();
+            SearchBox.SearchTextBox.Focus();
+            Keyboard.Focus(SearchBox.SearchTextBox);
+            SearchBox.SearchTextBox.CaretIndex = SearchBox.SearchTextBox.Text.Length;
+            if (foreground != IntPtr.Zero && foregroundThread != 0)
+            {
+                _originalLayout = InlineSearchWindowNativeMethods.GetKeyboardLayout(currentThread);
+                var layout = InlineSearchWindowNativeMethods.GetKeyboardLayout(foregroundThread);
+                if (layout != IntPtr.Zero)
+                {
+                    InlineSearchWindowNativeMethods.ActivateKeyboardLayout(layout, 0);
+                }
+            }
+
+            return IsActive && SearchBox.SearchTextBox.IsKeyboardFocusWithin;
         }
+
+        finally
+        {
+            if (attached)
+                InlineSearchWindowNativeMethods.AttachThreadInput(currentThread, foregroundThread, false);
+        }
+    }
+
+    public void HideWindow() => _manager.CloseInlineSearch();
+
+    public void UpdateSearchDisplay(string text)
+    {
+        _searchText = text;
+        LstResults.SelectedIndex = -1;
+        _inputHandler.ResetUserNavigation();
+        SearchBox.SearchTextBox.Text = text;
+        SearchBox.SearchTextBox.CaretIndex = SearchBox.SearchTextBox.Text.Length;
+        SearchBox.PlaceholderTextBlock.Visibility = string.IsNullOrEmpty(text) ? Visibility.Visible : Visibility.Collapsed;
+        _viewModel.SearchQuery = text;
+    }
+
+    public void UpdateActionsLayout() => _inputHandler.UpdateActionsLayout();
+    public void LaunchByShortcutIndex(int num) => _inputHandler.LaunchByShortcutIndex(num);
+    public void OpenFileOrFolderExternal(string path) => InlineSearchNavigator.OpenFileOrFolderExternal(this, path);
+    public void OpenFileOrFolderAsAdminExternal(string path) => InlineSearchNavigator.OpenFileOrFolderAsAdminExternal(this, path);
+    public void LocateInExplorerExternal(string path) => InlineSearchNavigator.LocateInExplorerExternal(this, path);
+    public void ExecuteSearchResult(AppSearchResult result) => InlineSearchNavigator.ExecuteSearchResult(this, result);
+    public void ExecuteSearchResultAsAdmin(AppSearchResult result) => InlineSearchNavigator.ExecuteSearchResult(this, result, asAdmin: true);
+
+    public bool IsPointInsideWindowExternal(int x, int y) => InlineSearchWindowNativeMethods.IsPointInsideWindow(x, y);
+
+    private void HandleActiveWindowMoved()
+    {
+        if (IsVisible)
+        {
+            _positioner.PositionWindow();
+        }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _activeTimer?.Stop();
+        _manager.ExplorerTracker.OnActiveWindowMoved -= HandleActiveWindowMoved;
+        _menuPresenter.Dispose();
+        if (_originalLayout != IntPtr.Zero)
+        {
+            InlineSearchWindowNativeMethods.ActivateKeyboardLayout(_originalLayout, 0);
+            _originalLayout = IntPtr.Zero;
+        }
+
+        base.OnClosed(e);
     }
 }

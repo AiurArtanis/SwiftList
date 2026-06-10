@@ -1,32 +1,29 @@
-using System;
-using System.Collections.Generic;
 using System.Reflection;
 using SwiftList.PluginSdk;
 
-namespace SwiftList.Plugins.WebSearch.Providers
+namespace SwiftList.Plugins.WebSearch.Providers;
+
+public class WebSearchTranslationProvider : ITranslationProvider
 {
-    public class WebSearchTranslationProvider : ITranslationProvider
+    public string Name => "WebSearch Plugin Translation Provider";
+
+    public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(Assembly.GetExecutingAssembly());
+
+    private static readonly Dictionary<string, Dictionary<string, string>> Cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly object LockObj = new();
+
+    public IReadOnlyDictionary<string, string> GetTranslations(string cultureName)
     {
-        public string Name => "WebSearch Plugin Translation Provider";
-
-        public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(Assembly.GetExecutingAssembly());
-
-        private static readonly Dictionary<string, Dictionary<string, string>> Cache = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly object LockObj = new();
-
-        public IReadOnlyDictionary<string, string> GetTranslations(string cultureName)
+        lock (LockObj)
         {
-            lock (LockObj)
+            if (Cache.TryGetValue(cultureName, out var cached))
             {
-                if (Cache.TryGetValue(cultureName, out var cached))
-                {
-                    return cached;
-                }
-
-                var dict = TranslationService.LoadEmbeddedTranslations(Assembly.GetExecutingAssembly(), cultureName, "Plugin");
-                Cache[cultureName] = dict;
-                return dict;
+                return cached;
             }
+
+            var dict = TranslationService.LoadEmbeddedTranslations(Assembly.GetExecutingAssembly(), cultureName, "Plugin");
+            Cache[cultureName] = dict;
+            return dict;
         }
     }
 }

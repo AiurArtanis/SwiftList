@@ -1,129 +1,121 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 
-namespace SwiftList.PluginSdk
+namespace SwiftList.PluginSdk;
+
+/// <summary>
+/// A decoupled service to provide runtime dynamic translations to plugins.
+/// </summary>
+public static class TranslationService
 {
     /// <summary>
-    /// A decoupled service to provide runtime dynamic translations to plugins.
+    /// Delegate function set by the main application to perform multi-language lookup.
     /// </summary>
-    public static class TranslationService
+    public static Func<string, string> LookupFunc { get; set; } = key => $"[{key}]";
+
+    /// <summary>
+    /// Gets translation by key.
+    /// </summary>
+    public static string Get(string key) => LookupFunc(key);
+
+    /// <summary>
+    /// Gets formatted translation by key.
+    /// </summary>
+    public static string Format(string key, params object[] args)
     {
-        /// <summary>
-        /// Delegate function set by the main application to perform multi-language lookup.
-        /// </summary>
-        public static Func<string, string> LookupFunc { get; set; } = key => $"[{key}]";
-
-        /// <summary>
-        /// Gets translation by key.
-        /// </summary>
-        public static string Get(string key) => LookupFunc(key);
-
-        /// <summary>
-        /// Gets formatted translation by key.
-        /// </summary>
-        public static string Format(string key, params object[] args)
+        var fmt = LookupFunc(key);
+        try
         {
-            string fmt = LookupFunc(key);
-            try
-            {
-                return string.Format(fmt, args);
-            }
-            catch
-            {
-                return fmt;
-            }
+            return string.Format(fmt, args);
         }
-
-        /// <summary>
-        /// Detects supported culture names by scanning embedded resource filenames under the prefix "Resources.Translations."
-        /// </summary>
-        public static IReadOnlyList<string> GetSupportedCultures(Assembly assembly)
+        catch
         {
-            var cultures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            try
+            return fmt;
+        }
+    }
+
+    /// <summary>
+    /// Detects supported culture names by scanning embedded resource filenames under the prefix "Resources.Translations."
+    /// </summary>
+    public static IReadOnlyList<string> GetSupportedCultures(Assembly assembly)
+    {
+        var cultures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var prefix = "Resources.Translations.";
+            var resourceNames = assembly.GetManifestResourceNames();
+            foreach (var name in resourceNames)
             {
-                string prefix = "Resources.Translations.";
-                var resourceNames = assembly.GetManifestResourceNames();
-                foreach (var name in resourceNames)
+                var index = name.IndexOf(prefix, StringComparison.OrdinalIgnoreCase);
+                if (index >= 0)
                 {
-                    int index = name.IndexOf(prefix, StringComparison.OrdinalIgnoreCase);
-                    if (index >= 0)
+                    var sub = name.Substring(index + prefix.Length);
+                    var nextDot = sub.IndexOf('.');
+                    if (nextDot > 0)
                     {
-                        string sub = name.Substring(index + prefix.Length);
-                        int nextDot = sub.IndexOf('.');
-                        if (nextDot > 0)
+                        var cultureKey = sub.Substring(0, nextDot).Replace('_', '-');
+                        if (cultureKey.Contains("-") && cultureKey.Length >= 5)
                         {
-                            string cultureKey = sub.Substring(0, nextDot).Replace('_', '-');
-                            if (cultureKey.Contains("-") && cultureKey.Length >= 5)
-                            {
-                                cultures.Add(cultureKey);
-                            }
+                            cultures.Add(cultureKey);
                         }
                     }
                 }
             }
-            catch { }
-
-            return cultures.ToList();
         }
+        catch { }
 
-        /// <summary>
-        /// Loads translations from a JSON file embedded as resource in the specified assembly.
-        /// Expected naming suffix: {cultureKey}.{typeName}.json or {cultureKey_with_underscore}.{typeName}.json
-        /// </summary>
-        public static Dictionary<string, string> LoadEmbeddedTranslations(Assembly assembly, string cultureKey, string typeName)
+        return cultures.ToList();
+    }
+
+    /// <summary>
+    /// Loads translations from a JSON file embedded as resource in the specified assembly.
+    /// Expected naming suffix: {cultureKey}.{typeName}.json or {cultureKey_with_underscore}.{typeName}.json
+    /// </summary>
+    public static Dictionary<string, string> LoadEmbeddedTranslations(Assembly assembly, string cultureKey, string typeName)
+    {
+        var target = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var cultureKeyUnderscore = cultureKey.Replace('-', '_');
+
+        var suffix1 = $"{cultureKey}.{typeName}.json";
+        var suffix2 = $"{cultureKeyUnderscore}.{typeName}.json";
+
+        string? matchedResourceName = null;
+        try
         {
-            var target = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            string cultureKeyUnderscore = cultureKey.Replace('-', '_');
-
-            string suffix1 = $"{cultureKey}.{typeName}.json";
-            string suffix2 = $"{cultureKeyUnderscore}.{typeName}.json";
-
-            string? matchedResourceName = null;
-            try
+            var resourceNames = assembly.GetManifestResourceNames();
+            foreach (var name in resourceNames)
             {
-                var resourceNames = assembly.GetManifestResourceNames();
-                foreach (var name in resourceNames)
+                if (name.EndsWith(suffix1, StringComparison.OrdinalIgnoreCase) ||
+                    name.EndsWith(suffix2, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (name.EndsWith(suffix1, StringComparison.OrdinalIgnoreCase) ||
-                        name.EndsWith(suffix2, StringComparison.OrdinalIgnoreCase))
-                    {
-                        matchedResourceName = name;
-                        break;
-                    }
+                    matchedResourceName = name;
+                    break;
                 }
             }
-            catch { }
-
-            if (string.IsNullOrEmpty(matchedResourceName)) return target;
-
-            try
-            {
-                using (var stream = assembly.GetManifestResourceStream(matchedResourceName))
-                {
-                    if (stream != null)
-                    {
-                        using (var reader = new StreamReader(stream))
-                        {
-                            string json = reader.ReadToEnd();
-                            var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-                            if (dict != null)
-                            {
-                                foreach (var kvp in dict)
-                                {
-                                    target[kvp.Key] = kvp.Value;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            catch { }
-
-            return target;
         }
+        catch { }
+
+        if (string.IsNullOrEmpty(matchedResourceName)) return target;
+
+        try
+        {
+            using var stream = assembly.GetManifestResourceStream(matchedResourceName);
+            if (stream != null)
+            {
+                using var reader = new StreamReader(stream);
+                var json = reader.ReadToEnd();
+                var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                if (dict != null)
+                {
+                    foreach (var kvp in dict)
+                    {
+                        target[kvp.Key] = kvp.Value;
+                    }
+                }
+            }
+        }
+        catch { }
+
+        return target;
     }
 }

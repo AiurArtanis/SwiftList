@@ -1,36 +1,31 @@
-using System.Collections.Generic;
 using SwiftList.PluginSdk;
 using SwiftList.App.ViewModels.Settings.Plugins;
 
-namespace SwiftList.App.Services
+namespace SwiftList.App.Services;
+
+public class FilteredResultColumnProvider : IResultColumnProvider
 {
-    public class FilteredResultColumnProvider : IResultColumnProvider
+    private readonly IResultColumnProvider _inner;
+    private readonly string _dllName;
+    private readonly PluginManager _manager;
+
+    public FilteredResultColumnProvider(IResultColumnProvider inner, string dllName, PluginManager manager)
     {
-        private readonly IResultColumnProvider _inner;
-        private readonly string _dllName;
-        private readonly PluginManager _manager;
+        _inner = inner;
+        _dllName = dllName;
+        _manager = manager;
+    }
 
-        public FilteredResultColumnProvider(IResultColumnProvider inner, string dllName, PluginManager manager)
+    public IEnumerable<ResultColumnDefinition> GetColumns()
+    {
+        foreach (var col in _inner.GetColumns())
         {
-            _inner = inner;
-            _dllName = dllName;
-            _manager = manager;
-        }
-
-        public IEnumerable<ResultColumnDefinition> GetColumns()
-        {
-            foreach (var col in _inner.GetColumns())
+            if (_manager.IsComponentEnabled(_dllName, PluginComponentType.ColumnProvider, col.ColumnId))
             {
-                if (_manager.IsComponentEnabled(_dllName, PluginComponentType.ColumnProvider, col.ColumnId))
-                {
-                    yield return col;
-                }
+                yield return col;
             }
         }
-
-        public string GetCellValue(ISearchResult result, string columnId)
-        {
-            return _inner.GetCellValue(result, columnId);
-        }
     }
+
+    public string GetCellValue(ISearchResult result, string columnId) => _inner.GetCellValue(result, columnId);
 }

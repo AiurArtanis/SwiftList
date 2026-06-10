@@ -1,176 +1,162 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using SwiftList.Core;
-namespace SwiftList.App.Services
-{
-    public class SearchRunner : IDisposable
-    {
-        private readonly SearchService _searchService;
-        private CancellationTokenSource? _searchCts;
-        private readonly object _searchLock = new();
+namespace SwiftList.App.Services;
 
-        public SearchRunner(SearchService searchService)
+public class SearchRunner : IDisposable
+{
+    private readonly SearchService _searchService;
+    private CancellationTokenSource? _searchCts;
+    private readonly object _searchLock = new();
+
+    public SearchRunner(SearchService searchService) => _searchService = searchService;
+
+    public void QueueSearch(
+
+        string query,
+        int fileLimit,
+        int appLimit,
+        Action<bool> onSearchStateChanged,
+        Action<List<AppSearchResult>, bool> onResultsUpdated,
+        Action onServiceUnavailable)
+    {
+        lock (_searchLock)
         {
-            _searchService = searchService;
+            _searchCts?.Cancel();
+            _searchCts?.Dispose();
+            _searchCts = new CancellationTokenSource();
         }
 
-        public void QueueSearch(
+        var cts = _searchCts;
+        var token = cts.Token;
 
-            string query,
-            int fileLimit,
-            int appLimit,
-            Action<bool> onSearchStateChanged,
-            Action<List<AppSearchResult>, bool> onResultsUpdated,
-            Action onServiceUnavailable)
+        // Short debounce for typing
+
+        _ = Task.Delay(50, token).ContinueWith(t =>
         {
-            lock (_searchLock)
+            if (t.IsCanceled) return;
+            if (string.IsNullOrWhiteSpace(query))
             {
-                _searchCts?.Cancel();
-                _searchCts?.Dispose();
-                _searchCts = new CancellationTokenSource();
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    onSearchStateChanged(false);
+                    onResultsUpdated(new List<AppSearchResult>(), true);
+                });
+                return;
             }
 
-            var cts = _searchCts;
-            var token = cts.Token;
+            System.Windows.Application.Current.Dispatcher.Invoke(() => onSearchStateChanged(true));
 
-            // Short debounce for typing
-
-            _ = Task.Delay(50, token).ContinueWith(t =>
+            _ = Task.Run(async () =>
             {
-                if (t.IsCanceled) return;
-                if (string.IsNullOrWhiteSpace(query))
+                try
                 {
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        onSearchStateChanged(false);
-                        onResultsUpdated(new List<AppSearchResult>(), true);
-                    });
-                    return;
+                    token.ThrowIfCancellationRequested();
+                    await PerformStreamingSearchAsync(query, fileLimit, appLimit, onResultsUpdated, onServiceUnavailable, token);
                 }
 
-                System.Windows.Application.Current.Dispatcher.Invoke(() => onSearchStateChanged(true));
+                catch (OperationCanceledException) { }
 
-                _ = Task.Run(async () =>
+                catch (Exception ex)
                 {
-                    try
-                    {
-                        token.ThrowIfCancellationRequested();
-                        await PerformStreamingSearchAsync(query, fileLimit, appLimit, onResultsUpdated, onServiceUnavailable, token);
-                    }
+                    Logger.Log($"[SearchRunner] Search failed: {ex.Message}", LogLevel.Error);
+                }
 
-                    catch (OperationCanceledException) { }
-
-                    catch (Exception ex)
+                finally
+                {
+                    _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        Logger.Log($"[SearchRunner] Search failed: {ex.Message}", SwiftList.Core.LogLevel.Error);
-                    }
-
-                    finally
-                    {
-                        _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                        lock (_searchLock)
                         {
-                            lock (_searchLock)
+                            if (_searchCts == cts)
                             {
-                                if (_searchCts == cts)
-                                {
-                                    onSearchStateChanged(false);
-                                }
+                                onSearchStateChanged(false);
                             }
+                        }
 
-                        }));
-                    }
+                    }));
+                }
 
-                }, token);
             }, token);
-        }
+        }, token);
+    }
 
-        private async Task<bool> PerformStreamingSearchAsync(
+    private async Task<bool> PerformStreamingSearchAsync(
 
-            string query,
-            int fileLimit,
-            int appLimit,
-            Action<List<AppSearchResult>, bool> onResultsUpdated,
-            Action onServiceUnavailable,
-            CancellationToken token)
+        string query,
+        int fileLimit,
+        int appLimit,
+        Action<List<AppSearchResult>, bool> onResultsUpdated,
+        Action onServiceUnavailable,
+        CancellationToken token)
+    {
+        var uiResults = new List<AppSearchResult>();
+        object resultsLock = new();
+        long lastRenderTicks = 0;
+
+        void RenderSnapshot(bool final)
         {
-            var uiResults = new List<AppSearchResult>();
-            object resultsLock = new();
-            long lastRenderTicks = 0;
-
-            void RenderSnapshot(bool final)
+            _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
-                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (token.IsCancellationRequested)
-                        return;
-                    List<AppSearchResult> snapshot;
-
-                    lock (resultsLock)
-
-                        snapshot = new List<AppSearchResult>(uiResults);
-                    onResultsUpdated(snapshot, final);
-                }));
-            }
-
-            bool ok = await _searchService.SearchStreamingAsync(query, fileLimit, appLimit, null, (result, isApplication) =>
-            {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested)
+                    return;
+                List<AppSearchResult> snapshot;
 
                 lock (resultsLock)
 
-                    uiResults.Add(CreateUiResult(result, query, uiResults.Count));
-                long now = Environment.TickCount64;
-                long previous = Interlocked.Read(ref lastRenderTicks);
-                if (now - previous >= 100 && Interlocked.CompareExchange(ref lastRenderTicks, now, previous) == previous)
-                    RenderSnapshot(final: false);
-            }, token);
-            if (!ok)
-            {
-                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (!token.IsCancellationRequested)
-                        onServiceUnavailable();
-                }));
-                return true;
-            }
+                    snapshot = new List<AppSearchResult>(uiResults);
+                onResultsUpdated(snapshot, final);
+            }));
+        }
 
+        var ok = await _searchService.SearchStreamingAsync(query, fileLimit, appLimit, null, (result, isApplication) =>
+        {
             token.ThrowIfCancellationRequested();
-            RenderSnapshot(final: true);
+
+            lock (resultsLock)
+
+                uiResults.Add(CreateUiResult(result, query, uiResults.Count));
+            var now = Environment.TickCount64;
+            var previous = Interlocked.Read(ref lastRenderTicks);
+            if (now - previous >= 100 && Interlocked.CompareExchange(ref lastRenderTicks, now, previous) == previous)
+                RenderSnapshot(final: false);
+        }, token);
+        if (!ok)
+        {
+            _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!token.IsCancellationRequested)
+                    onServiceUnavailable();
+            }));
             return true;
         }
 
-        private static AppSearchResult CreateUiResult(SearchResult item, string query, int index)
-        {
-            return new AppSearchResult
-            {
-                Name = item.Name,
-                FullPath = item.Path,
-                ParentDir = Path.GetDirectoryName(item.Path) ?? item.Drive + ":\\",
-                IsDir = item.IsDir,
-                Drive = item.Drive,
-                ResultKind = "File",
-                Index = index,
-                SearchQuery = query
+        token.ThrowIfCancellationRequested();
+        RenderSnapshot(final: true);
+        return true;
+    }
 
-            };
-        }
+    private static AppSearchResult CreateUiResult(SearchResult item, string query, int index) => new AppSearchResult
+    {
+        Name = item.Name,
+        FullPath = item.Path,
+        ParentDir = Path.GetDirectoryName(item.Path) ?? item.Drive + ":\\",
+        IsDir = item.IsDir,
+        Drive = item.Drive,
+        ResultKind = "File",
+        Index = index,
+        SearchQuery = query
 
-        public void Cancel()
-        {
-            lock (_searchLock)
-            {
-                _searchCts?.Cancel();
-                _searchCts?.Dispose();
-                _searchCts = null;
-            }
-        }
+    };
 
-        public void Dispose()
+    public void Cancel()
+    {
+        lock (_searchLock)
         {
-            Cancel();
+            _searchCts?.Cancel();
+            _searchCts?.Dispose();
+            _searchCts = null;
         }
     }
+
+    public void Dispose() => Cancel();
 }

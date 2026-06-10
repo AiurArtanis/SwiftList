@@ -1,297 +1,288 @@
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using SwiftList.PluginSdk;
 
-namespace SwiftList.Plugins.Translation
+namespace SwiftList.Plugins.Translation;
+
+public class TranslationInstantProvider : IInstantResultProvider
 {
-    public class TranslationInstantProvider : IInstantResultProvider
+    public string Name => TranslationService.Get("Translation_ProviderName");
+
+    private static readonly HttpClient HttpClient = new HttpClient();
+    private static readonly HashSet<string> PendingRequests = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    private static readonly SemaphoreSlim TokenSemaphore = new SemaphoreSlim(1, 1);
+
+    private static string? _tokenCache;
+    private static DateTime _tokenExpireTime = DateTime.MinValue;
+    private static readonly Dictionary<string, string> TranslationCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, string> DetectedLanguageCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    static TranslationInstantProvider()
     {
-        public string Name => TranslationService.Get("Translation_ProviderName");
-
-        private static readonly HttpClient HttpClient = new HttpClient();
-        private static readonly HashSet<string> PendingRequests = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private static readonly System.Threading.SemaphoreSlim TokenSemaphore = new System.Threading.SemaphoreSlim(1, 1);
-
-        private static string? _tokenCache;
-        private static DateTime _tokenExpireTime = DateTime.MinValue;
-        private static readonly Dictionary<string, string> TranslationCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        private static readonly Dictionary<string, string> DetectedLanguageCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        static TranslationInstantProvider()
+        try
         {
-            try
+            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0");
+        }
+        catch { }
+    }
+
+    public IEnumerable<InstantResultItem> GetInstantResults(string query)
+    {
+        if (string.IsNullOrEmpty(query))
+            yield break;
+
+        if (!query.StartsWith("tr ", StringComparison.OrdinalIgnoreCase))
+            yield break;
+
+        var textToTranslate = query.Substring(3).Trim();
+        if (string.IsNullOrEmpty(textToTranslate))
+        {
+            yield return new InstantResultItem
             {
-                HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0");
-            }
-            catch { }
+                Title = TranslationService.Get("Translation_PlaceholderTitle") ?? "智能翻译",
+                Description = TranslationService.Get("Translation_PlaceholderDesc") ?? "输入文字即可翻译",
+                IconData = "M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z",
+                IconColor = "#3399FF",
+                ActionType = "None"
+            };
+            yield break;
         }
 
-        public IEnumerable<InstantResultItem> GetInstantResults(string query)
+        string? resultText = null;
+        var detectedLang = "Unknown";
+
+        lock (TranslationCache)
         {
-            if (string.IsNullOrEmpty(query))
-                yield break;
-
-            if (!query.StartsWith("tr ", StringComparison.OrdinalIgnoreCase))
-                yield break;
-
-            string textToTranslate = query.Substring(3).Trim();
-            if (string.IsNullOrEmpty(textToTranslate))
+            if (TranslationCache.TryGetValue(textToTranslate, out var cachedResult))
             {
-                yield return new InstantResultItem
+                resultText = cachedResult;
+                if (DetectedLanguageCache.TryGetValue(textToTranslate, out var cachedLang))
                 {
-                    Title = TranslationService.Get("Translation_PlaceholderTitle") ?? "智能翻译",
-                    Description = TranslationService.Get("Translation_PlaceholderDesc") ?? "输入文字即可翻译",
-                    IconData = "M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z",
-                    IconColor = "#3399FF",
-                    ActionType = "None"
-                };
-                yield break;
+                    detectedLang = cachedLang;
+                }
             }
+        }
 
-            string? resultText = null;
-            string detectedLang = "Unknown";
-
-            lock (TranslationCache)
+        if (resultText != null)
+        {
+            yield return new InstantResultItem
             {
-                if (TranslationCache.TryGetValue(textToTranslate, out var cachedResult))
+                Title = resultText,
+                Description = TranslationService.Format("Translation_ResultDesc", detectedLang.ToUpper()),
+                IconData = "M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z",
+                IconColor = "#3399FF",
+                ActionType = "Copy",
+                ActionArgument = resultText,
+                TabCompletion = resultText
+            };
+        }
+        else
+        {
+            var shouldTrigger = false;
+            lock (PendingRequests)
+            {
+                if (!PendingRequests.Contains(textToTranslate))
                 {
-                    resultText = cachedResult;
-                    if (DetectedLanguageCache.TryGetValue(textToTranslate, out var cachedLang))
-                    {
-                        detectedLang = cachedLang;
-                    }
+                    PendingRequests.Add(textToTranslate);
+                    shouldTrigger = true;
                 }
             }
 
-            if (resultText != null)
+            if (shouldTrigger)
             {
-                yield return new InstantResultItem
+                Task.Run(async () =>
                 {
-                    Title = resultText,
-                    Description = TranslationService.Format("Translation_ResultDesc", detectedLang.ToUpper()),
-                    IconData = "M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z",
-                    IconColor = "#3399FF",
-                    ActionType = "Copy",
-                    ActionArgument = resultText,
-                    TabCompletion = resultText
-                };
-            }
-            else
-            {
-                bool shouldTrigger = false;
-                lock (PendingRequests)
-                {
-                    if (!PendingRequests.Contains(textToTranslate))
+                    try
                     {
-                        PendingRequests.Add(textToTranslate);
-                        shouldTrigger = true;
+                        var (translated, lang) = await TranslateTextAsync(textToTranslate);
+                        lock (TranslationCache)
+                        {
+                            TranslationCache[textToTranslate] = translated;
+                            DetectedLanguageCache[textToTranslate] = lang;
+                        }
                     }
-                }
+                    catch (Exception ex)
+                    {
+                        lock (TranslationCache)
+                        {
+                            TranslationCache[textToTranslate] = $"Translation error: {ex.Message}";
+                            DetectedLanguageCache[textToTranslate] = "Unknown";
+                        }
+                    }
+                    finally
+                    {
+                        lock (PendingRequests)
+                        {
+                            PendingRequests.Remove(textToTranslate);
+                        }
+                    }
 
-                if (shouldTrigger)
-                {
-                    Task.Run(async () =>
+                    // Re-trigger search to show updated results via Reflection
+                    System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                     {
                         try
                         {
-                            var (translated, lang) = await TranslateTextAsync(textToTranslate);
-                            lock (TranslationCache)
+                            foreach (System.Windows.Window window in System.Windows.Application.Current.Windows)
                             {
-                                TranslationCache[textToTranslate] = translated;
-                                DetectedLanguageCache[textToTranslate] = lang;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            lock (TranslationCache)
-                            {
-                                TranslationCache[textToTranslate] = $"Translation error: {ex.Message}";
-                                DetectedLanguageCache[textToTranslate] = "Unknown";
-                            }
-                        }
-                        finally
-                        {
-                            lock (PendingRequests)
-                            {
-                                PendingRequests.Remove(textToTranslate);
-                            }
-                        }
-
-                        // Re-trigger search to show updated results via Reflection
-                        System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
-                        {
-                            try
-                            {
-                                foreach (System.Windows.Window window in System.Windows.Application.Current.Windows)
+                                if (window.DataContext == null) continue;
+                                var type = window.DataContext.GetType();
+                                if (type.FullName == "SwiftList.App.ViewModels.Search.QuickSearchViewModel")
                                 {
-                                    if (window.DataContext == null) continue;
-                                    var type = window.DataContext.GetType();
-                                    if (type.FullName == "SwiftList.App.ViewModels.Search.QuickSearchViewModel")
+                                    var searchQueryProp = type.GetProperty("SearchQuery");
+                                    var currentQueryText = searchQueryProp?.GetValue(window.DataContext) as string ?? "";
+                                    if (currentQueryText.StartsWith("tr ", StringComparison.OrdinalIgnoreCase) &&
+                                        string.Equals(currentQueryText.Substring(3).Trim(), textToTranslate, StringComparison.OrdinalIgnoreCase))
                                     {
-                                        var searchQueryProp = type.GetProperty("SearchQuery");
-                                        string currentQueryText = searchQueryProp?.GetValue(window.DataContext) as string ?? "";
-                                        if (currentQueryText.StartsWith("tr ", StringComparison.OrdinalIgnoreCase) &&
-                                            string.Equals(currentQueryText.Substring(3).Trim(), textToTranslate, StringComparison.OrdinalIgnoreCase))
+                                        var searchProp = type.GetProperty("Search");
+                                        var searchVm = searchProp?.GetValue(window.DataContext);
+                                        if (searchVm != null)
                                         {
-                                            var searchProp = type.GetProperty("Search");
-                                            var searchVm = searchProp?.GetValue(window.DataContext);
-                                            if (searchVm != null)
-                                            {
-                                                var performSearchMethod = searchVm.GetType().GetMethod("PerformSearch");
-                                                performSearchMethod?.Invoke(searchVm, new object[] { currentQueryText });
-                                            }
-                                        }
-                                    }
-                                    else if (type.FullName == "SwiftList.App.ViewModels.Search.SearchViewModel")
-                                    {
-                                        var advancedQueryProp = type.GetProperty("AdvancedQuery");
-                                        string currentQueryText = advancedQueryProp?.GetValue(window.DataContext) as string ?? "";
-                                        if (currentQueryText.StartsWith("tr ", StringComparison.OrdinalIgnoreCase) &&
-                                            string.Equals(currentQueryText.Substring(3).Trim(), textToTranslate, StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            var performSearchMethod = type.GetMethod("PerformSearch", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                                            performSearchMethod?.Invoke(window.DataContext, new object[] { currentQueryText });
+                                            var performSearchMethod = searchVm.GetType().GetMethod("PerformSearch");
+                                            performSearchMethod?.Invoke(searchVm, new object[] { currentQueryText });
                                         }
                                     }
                                 }
+                                else if (type.FullName == "SwiftList.App.ViewModels.Search.SearchViewModel")
+                                {
+                                    var advancedQueryProp = type.GetProperty("AdvancedQuery");
+                                    var currentQueryText = advancedQueryProp?.GetValue(window.DataContext) as string ?? "";
+                                    if (currentQueryText.StartsWith("tr ", StringComparison.OrdinalIgnoreCase) &&
+                                        string.Equals(currentQueryText.Substring(3).Trim(), textToTranslate, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        var performSearchMethod = type.GetMethod("PerformSearch", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                                        performSearchMethod?.Invoke(window.DataContext, new object[] { currentQueryText });
+                                    }
+                                }
                             }
-                            catch { }
-                        }));
-                    });
-                }
-
-                yield return new InstantResultItem
-                {
-                    Title = TranslationService.Get("Translation_PlaceholderTitle") ?? "智能翻译",
-                    Description = TranslationService.Get("Translation_PlaceholderDesc") ?? "正在翻译中...",
-                    IconData = "M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z",
-                    IconColor = "#3399FF",
-                    ActionType = "None"
-                };
+                        }
+                        catch { }
+                    }));
+                });
             }
+
+            yield return new InstantResultItem
+            {
+                Title = TranslationService.Get("Translation_PlaceholderTitle") ?? "智能翻译",
+                Description = TranslationService.Get("Translation_PlaceholderDesc") ?? "正在翻译中...",
+                IconData = "M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z",
+                IconColor = "#3399FF",
+                ActionType = "None"
+            };
+        }
+    }
+
+    private static async Task<(string Translation, string DetectedLang)> TranslateTextAsync(string text)
+    {
+        var token = await GetAuthTokenAsync();
+
+        var appCulture = System.Globalization.CultureInfo.CurrentUICulture.Name;
+        var targetLang = "en";
+        if (appCulture.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+        {
+            targetLang = appCulture.Contains("TW") || appCulture.Contains("HK") || appCulture.Contains("Hant") ? "zh-Hant" : "zh-Hans";
+        }
+        else
+        {
+            var dashIdx = appCulture.IndexOf('-');
+            targetLang = dashIdx > 0 ? appCulture.Substring(0, dashIdx) : appCulture;
         }
 
-        private static async Task<(string Translation, string DetectedLang)> TranslateTextAsync(string text)
+        // Translate to both targetLang and English to determine auto-reversing
+        var url = $"https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to={targetLang}&to=en";
+        
+        using (var request = new HttpRequestMessage(HttpMethod.Post, url))
         {
-            string token = await GetAuthTokenAsync();
-
-            string appCulture = System.Globalization.CultureInfo.CurrentUICulture.Name;
-            string targetLang = "en";
-            if (appCulture.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
-            {
-                targetLang = appCulture.Contains("TW") || appCulture.Contains("HK") || appCulture.Contains("Hant") ? "zh-Hant" : "zh-Hans";
-            }
-            else
-            {
-                int dashIdx = appCulture.IndexOf('-');
-                targetLang = dashIdx > 0 ? appCulture.Substring(0, dashIdx) : appCulture;
-            }
-
-            // Translate to both targetLang and English to determine auto-reversing
-            string url = $"https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to={targetLang}&to=en";
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             
-            using (var request = new HttpRequestMessage(HttpMethod.Post, url))
+            var body = new[] { new { Text = text } };
+            var jsonBody = JsonSerializer.Serialize(body);
+            request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+
+            using var response = await HttpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+
+            using var doc = JsonDocument.Parse(jsonResponse);
+            var root = doc.RootElement;
+            if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() > 0)
             {
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                
-                var body = new[] { new { Text = text } };
-                string jsonBody = JsonSerializer.Serialize(body);
-                request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-
-                using (var response = await HttpClient.SendAsync(request))
+                var element = root[0];
+                var detected = "unknown";
+                if (element.TryGetProperty("detectedLanguage", out var detProperty) &&
+                    detProperty.TryGetProperty("language", out var langProperty))
                 {
-                    response.EnsureSuccessStatusCode();
-                    string jsonResponse = await response.Content.ReadAsStringAsync();
-                    
-                    using (JsonDocument doc = JsonDocument.Parse(jsonResponse))
-                    {
-                        var root = doc.RootElement;
-                        if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() > 0)
-                        {
-                            var element = root[0];
-                            string detected = "unknown";
-                            if (element.TryGetProperty("detectedLanguage", out var detProperty) &&
-                                detProperty.TryGetProperty("language", out var langProperty))
-                            {
-                                detected = langProperty.GetString() ?? "unknown";
-                            }
-                            
-                            string translatedText = string.Empty;
-                            string fallbackText = string.Empty;
-                            
-                            if (element.TryGetProperty("translations", out var transProperty) &&
-                                transProperty.ValueKind == JsonValueKind.Array)
-                            {
-                                foreach (var trans in transProperty.EnumerateArray())
-                                {
-                                    string to = trans.TryGetProperty("to", out var toProp) ? toProp.GetString() ?? "" : "";
-                                    string textVal = trans.TryGetProperty("text", out var textProp) ? textProp.GetString() ?? "" : "";
-                                    
-                                    if (to == targetLang)
-                                    {
-                                        translatedText = textVal;
-                                    }
-                                    else if (to == "en")
-                                    {
-                                        fallbackText = textVal;
-                                    }
-                                }
-                            }
+                    detected = langProperty.GetString() ?? "unknown";
+                }
 
-                            // If the detected language matches the app language, show the English version instead
-                            if (detected.StartsWith(targetLang, StringComparison.OrdinalIgnoreCase) || 
-                                (targetLang == "zh-Hans" && detected.StartsWith("zh", StringComparison.OrdinalIgnoreCase)))
-                            {
-                                return (fallbackText, detected);
-                            }
-                            
-                            return (translatedText, detected);
+                var translatedText = string.Empty;
+                var fallbackText = string.Empty;
+
+                if (element.TryGetProperty("translations", out var transProperty) &&
+                    transProperty.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var trans in transProperty.EnumerateArray())
+                    {
+                        var to = trans.TryGetProperty("to", out var toProp) ? toProp.GetString() ?? "" : "";
+                        var textVal = trans.TryGetProperty("text", out var textProp) ? textProp.GetString() ?? "" : "";
+
+                        if (to == targetLang)
+                        {
+                            translatedText = textVal;
+                        }
+                        else if (to == "en")
+                        {
+                            fallbackText = textVal;
                         }
                     }
                 }
-            }
 
-            return ("Translation failed", "unknown");
+                // If the detected language matches the app language, show the English version instead
+                if (detected.StartsWith(targetLang, StringComparison.OrdinalIgnoreCase) ||
+                    (targetLang == "zh-Hans" && detected.StartsWith("zh", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return (fallbackText, detected);
+                }
+
+                return (translatedText, detected);
+            }
         }
 
-        private static async Task<string> GetAuthTokenAsync()
+        return ("Translation failed", "unknown");
+    }
+
+    private static async Task<string> GetAuthTokenAsync()
+    {
+        if (_tokenCache != null && DateTime.UtcNow < _tokenExpireTime)
+        {
+            return _tokenCache;
+        }
+
+        await TokenSemaphore.WaitAsync();
+        try
         {
             if (_tokenCache != null && DateTime.UtcNow < _tokenExpireTime)
             {
                 return _tokenCache;
             }
 
-            await TokenSemaphore.WaitAsync();
-            try
+            // Fetch Edge translate token (returns plain text JWT)
+            var token = await HttpClient.GetStringAsync("https://edge.microsoft.com/translate/auth");
+            if (string.IsNullOrWhiteSpace(token))
             {
-                if (_tokenCache != null && DateTime.UtcNow < _tokenExpireTime)
-                {
-                    return _tokenCache;
-                }
-
-                // Fetch Edge translate token (returns plain text JWT)
-                string token = await HttpClient.GetStringAsync("https://edge.microsoft.com/translate/auth");
-                if (string.IsNullOrWhiteSpace(token))
-                {
-                    throw new Exception("Empty token returned");
-                }
-                _tokenCache = token.Trim();
-                _tokenExpireTime = DateTime.UtcNow.AddMinutes(5);
-                return _tokenCache;
+                throw new Exception("Empty token returned");
             }
-            catch (Exception ex)
-            {
-                throw new Exception("Failed to retrieve translator credentials: " + ex.Message);
-            }
-            finally
-            {
-                TokenSemaphore.Release();
-            }
+            _tokenCache = token.Trim();
+            _tokenExpireTime = DateTime.UtcNow.AddMinutes(5);
+            return _tokenCache;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Failed to retrieve translator credentials: " + ex.Message);
+        }
+        finally
+        {
+            TokenSemaphore.Release();
         }
     }
 }

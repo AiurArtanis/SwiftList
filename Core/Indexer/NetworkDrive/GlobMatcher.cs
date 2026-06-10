@@ -1,54 +1,52 @@
-using System;
 using System.Text.RegularExpressions;
 
-namespace SwiftList.Core.Indexer.NetworkDrive
+namespace SwiftList.Core.Indexer.NetworkDrive;
+
+internal static class GlobMatcher
 {
-    internal static class GlobMatcher
+    public static NetworkGlobPattern Compile(string pattern) => new(pattern);
+}
+
+internal sealed class NetworkGlobPattern
+{
+    private readonly string _rawPattern;
+    private readonly Regex? _regex;
+
+    public NetworkGlobPattern(string pattern)
     {
-        public static NetworkGlobPattern Compile(string pattern) => new(pattern);
+        _rawPattern = pattern ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(_rawPattern))
+        {
+            try
+            {
+                _regex = GlobToRegex.Compile(_rawPattern.Trim());
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[NetworkGlobPattern] Failed to compile glob '{_rawPattern}' to regex: {ex.Message}", LogLevel.Warn);
+            }
+        }
     }
 
-    internal sealed class NetworkGlobPattern
+    public bool IsEmpty => string.IsNullOrWhiteSpace(_rawPattern);
+
+    public bool IsMatch(string text)
     {
-        private readonly string _rawPattern;
-        private readonly Regex? _regex;
+        if (IsEmpty)
+            return string.IsNullOrEmpty(text);
 
-        public NetworkGlobPattern(string pattern)
+        if (_regex != null)
         {
-            _rawPattern = pattern ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(_rawPattern))
+            try
             {
-                try
-                {
-                    _regex = GlobToRegex.Compile(_rawPattern.Trim());
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log($"[NetworkGlobPattern] Failed to compile glob '{_rawPattern}' to regex: {ex.Message}", LogLevel.Warn);
-                }
+                return _regex.IsMatch(text);
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                Logger.Log($"[NetworkGlobPattern] Timeout matching '{text}' against regex for glob '{_rawPattern}'", LogLevel.Warn);
             }
         }
 
-        public bool IsEmpty => string.IsNullOrWhiteSpace(_rawPattern);
-
-        public bool IsMatch(string text)
-        {
-            if (IsEmpty)
-                return string.IsNullOrEmpty(text);
-
-            if (_regex != null)
-            {
-                try
-                {
-                    return _regex.IsMatch(text);
-                }
-                catch (RegexMatchTimeoutException)
-                {
-                    Logger.Log($"[NetworkGlobPattern] Timeout matching '{text}' against regex for glob '{_rawPattern}'", LogLevel.Warn);
-                }
-            }
-
-            return false;
-        }
+        return false;
     }
 }

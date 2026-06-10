@@ -1,12 +1,6 @@
-using System.Windows.Controls;
+namespace SwiftList.App.Views.Settings.Plugins;
 
-namespace SwiftList.App.Views.Settings.Plugins
+public partial class PluginManagementSettingsPage : System.Windows.Controls.UserControl
 {
-    public partial class PluginManagementSettingsPage : System.Windows.Controls.UserControl
-    {
-        public PluginManagementSettingsPage()
-        {
-            InitializeComponent();
-        }
-    }
+    public PluginManagementSettingsPage() => InitializeComponent();
 }

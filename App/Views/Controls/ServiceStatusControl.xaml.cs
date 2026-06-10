@@ -1,12 +1,6 @@
-using System.Windows.Controls;
+namespace SwiftList.App.Views.Controls;
 
-namespace SwiftList.App.Views.Controls
+public partial class ServiceStatusControl : System.Windows.Controls.UserControl
 {
-    public partial class ServiceStatusControl : System.Windows.Controls.UserControl
-    {
-        public ServiceStatusControl()
-        {
-            InitializeComponent();
-        }
-    }
+    public ServiceStatusControl() => InitializeComponent();
 }

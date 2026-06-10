@@ -1,10 +1,6 @@
-namespace SwiftList.App.Views.Settings
+namespace SwiftList.App.Views.Settings;
+
+public partial class NetworkDriveSettingsPage : System.Windows.Controls.UserControl
 {
-    public partial class NetworkDriveSettingsPage : System.Windows.Controls.UserControl
-    {
-        public NetworkDriveSettingsPage()
-        {
-            InitializeComponent();
-        }
-    }
+    public NetworkDriveSettingsPage() => InitializeComponent();
 }
