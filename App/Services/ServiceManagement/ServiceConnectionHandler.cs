@@ -6,7 +6,6 @@ using System.Windows.Threading;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
 using Application = System.Windows.Application;
-
 namespace SwiftList.App.Services
 {
     public class ServiceConnectionHandler : IDisposable
@@ -19,16 +18,15 @@ namespace SwiftList.App.Services
         private readonly Action _onServiceInstallCompleted;
         private readonly Action<Exception> _onServiceInstallError;
         private readonly Action _onServiceFailedToStart;
-
         private bool _hasAttemptedAutoInstall;
         private bool _isAutoInstallingService;
         private DateTime _serviceReconnectUntilUtc = DateTime.MinValue;
         private int _isStatusCheckInFlight;
-
         public bool IsAutoInstallingService => _isAutoInstallingService;
         public bool HasAttemptedAutoInstall => _hasAttemptedAutoInstall;
 
         public ServiceConnectionHandler(
+
             SearchService searchService,
             Action<UsnIndexer.IndexerStatus> onStatusUpdated,
             Action onServiceInstallStarted,
@@ -43,7 +41,6 @@ namespace SwiftList.App.Services
             _onServiceInstallCompleted = onServiceInstallCompleted ?? throw new ArgumentNullException(nameof(onServiceInstallCompleted));
             _onServiceInstallError = onServiceInstallError ?? throw new ArgumentNullException(nameof(onServiceInstallError));
             _onServiceFailedToStart = onServiceFailedToStart ?? throw new ArgumentNullException(nameof(onServiceFailedToStart));
-
             _statusTimer = new DispatcherTimer();
             _statusTimer.Interval = TimeSpan.FromMilliseconds(pollIntervalMs);
             _statusTimer.Tick += (s, e) => PollStatusTick();
@@ -86,19 +83,22 @@ namespace SwiftList.App.Services
             if (Interlocked.Exchange(ref _isStatusCheckInFlight, 1) == 1)
                 return;
 
-            Task.Run(() =>
+            Task.Run(async () =>
             {
-                var status = _searchService.GetStatus();
-                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                var status = await _searchService.GetStatusAsync();
+
+                _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     try
                     {
                         ProcessStatus(status);
                     }
+
                     finally
                     {
                         Interlocked.Exchange(ref _isStatusCheckInFlight, 0);
                     }
+
                 }));
             });
         }
@@ -114,7 +114,6 @@ namespace SwiftList.App.Services
                 }
 
                 _statusTimer.Stop();
-
                 if (!_hasAttemptedAutoInstall)
                 {
                     _hasAttemptedAutoInstall = true;
@@ -152,6 +151,7 @@ namespace SwiftList.App.Services
         public void ExecuteInstallService()
         {
             ServiceInstallManager.InstallService(
+
                 onCompleted: () =>
                 {
                     Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -161,7 +161,9 @@ namespace SwiftList.App.Services
                         BeginServiceReconnectGracePeriod();
                         _onServiceInstallCompleted?.Invoke();
                     }));
+
                 },
+
                 onError: ex =>
                 {
                     Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -169,6 +171,7 @@ namespace SwiftList.App.Services
                         _onServiceInstallError?.Invoke(ex);
                     }));
                 }
+
             );
         }
 

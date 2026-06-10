@@ -51,8 +51,8 @@ namespace SwiftList.Plugins.CoreExtensions.Providers
                     bool partIsDir = Directory.Exists(cleanedPath);
                     bool partIsFile = File.Exists(cleanedPath);
                     bool partExists = partIsDir || partIsFile;
-                    string partTypeDesc = partIsDir 
-                        ? TranslationService.Get("Column_TypeFolder") 
+                    string partTypeDesc = partIsDir
+                        ? TranslationService.Get("Column_TypeFolder")
                         : (partIsFile ? TranslationService.Get("Column_TypeFile") : TranslationService.Get("Env_PathNotExist"));
 
                     yield return new InstantResultItem
@@ -77,8 +77,8 @@ namespace SwiftList.Plugins.CoreExtensions.Providers
                 bool isDir = Directory.Exists(expanded);
                 bool isFile = File.Exists(expanded);
                 bool exists = isDir || isFile;
-                string typeDesc = isDir 
-                    ? TranslationService.Get("Column_TypeFolder") 
+                string typeDesc = isDir
+                    ? TranslationService.Get("Column_TypeFolder")
                     : (isFile ? TranslationService.Get("Column_TypeFile") : TranslationService.Get("Env_PathNotExist"));
 
                 yield return new InstantResultItem

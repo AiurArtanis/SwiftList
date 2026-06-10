@@ -86,7 +86,7 @@ namespace SwiftList.App.ViewModels.Settings.Plugins
             foreach (var assembly in loadedAssemblies)
             {
                 string dllName = Path.GetFileName(assembly.Location);
-                
+
                 // Skip the core SDK Contract DLL
                 if (dllName.Equals("PluginSdk.dll", System.StringComparison.OrdinalIgnoreCase))
                     continue;
@@ -179,10 +179,10 @@ namespace SwiftList.App.ViewModels.Settings.Plugins
         }
 
         private static void AddAssemblyProviders(
-            List<PluginComponentViewModel> components, 
-            System.Reflection.Assembly assembly, 
-            string dllName, 
-            PluginManager manager, 
+            List<PluginComponentViewModel> components,
+            System.Reflection.Assembly assembly,
+            string dllName,
+            PluginManager manager,
             HashSet<string> disabledSet)
         {
             foreach (var prov in AliasProviderRegistry.GetAllProviders().Where(p => p.GetType().Assembly == assembly))

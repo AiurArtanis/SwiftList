@@ -67,14 +67,14 @@ namespace SwiftList.Core
                     if (cachedMetadata.Count > 0)
                     {
                         Logger.Log($"[SearchEngineInitializer] Loaded {cachedMetadata.Count}/{supportedDrives.Count} per-drive caches. Instantly unblocking UI for instant search.");
-                        
+
                         lock (_indexer.LockObj)
                         {
                             _indexer.Status.State = "ready";
                             _indexer.Status.Progress = 100;
                             _indexer.Status.ActiveDrives = cachedMetadata.Select(m => m.Drive).ToList();
                         }
-                        
+
                         loadedFromCache = true;
                     }
                     else
@@ -95,14 +95,14 @@ namespace SwiftList.Core
                     {
                         var meta = cachedMetadata[i];
                         long newUsn = _indexer.CatchUpDrive(meta.Drive, meta.JournalId, meta.NextUsn);
-                        
+
                         if (newUsn < 0)
                         {
                             Logger.Log($"[SearchEngineInitializer] Silent catch-up failed for drive {meta.Drive} (journal mismatch or error). Requiring full re-index.", SwiftList.Core.LogLevel.Error);
                             catchUpSuccess = false;
                             break;
                         }
-                        
+
                         updatedMetadata.Add((meta.Drive, meta.JournalId, newUsn));
                     }
 

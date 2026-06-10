@@ -199,7 +199,7 @@ namespace SwiftList.App.ViewModels.Settings
         {
             if (!drive.IsReady)
                 return TranslationManager.Instance["Network_StatusUnavailable"];
- 
+
             return indexStatus?.State switch
             {
                 "indexing" => TranslationManager.Instance["Network_StatusIndexing"],

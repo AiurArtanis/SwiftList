@@ -17,6 +17,6 @@ namespace SwiftList.Core
         public int AppLimit { get; set; }
         public string? Query { get; set; }
         public string? DirectoryFilter { get; set; }
-        public string? JsonSettings { get; set; }
+        public MachineSettings? MachineSettings { get; set; }
     }
 }

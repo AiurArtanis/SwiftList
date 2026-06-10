@@ -78,7 +78,7 @@ namespace SwiftList.PluginSdk
         {
             var target = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             string cultureKeyUnderscore = cultureKey.Replace('-', '_');
-            
+
             string suffix1 = $"{cultureKey}.{typeName}.json";
             string suffix2 = $"{cultureKeyUnderscore}.{typeName}.json";
 
@@ -88,7 +88,7 @@ namespace SwiftList.PluginSdk
                 var resourceNames = assembly.GetManifestResourceNames();
                 foreach (var name in resourceNames)
                 {
-                    if (name.EndsWith(suffix1, StringComparison.OrdinalIgnoreCase) || 
+                    if (name.EndsWith(suffix1, StringComparison.OrdinalIgnoreCase) ||
                         name.EndsWith(suffix2, StringComparison.OrdinalIgnoreCase))
                     {
                         matchedResourceName = name;

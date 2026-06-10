@@ -63,7 +63,7 @@ namespace SwiftList.App.Views.Settings
                 MessageBox.Show(msg, title, MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-            
+
             // Compare versions
             var currentVersion = typeof(AboutSettingsPage).Assembly.GetName().Version;
             var cleanTag = release.TagName.TrimStart('v', 'V');
@@ -73,7 +73,7 @@ namespace SwiftList.App.Views.Settings
                 {
                     var newVerFormat = TranslationManager.Instance["About_NewVersionAvailable"];
                     TxtUpdateStatus.Text = string.Format(newVerFormat, release.TagName);
-                    
+
                     // Show update actions
                     SpUpdateActions.Visibility = Visibility.Visible;
 
@@ -132,7 +132,7 @@ namespace SwiftList.App.Views.Settings
             {
                 TxtUpdateStatus.Text = TranslationManager.Instance["About_Success"];
                 // Quit App so batch script can replace files
-                System.Windows.Application.Current.Shutdown();
+                TrayCleanExitHelper.CleanExit();
             }
             else
             {

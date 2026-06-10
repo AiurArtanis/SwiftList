@@ -172,7 +172,7 @@ namespace SwiftList.Core.SearchIndex.RecordSearch
                             }
                             else
                             {
-                                  continue;
+                                continue;
                             }
                         }
 

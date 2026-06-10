@@ -4,7 +4,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SwiftList.Core;
-
 namespace SwiftList.App.Services
 {
     public class SearchRunner : IDisposable
@@ -19,6 +18,7 @@ namespace SwiftList.App.Services
         }
 
         public void QueueSearch(
+
             string query,
             int fileLimit,
             int appLimit,
@@ -37,10 +37,10 @@ namespace SwiftList.App.Services
             var token = cts.Token;
 
             // Short debounce for typing
-            Task.Delay(50, token).ContinueWith(t =>
+
+            _ = Task.Delay(50, token).ContinueWith(t =>
             {
                 if (t.IsCanceled) return;
-
                 if (string.IsNullOrWhiteSpace(query))
                 {
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
@@ -53,21 +53,24 @@ namespace SwiftList.App.Services
 
                 System.Windows.Application.Current.Dispatcher.Invoke(() => onSearchStateChanged(true));
 
-                Task.Run(() =>
+                _ = Task.Run(async () =>
                 {
                     try
                     {
                         token.ThrowIfCancellationRequested();
-                        PerformStreamingSearch(query, fileLimit, appLimit, onResultsUpdated, onServiceUnavailable, token);
+                        await PerformStreamingSearchAsync(query, fileLimit, appLimit, onResultsUpdated, onServiceUnavailable, token);
                     }
+
                     catch (OperationCanceledException) { }
+
                     catch (Exception ex)
                     {
                         Logger.Log($"[SearchRunner] Search failed: {ex.Message}", SwiftList.Core.LogLevel.Error);
                     }
+
                     finally
                     {
-                        System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                        _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                         {
                             lock (_searchLock)
                             {
@@ -76,13 +79,16 @@ namespace SwiftList.App.Services
                                     onSearchStateChanged(false);
                                 }
                             }
+
                         }));
                     }
+
                 }, token);
             }, token);
         }
 
-        private bool PerformStreamingSearch(
+        private async Task<bool> PerformStreamingSearchAsync(
+
             string query,
             int fileLimit,
             int appLimit,
@@ -96,34 +102,34 @@ namespace SwiftList.App.Services
 
             void RenderSnapshot(bool final)
             {
-                System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     if (token.IsCancellationRequested)
                         return;
-
                     List<AppSearchResult> snapshot;
-                    lock (resultsLock)
-                        snapshot = new List<AppSearchResult>(uiResults);
 
+                    lock (resultsLock)
+
+                        snapshot = new List<AppSearchResult>(uiResults);
                     onResultsUpdated(snapshot, final);
                 }));
             }
 
-            bool ok = _searchService.SearchStreaming(query, fileLimit, appLimit, null, (result, isApplication) =>
+            bool ok = await _searchService.SearchStreamingAsync(query, fileLimit, appLimit, null, (result, isApplication) =>
             {
                 token.ThrowIfCancellationRequested();
-                lock (resultsLock)
-                    uiResults.Add(CreateUiResult(result, query, uiResults.Count));
 
+                lock (resultsLock)
+
+                    uiResults.Add(CreateUiResult(result, query, uiResults.Count));
                 long now = Environment.TickCount64;
                 long previous = Interlocked.Read(ref lastRenderTicks);
                 if (now - previous >= 100 && Interlocked.CompareExchange(ref lastRenderTicks, now, previous) == previous)
                     RenderSnapshot(final: false);
             }, token);
-
             if (!ok)
             {
-                System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     if (!token.IsCancellationRequested)
                         onServiceUnavailable();
@@ -148,6 +154,7 @@ namespace SwiftList.App.Services
                 ResultKind = "File",
                 Index = index,
                 SearchQuery = query
+
             };
         }
 

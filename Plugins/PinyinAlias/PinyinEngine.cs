@@ -3973,9 +3973,9 @@ namespace SwiftList.Plugins.PinyinAlias
 
         private static int ReadInt32(int offset)
         {
-            return RawData[offset] | 
-                   (RawData[offset + 1] << 8) | 
-                   (RawData[offset + 2] << 16) | 
+            return RawData[offset] |
+                   (RawData[offset + 1] << 8) |
+                   (RawData[offset + 2] << 16) |
                    (RawData[offset + 3] << 24);
         }
 

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using SwiftList.Core;
 using SwiftList.App.Services;
-
 namespace SwiftList.App.ViewModels.Search
 {
     internal sealed class SearchExecutionEngine : IDisposable
@@ -24,6 +23,7 @@ namespace SwiftList.App.ViewModels.Search
         }
 
         public void QueueSearch(
+
             string query,
             string? searchScope,
             bool isInlineSearchContext,
@@ -33,19 +33,20 @@ namespace SwiftList.App.ViewModels.Search
         {
             _debounceCts?.Cancel();
             _debounceCts?.Dispose();
-
             var cts = new CancellationTokenSource();
             _debounceCts = cts;
 
-            Task.Delay(35, cts.Token).ContinueWith(t =>
+            _ = Task.Delay(35, cts.Token).ContinueWith(t =>
             {
                 if (t.IsCanceled) return;
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
+
                     PerformSearch(query, searchScope, isInlineSearchContext, onSearchStateChanged, onResultsUpdated, onServiceUnavailable));
             }, cts.Token);
         }
 
         public void PerformSearch(
+
             string query,
             string? searchScope,
             bool isInlineSearchContext,
@@ -54,7 +55,6 @@ namespace SwiftList.App.ViewModels.Search
             Action onServiceUnavailable)
         {
             CancelPendingSearch();
-
             if (string.IsNullOrWhiteSpace(query))
             {
                 onSearchStateChanged(false);
@@ -63,32 +63,36 @@ namespace SwiftList.App.ViewModels.Search
             }
 
             onSearchStateChanged(true);
-
             var cts = new CancellationTokenSource();
             int searchVersion = Interlocked.Increment(ref _searchVersion);
+
             lock (_searchCtsLock)
             {
                 _searchCts = cts;
             }
+
             var token = cts.Token;
 
-            Task.Run(() =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
                     token.ThrowIfCancellationRequested();
-
                     var tracker = InlineSearchManager.Instance.ExplorerTracker;
                     var adapter = tracker.ActiveInlineAdapter;
                     if (isInlineSearchContext && adapter != null && tracker.ActiveHwnd != IntPtr.Zero)
                     {
                         var listItems = adapter.GetListItems(tracker.ActiveHwnd);
                         // Use list-based search when the adapter provides items;
+
                         // fall back to streaming search when the list is empty.
+
                         if (listItems.Any())
                         {
                             string? contextDirectory = !string.IsNullOrWhiteSpace(searchScope)
+
                                 ? searchScope
+
                                 : (tracker.ActivePath ?? tracker.LastActiveExplorerPath);
                             InlineListSearchHelper.PerformInlineListProviderSearch(query, adapter, tracker.ActiveHwnd, listItems, contextDirectory, searchVersion, () => Volatile.Read(ref _searchVersion), onResultsUpdated, token);
                             return;
@@ -96,24 +100,33 @@ namespace SwiftList.App.ViewModels.Search
                     }
 
                     // Fall through to streaming search when the adapter provides no list items
-                    // (e.g. desktop, or adapters that only implement ExecuteItem).
-                    // Only restrict scope to the current directory when an actual Explorer window is active;
-                    // for all other contexts (desktop, dialog, etc.) scope must be null so global search runs.
-                    string? streamingScope = tracker.IsActiveWindowExplorer ? searchScope : null;
-                    string? streamingContextDirectory = isInlineSearchContext
-                        ? (!string.IsNullOrWhiteSpace(searchScope) ? searchScope : tracker.ActivePath ?? tracker.LastActiveExplorerPath)
-                        : tracker.LastActiveExplorerPath;
 
-                    PerformStreamingSearch(query, streamingScope, streamingContextDirectory, isInlineSearchContext, searchVersion, onResultsUpdated, onServiceUnavailable, token);
+                    // (e.g. desktop, or adapters that only implement ExecuteItem).
+
+                    // Only restrict scope to the current directory when an actual Explorer window is active;
+
+                    // for all other contexts (desktop, dialog, etc.) scope must be null so global search runs.
+
+                    string? streamingScope = tracker.IsActiveWindowExplorer ? searchScope : null;
+
+                    string? streamingContextDirectory = isInlineSearchContext
+
+                        ? (!string.IsNullOrWhiteSpace(searchScope) ? searchScope : tracker.ActivePath ?? tracker.LastActiveExplorerPath)
+
+                        : tracker.LastActiveExplorerPath;
+                    await PerformStreamingSearchAsync(query, streamingScope, streamingContextDirectory, isInlineSearchContext, searchVersion, onResultsUpdated, onServiceUnavailable, token);
                 }
+
                 catch (OperationCanceledException) { }
+
                 catch (Exception ex)
                 {
                     Logger.Log($"[SearchExecutionEngine] PerformSearch failed: {ex}", SwiftList.Core.LogLevel.Error);
                 }
+
                 finally
                 {
-                    System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                    _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                     {
                         lock (_searchCtsLock)
                         {
@@ -122,13 +135,15 @@ namespace SwiftList.App.ViewModels.Search
                                 onSearchStateChanged(false);
                             }
                         }
+
                     }));
                 }
+
             }, token);
         }
 
+        private async Task PerformStreamingSearchAsync(
 
-        private void PerformStreamingSearch(
             string query,
             string? searchScope,
             string? contextDirectory,
@@ -149,66 +164,65 @@ namespace SwiftList.App.ViewModels.Search
                 {
                     if (searchVersion != Volatile.Read(ref _searchVersion) || token.IsCancellationRequested)
                         return;
-
                     SearchResponse snapshot;
+
                     lock (responseLock)
                     {
                         snapshot = new SearchResponse
                         {
                             AppResults = new List<SearchResult>(streamedResponse.AppResults),
                             FileResults = new List<SearchResult>(streamedResponse.FileResults)
+
                         };
                     }
 
                     var uiResults = SearchResultMapper.BuildQuickResults(snapshot, query, searchScope, contextDirectory, isInlineSearchContext);
                     if (final && uiResults.Count == 0)
                         uiResults.Add(SearchResultMapper.CreateNoResultsResult(query));
-
                     string statusText = "";
                     if (uiResults.Count > 0)
                         statusText = SearchResultMapper.FormatSearchStatus(snapshot.AppResults.Count, snapshot.FileResults.Count);
                     else if (final)
                         statusText = "No matching results";
-
                     onResultsUpdated(uiResults, statusText, final);
                 }
 
                 if (final)
                     System.Windows.Application.Current.Dispatcher.Invoke(new Action(ApplySnapshot));
                 else
-                    System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplySnapshot));
+                    _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplySnapshot));
             }
 
-            bool ok = _searchService.SearchStreaming(query, 51, 51, searchScope, (result, isApplication) =>
+            bool ok = await _searchService.SearchStreamingAsync(query, 51, 51, searchScope, (result, isApplication) =>
             {
                 token.ThrowIfCancellationRequested();
+
                 lock (responseLock)
                 {
                     if (isApplication)
                         streamedResponse.AppResults.Add(result);
                     else
                         streamedResponse.FileResults.Add(result);
-
                     streamedCount++;
                 }
 
                 if (Volatile.Read(ref hasRenderedFirstBatch) == 0 && Volatile.Read(ref streamedCount) < 9)
                     return;
-
                 if (Interlocked.CompareExchange(ref hasRenderedFirstBatch, 1, 0) == 0)
                 {
                     RenderSnapshot(final: false);
                 }
-            }, token);
 
+            }, token);
             if (!ok)
             {
-                System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     if (!token.IsCancellationRequested)
                     {
                         onServiceUnavailable();
                     }
+
                 }));
                 return;
             }
@@ -217,7 +231,6 @@ namespace SwiftList.App.ViewModels.Search
             Interlocked.Exchange(ref hasRenderedFirstBatch, 1);
             RenderSnapshot(final: true);
         }
-
 
         public void CancelPendingSearch()
         {

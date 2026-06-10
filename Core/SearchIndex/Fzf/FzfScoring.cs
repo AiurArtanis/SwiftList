@@ -8,11 +8,11 @@ namespace SwiftList.Core.SearchIndex.Fzf
         {
             start = -1;
             end = -1;
-            
+
             var textSpan = text.AsSpan();
             int currentIdx = 0;
             char lastChar = '\0';
-            
+
             for (int patternIndex = 0; patternIndex < pattern.Length; patternIndex++)
             {
                 char target = pattern[patternIndex];
@@ -25,32 +25,32 @@ namespace SwiftList.Core.SearchIndex.Fzf
                 {
                     char lower = char.ToLowerInvariant(target);
                     char upper = char.ToUpperInvariant(target);
-                    offset = lower == upper 
+                    offset = lower == upper
                         ? textSpan.Slice(currentIdx).IndexOf(lower)
                         : textSpan.Slice(currentIdx).IndexOfAny(lower, upper);
                 }
-                
+
                 if (offset < 0)
                     return false;
-                
+
                 int absoluteIdx = currentIdx + offset;
                 if (patternIndex == 0)
                     start = Math.Max(0, absoluteIdx - 1);
-                
+
                 lastChar = target;
                 currentIdx = absoluteIdx + 1;
             }
-            
+
             end = currentIdx;
-            
+
             char l = char.ToLowerInvariant(lastChar);
             char u = char.ToUpperInvariant(lastChar);
             int lastOffset = caseSensitive ? textSpan.Slice(end).LastIndexOf(lastChar)
                 : (l == u ? textSpan.Slice(end).LastIndexOf(l) : textSpan.Slice(end).LastIndexOfAny(l, u));
-            
+
             if (lastOffset >= 0)
                 end = end + lastOffset + 1;
-                
+
             return true;
         }
 

@@ -30,7 +30,7 @@ namespace SwiftList.App.ViewModels.Settings
             {
                 OnPropertyChanged(nameof(LogLevelOptions));
                 OnPropertyChanged(nameof(ThemeOptions));
-                
+
                 // Let WPF bind the new ItemsSource first, then restore selections
                 System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
                 {

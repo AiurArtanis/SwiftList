@@ -21,6 +21,8 @@ namespace SwiftList.App.Services
         private System.Windows.Controls.MenuItem? _wpfItemToggleHotkeys;
         private System.Windows.Controls.MenuItem? _wpfItemSettings;
         private System.Windows.Controls.MenuItem? _wpfItemAbout;
+        private System.Windows.Controls.Separator? _wpfCleanExitSeparator;
+        private System.Windows.Controls.MenuItem? _wpfItemCleanExit;
         private System.Windows.Controls.MenuItem? _wpfItemExit;
         private Window? _dummyWindow;
         private bool _isHotkeysDisabled;
@@ -108,11 +110,19 @@ namespace SwiftList.App.Services
             };
             _wpfItemAbout.Click += (s, e) => ShowSettingsWindow("About");
 
+            _wpfItemCleanExit = new System.Windows.Controls.MenuItem
+            {
+                Icon = CreateIcon("\uE74D", "AccentBlue")
+            };
+            _wpfItemCleanExit.Click += (s, e) => TrayCleanExitHelper.CleanExit();
+
             _wpfItemExit = new System.Windows.Controls.MenuItem
             {
                 Icon = CreateIcon("\uF3B1", "MenuText")
             };
             _wpfItemExit.Click += (s, e) => Application.Current.Shutdown();
+
+            _wpfCleanExitSeparator = new System.Windows.Controls.Separator();
 
             _wpfContextMenu.Items.Add(_wpfItemShowWindow);
             _wpfContextMenu.Items.Add(_wpfItemToggleHotkeys);
@@ -120,6 +130,8 @@ namespace SwiftList.App.Services
             _wpfContextMenu.Items.Add(new System.Windows.Controls.Separator());
             _wpfContextMenu.Items.Add(_wpfItemAbout);
             _wpfContextMenu.Items.Add(new System.Windows.Controls.Separator());
+            _wpfContextMenu.Items.Add(_wpfCleanExitSeparator);
+            _wpfContextMenu.Items.Add(_wpfItemCleanExit);
             _wpfContextMenu.Items.Add(_wpfItemExit);
 
             UpdateMenuTexts();
@@ -146,9 +158,11 @@ namespace SwiftList.App.Services
                 InitializeWpfContextMenu();
             }
 
+            UpdateCleanExitVisibility();
+
             if (_dummyWindow != null)
             {
-                try { _dummyWindow.Close(); } catch {}
+                try { _dummyWindow.Close(); } catch { }
                 _dummyWindow = null;
             }
 
@@ -177,7 +191,7 @@ namespace SwiftList.App.Services
                 {
                     _dummyWindow?.Close();
                 }
-                catch {}
+                catch { }
                 _dummyWindow = null;
             };
             _wpfContextMenu.Closed += closedHandler;
@@ -190,6 +204,7 @@ namespace SwiftList.App.Services
             if (_wpfItemShowWindow != null) _wpfItemShowWindow.Header = TranslationManager.Instance["Tray_ShowWindow"];
             if (_wpfItemSettings != null) _wpfItemSettings.Header = TranslationManager.Instance["Tray_Settings"];
             if (_wpfItemAbout != null) _wpfItemAbout.Header = TranslationManager.Instance["Tray_About"];
+            if (_wpfItemCleanExit != null) _wpfItemCleanExit.Header = TranslationManager.Instance["Tray_CleanExit"];
             if (_wpfItemExit != null) _wpfItemExit.Header = TranslationManager.Instance["Tray_Exit"];
             UpdateHotkeysMenuState();
         }
@@ -230,6 +245,17 @@ namespace SwiftList.App.Services
             App.ShowSearchWindow();
         }
 
+        private void UpdateCleanExitVisibility()
+        {
+            if (_wpfItemCleanExit == null) return;
+            var visibility = TrayCleanExitHelper.IsOnlyAppProcessRunning() ? Visibility.Visible : Visibility.Collapsed;
+            _wpfItemCleanExit.Visibility = visibility;
+            if (_wpfCleanExitSeparator != null)
+            {
+                _wpfCleanExitSeparator.Visibility = visibility;
+            }
+        }
+
         public void Dispose()
         {
             TranslationManager.Instance.PropertyChanged -= OnLanguageChanged;
@@ -237,7 +263,7 @@ namespace SwiftList.App.Services
 
             if (_dummyWindow != null)
             {
-                try { _dummyWindow.Close(); } catch {}
+                try { _dummyWindow.Close(); } catch { }
                 _dummyWindow = null;
             }
 

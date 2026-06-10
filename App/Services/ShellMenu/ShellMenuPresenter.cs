@@ -7,7 +7,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using SwiftList.Core;
 using SwiftList.PluginSdk;
-
 namespace SwiftList.App.Services
 {
     /// <summary>
@@ -26,6 +25,7 @@ namespace SwiftList.App.Services
         private readonly ShellMenuMouseInputHandler _mouseHandler;
 
         // Mappings to trace which provider owns which item/submenu at runtime
+
         private readonly Dictionary<uint, IDynamicActionProvider> _commandToProviderMap = new();
         private readonly Dictionary<IntPtr, IDynamicActionProvider> _subMenuToProviderMap = new();
 
@@ -47,11 +47,17 @@ namespace SwiftList.App.Services
 
             if (result == null
                 || result.FullPath == "__SHOW_MORE__"
+
                 || result.IsEmptyResult
+
                 || result.IsApplication
+
                 || result.IsPluginSearchAction
+
                 || result.IsSearchSectionHeader
+
                 || result.IsInstantResult
+
                 || IsInlineFileDialog())
             {
                 return;
@@ -65,6 +71,7 @@ namespace SwiftList.App.Services
             _subMenuToProviderMap.Clear();
 
             // Clear previous sessions in all registered dynamic action providers
+
             foreach (var provider in PluginManager.Instance.DynamicProviders)
             {
                 provider.ClearSession();
@@ -73,35 +80,37 @@ namespace SwiftList.App.Services
             _isInActionsMode = true;
 
             // Transition UI
+
             _view.GridSearchResults.Visibility = Visibility.Collapsed;
             _view.GridActions.Visibility = Visibility.Visible;
             _view.TxtActionsTarget.Text = Path.GetFileName(result.FullPath);
-
             LoadMenuItems(IntPtr.Zero);
         }
 
         private void LoadMenuItems(IntPtr hMenu)
         {
             if (_activeResult == null) return;
-
             // Update header text based on current menu level
+
             if (hMenu == IntPtr.Zero)
             {
                 _view.TxtActionsTarget.Text = Path.GetFileName(_activeResult.FullPath);
             }
+
             else if (_menuTitleStack.Count > 0)
             {
                 _view.TxtActionsTarget.Text = _menuTitleStack.Peek();
             }
 
             var finalItems = ActionMenuBuilder.Build(
+
                 _activeResult,
                 hMenu,
                 IsInlineWindow(),
                 _commandToProviderMap,
                 _subMenuToProviderMap
-            );
 
+            );
             _view.LstActions.ItemsSource = finalItems;
             _view.UpdateActionsLayout();
             if (finalItems.Count > 0)
@@ -116,7 +125,6 @@ namespace SwiftList.App.Services
         {
             int count = _view.LstActions.Items.Count;
             if (count == 0) return;
-
             int index = _view.LstActions.SelectedIndex;
             int originalIndex = index;
 
@@ -124,7 +132,6 @@ namespace SwiftList.App.Services
             {
                 index = (index + direction + count) % count;
                 if (index == originalIndex) break;
-
                 var item = _view.LstActions.Items[index] as ActionMenuItem;
                 if (item != null && !item.IsSeparator && !item.IsSectionHeader && !item.IsDisabled)
                 {
@@ -132,6 +139,7 @@ namespace SwiftList.App.Services
                     _view.LstActions.ScrollIntoView(_view.LstActions.SelectedItem);
                     break;
                 }
+
             } while (true);
         }
 
@@ -155,9 +163,9 @@ namespace SwiftList.App.Services
                 {
                     _menuTitleStack.Pop();
                 }
+
                 IntPtr parentMenu = _menuStack.Count > 0 ? _menuStack.Peek() : IntPtr.Zero;
                 LoadMenuItems(parentMenu);
-
                 if (_menuSelectedIndexStack.Count > 0)
                 {
                     int prevIndex = _menuSelectedIndexStack.Pop();
@@ -168,6 +176,7 @@ namespace SwiftList.App.Services
                     }
                 }
             }
+
             else
             {
                 ExitActionsMode();
@@ -178,7 +187,6 @@ namespace SwiftList.App.Services
         {
             _isInActionsMode = false;
             _activeResult = null;
-
             foreach (var provider in PluginManager.Instance.DynamicProviders)
             {
                 provider.ClearSession();
@@ -189,11 +197,9 @@ namespace SwiftList.App.Services
             _menuStack.Clear();
             _menuSelectedIndexStack.Clear();
             _menuTitleStack.Clear();
-
             _view.GridActions.Visibility = Visibility.Collapsed;
             _view.GridSearchResults.Visibility = Visibility.Visible;
             _view.UpdateActionsLayout();
-
             if (_view.LstResults.SelectedItem != null)
             {
                 _view.LstResults.ScrollIntoView(_view.LstResults.SelectedItem);
@@ -205,8 +211,8 @@ namespace SwiftList.App.Services
             if (_view.LstActions.SelectedItem is ActionMenuItem item)
             {
                 if (item.IsSeparator || item.IsSectionHeader || item.IsDisabled) return;
-
                 // 1. Handle custom SwiftList actions dynamically from PluginManager
+
                 var registration = PluginManager.Instance.GetActionByRuntimeId(item.CommandId);
                 if (registration != null)
                 {
@@ -217,13 +223,16 @@ namespace SwiftList.App.Services
                         {
                             _view.HideWindow();
                         }
+
                         registration.Action.Execute(resultToExecute, _view);
                     }
+
                     ExitActionsMode();
                     return;
                 }
 
                 // 2. Handle submenus
+
                 if (item.HasSubMenu)
                 {
                     EnterSubMenu();
@@ -231,6 +240,7 @@ namespace SwiftList.App.Services
                 }
 
                 // 3. Handle dynamic action provider executions
+
                 if (_commandToProviderMap.TryGetValue(item.CommandId, out var provider))
                 {
                     var resultToExecute = _activeResult;
@@ -243,15 +253,14 @@ namespace SwiftList.App.Services
                             _view.HideWindow();
                         }
                     }
+
                     ExitActionsMode();
                 }
             }
         }
 
-        public void HandleActionsMouseDoubleClick(object sender, MouseButtonEventArgs e)
-            => _mouseHandler.HandleActionsMouseDoubleClick(sender, e);
-
         public void HandleActionsPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+
             => _mouseHandler.HandleActionsPreviewMouseLeftButtonUp(sender, e);
 
         public void Dispose()

@@ -1,0 +1,55 @@
+using System;
+using System.Diagnostics;
+using System.Windows;
+using SwiftList.Core;
+using Application = System.Windows.Application;
+
+namespace SwiftList.App.Services
+{
+    internal static class TrayCleanExitHelper
+    {
+        public static void CleanExit()
+        {
+            if (IsOnlyAppProcessRunning())
+            {
+                TryStopService();
+            }
+
+            Application.Current.Shutdown();
+        }
+
+        public static bool IsOnlyAppProcessRunning()
+        {
+            try
+            {
+                var current = Process.GetCurrentProcess();
+                return Process.GetProcessesByName(current.ProcessName).Length == 1;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[TrayCleanExitHelper] Failed to count app processes: {ex.Message}", LogLevel.Warn);
+                return false;
+            }
+        }
+
+        private static void TryStopService()
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "sc.exe",
+                    Arguments = "stop SwiftListService",
+                    Verb = "runas",
+                    UseShellExecute = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+                Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[TrayCleanExitHelper] Failed to stop service: {ex.Message}", LogLevel.Warn);
+            }
+        }
+    }
+}

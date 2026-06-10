@@ -110,7 +110,7 @@ namespace SwiftList.App.ViewModels.Search
         {
             if (parameters.Count == 0)
                 return string.Format(TranslationManager.Instance["Search_KeywordOnly"], keyword);
- 
+
             return string.Format(TranslationManager.Instance["Search_KeywordParams"], keyword, string.Join(" ", parameters));
         }
     }

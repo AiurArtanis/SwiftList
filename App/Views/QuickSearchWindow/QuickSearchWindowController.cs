@@ -223,7 +223,7 @@ namespace SwiftList.App.Views.QuickSearchWindow
             {
                 _window.Activate();
                 _window.Focus();
-                
+
                 var hwnd = new WindowInteropHelper(_window).Handle;
                 if (hwnd != IntPtr.Zero)
                 {
@@ -244,7 +244,7 @@ namespace SwiftList.App.Views.QuickSearchWindow
             {
                 _window.MenuPresenter.ExitActionsMode();
             }
-            
+
             _window.ViewModel.SearchQuery = string.Empty;
             try
             {

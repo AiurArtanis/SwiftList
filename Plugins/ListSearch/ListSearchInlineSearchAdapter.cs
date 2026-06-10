@@ -116,12 +116,12 @@ namespace SwiftList.Plugins.ListSearch
             var nativeRect = new Win32Api.RECT();
             if (Win32Api.GetWindowRect(targetHwnd, out nativeRect))
             {
-                rect = new AdapterRect 
-                { 
-                    Left = nativeRect.Left, 
-                    Top = nativeRect.Top, 
-                    Right = nativeRect.Right, 
-                    Bottom = nativeRect.Bottom 
+                rect = new AdapterRect
+                {
+                    Left = nativeRect.Left,
+                    Top = nativeRect.Top,
+                    Right = nativeRect.Right,
+                    Bottom = nativeRect.Bottom
                 };
                 return true;
             }

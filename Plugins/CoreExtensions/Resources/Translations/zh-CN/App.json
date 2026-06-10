@@ -232,6 +232,7 @@
   "Tray_ToggleHotkeys": "禁用快捷键",
   "Tray_Settings": "设置",
   "Tray_About": "关于",
+  "Tray_CleanExit": "干净退出",
   "Tray_Exit": "退出",
   "LogLevel_Error": "错误",
   "LogLevel_Warn": "警告",

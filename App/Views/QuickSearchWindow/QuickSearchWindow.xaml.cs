@@ -18,7 +18,6 @@ using Button = System.Windows.Controls.Button;
 using ListBox = System.Windows.Controls.ListBox;
 using Grid = System.Windows.Controls.Grid;
 using SwiftList.App.ViewModels.Search;
-
 namespace SwiftList.App
 {
     public partial class QuickSearchWindow : Window, ISearchWindow
@@ -26,9 +25,7 @@ namespace SwiftList.App
         private readonly QuickSearchViewModel _viewModel;
         private TrayIconService? _trayService;
         private ShellMenuPresenter? _menuPresenter;
-
         private bool _isFirstLoad = true;
-
         private readonly QuickSearchWindowController _controller;
         private readonly QuickSearchWindowInputHandler _inputHandler;
         private readonly QuickSearchWindowLayoutManager _layoutManager;
@@ -38,27 +35,30 @@ namespace SwiftList.App
             InitializeComponent();
             _viewModel = new QuickSearchViewModel();
             this.DataContext = _viewModel;
-            
             _controller = new QuickSearchWindowController(this);
             _inputHandler = new QuickSearchWindowInputHandler(this);
             _layoutManager = new QuickSearchWindowLayoutManager(this);
-            
             InitializeChildControls();
         }
 
         // ==========================================
+
         // Decoupled Property Exposures
+
         // ==========================================
+
         public ShellMenuPresenter? MenuPresenter => _menuPresenter;
         public QuickSearchViewModel ViewModel => _viewModel;
         public string SearchText => TxtSearch.Text;
 
         // ==========================================
+
         // Child Control Properties
+
         // ==========================================
+
         public TextBox TxtSearch => SearchBox.SearchTextBox;
         public TextBlock TxtPlaceholder => SearchBox.PlaceholderTextBlock;
-
         public UIElement ResultsPanel => ResultsPanelControl;
         public Border GridLoading => ResultsPanelControl.LoadingBorder;
         public System.Windows.Controls.Control ProgressLoading => ResultsPanelControl.LoadingProgressBar;
@@ -70,9 +70,7 @@ namespace SwiftList.App
         public Grid GridActions => ResultsPanelControl.ActionsGrid;
         public TextBlock TxtActionsTarget => ResultsPanelControl.ActionsTargetTextBlock;
         public ListBox LstActions => ResultsPanelControl.ActionsListBox;
-        
         public void UpdateActionsLayout() => _layoutManager.UpdateActionsLayout();
-
         public UIElement StatusBar => StatusBarControl;
         public System.Windows.Shapes.Ellipse DotStatus => StatusBarControl.StatusDot;
         public TextBlock TxtStatusInfo => StatusBarControl.StatusInfoTextBlock;
@@ -82,15 +80,12 @@ namespace SwiftList.App
             _menuPresenter = new ShellMenuPresenter(this);
             _trayService = new TrayIconService(_viewModel, ShowWindow, ToggleVisibility);
 
-
             // Wire up event handlers to subcontrols
+
             BtnOpenMore.Click += BtnOpenMore_Click;
-            LstResults.MouseDoubleClick += LstResults_MouseDoubleClick;
             LstResults.PreviewMouseLeftButtonUp += LstResults_PreviewMouseLeftButtonUp;
             LstResults.PreviewMouseRightButtonUp += LstResults_PreviewMouseRightButtonUp;
             LstResults.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler(OnResultsScrollChanged));
-
-            LstActions.MouseDoubleClick += _menuPresenter.HandleActionsMouseDoubleClick;
             LstActions.PreviewMouseLeftButtonUp += _menuPresenter.HandleActionsPreviewMouseLeftButtonUp;
 
             _viewModel.Results.CollectionChanged += (s, e) =>
@@ -112,19 +107,22 @@ namespace SwiftList.App
         {
             Logger.Log("[QuickSearchWindow] Window loaded. Registering hotkey and triggering index build.", LogLevel.Debug);
 
-
             // Start index build
+
             _viewModel.TriggerIndexBuild();
 
             // Position the window
+
             _controller.PositionWindow();
 
             // Focus search box or hide on first launch
+
             if (_isFirstLoad)
             {
                 _isFirstLoad = false;
                 this.Hide();
             }
+
             else
             {
                 TxtSearch.Focus();
@@ -132,14 +130,18 @@ namespace SwiftList.App
         }
 
         // ==========================================
+
         // Window Actions delegation
+
         // ==========================================
+
         public void ShowWindow() => _controller.ShowWindow(null);
         public void ShowWindow(string? initialQuery) => _controller.ShowWindow(initialQuery);
         public void HideWindow() => _controller.HideWindow(true);
         public void HideWindowNoRestore() => _controller.HideWindow(false);
         public void ToggleVisibility() => _controller.ToggleVisibility();
         public void OpenFileOrFolderExternal(string path) => FileExecutor.OpenFileOrFolder(path, TxtSearch.Text, HideWindow);
+        public void OpenFileOrFolderAsAdminExternal(string path) => FileExecutor.OpenFileOrFolderAsAdmin(path, TxtSearch.Text, HideWindow);
         public void LocateInExplorerExternal(string path) => FileExecutor.LocateInExplorer(path);
         public static T? FindVisualParentExternal<T>(DependencyObject? child) where T : DependencyObject => FindVisualParent<T>(child);
 
@@ -151,20 +153,13 @@ namespace SwiftList.App
                 {
                     _controller.HideWindow();
                 }
+
             }), DispatcherPriority.Background);
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             _inputHandler.HandleWindowPreviewKeyDown(e);
-        }
-
-        private void LstResults_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            if (LstResults.SelectedItem is AppSearchResult result)
-            {
-                ExecuteSearchResult(result);
-            }
         }
 
         private void BtnOpenMore_Click(object sender, RoutedEventArgs e)
@@ -177,11 +172,9 @@ namespace SwiftList.App
             var item = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
             if (item != null && item.Content is AppSearchResult result)
             {
-                if (result.FullPath == "__SHOW_MORE__")
-                {
-                    e.Handled = true;
-                    ExecuteSearchResult(result);
-                }
+                e.Handled = true;
+                bool asAdmin = Keyboard.Modifiers == SwiftList.App.Helpers.WpfUiHelper.GetWpfModifier(SwiftList.Core.UserSettings.Load().SelectIndexModifier);
+                ExecuteSearchResult(result, asAdmin);
             }
         }
 
@@ -201,24 +194,24 @@ namespace SwiftList.App
             while (child != null)
             {
                 if (child is T parent) return parent;
-
                 if (child is FrameworkContentElement fce)
                 {
                     child = fce.Parent;
                 }
+
                 else
                 {
                     child = System.Windows.Media.VisualTreeHelper.GetParent(child);
                 }
             }
+
             return null;
         }
 
-        private void ExecuteSearchResult(AppSearchResult result)
+        private void ExecuteSearchResult(AppSearchResult result, bool asAdmin = false)
         {
             if (result.IsSearchSectionHeader)
                 return;
-
             if (!result.IsPluginSearchAction && !result.IsInstantResult)
             {
                 SearchHistoryStore.Record(result.FullPath);
@@ -230,6 +223,7 @@ namespace SwiftList.App
                 if (PluginManager.Instance.TryExecuteSearchAction(result, this))
                 {
                 }
+
                 return;
             }
 
@@ -243,12 +237,19 @@ namespace SwiftList.App
             if (result.FullPath == "__SHOW_MORE__")
             {
                 HideWindowNoRestore();
-                FileExecutor.OpenFileOrFolder(result.FullPath, currentQuery, HideWindowNoRestore);
+                if (asAdmin)
+                    FileExecutor.OpenFileOrFolderAsAdmin(result.FullPath, currentQuery, HideWindowNoRestore);
+                else
+                    FileExecutor.OpenFileOrFolder(result.FullPath, currentQuery, HideWindowNoRestore);
             }
+
             else
             {
                 HideWindow();
-                FileExecutor.OpenFileOrFolder(result.FullPath, currentQuery, HideWindow);
+                if (asAdmin)
+                    FileExecutor.OpenFileOrFolderAsAdmin(result.FullPath, currentQuery, HideWindow);
+                else
+                    FileExecutor.OpenFileOrFolder(result.FullPath, currentQuery, HideWindow);
             }
         }
 
@@ -257,7 +258,6 @@ namespace SwiftList.App
             _viewModel.Dispose();
             _trayService?.Dispose();
             _menuPresenter?.Dispose();
-
             base.OnClosed(e);
         }
     }

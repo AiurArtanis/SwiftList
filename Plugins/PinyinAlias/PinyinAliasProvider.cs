@@ -146,13 +146,13 @@ namespace SwiftList.Plugins.PinyinAlias
         }
 
         private static void GenerateCombinations(
-            string[][] lists, 
-            int index, 
-            int currentFullLength, 
-            List<string> fullPinyins, 
-            List<string> initials, 
-            char[] fullBuffer, 
-            char[] initialsBuffer, 
+            string[][] lists,
+            int index,
+            int currentFullLength,
+            List<string> fullPinyins,
+            List<string> initials,
+            char[] fullBuffer,
+            char[] initialsBuffer,
             ref int count)
         {
             if (count >= 32) return; // Limit to 32 combinations to prevent combinatorial explosion

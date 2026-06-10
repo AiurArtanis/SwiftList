@@ -73,7 +73,7 @@
             </Grid.RowDefinitions>
 
             <!-- ═══════════ 1. Search Bar ═══════════ -->
-            <local:SearchBoxControl x:Name="SearchBox" Grid.Row="0"/>
+            <local:SearchBoxControl x:Name="SearchBox" Grid.Row="0" SearchText="{Binding SearchQuery, Mode=TwoWay}"/>
 
             <!-- ═══════════ 2. Separator ═══════════ -->
             <Rectangle x:Name="ResultsSeparator"
@@ -84,6 +84,9 @@
 
             <!-- ═══════════ 3. Results Panel ═══════════ -->
             <local:ResultsControl x:Name="ResultsPanelControl" Grid.Row="2" 
+                                  ItemsSource="{Binding Results}"
+                                  SelectedItem="{Binding SelectedResult, Mode=TwoWay}"
+                                  ViewMode="List"
                                   Visibility="{Binding ResultsPanelVisibility}"/>
 
             <!-- ═══════════ 4. Status bar (shown when loading or ready) ═══════════ -->

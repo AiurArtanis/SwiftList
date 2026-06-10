@@ -64,7 +64,7 @@ namespace SwiftList.Core
                 return false;
 
             string normalized = NormalizePath(path, isDirectory);
-            
+
             // 1. Check excluded roots on the full normalized path
             foreach (string excludedRoot in _excludedRoots)
             {

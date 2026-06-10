@@ -127,7 +127,7 @@ namespace SwiftList.Plugins.CoreExtensions.Providers
                 for (int i = 0; i < count; i++)
                 {
                     try
-                      {
+                    {
                         dynamic? window = shellWindows.Item(i);
                         if (window == null) continue;
 
@@ -141,7 +141,7 @@ namespace SwiftList.Plugins.CoreExtensions.Providers
                                 {
                                     Guid serviceId = new Guid("4C96BE40-915C-11CF-99D3-00AA004AE837"); // SID_STopLevelBrowser
                                     Guid interfaceId = new Guid("000214E2-0000-0000-C000-000000000046"); // IID_IShellBrowser
-                                    
+
                                     int hr = serviceProvider.QueryService(ref serviceId, ref interfaceId, out IntPtr shellBrowserPtr);
                                     if (hr == 0 && shellBrowserPtr != IntPtr.Zero)
                                     {

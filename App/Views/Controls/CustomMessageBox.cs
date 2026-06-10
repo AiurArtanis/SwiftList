@@ -63,7 +63,7 @@ namespace SwiftList.App.Views.Controls
         private static MessageBoxResult ShowInternal(Window? owner, string messageBoxText, string caption, MessageBoxButton button, MessageBoxImage icon)
         {
             var win = new CustomMessageBoxWindow(messageBoxText, caption, button, icon);
-            
+
             // Set Owner to the specified window or attempt to find the active window
             if (owner != null)
             {
@@ -80,7 +80,7 @@ namespace SwiftList.App.Views.Controls
                         break;
                     }
                 }
-                
+
                 if (win.Owner == null && Application.Current.MainWindow != null && Application.Current.MainWindow != win && Application.Current.MainWindow.IsVisible)
                 {
                     win.Owner = Application.Current.MainWindow;

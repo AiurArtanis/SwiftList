@@ -1,8 +1,6 @@
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-
 namespace SwiftList.App.Services
 {
     /// <summary>
@@ -18,11 +16,6 @@ namespace SwiftList.App.Services
         {
             _presenter = presenter;
             _view = view;
-        }
-
-        public void HandleActionsMouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            _presenter.ExecuteSelectedAction();
         }
 
         public void HandleActionsPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -42,6 +35,7 @@ namespace SwiftList.App.Services
                     _view.LstActions.SelectedItem = actionItem;
                     _presenter.EnterSubMenu();
                 }
+
                 else
                 {
                     e.Handled = true;
@@ -56,12 +50,12 @@ namespace SwiftList.App.Services
             while (child != null)
             {
                 if (child is T parent) return parent;
-
                 if (child is FrameworkContentElement fce)
                     child = fce.Parent;
                 else
                     child = System.Windows.Media.VisualTreeHelper.GetParent(child);
             }
+
             return null;
         }
     }

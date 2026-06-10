@@ -82,7 +82,7 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                 SwiftList.Core.Hook.ExplorerTracker.RECT rect;
                 // Check if TryGetActiveWindowRect succeeds AND returns a valid non-empty window size (width and height > 100)
                 bool hasValidRect = tracker.TryGetActiveWindowRect(out rect) && (rect.Right - rect.Left > 100 && rect.Bottom - rect.Top > 100);
-                
+
                 if (hasValidRect)
                 {
                     double winLeft = rect.Left * dpiScaleX;
@@ -129,7 +129,7 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                 else
                 {
                     // Fallback: place the window safely in the bottom-right corner of the active window's monitor work area so it is fully visible
-                    var screen = tracker.ActiveHwnd != IntPtr.Zero 
+                    var screen = tracker.ActiveHwnd != IntPtr.Zero
                         ? System.Windows.Forms.Screen.FromHandle(tracker.ActiveHwnd)
                         : System.Windows.Forms.Screen.PrimaryScreen ?? System.Windows.Forms.Screen.AllScreens[0];
                     var workingArea = screen.WorkingArea;

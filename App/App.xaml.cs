@@ -10,7 +10,6 @@ using SwiftList.App.ViewModels.Settings;
 using SwiftList.App.Services;
 using Application = System.Windows.Application;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
-
 namespace SwiftList.App
 {
     public partial class App : Application
@@ -18,14 +17,13 @@ namespace SwiftList.App
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
         private static extern bool AllowSetForegroundWindow(int dwProcessId);
-
         private System.Threading.Mutex? _appMutex;
         public static SwiftList.Core.Hook.HookIpcClient? HookClient { get; private set; }
 
-
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
             // Initialize logger first so we can log elevation decisions and issues
+
             Logger.Initialize("app.log", overwrite: true);
             var settings = UserSettings.Load();
             Logger.MinimumLevel = ExperienceSettingsViewModel.ParseLogLevel(settings.LogLevel);
@@ -33,12 +31,12 @@ namespace SwiftList.App
             Logger.Log($"Application starting with arguments: {string.Join(" ", e.Args)}");
             Logger.Log($"[App] Running as Administrator: {ElevationManager.IsRunningAsAdmin()}");
 
-
             // Single instance check per user session
+
             // We append the username to guarantee multi-user isolation on the same machine
+
             string mutexName = $@"Local\SwiftList_App_{Environment.UserName}";
             _appMutex = new System.Threading.Mutex(true, mutexName, out bool createdNew);
-
             if (!createdNew)
             {
                 try
@@ -52,10 +50,12 @@ namespace SwiftList.App
                         }
                     }
                 }
+
                 catch { }
 
                 // Send activation command to the already running process and then exit immediately
-                AppPipeService.SendActivateSignal();
+
+                await AppPipeService.SendActivateSignalAsync();
                 Shutdown();
                 return;
             }
@@ -64,12 +64,15 @@ namespace SwiftList.App
             HookClient = new SwiftList.Core.Hook.HookIpcClient(serviceExe, settings.AutoElevateIfAdmin);
 
             SwiftList.PluginSdk.ListControlIpcBridge.GetListItemsFunc = hwnd =>
+
                 HookClient != null ? SwiftList.Core.Hook.ListIpcCoordinator.GetListItems(hwnd, HookClient.SendMessage) : Array.Empty<string>();
 
             SwiftList.PluginSdk.ListControlIpcBridge.GetSelectedIndicesFunc = (hwnd, className) =>
+
                 HookClient != null ? SwiftList.Core.Hook.ListIpcCoordinator.GetSelectedIndices(hwnd, className, HookClient.SendMessage) : Array.Empty<int>();
 
             SwiftList.PluginSdk.ListControlIpcBridge.SelectItemAction = (hwnd, className, index, clearOthers, selectState) =>
+
                 HookClient?.SendMessage(new SwiftList.Core.IpcMessage
                 {
                     Id = SwiftList.Core.IpcMessageId.SelectItem,
@@ -78,15 +81,19 @@ namespace SwiftList.App
                     IntVal = index,
                     BoolVal = clearOthers,
                     IsDesktop = selectState
+
                 });
 
             SwiftList.PluginSdk.ListControlIpcBridge.ClearSelectionAction = (hwnd, className) =>
+
                 HookClient?.SendMessage(new SwiftList.Core.IpcMessage
                 {
                     Id = SwiftList.Core.IpcMessageId.ClearSelection,
                     Hwnd = hwnd.ToInt64(),
                     StringVal1 = className
+
                 });
+
             HookClient.OnActivated += () =>
             {
                 Dispatcher.BeginInvoke(new Action(() =>
@@ -98,6 +105,7 @@ namespace SwiftList.App
             HookClient.Start();
 
             // Set up global exception handlers
+
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
             {
                 LogException("AppDomain UnhandledException", args.ExceptionObject as Exception);
@@ -106,7 +114,9 @@ namespace SwiftList.App
             DispatcherUnhandledException += (s, args) =>
             {
                 LogException("DispatcherUnhandledException", args.Exception);
+
                 args.Handled = true; // Prevent crash if possible
+
             };
 
             TaskScheduler.UnobservedTaskException += (s, args) =>
@@ -116,41 +126,47 @@ namespace SwiftList.App
             };
 
             // Force load all plugins (actions and alias providers) on startup
+
             _ = SwiftList.App.Services.PluginManager.Instance;
 
             // Now that all plugins are loaded, initialize translations.
+
             // This must happen after PluginManager to avoid a Lazy<T> circular initialization crash.
+
             try
             {
                 // Register TranslationService delegate for decoupled plugins
+
                 SwiftList.PluginSdk.TranslationService.LookupFunc = key => SwiftList.App.Services.TranslationManager.Instance[key];
 
                 // Register Logger delegate for decoupled plugins
+
                 SwiftList.PluginSdk.Logger.LogAction = (msg, lvl) =>
                 {
                     SwiftList.Core.Logger.Log(msg, (SwiftList.Core.LogLevel)(int)lvl);
                 };
-
                 SwiftList.App.Services.TranslationManager.Instance.ReloadTranslations();
                 Logger.Log("[App] TranslationManager initialized.");
 
                 // Initialize ThemeManager with the saved theme setting
+
                 ThemeManager.Instance.Initialize(settings.Theme);
                 Logger.Log($"[App] ThemeManager initialized with theme: {settings.Theme}");
             }
+
             catch (Exception ex)
             {
                 Logger.Log($"[App] Failed to initialize TranslationManager or ThemeManager: {ex.Message}", LogLevel.Error);
             }
 
             // Start the activation named pipe server to listen to subsequent launches
-            AppPipeService.StartPipeServer();
 
+            _ = AppPipeService.StartPipeServerAsync();
             Logger.Log("Starting normal WPF GUI client mode.");
             base.OnStartup(e);
 
             // After QuickSearchWindow is created (via StartupUri), start InlineSearchManager
-            Dispatcher.BeginInvoke(new Action(() =>
+            _ = Dispatcher.BeginInvoke(new Action(() =>
             {
                 var quickSearchWindow = Current.MainWindow as QuickSearchWindow;
                 if (quickSearchWindow != null)
@@ -161,19 +177,20 @@ namespace SwiftList.App
             }), System.Windows.Threading.DispatcherPriority.Loaded);
 
             // Background update check on startup
+
             _ = Task.Run(async () =>
             {
                 try
                 {
                     // Delay slightly to ensure app is fully initialized and main window is up
+
                     await Task.Delay(3000);
-                    
                     var settings = UserSettings.Load();
                     if (!settings.AutoCheckUpdates)
                     {
                         return;
                     }
-                    
+
                     var release = await UpdateService.Instance.CheckForUpdatesAsync();
                     if (release != null)
                     {
@@ -182,6 +199,7 @@ namespace SwiftList.App
                         if (Version.TryParse(cleanTag, out var latestVersion) && latestVersion > currentVersion)
                         {
                             // If auto silent update is enabled and user is admin, prompt user and execute silent update
+
                             if (settings.AutoSilentUpdate && UpdateService.Instance.IsUserAdmin())
                             {
                                 var zipAsset = Array.Find(release.Assets, a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
@@ -192,14 +210,13 @@ namespace SwiftList.App
                                         string promptFormat = TranslationManager.Instance["About_SilentUpdatePrompt"];
                                         string prompt = string.Format(promptFormat, release.TagName);
                                         string title = TranslationManager.Instance["About_CheckUpdate"];
-                                        
                                         MessageBox.Show(prompt, title, MessageBoxButton.OK, MessageBoxImage.Information);
-                                        
                                         bool success = await UpdateService.Instance.StartSilentUpdateAsync(zipAsset.BrowserDownloadUrl);
                                         if (success)
                                         {
-                                            Application.Current.Shutdown();
+                                            TrayCleanExitHelper.CleanExit();
                                         }
+
                                     }));
                                     return;
                                 }
@@ -209,19 +226,19 @@ namespace SwiftList.App
                             {
                                 string promptFormat = TranslationManager.Instance["About_NewVersionAvailablePrompt"];
                                 string prompt = string.Format(promptFormat, release.TagName);
-                                
                                 string title = TranslationManager.Instance["About_CheckUpdate"];
-                                
                                 MessageBox.Show(prompt, title, MessageBoxButton.OK, MessageBoxImage.Information);
                                 ShowSettingsWindow("About");
                             }));
                         }
                     }
                 }
+
                 catch (Exception ex)
                 {
                     Logger.Log($"[App] Background startup update check failed: {ex.Message}", LogLevel.Warn);
                 }
+
             });
         }
 
@@ -234,18 +251,22 @@ namespace SwiftList.App
         {
             string details = ex != null ? ex.ToString() : "Null exception object";
             Logger.Log($"CRITICAL CRASH ({source}):\n{details}", LogLevel.Error);
-            
+
             // Show message box to alert user
+
             MessageBox.Show(string.Format(SwiftList.App.Services.TranslationManager.Instance["Crash_Message"], source, ex?.Message, Logger.LogDir), SwiftList.App.Services.TranslationManager.Instance["Crash_Title"], MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         public static void ShowSettingsWindow(string? targetSection = null)
+
             => AppWindowManager.ShowSettingsWindow(targetSection);
 
         public static void ShowSearchWindow()
+
             => AppWindowManager.ShowSearchWindow();
 
         public static void CloseAllManagedWindows()
+
             => AppWindowManager.CloseAllManagedWindows();
 
         protected override void OnExit(ExitEventArgs e)
@@ -253,9 +274,7 @@ namespace SwiftList.App
             HookClient?.Stop();
             HookClient?.Dispose();
             HookClient = null;
-
             AppPipeService.StopServer();
-
             SwiftList.App.Services.InlineSearchManager.Instance.Dispose();
             CloseAllManagedWindows();
             if (_appMutex != null)
@@ -264,9 +283,12 @@ namespace SwiftList.App
                 {
                     _appMutex.ReleaseMutex();
                 }
+
                 catch { }
+
                 _appMutex.Dispose();
             }
+
             base.OnExit(e);
         }
     }

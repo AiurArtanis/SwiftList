@@ -5,16 +5,24 @@ using System.Threading.Tasks;
 using System.Windows;
 using SwiftList.Core;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
-
 namespace SwiftList.App.Services
 {
     public static class FileExecutor
     {
         public static void OpenFileOrFolder(string path, string currentSearchText = "", Action? onHideWindow = null)
         {
+            OpenFileOrFolderCore(path, currentSearchText, onHideWindow, asAdmin: false);
+        }
+
+        public static void OpenFileOrFolderAsAdmin(string path, string currentSearchText = "", Action? onHideWindow = null)
+        {
+            OpenFileOrFolderCore(path, currentSearchText, onHideWindow, asAdmin: true);
+        }
+
+        private static void OpenFileOrFolderCore(string path, string currentSearchText, Action? onHideWindow, bool asAdmin)
+        {
             if (path == "__NO_RESULTS__")
                 return;
-
             if (path == "__SHOW_MORE__")
             {
                 var searchWin = new SearchWindow(currentSearchText);
@@ -28,13 +36,56 @@ namespace SwiftList.App.Services
                 if (File.Exists(path) || Directory.Exists(path))
                 {
                     bool isFile = File.Exists(path);
-                    var startInfo = new ProcessStartInfo
-                    {
-                        FileName = path,
-                        UseShellExecute = true
-                    };
+                    ProcessStartInfo startInfo;
 
-                    if (isFile)
+                    if (asAdmin)
+                    {
+                        if (isFile)
+                        {
+                            string ext = Path.GetExtension(path).ToLowerInvariant();
+                            bool isExecutable = ext == ".exe" || ext == ".bat" || ext == ".cmd" || ext == ".com" || ext == ".scr" || ext == ".msi" || ext == ".lnk";
+
+                            if (isExecutable)
+                            {
+                                startInfo = new ProcessStartInfo
+                                {
+                                    FileName = path,
+                                    UseShellExecute = true,
+                                    Verb = "runas"
+                                };
+                            }
+                            else
+                            {
+                                startInfo = new ProcessStartInfo
+                                {
+                                    FileName = "notepad.exe",
+                                    Arguments = $"\"{path}\"",
+                                    UseShellExecute = true,
+                                    Verb = "runas"
+                                };
+                            }
+                        }
+                        else
+                        {
+                            startInfo = new ProcessStartInfo
+                            {
+                                FileName = "cmd.exe",
+                                Arguments = $"/k cd /d \"{path}\"",
+                                UseShellExecute = true,
+                                Verb = "runas"
+                            };
+                        }
+                    }
+                    else
+                    {
+                        startInfo = new ProcessStartInfo
+                        {
+                            FileName = path,
+                            UseShellExecute = true
+                        };
+                    }
+
+                    if (isFile && !asAdmin)
                     {
                         string? workingDirectory = Path.GetDirectoryName(path);
                         if (!string.IsNullOrWhiteSpace(workingDirectory))
@@ -50,17 +101,20 @@ namespace SwiftList.App.Services
                     {
                         Process.Start(startInfo);
                     }
+
                     catch (Exception startEx)
                     {
                         Logger.Log($"[FileExecutor] Process.Start failed for '{path}': {startEx.Message}", SwiftList.Core.LogLevel.Error);
                         throw;
                     }
                 }
+
                 else
                 {
                     MessageBox.Show(string.Format(TranslationManager.Instance["Executor_NotExist"], path), TranslationManager.Instance["Executor_PromptTitle"], MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
+
             catch (Exception ex)
             {
                 Logger.Log($"[FileExecutor] OpenFileOrFolder failed for '{path}': {ex}", SwiftList.Core.LogLevel.Error);
@@ -74,6 +128,7 @@ namespace SwiftList.App.Services
             {
                 Process.Start("explorer.exe", $"/select,\"{path}\"");
             }
+
             catch (Exception ex)
             {
                 Logger.Log($"[FileExecutor] Locate in explorer failed for '{path}': {ex.Message}", SwiftList.Core.LogLevel.Error);
@@ -84,12 +139,10 @@ namespace SwiftList.App.Services
         public static bool TryLocateInExistingExplorer(string path, IntPtr explorerHwnd)
         {
             if (explorerHwnd == IntPtr.Zero) return false;
-
             try
             {
                 dynamic? window = FindExplorerWindow(explorerHwnd);
                 if (window == null) return false;
-
                 string? targetFolder = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
                 if (string.IsNullOrWhiteSpace(targetFolder) || !Directory.Exists(targetFolder))
                 {
@@ -97,7 +150,6 @@ namespace SwiftList.App.Services
                 }
 
                 window.Navigate2(targetFolder);
-
                 if (File.Exists(path))
                 {
                     SelectItemInExplorerLater(path, explorerHwnd);
@@ -105,6 +157,7 @@ namespace SwiftList.App.Services
 
                 return true;
             }
+
             catch (Exception ex)
             {
                 Logger.Log($"[FileExecutor] Locate in existing explorer failed for '{path}': {ex.Message}", SwiftList.Core.LogLevel.Error);
@@ -112,27 +165,24 @@ namespace SwiftList.App.Services
             }
         }
 
-
         private static dynamic? FindExplorerWindow(IntPtr explorerHwnd)
         {
             var shellWindowsType = Type.GetTypeFromCLSID(new Guid("9BA05972-F6A8-11CF-A442-00A0C90A8F39"));
             if (shellWindowsType == null) return null;
-
             dynamic shellWindows = Activator.CreateInstance(shellWindowsType)!;
             int count = shellWindows.Count;
-
             for (int i = 0; i < count; i++)
             {
                 try
                 {
                     dynamic? window = shellWindows.Item(i);
                     if (window == null) continue;
-
                     if ((IntPtr)window.HWND == explorerHwnd)
                     {
                         return window;
                     }
                 }
+
                 catch { }
             }
 
@@ -147,19 +197,17 @@ namespace SwiftList.App.Services
             {
                 dynamic? window = FindExplorerWindow(explorerHwnd);
                 if (window == null) return;
-
                 string name = Path.GetFileName(path);
                 if (string.IsNullOrEmpty(name)) return;
-
                 dynamic folder = window.Document.Folder;
                 dynamic? item = folder.ParseName(name);
                 if (item == null) return;
-
                 const int svsiSelect = 0x1;
                 const int svsiDeselectOthers = 0x4;
                 const int svsiEnsureVisible = 0x8;
                 window.Document.SelectItem(item, svsiSelect | svsiDeselectOthers | svsiEnsureVisible);
             }
+
             catch (Exception ex)
             {
                 Logger.Log($"[FileExecutor] Select item in existing explorer failed for '{path}': {ex.Message}", SwiftList.Core.LogLevel.Error);

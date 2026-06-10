@@ -125,7 +125,7 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                     {
                         string qsMod = quickSwitch.Modifier;
                         if (string.Equals(qsMod, "Control", StringComparison.OrdinalIgnoreCase)) qsMod = "Ctrl";
-                        
+
                         string qsKey = quickSwitch.Key;
                         if (string.Equals(qsKey, "Space", StringComparison.OrdinalIgnoreCase)) qsKey = "Space";
                         else if (string.Equals(qsKey, "Enter", StringComparison.OrdinalIgnoreCase)) qsKey = "Enter";

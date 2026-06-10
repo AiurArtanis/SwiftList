@@ -134,7 +134,7 @@ namespace SwiftList.Core.Indexer.Usn
                     int err = Marshal.GetLastWin32Error();
                     if (err == Win32Api.ERROR_HANDLE_EOF)
                         break;
-                    
+
                     Logger.Log($"[JournalReader] FSCTL_ENUM_USN_DATA on {drive} failed. Error: {err}", SwiftList.Core.LogLevel.Error);
                     break;
                 }
@@ -162,7 +162,7 @@ namespace SwiftList.Core.Indexer.Usn
                     try
                     {
                         var record = UsnRecordParser.ParseRecord(recordSpan);
-                        
+
                         driveSearchItems[record.FileReferenceNumber] = (record.FileName, record.ParentFileReferenceNumber, record.IsDirectory);
                     }
                     catch (Exception ex)

@@ -35,7 +35,7 @@ namespace SwiftList.PluginSdk
     {
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        
+
         /// <summary>Optional vector path string for a custom icon.</summary>
         public string? IconData { get; set; }
 

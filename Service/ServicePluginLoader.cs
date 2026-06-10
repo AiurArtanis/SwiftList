@@ -117,18 +117,18 @@ namespace SwiftList.Service
                         var settings = UserSettings.Load();
                         // Match the same ID format used by App's ComponentFilter
                         string idInlineSearch = $"{dllName}::InlineSearchAdapter::{typeName}";
-                        string idFileDialog   = $"{dllName}::FileDialogAdapter::{typeName}";
-                        string idPathCollect  = $"{dllName}::ActivePathCollector::{typeName}";
+                        string idFileDialog = $"{dllName}::FileDialogAdapter::{typeName}";
+                        string idPathCollect = $"{dllName}::ActivePathCollector::{typeName}";
                         return !settings.DisabledPluginComponents.Contains(idInlineSearch, StringComparer.OrdinalIgnoreCase)
-                            && !settings.DisabledPluginComponents.Contains(idFileDialog,   StringComparer.OrdinalIgnoreCase)
-                            && !settings.DisabledPluginComponents.Contains(idPathCollect,  StringComparer.OrdinalIgnoreCase);
+                            && !settings.DisabledPluginComponents.Contains(idFileDialog, StringComparer.OrdinalIgnoreCase)
+                            && !settings.DisabledPluginComponents.Contains(idPathCollect, StringComparer.OrdinalIgnoreCase);
                     }
                     catch { return true; }
                 }
 
-                InlineSearchAdapterRegistry.FilterFunc  = a => IsAdapterEnabled(a);
-                FileDialogAdapterRegistry.FilterFunc    = a => IsAdapterEnabled(a);
-                ActivePathCollectorRegistry.FilterFunc  = a => IsAdapterEnabled(a);
+                InlineSearchAdapterRegistry.FilterFunc = a => IsAdapterEnabled(a);
+                FileDialogAdapterRegistry.FilterFunc = a => IsAdapterEnabled(a);
+                ActivePathCollectorRegistry.FilterFunc = a => IsAdapterEnabled(a);
 
                 // Now register alias providers (this will trigger provider.Name evaluation)
                 foreach (var provider in aliasProviders)

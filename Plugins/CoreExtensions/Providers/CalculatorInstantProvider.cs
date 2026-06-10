@@ -113,18 +113,18 @@ namespace SwiftList.Plugins.CoreExtensions.Providers
                 yield break;
 
             // Must contain at least one digit or a constant to be a valid expression
-            bool hasDigitOrConstant = trimmed.Any(char.IsDigit) || 
-                                      trimmed.Contains("pi", StringComparison.OrdinalIgnoreCase) || 
-                                      trimmed.Contains("e", StringComparison.OrdinalIgnoreCase) || 
+            bool hasDigitOrConstant = trimmed.Any(char.IsDigit) ||
+                                      trimmed.Contains("pi", StringComparison.OrdinalIgnoreCase) ||
+                                      trimmed.Contains("e", StringComparison.OrdinalIgnoreCase) ||
                                       trimmed.Contains("π");
             if (!hasDigitOrConstant)
                 yield break;
 
             // Prevent matching simple alphabetic text search keywords (e.g. "excel", "calculator" itself)
             // If the query is pure letters and is not a constant, skip
-            if (trimmed.All(char.IsLetter) && 
-                !string.Equals(trimmed, "pi", StringComparison.OrdinalIgnoreCase) && 
-                !string.Equals(trimmed, "e", StringComparison.OrdinalIgnoreCase) && 
+            if (trimmed.All(char.IsLetter) &&
+                !string.Equals(trimmed, "pi", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(trimmed, "e", StringComparison.OrdinalIgnoreCase) &&
                 trimmed != "π")
             {
                 yield break;

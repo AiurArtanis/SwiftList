@@ -15,17 +15,17 @@ namespace SwiftList.Core.Hook.InlineSearch
             if (key == "ESC" || key == "ESCAPE") return 0x1B;
             if (key == "BACK" || key == "BACKSPACE") return 0x08;
             if (key == "CAPSLOCK") return 0x14;
-            
+
             if (key.Length == 1 && key[0] >= 'A' && key[0] <= 'Z')
                 return key[0];
             if (key.Length == 1 && key[0] >= '0' && key[0] <= '9')
                 return key[0];
-                
+
             if (key.StartsWith("F") && key.Length > 1 && int.TryParse(key.Substring(1), out int fNum) && fNum >= 1 && fNum <= 12)
             {
                 return 0x6F + fNum; // F1 is 0x70, F12 is 0x7B
             }
-            
+
             return 0;
         }
 
@@ -34,7 +34,7 @@ namespace SwiftList.Core.Hook.InlineSearch
             bool ctrlDown = (KeyboardNativeMethods.GetKeyState(0x11) & 0x8000) != 0;
             bool altDown = (KeyboardNativeMethods.GetKeyState(0x12) & 0x8000) != 0;
             bool shiftDown = (KeyboardNativeMethods.GetKeyState(0x10) & 0x8000) != 0;
-            bool winDown = (KeyboardNativeMethods.GetKeyState(0x5B) & 0x8000) != 0 || 
+            bool winDown = (KeyboardNativeMethods.GetKeyState(0x5B) & 0x8000) != 0 ||
                            (KeyboardNativeMethods.GetKeyState(0x5C) & 0x8000) != 0;
 
             string expected = expectedModifier?.Trim().ToUpperInvariant() ?? "NONE";
@@ -48,7 +48,7 @@ namespace SwiftList.Core.Hook.InlineSearch
                 return winDown && !ctrlDown && !altDown && !shiftDown;
             if (expected == "NONE")
                 return !ctrlDown && !altDown && !shiftDown && !winDown;
-                
+
             return false;
         }
 
@@ -57,7 +57,7 @@ namespace SwiftList.Core.Hook.InlineSearch
             bool ctrlDown = (KeyboardNativeMethods.GetKeyState(0x11) & 0x8000) != 0;
             bool altDown = (KeyboardNativeMethods.GetKeyState(0x12) & 0x8000) != 0;
             bool shiftDown = (KeyboardNativeMethods.GetKeyState(0x10) & 0x8000) != 0;
-            bool winDown = (KeyboardNativeMethods.GetKeyState(0x5B) & 0x8000) != 0 || 
+            bool winDown = (KeyboardNativeMethods.GetKeyState(0x5B) & 0x8000) != 0 ||
                            (KeyboardNativeMethods.GetKeyState(0x5C) & 0x8000) != 0;
 
             string exp = expected?.Trim().ToUpperInvariant() ?? "CONTROL";
@@ -106,7 +106,7 @@ namespace SwiftList.Core.Hook.InlineSearch
                     if (string.IsNullOrEmpty(blacklisted)) continue;
                     if (blacklisted.Equals(procName, StringComparison.OrdinalIgnoreCase) ||
                         blacklisted.Equals(procName + ".exe", StringComparison.OrdinalIgnoreCase) ||
-                        (procName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && 
+                        (procName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
                          blacklisted.Equals(procName.Substring(0, procName.Length - 4), StringComparison.OrdinalIgnoreCase)))
                     {
                         return true;

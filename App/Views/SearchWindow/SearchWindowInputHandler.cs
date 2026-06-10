@@ -6,9 +6,9 @@ using System.Windows.Interop;
 using SwiftList.App.Services;
 using SwiftList.PluginSdk;
 using SwiftList.Core;
+using SwiftList.App.Helpers;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using ListViewItem = System.Windows.Controls.ListViewItem;
-
 namespace SwiftList.App.Views.SearchWindow
 {
     public class SearchWindowInputHandler
@@ -25,6 +25,7 @@ namespace SwiftList.App.Views.SearchWindow
             var menuPresenter = _window.MenuPresenter;
 
             // Route actions mode keys if active
+
             if (menuPresenter != null && menuPresenter.IsInActionsMode)
             {
                 if (e.Key == Key.Escape)
@@ -77,6 +78,7 @@ namespace SwiftList.App.Views.SearchWindow
             }
 
             // Normal mode keys
+
             if (Keyboard.FocusedElement == _window.TxtSearchBoxControl &&
                 (e.Key == Key.Down || e.Key == Key.Up || e.Key == Key.Enter))
             {
@@ -90,16 +92,19 @@ namespace SwiftList.App.Views.SearchWindow
                 {
                     _window.Close();
                 }
+
                 else
                 {
                     _window.TxtSearchBoxControl.Text = string.Empty;
                     _window.TxtSearchBoxControl.Focus();
                 }
+
                 e.Handled = true;
                 return;
             }
 
             // Right arrow key enters Actions Mode if caret is at the end
+
             if (e.Key == Key.Right && IsSearchCaretAtEnd())
             {
                 if (_window.LstGridResultsControl.SelectedItem is AppSearchResult result)
@@ -118,19 +123,22 @@ namespace SwiftList.App.Views.SearchWindow
                 MoveSelection(1);
                 e.Handled = true;
             }
+
             else if (e.Key == Key.Up)
             {
                 MoveSelection(-1);
                 e.Handled = true;
             }
+
             else if (e.Key == Key.Enter)
             {
-                OpenSelectedResult();
+                bool asAdmin = Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
+                OpenSelectedResult(asAdmin: asAdmin);
                 e.Handled = true;
             }
         }
 
-        public void HandleLstGridResultsMouseDoubleClick(MouseButtonEventArgs e)
+        public void HandleLstGridResultsPreviewMouseLeftButtonUp(MouseButtonEventArgs e)
         {
             var depObj = e.OriginalSource as DependencyObject;
             while (depObj != null && !(depObj is ListViewItem))
@@ -139,12 +147,22 @@ namespace SwiftList.App.Views.SearchWindow
                 {
                     return; // Ignore double clicks on column headers!
                 }
+
                 depObj = System.Windows.Media.VisualTreeHelper.GetParent(depObj);
             }
 
-            if (depObj is ListViewItem)
+            if (depObj is ListViewItem item && item.Content is AppSearchResult result)
             {
-                OpenSelectedResult();
+                e.Handled = true;
+                bool asAdmin = Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
+                if (asAdmin)
+                {
+                    FileExecutor.OpenFileOrFolderAsAdmin(result.FullPath);
+                }
+                else
+                {
+                    FileExecutor.OpenFileOrFolder(result.FullPath);
+                }
             }
         }
 
@@ -152,16 +170,20 @@ namespace SwiftList.App.Views.SearchWindow
         {
             if (e.Key == Key.Enter)
             {
-                OpenSelectedResult();
+                bool asAdmin = Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
+                OpenSelectedResult(asAdmin: asAdmin);
                 e.Handled = true;
             }
         }
 
-        public void OpenSelectedResult()
+        public void OpenSelectedResult(bool asAdmin = false)
         {
             if (_window.LstGridResultsControl.SelectedItem is AppSearchResult selected)
             {
-                FileExecutor.OpenFileOrFolder(selected.FullPath);
+                if (asAdmin)
+                    FileExecutor.OpenFileOrFolderAsAdmin(selected.FullPath);
+                else
+                    FileExecutor.OpenFileOrFolder(selected.FullPath);
             }
         }
 
@@ -192,8 +214,9 @@ namespace SwiftList.App.Views.SearchWindow
             {
                 e.Handled = true;
                 _window.LstGridResultsControl.SelectedItem = result;
-                
+
                 // Trigger the shared premium actions context menu panel overlay
+
                 _window.MenuPresenter.EnterActionsMode(result);
             }
         }
@@ -201,7 +224,9 @@ namespace SwiftList.App.Views.SearchWindow
         private bool IsSearchCaretAtEnd()
         {
             return _window.TxtSearchBoxControl.IsKeyboardFocusWithin
+
                    && _window.TxtSearchBoxControl.SelectionLength == 0
+
                    && _window.TxtSearchBoxControl.CaretIndex >= _window.TxtSearchBoxControl.Text.Length;
         }
     }

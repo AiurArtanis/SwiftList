@@ -55,16 +55,16 @@ namespace SwiftList.App.Views.Converters
 
             return type switch
             {
-                PluginComponentType.Action              => new SolidColorBrush(WpfColor.FromRgb(0x3B, 0x82, 0xF6)),
-                PluginComponentType.DynamicProvider     => new SolidColorBrush(WpfColor.FromRgb(0x8B, 0x5C, 0xF6)),
-                PluginComponentType.InstantProvider     => new SolidColorBrush(WpfColor.FromRgb(0x10, 0xB9, 0x81)),
-                PluginComponentType.FilterProvider      => new SolidColorBrush(WpfColor.FromRgb(0xF5, 0x9E, 0x0B)),
-                PluginComponentType.ColumnProvider      => new SolidColorBrush(WpfColor.FromRgb(0x63, 0x66, 0xF1)),
-                PluginComponentType.AliasProvider       => new SolidColorBrush(WpfColor.FromRgb(0xEC, 0x48, 0x99)),
+                PluginComponentType.Action => new SolidColorBrush(WpfColor.FromRgb(0x3B, 0x82, 0xF6)),
+                PluginComponentType.DynamicProvider => new SolidColorBrush(WpfColor.FromRgb(0x8B, 0x5C, 0xF6)),
+                PluginComponentType.InstantProvider => new SolidColorBrush(WpfColor.FromRgb(0x10, 0xB9, 0x81)),
+                PluginComponentType.FilterProvider => new SolidColorBrush(WpfColor.FromRgb(0xF5, 0x9E, 0x0B)),
+                PluginComponentType.ColumnProvider => new SolidColorBrush(WpfColor.FromRgb(0x63, 0x66, 0xF1)),
+                PluginComponentType.AliasProvider => new SolidColorBrush(WpfColor.FromRgb(0xEC, 0x48, 0x99)),
                 PluginComponentType.ActivePathCollector => new SolidColorBrush(WpfColor.FromRgb(0x0D, 0x94, 0x88)),
-                PluginComponentType.FileDialogAdapter   => new SolidColorBrush(WpfColor.FromRgb(0xF9, 0x73, 0x16)),
+                PluginComponentType.FileDialogAdapter => new SolidColorBrush(WpfColor.FromRgb(0xF9, 0x73, 0x16)),
                 PluginComponentType.InlineSearchAdapter => new SolidColorBrush(WpfColor.FromRgb(0xEF, 0x44, 0x44)),
-                _                                       => new SolidColorBrush(WpfColor.FromRgb(0x6B, 0x72, 0x80))
+                _ => new SolidColorBrush(WpfColor.FromRgb(0x6B, 0x72, 0x80))
             };
         }
 

@@ -13,7 +13,7 @@ namespace SwiftList.PluginSdk
         {
             var geometry = Geometry.Parse(pathData);
             var group = new DrawingGroup();
-            
+
             Brush? brush = null;
             if (!string.IsNullOrEmpty(colorHexOrKey))
             {
@@ -32,10 +32,10 @@ namespace SwiftList.PluginSdk
             }
             if (brush == null)
             {
-                brush = System.Windows.Application.Current?.TryFindResource("TextPrimary") as Brush 
+                brush = System.Windows.Application.Current?.TryFindResource("TextPrimary") as Brush
                         ?? System.Windows.Media.Brushes.Gray;
             }
-            
+
             group.Children.Add(new GeometryDrawing(brush, null, geometry));
             var image = new DrawingImage(group);
             try

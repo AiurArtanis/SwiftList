@@ -186,10 +186,10 @@ namespace SwiftList.App.Services
             _mouseHook.Start();
 
             _window.Show();
-            
+
             IntPtr fgHwnd = ExplorerNativeHooks.GetForegroundWindow();
             bool isTextInputFocused = fgHwnd != IntPtr.Zero && InputFocusEvaluator.IsForegroundTextInputFocused(fgHwnd);
-            
+
             if (!isTextInputFocused)
             {
                 _window.Dispatcher.BeginInvoke(new Action(() =>

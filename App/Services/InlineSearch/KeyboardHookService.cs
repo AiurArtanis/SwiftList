@@ -19,7 +19,7 @@ namespace SwiftList.App.Services
         public event Action<int>? OnCtrlNumberPressed;
 
         public bool IsActive => _isActive;
-        
+
         private bool _isInlineSearchVisible;
         public bool IsInlineSearchVisible
         {

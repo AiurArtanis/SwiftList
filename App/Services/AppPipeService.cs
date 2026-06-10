@@ -1,9 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Threading;
 using System.Threading.Tasks;
 using SwiftList.Core;
-
 namespace SwiftList.App.Services
 {
     public static class AppPipeService
@@ -15,22 +15,30 @@ namespace SwiftList.App.Services
             _keepRunningPipeServer = false;
         }
 
-        public static void SendActivateSignal()
+        public static async Task SendActivateSignalAsync(CancellationToken token = default)
         {
             string pipeName = $"SwiftList_App_Pipe_{Environment.UserName}";
+
             try
             {
-                using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out);
-                client.Connect(500); // 500ms timeout
-                PipeRequestBinarySerializer.Write(client, "ACTIVATE");
+                using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, PipeOptions.Asynchronous);
+
+                await client.ConnectAsync(500, token).ConfigureAwait(false);
+                await PipeRequestBinarySerializer.WriteStringAsync(client, "ACTIVATE", token).ConfigureAwait(false);
             }
+
             catch (Exception ex)
             {
                 Logger.Log($"Failed to send activation signal: {ex.Message}", SwiftList.Core.LogLevel.Error);
             }
         }
 
-        public static async void StartPipeServer()
+        public static Task StartPipeServerAsync()
+        {
+            return RunPipeServerAsync();
+        }
+
+        private static async Task RunPipeServerAsync()
         {
             string pipeName = $"SwiftList_App_Pipe_{Environment.UserName}";
             while (_keepRunningPipeServer)
@@ -38,9 +46,9 @@ namespace SwiftList.App.Services
                 try
                 {
                     using var server = new NamedPipeServerStream(pipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-                    await server.WaitForConnectionAsync();
 
-                    string msg = PipeRequestBinarySerializer.Read(server);
+                    await server.WaitForConnectionAsync();
+                    string msg = await PipeRequestBinarySerializer.ReadStringAsync(server);
                     if (msg == "ACTIVATE")
                     {
                         _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -50,12 +58,15 @@ namespace SwiftList.App.Services
                             {
                                 quickSearchWindow.ShowWindow();
                             }
+
                         }));
                     }
                 }
+
                 catch (Exception ex)
                 {
                     Logger.Log($"[AppPipeService] Named pipe server error: {ex.Message}", SwiftList.Core.LogLevel.Error);
+
                     await Task.Delay(1000); // Prevent tight loop on error
                 }
             }

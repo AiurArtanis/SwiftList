@@ -20,7 +20,7 @@
         </ResourceDictionary>
     </Window.Resources>
     <!-- Main border with shadow -->
-    <Border x:Name="MainBorder" CornerRadius="10" Background="{DynamicResource ContentBg}" 
+    <Border x:Name="MainBorder" CornerRadius="10" Background="{DynamicResource ContentBg}"
             BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" Margin="8">
         <Border.Effect>
             <DropShadowEffect BlurRadius="20" ShadowDepth="2" Opacity="0.2" Color="{DynamicResource ShadowColor}"/>
@@ -36,7 +36,7 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <!-- ═══════════ 1. Title Bar + Search ═══════════ -->
-                <Border Grid.Row="0" Background="{DynamicResource HeaderBg}" 
+                <Border Grid.Row="0" Background="{DynamicResource HeaderBg}"
                         BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -47,7 +47,6 @@
                         <Grid Grid.Column="0" Margin="12,12,8,12" MouseLeftButtonDown="Header_MouseLeftButtonDown">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/> <!-- Drag Grip -->
-                                <ColumnDefinition Width="Auto"/> <!-- Search Icon -->
                                 <ColumnDefinition Width="*"/>    <!-- Input -->
                             </Grid.ColumnDefinitions>
                             <!-- Drag Grip Handle (::) -->
@@ -61,74 +60,8 @@
                                     <Ellipse Canvas.Left="7" Canvas.Top="13" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary}"/>
                                 </Canvas>
                             </Viewbox>
-                            <!-- Search Icon / Spinner loader -->
-                            <Grid Grid.Column="1" Margin="0,0,12,0">
-                                <!-- Magnifier icon -->
-                                <Viewbox Width="20" Height="20" Opacity="0.5">
-                                    <Viewbox.Style>
-                                        <Style TargetType="Viewbox">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsSearching}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Viewbox.Style>
-                                    <Canvas Width="24" Height="24">
-                                        <Path Data="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
-                                              Fill="{DynamicResource TextSecondary}"/>
-                                    </Canvas>
-                                </Viewbox>
-                                <!-- Loading spinner -->
-                                <Control Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <Control.Style>
-                                        <Style TargetType="Control" BasedOn="{StaticResource ModernSpinnerStyle}">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsSearching}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Control.Style>
-                                </Control>
-                            </Grid>
-                            <!-- Search TextBox -->
-                            <TextBox x:Name="TxtSearchBox"
-                                     Grid.Column="2"
-                                     BorderThickness="0"
-                                     FontSize="15"
-                                     FontFamily="Microsoft YaHei UI, Segoe UI"
-                                     Foreground="{DynamicResource TextPrimary2}"
-                                     Background="Transparent"
-                                     VerticalContentAlignment="Center"
-                                     CaretBrush="{DynamicResource AccentColor}"
-                                     Text="{Binding AdvancedQuery, UpdateSourceTrigger=PropertyChanged}"
-                                     IsEnabled="{Binding IsSearchBoxEnabled}"
-                                     KeyDown="TxtSearchBox_KeyDown"/>
-                            <TextBlock IsHitTestVisible="False"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_Placeholder]}"
-                                       x:Name="TxtPlaceholder"
-                                       Grid.Column="2"
-                                       FontSize="15"
-                                       FontFamily="Microsoft YaHei UI, Segoe UI"
-                                       Foreground="{DynamicResource TextSecondary}"
-                                       VerticalAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Text, ElementName=TxtSearchBox}" Value="">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding Text, ElementName=TxtSearchBox}" Value="{x:Null}">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                            <!-- Shared SearchBoxControl component -->
+                            <app:SearchBoxControl x:Name="SearchBox" Grid.Column="1" FontSize="15" Padding="0" IsIconOnLeft="True" SearchText="{Binding AdvancedQuery, Mode=TwoWay}"/>
                         </Grid>
                         <!-- Window controls -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,6,6,0">
@@ -151,67 +84,11 @@
                     <controls:SearchSidebarControl Grid.Column="0"/>
                     <!-- Main Results Grid -->
                     <Grid Grid.Column="1" Background="{DynamicResource ContentBg}">
-                        <!-- Search results view -->
-                        <Grid x:Name="GridSearchResults" Visibility="Visible">
-                            <ListView x:Name="LstGridResults" BorderThickness="0" Background="Transparent"
-                                      ItemsSource="{Binding FilteredResults}"
-                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                      ItemContainerStyle="{StaticResource SearchResultItemStyle}"
-                                      MouseDoubleClick="LstGridResults_MouseDoubleClick"
-                                      KeyDown="LstGridResults_KeyDown"
-                                      PreviewMouseRightButtonUp="LstGridResults_PreviewMouseRightButtonUp"
-                                      PreviewMouseWheel="LstGridResults_PreviewMouseWheel"
-                                      VirtualizingPanel.IsVirtualizing="True"
-                                      VirtualizingPanel.VirtualizationMode="Recycling"
-                                      IsEnabled="{Binding IsResultsListEnabled}"
-                                      GridViewColumnHeader.Click="GridViewColumnHeader_Click">
-                                <ListView.View>
-                                    <GridView>
-                                        <!-- Name Column -->
-                                        <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderName]}" Width="320">
-                                            <GridViewColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <Image Source="{Binding Icon}" Width="18" Height="18" Margin="0,0,10,0" VerticalAlignment="Center"
-                                                               RenderOptions.BitmapScalingMode="HighQuality"/>
-                                                        <TextBlock Text="{Binding Name}"
-                                                                   FontFamily="Microsoft YaHei UI"
-                                                                   FontSize="13"
-                                                                   Foreground="{DynamicResource TextPrimary2}"
-                                                                   VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                    </StackPanel>
-                                                </DataTemplate>
-                                            </GridViewColumn.CellTemplate>
-                                        </GridViewColumn>
-                                        <!-- Path Column -->
-                                        <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderPath]}" Width="260">
-                                            <GridViewColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding FullPath}"
-                                                               FontFamily="Microsoft YaHei UI"
-                                                               Foreground="{DynamicResource TextSecondary2}"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               FontSize="12"/>
-                                                </DataTemplate>
-                                            </GridViewColumn.CellTemplate>
-                                        </GridViewColumn>
-                                        <!-- Date Modified Column -->
-                                        <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderDateModified]}" Width="120">
-                                            <GridViewColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding DateModifiedText}"
-                                                               FontFamily="Microsoft YaHei UI"
-                                                               Foreground="{DynamicResource TextSecondary2}"
-                                                               FontSize="12"/>
-                                                </DataTemplate>
-                                            </GridViewColumn.CellTemplate>
-                                        </GridViewColumn>
-                                    </GridView>
-                                </ListView.View>
-                            </ListView>
-                        </Grid>
+                        <!-- Shared ResultsControl component in Grid Mode -->
+                        <app:ResultsControl x:Name="ResultsPanelControl"
+                                            ItemsSource="{Binding FilteredResults}"
+                                            ViewMode="Grid"
+                                            Visibility="Visible"/>
                         <!-- Actions View (Self-drawn context actions menu, decoupled and shared) -->
                         <Grid x:Name="GridActions" Visibility="Collapsed">
                             <Grid.RowDefinitions>
@@ -245,7 +122,7 @@
                     </Grid>
                 </Grid>
                 <!-- ═══════════ 3. Status Bar ═══════════ -->
-                <Border Grid.Row="2" Background="{DynamicResource StatusBarBg}" 
+                <Border Grid.Row="2" Background="{DynamicResource StatusBarBg}"
                         BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0"
                         Padding="16,8,16,8">
                     <Grid>
@@ -256,18 +133,18 @@
                         </Grid.ColumnDefinitions>
                         <!-- Result count with accent dot -->
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentColor}" 
+                            <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentColor}"
                                      Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="TxtResultCount" Text="{Binding ResultCountText}" 
+                            <TextBlock x:Name="TxtResultCount" Text="{Binding ResultCountText}"
                                        FontSize="12" FontWeight="Medium"
-                                       Foreground="{DynamicResource TextSecondary2}" 
+                                       Foreground="{DynamicResource TextSecondary2}"
                                        FontFamily="Microsoft YaHei UI"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                         <!-- Keyboard hint -->
-                        <TextBlock Grid.Column="2" 
+                        <TextBlock Grid.Column="2"
                                    Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HintKeyboard]}"
-                                   FontSize="11" 
+                                   FontSize="11"
                                    Foreground="{DynamicResource TextSecondary2}"
                                    FontFamily="Microsoft YaHei UI"
                                    VerticalAlignment="Center"/>

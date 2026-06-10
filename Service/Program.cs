@@ -67,12 +67,13 @@ namespace SwiftList.Service
             // Default fallback: Debug Console Mode
             Logger.Log("Running in debug console mode.");
             Console.WriteLine("SwiftList Background Service is running. Press Ctrl+C to exit.");
-            
+
             using var service = new UsnServiceDebugWrapper();
             service.Start();
-            
+
             var quitEvent = new ManualResetEvent(false);
-            Console.CancelKeyPress += (sender, eventArgs) => {
+            Console.CancelKeyPress += (sender, eventArgs) =>
+            {
                 eventArgs.Cancel = true;
                 quitEvent.Set();
             };
@@ -84,7 +85,7 @@ namespace SwiftList.Service
         {
             try
             {
-                string serviceExePath = Process.GetCurrentProcess().MainModule?.FileName 
+                string serviceExePath = Process.GetCurrentProcess().MainModule?.FileName
                     ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SwiftList.Service.exe");
                 serviceExePath = Path.GetFullPath(serviceExePath);
 
@@ -186,7 +187,7 @@ namespace SwiftList.Service
             ServicePluginLoader.LoadPlugins();
 
             Logger.Log($"[HookMode] Starting hook process (elevated={SwiftList.Core.Services.ElevationManager.IsRunningAsAdmin()}).");
-            
+
             using var ipcServer = new HookIpcServer();
             using var hookProcess = new HookProcess(ipcServer);
 

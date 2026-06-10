@@ -77,8 +77,8 @@ namespace SwiftList.App.ViewModels.Settings
                 ProgressBarVisibility = Visibility.Visible;
                 ErrorIconVisibility = Visibility.Collapsed;
                 InstallButtonVisibility = Visibility.Collapsed;
-                LoadingTitle = status.State == "indexing" 
-                    ? string.Format(TranslationManager.Instance["Service_ProgressIndexing"], status.Progress) 
+                LoadingTitle = status.State == "indexing"
+                    ? string.Format(TranslationManager.Instance["Service_ProgressIndexing"], status.Progress)
                     : TranslationManager.Instance["Service_ProgressLoading"];
                 LoadingStats = string.Format(TranslationManager.Instance["Service_StatsTemplate"], status.TotalFiles, status.TotalDirs);
             }

@@ -232,6 +232,7 @@
   "Tray_ToggleHotkeys": "Disable Hotkeys",
   "Tray_Settings": "Settings",
   "Tray_About": "About",
+  "Tray_CleanExit": "Clean Exit",
   "Tray_Exit": "Exit",
   "LogLevel_Error": "Error",
   "LogLevel_Warn": "Warn",

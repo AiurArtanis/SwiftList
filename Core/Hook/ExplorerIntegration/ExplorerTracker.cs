@@ -69,7 +69,7 @@ namespace SwiftList.Core.Hook
             {
                 var windowTitle = new StringBuilder(256);
                 ExplorerNativeHooks.GetWindowText(hwnd, windowTitle, windowTitle.Capacity);
-                
+
                 var sbClass = new StringBuilder(256);
                 ExplorerNativeHooks.GetClassName(hwnd, sbClass, sbClass.Capacity);
 

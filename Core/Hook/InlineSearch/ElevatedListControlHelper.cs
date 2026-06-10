@@ -55,9 +55,9 @@ namespace SwiftList.Core.Hook.InlineSearch
 
                 ListSearchNativeMethods.GetWindowThreadProcessId(hwnd, out uint pid);
                 IntPtr hProcess = ListSearchNativeMethods.OpenProcess(
-                    ListSearchNativeMethods.PROCESS_VM_OPERATION | 
-                    ListSearchNativeMethods.PROCESS_VM_READ | 
-                    ListSearchNativeMethods.PROCESS_VM_WRITE, 
+                    ListSearchNativeMethods.PROCESS_VM_OPERATION |
+                    ListSearchNativeMethods.PROCESS_VM_READ |
+                    ListSearchNativeMethods.PROCESS_VM_WRITE,
                     false, pid);
                 if (hProcess == IntPtr.Zero) return result;
 
@@ -234,7 +234,7 @@ namespace SwiftList.Core.Hook.InlineSearch
             if (className.Contains("ListBox", StringComparison.OrdinalIgnoreCase))
             {
                 int style = ListSearchNativeMethods.GetWindowLong(hwnd, ListSearchNativeMethods.GWL_STYLE);
-                bool isMulti = (style & (int)ListSearchNativeMethods.LBS_MULTIPLESEL) != 0 || 
+                bool isMulti = (style & (int)ListSearchNativeMethods.LBS_MULTIPLESEL) != 0 ||
                                (style & (int)ListSearchNativeMethods.LBS_EXTENDEDSEL) != 0;
                 if (isMulti)
                 {

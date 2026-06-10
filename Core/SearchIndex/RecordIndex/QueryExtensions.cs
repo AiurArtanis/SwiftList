@@ -91,7 +91,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
             {
                 if (!index.IsDeleted(idx))
                     return true;
-                
+
                 idx = -1;
                 return false;
             }

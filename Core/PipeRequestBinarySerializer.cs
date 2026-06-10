@@ -1,228 +1,60 @@
 using System;
 using System.IO;
 using System.Text;
-
+using System.Threading;
+using System.Threading.Tasks;
+using SwiftList.Core.Extensions;
 namespace SwiftList.Core
 {
     public static class PipeRequestBinarySerializer
     {
         private const int Magic = 0x51504C53; // SLPQ
-        private const int VersionLegacyString = 1;
+
+        private const int VersionString = 1;
         private const int VersionIpc = 2;
 
-        private static byte[] ReadExactly(BinaryReader reader, int count)
+        public static Task WriteStringAsync(Stream stream, string command, CancellationToken token = default)
         {
-            byte[] buffer = new byte[count];
-            int offset = 0;
-            while (offset < count)
-            {
-                int read = reader.Read(buffer, offset, count - offset);
-                if (read <= 0)
-                    throw new EndOfStreamException($"End of stream reached. Read {offset} of {count} bytes.");
-                offset += read;
-            }
-            return buffer;
+            using var payload = new MemoryStream();
+            using (var writer = new BinaryWriter(payload, Encoding.UTF8, leaveOpen: true))
+
+                writer.Write(command ?? string.Empty);
+            return WriteFrameAsync(stream, VersionString, payload.ToArray(), token);
         }
 
-        // --- Legacy String Protocol (Used by AppPipeService for single instance activation) ---
-
-        public static void Write(Stream stream, string command)
+        public static async Task<string> ReadStringAsync(Stream stream, CancellationToken token = default)
         {
-            using var ms = new MemoryStream();
-            using (var msWriter = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true))
-            {
-                msWriter.Write(command ?? string.Empty);
-            }
-            byte[] payload = ms.ToArray();
-
-            using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
-            writer.Write(Magic);
-            writer.Write(VersionLegacyString);
-            writer.Write(payload.Length);
-            writer.Write(payload);
-            writer.Flush();
-        }
-
-        public static string Read(Stream stream)
-        {
-            using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
-            int magic = reader.ReadInt32();
-            if (magic != Magic)
-                throw new InvalidDataException("Invalid pipe request binary header.");
-
-            int version = reader.ReadInt32();
-            if (version != VersionLegacyString)
-                throw new InvalidDataException($"Unsupported legacy string pipe request version: {version}.");
-
-            int length = reader.ReadInt32();
-            if (length < 0 || length > 10 * 1024 * 1024)
-                throw new InvalidDataException($"Invalid legacy payload length: {length}");
-
-            byte[] payload = ReadExactly(reader, length);
+            byte[] payload = await ReadFrameAsync(stream, VersionString, token).ConfigureAwait(false);
             using var ms = new MemoryStream(payload);
-            using var msReader = new BinaryReader(ms, Encoding.UTF8);
-            return msReader.ReadString();
+            using var reader = new BinaryReader(ms, Encoding.UTF8);
+
+            return reader.ReadString();
         }
 
-        // --- Structured Binary IPC Protocol (Used by Hook client and server) ---
-
-        public static void WriteMessage(BinaryWriter writer, IpcMessage msg)
+        public static Task WriteMessageAsync(Stream stream, IpcMessage msg, CancellationToken token = default)
         {
-            using var ms = new MemoryStream();
-            using (var msWriter = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true))
-            {
-                msWriter.Write((byte)msg.Id);
+            using var payload = new MemoryStream();
+            using (var writer = new BinaryWriter(payload, Encoding.UTF8, leaveOpen: true))
 
-                switch (msg.Id)
-                {
-                    case IpcMessageId.Stop:
-                        break;
-                    case IpcMessageId.SetAppProcessId:
-                        msWriter.Write(msg.ProcessId);
-                        break;
-                    case IpcMessageId.SetQuickSearchVisible:
-                    case IpcMessageId.SetInlineSearchVisible:
-                    case IpcMessageId.SetHotkeysDisabled:
-                        msWriter.Write(msg.BoolVal);
-                        break;
-                    case IpcMessageId.NavigateDialog:
-                        msWriter.Write(msg.Hwnd);
-                        msWriter.Write(msg.StringVal1 ?? string.Empty);
-                        break;
-                    case IpcMessageId.RestoreDialogFocus:
-                        msWriter.Write(msg.Hwnd);
-                        break;
-                    case IpcMessageId.Activate:
-                    case IpcMessageId.ExplorerDeactivated:
-                    case IpcMessageId.ActiveWindowMoved:
-                    case IpcMessageId.KeyBackspace:
-                    case IpcMessageId.KeyEscape:
-                    case IpcMessageId.KeyEnter:
-                    case IpcMessageId.KeyUp:
-                    case IpcMessageId.KeyDown:
-                    case IpcMessageId.KeyLeft:
-                    case IpcMessageId.KeyRight:
-                        break;
-                    case IpcMessageId.KeyChar:
-                        msWriter.Write(msg.CharVal);
-                        break;
-                    case IpcMessageId.KeyCtrlNumber:
-                        msWriter.Write(msg.IntVal);
-                        break;
-                    case IpcMessageId.MouseClick:
-                        msWriter.Write(msg.MouseX);
-                        msWriter.Write(msg.MouseY);
-                        break;
-                    case IpcMessageId.ExplorerActivated:
-                        msWriter.Write(msg.Hwnd);
-                        msWriter.Write(msg.StringVal1 ?? string.Empty);
-                        msWriter.Write(msg.StringVal2 ?? string.Empty);
-                        msWriter.Write(msg.IsDesktop);
-                        break;
-                    case IpcMessageId.PathCaptured:
-                        msWriter.Write(msg.StringVal1 ?? string.Empty);
-                        msWriter.Write(msg.IsDesktop);
-                        break;
-                    case IpcMessageId.Error:
-                        msWriter.Write(msg.StringVal1 ?? string.Empty);
-                        break;
-                    case IpcMessageId.GetListItems:
-                        msWriter.Write(msg.Hwnd);
-                        break;
-                    case IpcMessageId.SelectItem:
-                        msWriter.Write(msg.Hwnd);
-                        msWriter.Write(msg.StringVal1 ?? string.Empty);
-                        msWriter.Write(msg.IntVal);
-                        msWriter.Write(msg.BoolVal);
-                        msWriter.Write(msg.IsDesktop);
-                        break;
-                    case IpcMessageId.ClearSelection:
-                        msWriter.Write(msg.Hwnd);
-                        msWriter.Write(msg.StringVal1 ?? string.Empty);
-                        break;
-                    case IpcMessageId.GetSelectedIndices:
-                        msWriter.Write(msg.Hwnd);
-                        msWriter.Write(msg.StringVal1 ?? string.Empty);
-                        break;
-                    case IpcMessageId.GetListItemsResponse:
-                        if (msg.StringArray != null)
-                        {
-                            msWriter.Write(msg.StringArray.Length);
-                            foreach (var s in msg.StringArray)
-                            {
-                                msWriter.Write(s ?? string.Empty);
-                            }
-                        }
-                        else
-                        {
-                            msWriter.Write(0);
-                        }
-                        break;
-                    case IpcMessageId.GetSelectedIndicesResponse:
-                        if (msg.IntArray != null)
-                        {
-                            msWriter.Write(msg.IntArray.Length);
-                            foreach (var val in msg.IntArray)
-                            {
-                                msWriter.Write(val);
-                            }
-                        }
-                        else
-                        {
-                            msWriter.Write(0);
-                        }
-                        break;
-                }
-            }
-            byte[] payload = ms.ToArray();
-
-            writer.Write(Magic);
-            writer.Write(VersionIpc);
-            writer.Write(payload.Length);
-            writer.Write(payload);
-            writer.Flush();
+                WritePayload(writer, msg);
+            return WriteFrameAsync(stream, VersionIpc, payload.ToArray(), token);
         }
 
-        public static IpcMessage ReadMessage(BinaryReader reader)
+        public static async Task<IpcMessage> ReadMessageAsync(Stream stream, CancellationToken token = default)
         {
-            int magic = reader.ReadInt32();
-            if (magic != Magic)
-                throw new InvalidDataException("Invalid pipe request binary header.");
-
-            int version = reader.ReadInt32();
-            if (version != VersionIpc)
-                throw new InvalidDataException($"Unsupported pipe request binary version for structured IPC: {version}.");
-
-            int length = reader.ReadInt32();
-            if (length < 0 || length > 10 * 1024 * 1024)
-                throw new InvalidDataException($"Invalid IPC payload length: {length}");
-
-            byte[] payload = ReadExactly(reader, length);
+            byte[] payload = await ReadFrameAsync(stream, VersionIpc, token).ConfigureAwait(false);
             using var ms = new MemoryStream(payload);
-            using var msReader = new BinaryReader(ms, Encoding.UTF8);
+            using var reader = new BinaryReader(ms, Encoding.UTF8);
 
-            var msg = new IpcMessage();
-            msg.Id = (IpcMessageId)msReader.ReadByte();
+            return ReadPayload(reader);
+        }
 
+        private static void WritePayload(BinaryWriter writer, IpcMessage msg)
+        {
+            writer.Write((byte)msg.Id);
             switch (msg.Id)
             {
                 case IpcMessageId.Stop:
-                    break;
-                case IpcMessageId.SetAppProcessId:
-                    msg.ProcessId = msReader.ReadUInt32();
-                    break;
-                case IpcMessageId.SetQuickSearchVisible:
-                case IpcMessageId.SetInlineSearchVisible:
-                case IpcMessageId.SetHotkeysDisabled:
-                    msg.BoolVal = msReader.ReadBoolean();
-                    break;
-                case IpcMessageId.NavigateDialog:
-                    msg.Hwnd = msReader.ReadInt64();
-                    msg.StringVal1 = msReader.ReadString();
-                    break;
-                case IpcMessageId.RestoreDialogFocus:
-                    msg.Hwnd = msReader.ReadInt64();
-                    break;
                 case IpcMessageId.Activate:
                 case IpcMessageId.ExplorerDeactivated:
                 case IpcMessageId.ActiveWindowMoved:
@@ -234,71 +66,234 @@ namespace SwiftList.Core
                 case IpcMessageId.KeyLeft:
                 case IpcMessageId.KeyRight:
                     break;
-                case IpcMessageId.KeyChar:
-                    msg.CharVal = msReader.ReadChar();
+
+                case IpcMessageId.SetAppProcessId:
+                    writer.Write(msg.ProcessId);
                     break;
-                case IpcMessageId.KeyCtrlNumber:
-                    msg.IntVal = msReader.ReadInt32();
+
+                case IpcMessageId.SetQuickSearchVisible:
+                case IpcMessageId.SetInlineSearchVisible:
+                case IpcMessageId.SetHotkeysDisabled:
+                    writer.Write(msg.BoolVal);
                     break;
-                case IpcMessageId.MouseClick:
-                    msg.MouseX = msReader.ReadInt32();
-                    msg.MouseY = msReader.ReadInt32();
+
+                case IpcMessageId.NavigateDialog:
+                    writer.Write(msg.Hwnd);
+                    writer.Write(msg.StringVal1 ?? string.Empty);
                     break;
-                case IpcMessageId.ExplorerActivated:
-                    msg.Hwnd = msReader.ReadInt64();
-                    msg.StringVal1 = msReader.ReadString();
-                    msg.StringVal2 = msReader.ReadString();
-                    msg.IsDesktop = msReader.ReadBoolean();
-                    break;
-                case IpcMessageId.PathCaptured:
-                    msg.StringVal1 = msReader.ReadString();
-                    msg.IsDesktop = msReader.ReadBoolean();
-                    break;
-                case IpcMessageId.Error:
-                    msg.StringVal1 = msReader.ReadString();
-                    break;
+
+                case IpcMessageId.RestoreDialogFocus:
                 case IpcMessageId.GetListItems:
-                    msg.Hwnd = msReader.ReadInt64();
+                    writer.Write(msg.Hwnd);
                     break;
+
+                case IpcMessageId.KeyChar:
+                    writer.Write(msg.CharVal);
+                    break;
+
+                case IpcMessageId.KeyCtrlNumber:
+                    writer.Write(msg.IntVal);
+                    break;
+
+                case IpcMessageId.MouseClick:
+                    writer.Write(msg.MouseX);
+                    writer.Write(msg.MouseY);
+                    break;
+
+                case IpcMessageId.ExplorerActivated:
+                    writer.Write(msg.Hwnd);
+                    writer.Write(msg.StringVal1 ?? string.Empty);
+                    writer.Write(msg.StringVal2 ?? string.Empty);
+                    writer.Write(msg.IsDesktop);
+                    break;
+
+                case IpcMessageId.PathCaptured:
+                case IpcMessageId.Error:
+                    writer.Write(msg.StringVal1 ?? string.Empty);
+                    if (msg.Id == IpcMessageId.PathCaptured)
+                        writer.Write(msg.IsDesktop);
+                    break;
+
                 case IpcMessageId.SelectItem:
-                    msg.Hwnd = msReader.ReadInt64();
-                    msg.StringVal1 = msReader.ReadString();
-                    msg.IntVal = msReader.ReadInt32();
-                    msg.BoolVal = msReader.ReadBoolean();
-                    msg.IsDesktop = msReader.ReadBoolean();
+                    writer.Write(msg.Hwnd);
+                    writer.Write(msg.StringVal1 ?? string.Empty);
+                    writer.Write(msg.IntVal);
+                    writer.Write(msg.BoolVal);
+                    writer.Write(msg.IsDesktop);
                     break;
+
                 case IpcMessageId.ClearSelection:
-                    msg.Hwnd = msReader.ReadInt64();
-                    msg.StringVal1 = msReader.ReadString();
-                    break;
                 case IpcMessageId.GetSelectedIndices:
-                    msg.Hwnd = msReader.ReadInt64();
-                    msg.StringVal1 = msReader.ReadString();
+                    writer.Write(msg.Hwnd);
+                    writer.Write(msg.StringVal1 ?? string.Empty);
                     break;
+
                 case IpcMessageId.GetListItemsResponse:
-                    {
-                        int count = msReader.ReadInt32();
-                        var arr = new string[count];
-                        for (int i = 0; i < count; i++)
-                        {
-                            arr[i] = msReader.ReadString();
-                        }
-                        msg.StringArray = arr;
-                    }
+                    WriteStringArray(writer, msg.StringArray);
                     break;
+
                 case IpcMessageId.GetSelectedIndicesResponse:
-                    {
-                        int count = msReader.ReadInt32();
-                        var arr = new int[count];
-                        for (int i = 0; i < count; i++)
-                        {
-                            arr[i] = msReader.ReadInt32();
-                        }
-                        msg.IntArray = arr;
-                    }
+                    WriteIntArray(writer, msg.IntArray);
                     break;
             }
+        }
+
+        private static IpcMessage ReadPayload(BinaryReader reader)
+        {
+            var msg = new IpcMessage { Id = (IpcMessageId)reader.ReadByte() };
+            switch (msg.Id)
+            {
+                case IpcMessageId.Stop:
+                case IpcMessageId.Activate:
+                case IpcMessageId.ExplorerDeactivated:
+                case IpcMessageId.ActiveWindowMoved:
+                case IpcMessageId.KeyBackspace:
+                case IpcMessageId.KeyEscape:
+                case IpcMessageId.KeyEnter:
+                case IpcMessageId.KeyUp:
+                case IpcMessageId.KeyDown:
+                case IpcMessageId.KeyLeft:
+                case IpcMessageId.KeyRight:
+                    break;
+
+                case IpcMessageId.SetAppProcessId:
+                    msg.ProcessId = reader.ReadUInt32();
+                    break;
+
+                case IpcMessageId.SetQuickSearchVisible:
+                case IpcMessageId.SetInlineSearchVisible:
+                case IpcMessageId.SetHotkeysDisabled:
+                    msg.BoolVal = reader.ReadBoolean();
+                    break;
+
+                case IpcMessageId.NavigateDialog:
+                    msg.Hwnd = reader.ReadInt64();
+                    msg.StringVal1 = reader.ReadString();
+                    break;
+
+                case IpcMessageId.RestoreDialogFocus:
+                case IpcMessageId.GetListItems:
+                    msg.Hwnd = reader.ReadInt64();
+                    break;
+
+                case IpcMessageId.KeyChar:
+                    msg.CharVal = reader.ReadChar();
+                    break;
+
+                case IpcMessageId.KeyCtrlNumber:
+                    msg.IntVal = reader.ReadInt32();
+                    break;
+
+                case IpcMessageId.MouseClick:
+                    msg.MouseX = reader.ReadInt32();
+                    msg.MouseY = reader.ReadInt32();
+                    break;
+
+                case IpcMessageId.ExplorerActivated:
+                    msg.Hwnd = reader.ReadInt64();
+                    msg.StringVal1 = reader.ReadString();
+                    msg.StringVal2 = reader.ReadString();
+                    msg.IsDesktop = reader.ReadBoolean();
+                    break;
+
+                case IpcMessageId.PathCaptured:
+                    msg.StringVal1 = reader.ReadString();
+                    msg.IsDesktop = reader.ReadBoolean();
+                    break;
+
+                case IpcMessageId.Error:
+                    msg.StringVal1 = reader.ReadString();
+                    break;
+
+                case IpcMessageId.SelectItem:
+                    msg.Hwnd = reader.ReadInt64();
+                    msg.StringVal1 = reader.ReadString();
+                    msg.IntVal = reader.ReadInt32();
+                    msg.BoolVal = reader.ReadBoolean();
+                    msg.IsDesktop = reader.ReadBoolean();
+                    break;
+
+                case IpcMessageId.ClearSelection:
+                case IpcMessageId.GetSelectedIndices:
+                    msg.Hwnd = reader.ReadInt64();
+                    msg.StringVal1 = reader.ReadString();
+                    break;
+
+                case IpcMessageId.GetListItemsResponse:
+                    msg.StringArray = ReadStringArray(reader);
+                    break;
+
+                case IpcMessageId.GetSelectedIndicesResponse:
+                    msg.IntArray = ReadIntArray(reader);
+                    break;
+            }
+
             return msg;
         }
+
+        private static async Task WriteFrameAsync(Stream stream, int version, byte[] payload, CancellationToken token)
+        {
+            using var frame = new MemoryStream();
+            using (var writer = new BinaryWriter(frame, Encoding.UTF8, leaveOpen: true))
+            {
+                writer.Write(Magic);
+                writer.Write(version);
+                writer.Write(payload.Length);
+                writer.Write(payload);
+            }
+
+            await stream.WriteAsync(frame.ToArray(), token).ConfigureAwait(false);
+            await stream.FlushAsync(token).ConfigureAwait(false);
+        }
+
+        private static async Task<byte[]> ReadFrameAsync(Stream stream, int expectedVersion, CancellationToken token)
+        {
+            int magic = await stream.ReadInt32Async(token).ConfigureAwait(false);
+            if (magic != Magic)
+                throw new InvalidDataException("Invalid pipe request binary header.");
+            int version = await stream.ReadInt32Async(token).ConfigureAwait(false);
+            if (version != expectedVersion)
+                throw new InvalidDataException($"Unsupported pipe request version: {version}.");
+            int length = await stream.ReadInt32Async(token).ConfigureAwait(false);
+            if (length < 0 || length > 10 * 1024 * 1024)
+                throw new InvalidDataException($"Invalid IPC payload length: {length}");
+            return await stream.ReadExactlyAsync(length, token).ConfigureAwait(false);
+        }
+
+        private static void WriteStringArray(BinaryWriter writer, string[]? values)
+        {
+            writer.Write(values?.Length ?? 0);
+            if (values == null) return;
+            foreach (var value in values)
+                writer.Write(value ?? string.Empty);
+        }
+
+        private static string[] ReadStringArray(BinaryReader reader)
+        {
+            int count = reader.ReadInt32();
+            var values = new string[count];
+            for (int i = 0; i < count; i++)
+                values[i] = reader.ReadString();
+            return values;
+        }
+
+        private static void WriteIntArray(BinaryWriter writer, int[]? values)
+        {
+            writer.Write(values?.Length ?? 0);
+            if (values == null) return;
+            foreach (int value in values)
+                writer.Write(value);
+        }
+
+        private static int[] ReadIntArray(BinaryReader reader)
+        {
+            int count = reader.ReadInt32();
+            var values = new int[count];
+            for (int i = 0; i < count; i++)
+                values[i] = reader.ReadInt32();
+            return values;
+        }
+
+        // Stream operations have been moved to StreamExtensions.cs
     }
 }

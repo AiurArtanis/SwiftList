@@ -21,6 +21,8 @@
   "Action_OpenCmd": "Open Command Prompt",
   "Action_OpenAdminCmd": "Open Command Prompt (Admin)",
   "Action_GroupName_Cmd": "Command Shortcuts",
+  "Action_Open": "Open",
+  "Action_OpenAdmin": "Open (Admin)",
   "Action_LocateFolder": "Open Folder Location",
   "Action_Cut": "Cut",
   "Action_CopyPath": "Copy Path to Clipboard",

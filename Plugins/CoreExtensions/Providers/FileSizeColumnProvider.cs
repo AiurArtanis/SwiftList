@@ -41,7 +41,7 @@ namespace SwiftList.Plugins.CoreExtensions.Providers
                     if (!fi.Exists) return string.Empty;
                     return FormatSize(fi.Length);
                 }
-                
+
                 if (columnId == "Extension")
                 {
                     string ext = Path.GetExtension(result.FullPath).ToUpper();

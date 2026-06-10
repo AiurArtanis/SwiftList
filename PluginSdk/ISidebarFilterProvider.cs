@@ -35,12 +35,12 @@ namespace SwiftList.PluginSdk
     {
         public string Id { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
-        
+
         /// <summary>
         /// Vector icon path geometry (optional).
         /// </summary>
         public string? IconData { get; set; }
-        
+
         /// <summary>
         /// Key used for UI icon matching if vector path is not supplied (optional).
         /// </summary>

@@ -1,4 +1,6 @@
 {
+  "Action_Open": "打开",
+  "Action_OpenAdmin": "打开 (管理员)",
   "Action_DefaultGroup": "动作",
   "Action_BuiltinGroup": "内置",
   "Plugin_ShellGroup": "快捷菜单",

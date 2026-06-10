@@ -67,7 +67,7 @@ namespace SwiftList.App.Services
                         IntPtr hLinkedToken = IntPtr.Zero;
                         int returnLength = 0;
                         bool success = GetTokenInformation(hToken, TokenLinkedToken, ref hLinkedToken, IntPtr.Size, out returnLength);
-                        
+
                         if (success && hLinkedToken != IntPtr.Zero)
                         {
                             try

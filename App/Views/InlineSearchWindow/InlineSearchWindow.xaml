@@ -14,15 +14,13 @@
         WindowStartupLocation="Manual"
         Focusable="True"
         ShowActivated="True">
-
     <!-- Main card - inverted layout: results on top, search box at bottom -->
-    <Border x:Name="MainBorder" Margin="12" CornerRadius="8" 
+    <Border x:Name="MainBorder" Margin="12" CornerRadius="8"
             Background="{DynamicResource ContentBg}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
             ClipToBounds="True">
         <Border.Effect>
             <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.22" Color="{DynamicResource ShadowColor}"/>
         </Border.Effect>
-
         <Grid>
             <Grid.RowDefinitions>
                 <!-- Results list (grows upward) -->
@@ -32,54 +30,26 @@
                 <!-- Search box (anchored at bottom) -->
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-
             <!-- ═══════════ 1. Results Panel (Supports apps, highlighting, actions) ═══════════ -->
             <local:ResultsControl x:Name="ResultsPanelControl" Grid.Row="0"
+                                  ItemsSource="{Binding Results}"
+                                  SelectedItem="{Binding SelectedResult, Mode=TwoWay}"
+                                  ViewMode="List"
                                   Visibility="{Binding ResultsPanelVisibility}"/>
-
             <!-- ═══════════ 2. Separator ═══════════ -->
             <Rectangle x:Name="ResultsSeparator" Grid.Row="1" Height="1" Fill="{DynamicResource SeparatorBrush}"
                        Visibility="{Binding ResultsSeparatorVisibility}"/>
-
             <!-- ═══════════ 3. Search Box (Bottom Anchored) ═══════════ -->
             <Border x:Name="SearchBoxBorder" Grid.Row="2" Background="{DynamicResource HeaderBg}" Padding="13,11,13,11">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-
-                    <!-- Search icon -->
-                    <Viewbox Grid.Column="0" Width="21" Height="21" Margin="0,0,11,0" Opacity="0.45">
-                        <Canvas Width="24" Height="24">
-                            <Path Data="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
-                                  Fill="{DynamicResource TextSecondary}"/>
-                        </Canvas>
-                    </Viewbox>
-
-                    <!-- Search text display (editable TextBox) -->
-                    <TextBox x:Name="TxtSearchDisplay" Grid.Column="1"
-                             FontSize="19" FontFamily="Microsoft YaHei UI, Segoe UI"
-                             Foreground="{DynamicResource TextPrimary}"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             Padding="0"
-                             VerticalAlignment="Center"
-                             Focusable="True"
-                             IsTabStop="True"
-                             CaretBrush="{DynamicResource TextPrimary}"/>
-
-                    <!-- Placeholder text -->
-                    <TextBlock x:Name="TxtPlaceholder" Grid.Column="1"
-                               Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[QuickSearch_Placeholder]}"
-                               FontSize="19" FontFamily="Microsoft YaHei UI, Segoe UI"
-                               Foreground="{DynamicResource TextSecondary}"
-                               VerticalAlignment="Center"
-                               IsHitTestVisible="False"/>
-
+                    <!-- Shared SearchBoxControl -->
+                    <local:SearchBoxControl x:Name="SearchBox" Grid.Column="0" FontSize="19" Padding="0" IsIconOnLeft="True" SearchText="{Binding SearchQuery, Mode=TwoWay}"/>
                     <!-- Status text (result count) -->
-                    <TextBlock x:Name="TxtStatusInfo" Grid.Column="2"
+                    <TextBlock x:Name="TxtStatusInfo" Grid.Column="1"
                                FontSize="15" FontFamily="Microsoft YaHei UI, Segoe UI"
                                Foreground="{DynamicResource TextSecondary2}"
                                VerticalAlignment="Center"

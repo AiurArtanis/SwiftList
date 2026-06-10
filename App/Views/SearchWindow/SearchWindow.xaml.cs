@@ -12,7 +12,6 @@ using ListView = System.Windows.Controls.ListView;
 using ListBox = System.Windows.Controls.ListBox;
 using Grid = System.Windows.Controls.Grid;
 using SwiftList.App.ViewModels.Search;
-
 namespace SwiftList.App
 {
     public partial class SearchWindow : Window, ISearchWindow
@@ -25,115 +24,84 @@ namespace SwiftList.App
         public SearchWindow(string initialQuery = "")
         {
             InitializeComponent();
-            
             _menuPresenter = new ShellMenuPresenter(this);
             _chromeHandler = new SearchWindowChromeHandler(this);
             _inputHandler = new SearchWindowInputHandler(this);
-
             this.PreviewKeyDown += Window_PreviewKeyDown;
             this.StateChanged += SearchWindow_StateChanged;
 
             // Restrict window size when maximized to avoid covering the Windows Taskbar
+
             this.MaxHeight = SystemParameters.MaximizedPrimaryScreenHeight;
             this.MaxWidth = SystemParameters.MaximizedPrimaryScreenWidth;
-
             _viewModel = new SearchViewModel(initialQuery);
             this.DataContext = _viewModel;
-
-            // Dynamically load custom GridView columns from ResultColumnProviders
-            var gridView = LstGridResults.View as GridView;
-            if (gridView != null)
-            {
-                foreach (var provider in PluginManager.Instance.ResultColumnProviders)
-                {
-                    foreach (var colDef in provider.GetColumns())
-                    {
-                        var gvc = new GridViewColumn
-                        {
-                            Header = colDef.HeaderText,
-                            Width = colDef.Width
-                        };
-
-                        var binding = new System.Windows.Data.Binding($"[{colDef.ColumnId}]")
-                        {
-                            Mode = System.Windows.Data.BindingMode.OneWay
-                        };
-
-                        var textBlockFactory = new FrameworkElementFactory(typeof(TextBlock));
-                        textBlockFactory.SetBinding(TextBlock.TextProperty, binding);
-                        textBlockFactory.SetValue(TextBlock.FontFamilyProperty, new System.Windows.Media.FontFamily("Microsoft YaHei UI"));
-                        textBlockFactory.SetValue(TextBlock.ForegroundProperty, new System.Windows.DynamicResourceExtension("TextSecondary2"));
-                        textBlockFactory.SetValue(TextBlock.FontSizeProperty, 12.0);
-                        textBlockFactory.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
-
-                        gvc.CellTemplate = new DataTemplate { VisualTree = textBlockFactory };
-                        gridView.Columns.Add(gvc);
-                    }
-                }
-            }
-
-            _viewModel.FilteredResults.CollectionChanged += (s, e) =>
-            {
-                Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (LstGridResults.Items.Count > 0)
-                    {
-                        LstGridResults.SelectedIndex = 0;
-                        LstGridResults.ScrollIntoView(LstGridResults.SelectedItem);
-                    }
-                    else
-                    {
-                        LstGridResults.SelectedIndex = -1;
-                    }
-                }), System.Windows.Threading.DispatcherPriority.Render);
-            };
 
             this.Loaded += (s, e) =>
             {
                 this.Activate();
                 this.Focus();
+
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    TxtSearchBox.Focus();
-                    Keyboard.Focus(TxtSearchBox);
+                    var txtSearch = SearchBox.SearchTextBox;
+                    txtSearch.Focus();
+                    Keyboard.Focus(txtSearch);
                     if (initialQuery != null)
                     {
-                        TxtSearchBox.SelectionStart = initialQuery.Length;
+                        txtSearch.SelectionStart = initialQuery.Length;
                     }
+
                 }), System.Windows.Threading.DispatcherPriority.Input);
             };
 
-            // Actions list double-click and preview click event registration
-            LstActions.MouseDoubleClick += _menuPresenter.HandleActionsMouseDoubleClick;
-            LstActions.PreviewMouseLeftButtonUp += _menuPresenter.HandleActionsPreviewMouseLeftButtonUp;
+            // Bind list events
+            var activeList = ResultsPanelControl.ActiveListBox;
+            activeList.KeyDown += LstGridResults_KeyDown;
+            activeList.PreviewMouseLeftButtonUp += LstGridResults_PreviewMouseLeftButtonUp;
+            activeList.PreviewMouseRightButtonUp += LstGridResults_PreviewMouseRightButtonUp;
+            activeList.PreviewMouseWheel += LstGridResults_PreviewMouseWheel;
+
+            ResultsPanelControl.ActionsListBox.PreviewMouseLeftButtonUp += _menuPresenter.HandleActionsPreviewMouseLeftButtonUp;
         }
 
         // ==========================================
+
         // ISearchWindow Interface Implementation
+
         // ==========================================
-        public UIElement ResultsPanel => GridSearchResults;
-        ListBox ISearchWindow.LstResults => LstGridResults;
-        Grid ISearchWindow.GridSearchResults => GridSearchResults;
-        Grid ISearchWindow.GridActions => GridActions;
-        TextBlock ISearchWindow.TxtActionsTarget => TxtActionsTarget;
-        ListBox ISearchWindow.LstActions => LstActions;
-        public string SearchText => TxtSearchBox.Text;
+
+        public UIElement ResultsPanel => ResultsPanelControl;
+        ListBox ISearchWindow.LstResults => ResultsPanelControl.ActiveListBox;
+        Grid ISearchWindow.GridSearchResults => ResultsPanelControl.SearchResultsGrid;
+        Grid ISearchWindow.GridActions => ResultsPanelControl.ActionsGrid;
+        TextBlock ISearchWindow.TxtActionsTarget => ResultsPanelControl.ActionsTargetTextBlock;
+        ListBox ISearchWindow.LstActions => ResultsPanelControl.ActionsListBox;
+        public string SearchText => SearchBox.SearchTextBox.Text;
+
         public void UpdateActionsLayout() { /* Fixed-size window, no dynamic resizing needed */ }
 
         public void OpenFileOrFolderExternal(string path) => FileExecutor.OpenFileOrFolder(path);
+        public void OpenFileOrFolderAsAdminExternal(string path) => FileExecutor.OpenFileOrFolderAsAdmin(path);
         public void LocateInExplorerExternal(string path) => FileExecutor.LocateInExplorer(path);
         public void HideWindow() => this.Close();
 
         // ==========================================
+
         // Window Control Exposures for Handlers
+
         // ==========================================
-        public TextBox TxtSearchBoxControl => TxtSearchBox;
-        public ListView LstGridResultsControl => LstGridResults;
+
+        public TextBox TxtSearchBoxControl => SearchBox.SearchTextBox;
+        public ListView LstGridResultsControl => (ListView)ResultsPanelControl.ActiveListBox;
         public ShellMenuPresenter MenuPresenter => _menuPresenter;
 
         // ==========================================
+
         // Window Chrome & Drag Handlers
+
         // ==========================================
+
         private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => _chromeHandler.HandleHeaderMouseLeftButtonDown(sender, e);
         private void SearchWindow_StateChanged(object? sender, EventArgs e) => _chromeHandler.HandleStateChanged();
         private void BtnMinimize_Click(object sender, RoutedEventArgs e) => _chromeHandler.Minimize();
@@ -158,26 +126,32 @@ namespace SwiftList.App
             if (quickSearchWindow != null)
             {
                 string? query = null;
-                if (!string.IsNullOrWhiteSpace(TxtSearchBox.Text))
+                if (!string.IsNullOrWhiteSpace(SearchBox.SearchText))
                 {
-                    query = TxtSearchBox.Text;
+                    query = SearchBox.SearchText;
                 }
+
                 else
                 {
                     query = quickSearchWindow.ViewModel.SearchQuery;
                 }
+
                 quickSearchWindow.ShowWindow(query);
             }
+
             this.Close();
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e) => _inputHandler.HandleWindowPreviewKeyDown(e);
 
         // ==========================================
+
         // Results Navigation & Context Menu
+
         // ==========================================
+
         private void TxtSearchBox_KeyDown(object sender, KeyEventArgs e) => _inputHandler.HandleTxtSearchBoxKeyDown(e);
-        private void LstGridResults_MouseDoubleClick(object sender, MouseButtonEventArgs e) => _inputHandler.HandleLstGridResultsMouseDoubleClick(e);
+        private void LstGridResults_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) => _inputHandler.HandleLstGridResultsPreviewMouseLeftButtonUp(e);
         private void LstGridResults_KeyDown(object sender, KeyEventArgs e) => _inputHandler.HandleLstGridResultsKeyDown(e);
         private void LstGridResults_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e) => _inputHandler.HandleLstGridResultsPreviewMouseRightButtonUp(e);
 
@@ -185,7 +159,7 @@ namespace SwiftList.App
         {
             if (Keyboard.Modifiers == ModifierKeys.Shift)
             {
-                var scrollViewer = FindScrollViewer(LstGridResults);
+                var scrollViewer = FindScrollViewer(LstGridResultsControl);
                 if (scrollViewer != null)
                 {
                     if (e.Delta > 0)
@@ -194,52 +168,15 @@ namespace SwiftList.App
                         scrollViewer.LineLeft();
                         scrollViewer.LineLeft();
                     }
+
                     else
                     {
                         scrollViewer.LineRight();
                         scrollViewer.LineRight();
                         scrollViewer.LineRight();
                     }
+
                     e.Handled = true;
-                }
-            }
-        }
-
-        private void GridViewColumnHeader_Click(object sender, RoutedEventArgs e)
-        {
-            if (e.OriginalSource is GridViewColumnHeader headerClicked)
-            {
-                if (headerClicked.Column != null)
-                {
-                    string headerText = headerClicked.Column.Header as string ?? string.Empty;
-                    if (!string.IsNullOrEmpty(headerText))
-                    {
-                        // Strip existing arrows from header text to get the actual clean name
-                        string cleanHeader = headerText.Replace(" ▲", "").Replace(" ▼", "");
-                        
-                        _viewModel.SortByColumn(cleanHeader);
-
-                        // Update all headers in the GridView to display the arrow for the sorted column only
-                        var gridView = LstGridResults.View as GridView;
-                        if (gridView != null)
-                        {
-                            foreach (var col in gridView.Columns)
-                            {
-                                if (col.Header is string colHeaderText)
-                                {
-                                    string cleanColHeader = colHeaderText.Replace(" ▲", "").Replace(" ▼", "");
-                                    if (cleanColHeader == cleanHeader)
-                                    {
-                                        col.Header = cleanColHeader + (_viewModel.IsSortAscending ? " ▲" : " ▼");
-                                    }
-                                    else
-                                    {
-                                        col.Header = cleanColHeader;
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -253,6 +190,7 @@ namespace SwiftList.App
                 var result = FindScrollViewer(child);
                 if (result != null) return result;
             }
+
             return null;
         }
 

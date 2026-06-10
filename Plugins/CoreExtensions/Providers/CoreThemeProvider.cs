@@ -31,12 +31,12 @@ namespace SwiftList.Plugins.CoreExtensions.Providers
                             {
                                 string key = entry.Key?.ToString() ?? string.Empty;
                                 // WPF compiled resources use lowercase relative paths ending in .baml
-                                if (key.StartsWith("resources/themes/", StringComparison.OrdinalIgnoreCase) && 
+                                if (key.StartsWith("resources/themes/", StringComparison.OrdinalIgnoreCase) &&
                                     key.EndsWith(".baml", StringComparison.OrdinalIgnoreCase))
                                 {
                                     string relativeXamlPath = key.Substring(0, key.Length - 5) + ".xaml";
                                     string packUri = $"pack://application:,,,/{assemblyName};component/{relativeXamlPath}";
-                                    
+
                                     try
                                     {
                                         var dict = new ResourceDictionary

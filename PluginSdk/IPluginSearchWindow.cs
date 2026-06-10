@@ -11,6 +11,9 @@ namespace SwiftList.PluginSdk
         /// <summary>Opens the specified file or folder using default application.</summary>
         void OpenFileOrFolderExternal(string path);
 
+        /// <summary>Opens the specified file or folder with administrator privileges.</summary>
+        void OpenFileOrFolderAsAdminExternal(string path);
+
         /// <summary>Closes or hides the search window.</summary>
         void HideWindow();
     }

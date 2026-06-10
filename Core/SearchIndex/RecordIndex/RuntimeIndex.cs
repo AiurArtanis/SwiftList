@@ -63,7 +63,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
             set => _aliasValues = value;
         }
         internal Dictionary<char, int[]> NameCharBuckets => _nameCharBuckets;
-        
+
         internal void SetNameCharBuckets(Dictionary<char, int[]> buckets)
         {
             _nameCharBuckets = buckets;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
@@ -8,14 +9,12 @@ using SwiftList.PluginSdk;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
 using SwiftList.App.ViewModels;
-
 namespace SwiftList.App.ViewModels.Settings
 {
     public class LocalDriveSettingsViewModel : ViewModelBase
     {
         private readonly SearchService _searchService;
         private readonly Action _onTriggerFastRefresh;
-
         private string _indexSummary = TranslationManager.Instance["Local_LoadingInfo"];
         private bool _canRebuild;
         private bool _isLocalDrivesEmpty = false;
@@ -29,7 +28,6 @@ namespace SwiftList.App.ViewModels.Settings
         }
 
         public ObservableCollection<LocalDriveSettingsItem> LocalDrives { get; } = new();
-
         public ICommand RebuildCommand { get; }
 
         public string IndexSummary
@@ -41,6 +39,7 @@ namespace SwiftList.App.ViewModels.Settings
         public bool CanRebuild
         {
             get => _canRebuild;
+
             set
             {
                 if (SetProperty(ref _canRebuild, value))
@@ -61,8 +60,8 @@ namespace SwiftList.App.ViewModels.Settings
         }
 
         public bool IsUserAdmin => UpdateService.Instance.IsUserAdmin();
-
         private bool _isDriveCheckboxEnabled;
+
         public bool IsDriveCheckboxEnabled
         {
             get => _isDriveCheckboxEnabled;
@@ -72,59 +71,60 @@ namespace SwiftList.App.ViewModels.Settings
         public void UpdateStatus(UsnIndexer.IndexerStatus status, MachineSettings settings)
         {
             var enabled = settings.EnabledLocalDrives.Count == 0
-                ? null
-                : settings.EnabledLocalDrives.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+                ? null
+
+                : settings.EnabledLocalDrives.ToHashSet(StringComparer.OrdinalIgnoreCase);
             LocalDrives.Clear();
             foreach (var drive in status.Drives.OrderBy(d => d.Drive))
             {
                 bool isEnabled = enabled == null ? drive.Enabled : enabled.Contains(drive.Drive);
+
                 LocalDrives.Add(new LocalDriveSettingsItem
                 {
                     Drive = drive.Drive,
                     Name = $"{drive.Drive}:",
+
                     IsEnabled = isEnabled,
                     Kind = drive.Kind == "LocalNtfs" ? TranslationManager.Instance["Local_KindLocalNtfs"] : drive.Kind,
                     Strategy = isEnabled ? TranslationManager.Instance["Local_StrategyMftUsn"] : TranslationManager.Instance["Local_StrategyDisabled"],
                     State = TranslateState(drive.State),
                     ItemCount = isEnabled ? $"{drive.Files + drive.Dirs:N0}" : "-"
+
                 });
             }
 
             IsLocalDrivesEmpty = LocalDrives.Count == 0;
-
             bool isServiceReady = status.State != "error";
             bool isBusy = status.State is "indexing" or "loading-cache" or "pending";
-
             CanRebuild = IsUserAdmin && isServiceReady && (status.State is "ready" or "idle");
             IsDriveCheckboxEnabled = IsUserAdmin && isServiceReady && !isBusy;
-
             if (!isServiceReady)
             {
                 IndexSummary = TranslationManager.Instance["Local_ErrorDisconnected"];
                 DrivesPlaceholderText = TranslationManager.Instance["Local_ErrorPlaceholder"];
             }
+
             else if (LocalDrives.Count == 0)
             {
                 IndexSummary = TranslationManager.Instance["Local_LoadingInfo"];
                 DrivesPlaceholderText = TranslationManager.Instance["Local_LoadingPlaceholder"];
             }
+
             else
             {
                 IndexSummary = string.Format(TranslationManager.Instance["Local_SummaryTemplate"], TranslateState(status.State), LocalDrives.Count(d => d.IsEnabled), status.TotalFiles + status.TotalDirs);
             }
         }
 
-        private void Rebuild()
+        private async void Rebuild()
         {
             if (!CanRebuild)
                 return;
-
             CanRebuild = false;
             IsLocalDrivesEmpty = false;
             IndexSummary = TranslationManager.Instance["Local_Rebuilding"];
-
-            _searchService.InitializeOrLoadIndex(true);
+            await _searchService.InitializeOrLoadIndexAsync(true);
             _onTriggerFastRefresh?.Invoke();
         }
 
@@ -141,6 +141,7 @@ namespace SwiftList.App.ViewModels.Settings
                 "error" => TranslationManager.Instance["Local_StateError"],
                 "idle" => TranslationManager.Instance["Local_StateIdle"],
                 _ => state
+
             };
         }
     }
@@ -154,6 +155,7 @@ namespace SwiftList.App.ViewModels.Settings
         public string Strategy { get; set; } = string.Empty;
         public string State { get; set; } = string.Empty;
         public string ItemCount { get; set; } = string.Empty;
+
         public bool IsEnabled { get => _isEnabled; set => SetProperty(ref _isEnabled, value); }
     }
 }

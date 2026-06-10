@@ -50,9 +50,9 @@ namespace SwiftList.App.ViewModels.Settings.Plugins
         private bool _isExpanded = true;
 
         public PluginInfoViewModel(
-            string name, 
-            string version, 
-            string dllFileName, 
+            string name,
+            string version,
+            string dllFileName,
             string sdkVersion,
             System.Collections.Generic.List<PluginComponentViewModel> components)
         {

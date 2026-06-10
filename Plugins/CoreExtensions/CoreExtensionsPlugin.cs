@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using SwiftList.Plugins.CoreExtensions.Actions;
 using SwiftList.Plugins.CoreExtensions.Shell;
 using SwiftList.PluginSdk;
-
 namespace SwiftList.Plugins.CoreExtensions
 {
     public class CoreExtensionsPlugin : IActionPlugin
@@ -13,6 +12,8 @@ namespace SwiftList.Plugins.CoreExtensions
         {
             return new ISearchResultAction[]
             {
+                new OpenResultAction(),
+                new OpenResultAsAdminAction(),
                 new LocateInExplorerAction(),
                 new CopyPathAction(),
                 new CopyFileAction(),
@@ -21,6 +22,7 @@ namespace SwiftList.Plugins.CoreExtensions
                 new OpenAdminCommandPromptAction(),
                 new TouchAction(),
                 new MkdirAction()
+
             };
         }
 
@@ -29,6 +31,7 @@ namespace SwiftList.Plugins.CoreExtensions
             return new IDynamicActionProvider[]
             {
                 new ShellMenuActionProvider()
+
             };
         }
     }

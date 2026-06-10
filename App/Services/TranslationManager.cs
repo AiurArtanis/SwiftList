@@ -13,7 +13,7 @@ namespace SwiftList.App.Services
     public class TranslationManager : INotifyPropertyChanged
     {
         private static readonly Lazy<TranslationManager> _instance = new(() => new TranslationManager());
-        
+
         /// <summary>Gets the singleton instance of TranslationManager.</summary>
         public static TranslationManager Instance => _instance.Value;
 

@@ -5,9 +5,7 @@
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="../Styles/Colors.xaml"/>
     </ResourceDictionary.MergedDictionaries>
-
     <local:SplitColumnsConverter x:Key="SplitColumnsConverter"/>
-
     <!-- ═══════════ Inline Search Result Item Template ═══════════ -->
     <DataTemplate x:Key="InlineSearchResultTemplate" DataType="{x:Type app:AppSearchResult}">
         <Grid>
@@ -19,7 +17,6 @@
                 <!-- Shortcut badge -->
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-
             <TextBlock Grid.ColumnSpan="3"
                        FontSize="12"
                        FontWeight="SemiBold"
@@ -38,7 +35,6 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
-
             <!-- File/Folder icon -->
             <Image Grid.Column="0" Source="{Binding Icon}" Width="23" Height="23" Margin="0,0,14,0" VerticalAlignment="Center"
                    RenderOptions.BitmapScalingMode="HighQuality">
@@ -59,7 +55,6 @@
                     </Style>
                 </Image.Style>
             </Image>
- 
             <!-- Name -->
             <StackPanel VerticalAlignment="Center">
                 <StackPanel.Style>
@@ -106,7 +101,6 @@
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
-
                 <!-- Custom multi-column renderer (only for list items) -->
                 <ScrollViewer HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Disabled"
@@ -180,7 +174,6 @@
                     </TextBlock.Style>
                 </TextBlock>
             </StackPanel>
-
             <!-- Keyboard shortcut hint -->
             <TextBlock Grid.Column="2"
                        Text="{Binding ShortcutHint}"
@@ -205,5 +198,4 @@
             </TextBlock>
         </Grid>
     </DataTemplate>
-
 </ResourceDictionary>

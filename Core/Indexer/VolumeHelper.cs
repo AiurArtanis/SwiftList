@@ -54,10 +54,10 @@ namespace SwiftList.Core
             {
                 if (!drive.IsReady) continue;
                 string driveLetter = drive.Name.Split(':')[0].ToUpper();
-                
+
                 var volumeName = new StringBuilder(260);
                 var fileSystemName = new StringBuilder(260);
-                
+
                 bool success = Win32Api.GetVolumeInformationW(
                     drive.Name,
                     volumeName, (uint)volumeName.Capacity,
@@ -85,7 +85,7 @@ namespace SwiftList.Core
             {
                 if (!drive.IsReady) continue;
                 string driveLetter = drive.Name.Split(':')[0].ToUpper();
-                
+
                 var volumeName = new StringBuilder(260);
                 var fileSystemName = new StringBuilder(260);
                 bool success = Win32Api.GetVolumeInformationW(
@@ -112,14 +112,14 @@ namespace SwiftList.Core
             string rootPath = $"{driveLetter}:\\";
             var volumeName = new StringBuilder(260);
             var fileSystemName = new StringBuilder(260);
-            
+
             bool success = Win32Api.GetVolumeInformationW(
                 rootPath,
                 volumeName, (uint)volumeName.Capacity,
                 out _, out _, out _,
                 fileSystemName, (uint)fileSystemName.Capacity
             );
-            
+
             return success ? fileSystemName.ToString() : "NTFS";
         }
     }

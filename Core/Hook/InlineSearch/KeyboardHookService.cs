@@ -11,7 +11,7 @@ namespace SwiftList.Core.Hook.InlineSearch
         private IntPtr _hookId = IntPtr.Zero;
         private KeyboardNativeMethods.LowLevelKeyboardProc? _proc;
         private readonly ExplorerTracker _explorerTracker;
-        
+
         private UserSettings _settings = UserSettings.Load();
         private GlobalHotkeyDetector _hotkeyDetector;
 
@@ -194,7 +194,7 @@ namespace SwiftList.Core.Hook.InlineSearch
 
                 bool ctrlDown = (KeyboardNativeMethods.GetKeyState(0x11) & 0x8000) != 0;
                 bool altDown = (KeyboardNativeMethods.GetKeyState(0x12) & 0x8000) != 0;
-                bool winDown = (KeyboardNativeMethods.GetKeyState(0x5B) & 0x8000) != 0 || 
+                bool winDown = (KeyboardNativeMethods.GetKeyState(0x5B) & 0x8000) != 0 ||
                                (KeyboardNativeMethods.GetKeyState(0x5C) & 0x8000) != 0;
                 if (ctrlDown || altDown || winDown)
                 {

@@ -35,8 +35,8 @@ namespace SwiftList.Core.SearchIndex.RecordIndex
                     {
                         index.HasAlias.Set(oldIndex, false);
                     }
-                    index.CharMasks[oldIndex] = (((FileRecordFlags)index.Flags[oldIndex]) & FileRecordFlags.Deleted) != 0 
-                        ? 0 
+                    index.CharMasks[oldIndex] = (((FileRecordFlags)index.Flags[oldIndex]) & FileRecordFlags.Deleted) != 0
+                        ? 0
                         : FzfAlgorithm.GetCharMask(name);
                 }
 

@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using SwiftList.PluginSdk;
 using SwiftList.Plugins.CoreExtensions.Providers;
-
 namespace SwiftList.Plugins.CoreExtensions.InlineSearch
 {
     public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
@@ -16,17 +15,18 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
         {
             if (string.IsNullOrEmpty(className) || string.IsNullOrEmpty(processName))
                 return false;
-
             return processName.Equals("explorer", StringComparison.OrdinalIgnoreCase) &&
+
                    (className.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase) ||
+
                     className.Equals("Progman", StringComparison.OrdinalIgnoreCase) ||
+
                     className.Equals("WorkerW", StringComparison.OrdinalIgnoreCase));
         }
 
         public bool CanTrigger(IntPtr focusedHwnd, string className)
         {
             if (focusedHwnd == IntPtr.Zero) return false;
-
             IntPtr current = focusedHwnd;
             for (int depth = 0; depth < 12 && current != IntPtr.Zero; depth++)
             {
@@ -36,13 +36,16 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
                     string cls = sbClass.ToString();
                     if (cls.Equals("SHELLDLL_DefView", StringComparison.OrdinalIgnoreCase) ||
                         cls.Equals("SysListView32", StringComparison.OrdinalIgnoreCase) ||
+
                         cls.Equals("DirectUIHWND", StringComparison.OrdinalIgnoreCase))
                     {
                         return true;
                     }
                 }
+
                 current = ExplorerAdapterHelpers.GetParent(current);
             }
+
             return false;
         }
 
@@ -52,7 +55,6 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
             ExplorerAdapterHelpers.GetClassName(hwnd, sbClass, sbClass.Capacity);
             string className = sbClass.ToString();
             string processName = ExplorerAdapterHelpers.GetProcessName(hwnd);
-
             var collector = new ExplorerPathCollector();
             return collector.TryGetPath(hwnd, className, hwnd, className, processName);
         }
@@ -66,8 +68,8 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
                 string className = sbClass.ToString();
 
                 bool isDesktop = className.Equals("Progman", StringComparison.OrdinalIgnoreCase) ||
-                                 className.Equals("WorkerW", StringComparison.OrdinalIgnoreCase);
 
+                                 className.Equals("WorkerW", StringComparison.OrdinalIgnoreCase);
                 if (Directory.Exists(path) && !isDesktop)
                 {
                     if (TryLocateInExistingExplorer(path, hwnd))
@@ -82,8 +84,8 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
                     {
                         FileName = path,
                         UseShellExecute = true
-                    };
 
+                    };
                     if (File.Exists(path))
                     {
                         string? workingDirectory = Path.GetDirectoryName(path);
@@ -97,7 +99,9 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
                     return true;
                 }
             }
+
             catch { }
+
             return false;
         }
 
@@ -108,19 +112,17 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
             {
                 dynamic? window = ExplorerAdapterHelpers.FindExplorerWindow(hwnd);
                 if (window == null) return;
-
                 string name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
                 if (string.IsNullOrEmpty(name)) return;
-
                 dynamic folder = window.Document.Folder;
                 dynamic? item = folder.ParseName(name);
                 if (item == null) return;
-
                 const int svsiSelect = 0x1;
                 const int svsiDeselectOthers = 0x4;
                 const int svsiEnsureVisible = 0x8;
                 window.Document.SelectItem(item, svsiSelect | svsiDeselectOthers | svsiEnsureVisible);
             }
+
             catch { }
         }
 
@@ -132,12 +134,10 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
         {
             var results = new System.Collections.Generic.List<string>();
             if (hwnd == IntPtr.Zero) return results;
-
             try
             {
                 var shellWindowsType = Type.GetTypeFromCLSID(new Guid("9BA05972-F6A8-11CF-A442-00A0C90A8F39"));
                 if (shellWindowsType == null) return results;
-
                 dynamic shellWindows = Activator.CreateInstance(shellWindowsType)!;
                 int count = shellWindows.Count;
                 for (int i = 0; i < count; i++)
@@ -146,10 +146,8 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
                     {
                         dynamic? window = shellWindows.Item(i);
                         if (window == null) continue;
-
                         var windowHwnd = new IntPtr(Convert.ToInt64(window.HWND));
                         if (windowHwnd != hwnd) continue;
-
                         dynamic folderItems = window.Document.Folder.Items();
                         int itemCount = folderItems.Count;
                         for (int j = 0; j < itemCount; j++)
@@ -160,16 +158,22 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
                             if (string.IsNullOrWhiteSpace(path)) continue;
                             if (path.StartsWith("::", StringComparison.Ordinal)
                              || path.Contains("::{", StringComparison.Ordinal)
+
                              || path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
+
                                 continue;
                             results.Add(path);
                         }
+
                         break;
                     }
+
                     catch { }
                 }
             }
+
             catch { }
+
             return results;
         }
 
@@ -184,11 +188,13 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
                 rect = new AdapterRect { Left = nativeRect.Left, Top = nativeRect.Top, Right = nativeRect.Right, Bottom = nativeRect.Bottom };
                 return true;
             }
+
             if (ExplorerAdapterHelpers.GetWindowRect(hwnd, out nativeRect))
             {
                 rect = new AdapterRect { Left = nativeRect.Left, Top = nativeRect.Top, Right = nativeRect.Right, Bottom = nativeRect.Bottom };
                 return true;
             }
+
             return false;
         }
 
@@ -204,19 +210,18 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
             {
                 dynamic? window = ExplorerAdapterHelpers.FindExplorerWindow(explorerHwnd);
                 if (window == null) return false;
-
                 string? targetFolder = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
                 if (string.IsNullOrWhiteSpace(targetFolder) || !Directory.Exists(targetFolder))
                     return false;
-
                 window.Navigate2(targetFolder);
-
                 if (File.Exists(path))
                 {
                     ExplorerAdapterHelpers.SelectItemInExplorerLater(path, explorerHwnd);
                 }
+
                 return true;
             }
+
             catch
             {
                 return false;

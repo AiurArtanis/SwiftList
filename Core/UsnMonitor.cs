@@ -48,7 +48,7 @@ namespace SwiftList.Core
         {
             Logger.Log($"[Monitor] Started real-time monitoring on drive {_drive} from USN {_startUsn}...");
             string volumePath = $"\\\\.\\{_drive}:";
-            
+
             using var handle = Win32Api.CreateFileW(
                 volumePath,
                 Win32Api.GENERIC_READ,
@@ -164,7 +164,7 @@ namespace SwiftList.Core
                         {
                             _startUsn = BitConverter.ToInt64(outBuf, 0);
                         }
-                        
+
                         // No changes, await to avoid CPU spinning
                         await Task.Delay(500, _token);
                     }

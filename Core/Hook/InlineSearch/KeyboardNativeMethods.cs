@@ -34,7 +34,7 @@ namespace SwiftList.Core.Hook
         public static extern IntPtr GetKeyboardLayout(uint idThread);
 
         [DllImport("user32.dll")]
-        public static extern int ToUnicode(uint wVirtKey, uint wScanCode, byte[] lpKeyState, 
+        public static extern int ToUnicode(uint wVirtKey, uint wScanCode, byte[] lpKeyState,
             [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pwszBuff, int cchBuff, uint wFlags);
 
         [DllImport("user32.dll")]

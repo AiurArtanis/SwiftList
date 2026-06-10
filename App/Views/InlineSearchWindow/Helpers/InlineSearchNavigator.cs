@@ -9,7 +9,6 @@ using SwiftList.PluginSdk;
 using SwiftList.App.ViewModels;
 using SwiftList.Core;
 using SwiftList.App;
-
 namespace SwiftList.App.Views.InlineSearchWindow.Helpers
 {
     public static class InlineSearchNavigator
@@ -33,20 +32,25 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
 
         public static void OpenFileOrFolderExternal(this global::SwiftList.App.InlineSearchWindow window, string path)
         {
-            window.OpenPathFromInline(path);
+            window.OpenPathFromInline(path, asAdmin: false);
         }
 
-        public static void ExecuteSearchResult(this global::SwiftList.App.InlineSearchWindow window, AppSearchResult result)
+        public static void OpenFileOrFolderAsAdminExternal(this global::SwiftList.App.InlineSearchWindow window, string path)
+        {
+            window.OpenPathFromInline(path, asAdmin: true);
+        }
+
+        public static void ExecuteSearchResult(this global::SwiftList.App.InlineSearchWindow window, AppSearchResult result, bool asAdmin = false)
         {
             if (result.IsSearchSectionHeader)
                 return;
-
             if (result.IsPluginSearchAction)
             {
                 if (PluginManager.Instance.TryExecuteSearchAction(result, window))
                 {
                     window.HideWindow();
                 }
+
                 return;
             }
 
@@ -56,13 +60,13 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                 return;
             }
 
-            window.OpenPathFromInline(result.FullPath);
+            window.OpenPathFromInline(result.FullPath, asAdmin);
         }
 
-        private static void OpenPathFromInline(this global::SwiftList.App.InlineSearchWindow window, string path)
+        private static void OpenPathFromInline(this global::SwiftList.App.InlineSearchWindow window, string path, bool asAdmin)
         {
             var tracker = window.Manager.ExplorerTracker;
-            if (path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero)
+            if (!asAdmin && path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero)
             {
                 window.Manager.IsExecuting = true;
                 if (tracker.ActiveInlineAdapter.ExecuteItem(tracker.ActiveHwnd, path, window.SearchText))
@@ -70,6 +74,7 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                     window.HideWindow();
                     return;
                 }
+
                 window.Manager.IsExecuting = false;
             }
 
@@ -82,6 +87,7 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                         Id = IpcMessageId.NavigateDialog,
                         Hwnd = tracker.ActiveHwnd.ToInt64(),
                         StringVal1 = path
+
                     });
                 }
 
@@ -91,8 +97,11 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
 
             if (Directory.Exists(path)
                 && tracker.IsExplorerOrDesktopActive
+
                 && !tracker.IsDesktop
+
                 && tracker.ActiveHwnd != IntPtr.Zero
+
                 && FileExecutor.TryLocateInExistingExplorer(path, tracker.ActiveHwnd))
             {
                 window.HideWindow();
@@ -103,7 +112,10 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
             if (path != "__SHOW_MORE__")
             {
                 window.HideWindow();
-                FileExecutor.OpenFileOrFolder(path, searchText);
+                if (asAdmin)
+                    FileExecutor.OpenFileOrFolderAsAdmin(path, searchText);
+                else
+                    FileExecutor.OpenFileOrFolder(path, searchText);
                 return;
             }
 
@@ -113,16 +125,19 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
         public static void ResetInlineSearchAndFocusDialog(this global::SwiftList.App.InlineSearchWindow window)
         {
             // 1. Clear our own search query
+
             window.UpdateSearchDisplay(string.Empty);
 
             // 2. Grant the elevated hook service permission to call SetForegroundWindow,
             //    bypassing the system's foreground-lock without needing to hide this window.
+
             if (App.HookClient != null && App.HookClient.ServiceProcessId != 0)
             {
                 AllowSetForegroundWindow(App.HookClient.ServiceProcessId);
             }
 
             // 3. Ask the elevated service to restore focus to the dialog's edit box
+
             var tracker = window.Manager.ExplorerTracker;
             if (tracker.ActiveHwnd != IntPtr.Zero && App.HookClient != null)
             {
@@ -130,6 +145,7 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                 {
                     Id = IpcMessageId.RestoreDialogFocus,
                     Hwnd = tracker.ActiveHwnd.ToInt64()
+
                 });
             }
         }

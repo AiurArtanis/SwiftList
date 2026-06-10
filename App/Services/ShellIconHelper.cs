@@ -214,7 +214,7 @@ namespace SwiftList.App
             {
                 var geometry = Geometry.Parse("M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z");
                 var group = new DrawingGroup();
-                var brush = System.Windows.Application.Current?.TryFindResource("AccentBlue") as System.Windows.Media.Brush 
+                var brush = System.Windows.Application.Current?.TryFindResource("AccentBlue") as System.Windows.Media.Brush
                             ?? System.Windows.Media.Brushes.Blue;
                 group.Children.Add(new GeometryDrawing(brush, null, geometry));
                 var image = new DrawingImage(group);
@@ -228,7 +228,7 @@ namespace SwiftList.App
         {
             var geometry = Geometry.Parse(pathData);
             var group = new DrawingGroup();
-            
+
             System.Windows.Media.Brush? brush = null;
             if (!string.IsNullOrEmpty(colorHexOrKey))
             {
@@ -247,10 +247,10 @@ namespace SwiftList.App
             }
             if (brush == null)
             {
-                brush = System.Windows.Application.Current?.TryFindResource("TextPrimary") as System.Windows.Media.Brush 
+                brush = System.Windows.Application.Current?.TryFindResource("TextPrimary") as System.Windows.Media.Brush
                         ?? System.Windows.Media.Brushes.Gray;
             }
-            
+
             group.Children.Add(new GeometryDrawing(brush, null, geometry));
             var image = new DrawingImage(group);
             try

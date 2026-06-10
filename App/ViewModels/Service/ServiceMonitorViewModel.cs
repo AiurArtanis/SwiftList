@@ -10,7 +10,6 @@ using Application = System.Windows.Application;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
 using SwiftList.App.ViewModels;
 using SwiftList.App.ViewModels.Search;
-
 namespace SwiftList.App.ViewModels.Service
 {
     public class ServiceMonitorViewModel : ViewModelBase, IDisposable
@@ -23,6 +22,7 @@ namespace SwiftList.App.ViewModels.Service
         private string _statusText = string.Empty;
 
         // UI Panel Visibilities
+
         private Visibility _statusBarVisibility = Visibility.Collapsed;
         private Visibility _loadingPanelVisibility = Visibility.Collapsed;
         private Visibility _progressBarVisibility = Visibility.Collapsed;
@@ -30,12 +30,14 @@ namespace SwiftList.App.ViewModels.Service
         private Visibility _errorIconVisibility = Visibility.Collapsed;
 
         // Loading/Connection texts
+
         private string _loadingTitle = string.Empty;
         private string _loadingStats = string.Empty;
         private double _loadingProgress;
         private bool _isProgressIndeterminate = true;
 
         // Status cache
+
         private int _statusFiles;
         private int _statusDirs;
 
@@ -51,6 +53,7 @@ namespace SwiftList.App.ViewModels.Service
             _searchService = searchService;
 
             _connectionHandler = new ServiceConnectionHandler(
+
                 _searchService,
                 onStatusUpdated: OnStatusUpdated,
                 onServiceInstallStarted: () =>
@@ -58,26 +61,33 @@ namespace SwiftList.App.ViewModels.Service
                     LoadingTitle = TranslationManager.Instance["Service_AutoConnecting"];
                     LoadingStats = TranslationManager.Instance["Service_AdminPrivilegeTip"];
                     ShowServiceReconnectState(LoadingTitle, LoadingStats);
+
                 },
+
                 onServiceInstallCompleted: () =>
                 {
                     TriggerIndexBuild();
+
                 },
+
                 onServiceInstallError: ex =>
                 {
                     MessageBox.Show(string.Format(TranslationManager.Instance["Service_InstallFailedPrompt"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
+
                 },
+
                 onServiceFailedToStart: () =>
                 {
                     IsIndexReady = false;
+
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         Application.Current.MainWindow?.Hide();
                     });
                     App.ShowSettingsWindow("Service");
                 }
-            );
 
+            );
             _statusHandler = new ServiceMonitorStatusHandler(this, _mainVm, _connectionHandler);
             InstallServiceCommand = new RelayCommand(_connectionHandler.ExecuteInstallService);
         }
@@ -85,6 +95,7 @@ namespace SwiftList.App.ViewModels.Service
         public ICommand InstallServiceCommand { get; }
 
         private void OnStatusUpdated(UsnIndexer.IndexerStatus status)
+
             => _statusHandler.ProcessStatusTimerTick(status);
 
         public bool IsIndexReady
@@ -153,7 +164,6 @@ namespace SwiftList.App.ViewModels.Service
             {
                 _mainVm.Search.ResultsPanelVisibility = Visibility.Visible;
                 _mainVm.Search.ResultsSeparatorVisibility = Visibility.Visible;
-
                 if (_connectionHandler.ShouldWaitForServiceReconnect())
                 {
                     LoadingPanelVisibility = Visibility.Visible;
@@ -164,31 +174,34 @@ namespace SwiftList.App.ViewModels.Service
                     LoadingTitle = TranslationManager.Instance["Service_WaitingStart"];
                     LoadingStats = TranslationManager.Instance["Service_StartedDetail"];
                 }
+
                 else
                 {
                     LoadingPanelVisibility = Visibility.Collapsed;
                     StatusBarVisibility = Visibility.Visible;
                 }
             }
+
             else
             {
                 LoadingPanelVisibility = Visibility.Collapsed;
                 StatusBarVisibility = Visibility.Visible;
             }
 
-            Task.Run(() =>
+            _ = Task.Run(async () =>
             {
                 UsnIndexer.IndexerStatus status;
                 if (!forceRebuild)
                 {
-                    status = _searchService.GetStatus();
+                    status = await _searchService.GetStatusAsync();
                 }
+
                 else
                 {
                     status = new UsnIndexer.IndexerStatus { State = "force-rebuild" };
                 }
 
-                Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     if (status.State == "ready")
                     {
@@ -200,6 +213,7 @@ namespace SwiftList.App.ViewModels.Service
                         _mainVm.Search.PerformSearch(_mainVm.Search.SearchQuery);
                         Logger.Log($"[ServiceMonitor] Connection fast-pass: service already ready.");
                     }
+
                     else
                     {
                         IsIndexReady = false;
@@ -210,15 +224,17 @@ namespace SwiftList.App.ViewModels.Service
 
                         _statusHandler.ProcessStatusTimerTick(status);
 
-                        Task.Run(() =>
+                        Task.Run(async () =>
                         {
-                            _searchService.InitializeOrLoadIndex(forceRebuild);
-                            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                            await _searchService.InitializeOrLoadIndexAsync(forceRebuild);
+
+                            _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                             {
                                 _connectionHandler.Start();
                             }));
                         });
                     }
+
                 }));
             });
         }
@@ -254,6 +270,7 @@ namespace SwiftList.App.ViewModels.Service
         }
 
         // Called by ServiceMonitorStatusHandler when index reaches ready state
+
         internal void ApplyReadyStatus(UsnIndexer.IndexerStatus status)
         {
             _statusFiles = status.TotalFiles;

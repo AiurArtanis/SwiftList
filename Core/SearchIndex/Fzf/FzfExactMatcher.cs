@@ -11,18 +11,18 @@ namespace SwiftList.Core.SearchIndex.Fzf
 
             int bestPos = -1;
             int bestBonus = -1;
-            
+
             var textSpan = text.AsSpan();
             var patternSpan = pattern.AsSpan();
             var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-            
+
             int offset = 0;
             while (offset <= text.Length - pattern.Length)
             {
                 int index = textSpan.Slice(offset).IndexOf(patternSpan, comparison);
                 if (index < 0)
                     break;
-                
+
                 int i = offset + index;
                 int bonus = FzfAlgorithm.BonusAt(text, i, scheme);
                 if (!boundaryCheck || IsBoundaryMatch(text, i, i + pattern.Length, bonus))
@@ -35,7 +35,7 @@ namespace SwiftList.Core.SearchIndex.Fzf
                             break;
                     }
                 }
-                
+
                 offset = i + 1;
             }
 

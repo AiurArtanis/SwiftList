@@ -80,22 +80,22 @@ namespace SwiftList.Core.SearchIndex.Fzf
 
             var maxVals = Vector256.Create(sortKeys[0], sortKeys[1], sortKeys[2], sortKeys[3]);
             var maxIndices = Vector256.Create(0UL, 1UL, 2UL, 3UL);
-            
+
             int limit = count - (count % 4);
             for (int i = 4; i < limit; i += 4)
             {
-                var nextVals = Vector256.Create(sortKeys[i], sortKeys[i+1], sortKeys[i+2], sortKeys[i+3]);
-                var nextIndices = Vector256.Create((ulong)i, (ulong)(i+1), (ulong)(i+2), (ulong)(i+3));
-                
+                var nextVals = Vector256.Create(sortKeys[i], sortKeys[i + 1], sortKeys[i + 2], sortKeys[i + 3]);
+                var nextIndices = Vector256.Create((ulong)i, (ulong)(i + 1), (ulong)(i + 2), (ulong)(i + 3));
+
                 var cmp = Vector256.GreaterThan(nextVals, maxVals);
-                
+
                 maxVals = Vector256.ConditionalSelect(cmp, nextVals, maxVals);
                 maxIndices = Vector256.ConditionalSelect(cmp, nextIndices, maxIndices);
             }
-            
+
             ulong bestVal = maxVals.GetElement(0);
             int bestIdx = (int)maxIndices.GetElement(0);
-            
+
             for (int i = 1; i < 4; i++)
             {
                 if (maxVals.GetElement(i) > bestVal)
@@ -104,7 +104,7 @@ namespace SwiftList.Core.SearchIndex.Fzf
                     bestIdx = (int)maxIndices.GetElement(i);
                 }
             }
-            
+
             for (int i = limit; i < count; i++)
             {
                 if (sortKeys[i] > bestVal)
@@ -113,7 +113,7 @@ namespace SwiftList.Core.SearchIndex.Fzf
                     bestIdx = i;
                 }
             }
-            
+
             return bestIdx;
         }
     }

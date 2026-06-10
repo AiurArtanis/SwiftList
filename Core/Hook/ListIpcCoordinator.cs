@@ -38,9 +38,9 @@ namespace SwiftList.Core.Hook
                 _selectedIndicesEvent = evt;
                 _selectedIndicesResult = null;
 
-                sendMsg(new IpcMessage 
-                { 
-                    Id = IpcMessageId.GetSelectedIndices, 
+                sendMsg(new IpcMessage
+                {
+                    Id = IpcMessageId.GetSelectedIndices,
                     Hwnd = hwnd.ToInt64(),
                     StringVal1 = className
                 });

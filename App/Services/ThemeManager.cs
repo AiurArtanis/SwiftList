@@ -56,7 +56,7 @@ namespace SwiftList.App.Services
 
                 // Apply to application-level resources
                 var appResources = System.Windows.Application.Current.Resources;
-                
+
                 if (_activeThemeDictionary != null)
                 {
                     appResources.MergedDictionaries.Remove(_activeThemeDictionary);

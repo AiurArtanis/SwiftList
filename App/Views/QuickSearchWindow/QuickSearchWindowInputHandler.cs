@@ -7,7 +7,6 @@ using SwiftList.PluginSdk;
 using SwiftList.App.Helpers;
 using SwiftList.Core;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
-
 namespace SwiftList.App.Views.QuickSearchWindow
 {
     public class QuickSearchWindowInputHandler
@@ -105,18 +104,20 @@ namespace SwiftList.App.Views.QuickSearchWindow
 
             if (e.Key == Key.Enter)
             {
+                bool asAdmin = Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
                 if (_window.LstResults.SelectedItem is AppSearchResult result)
                 {
-                    ExecuteResult(result);
+                    ExecuteResult(result, asAdmin);
                 }
                 else if (_window.LstResults.Items.Count > 0)
                 {
                     _window.LstResults.SelectedIndex = 0;
                     if (_window.LstResults.SelectedItem is AppSearchResult firstResult)
                     {
-                        ExecuteResult(firstResult);
+                        ExecuteResult(firstResult, asAdmin);
                     }
                 }
+
                 e.Handled = true;
                 return;
             }
@@ -143,13 +144,11 @@ namespace SwiftList.App.Views.QuickSearchWindow
                     num = e.Key - Key.D1;
                 else if (e.Key >= Key.NumPad1 && e.Key <= Key.NumPad9)
                     num = e.Key - Key.NumPad1;
-
                 if (num >= 0)
                 {
                     var scrollViewer = WpfUiHelper.GetScrollViewer(_window.LstResults);
                     int firstVisible = scrollViewer != null ? (int)Math.Round(scrollViewer.VerticalOffset) : 0;
                     int shortcutIndex = 0;
-
                     for (int i = firstVisible; i < _window.LstResults.Items.Count; i++)
                     {
                         var item = _window.LstResults.Items[i] as AppSearchResult;
@@ -157,7 +156,7 @@ namespace SwiftList.App.Views.QuickSearchWindow
                         {
                             if (shortcutIndex == num)
                             {
-                                ExecuteResult(item);
+                                ExecuteResult(item, asAdmin: true);
                                 e.Handled = true;
                                 break;
                             }
@@ -193,11 +192,10 @@ namespace SwiftList.App.Views.QuickSearchWindow
             _window.TxtSearch.Focus();
         }
 
-        private void ExecuteResult(AppSearchResult result)
+        private void ExecuteResult(AppSearchResult result, bool asAdmin = false)
         {
             if (result.IsSearchSectionHeader)
                 return;
-
             if (!result.IsPluginSearchAction && !result.IsInstantResult)
             {
                 SearchHistoryStore.Record(result.FullPath);
@@ -209,6 +207,7 @@ namespace SwiftList.App.Views.QuickSearchWindow
                 if (PluginManager.Instance.TryExecuteSearchAction(result, _window))
                 {
                 }
+
                 return;
             }
 
@@ -224,10 +223,14 @@ namespace SwiftList.App.Views.QuickSearchWindow
                 _window.HideWindowNoRestore();
                 FileExecutor.OpenFileOrFolder(result.FullPath, currentQuery, _window.HideWindowNoRestore);
             }
+
             else
             {
                 _window.HideWindow();
-                FileExecutor.OpenFileOrFolder(result.FullPath, currentQuery, _window.HideWindow);
+                if (asAdmin)
+                    FileExecutor.OpenFileOrFolderAsAdmin(result.FullPath, currentQuery, _window.HideWindow);
+                else
+                    FileExecutor.OpenFileOrFolder(result.FullPath, currentQuery, _window.HideWindow);
             }
         }
 
@@ -235,14 +238,12 @@ namespace SwiftList.App.Views.QuickSearchWindow
         {
             int count = _window.LstResults.Items.Count;
             if (count == 0) return;
-
             int index = _window.LstResults.SelectedIndex;
             for (int i = 0; i < count; i++)
             {
                 index += direction;
                 if (index < 0 || index >= count)
                     break;
-
                 if (_window.LstResults.Items[index] is AppSearchResult item && !item.IsEmptyResult && !item.IsSearchSectionHeader)
                 {
                     _window.LstResults.SelectedIndex = index;
@@ -278,7 +279,9 @@ namespace SwiftList.App.Views.QuickSearchWindow
         private bool IsSearchCaretAtEnd()
         {
             return _window.TxtSearch.IsKeyboardFocusWithin
+
                    && _window.TxtSearch.SelectionLength == 0
+
                    && _window.TxtSearch.CaretIndex >= _window.TxtSearch.Text.Length;
         }
     }

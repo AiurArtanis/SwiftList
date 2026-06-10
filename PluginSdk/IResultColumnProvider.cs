@@ -27,7 +27,7 @@ namespace SwiftList.PluginSdk
         public string ColumnId { get; set; } = string.Empty;
         public string HeaderText { get; set; } = string.Empty;
         public double Width { get; set; } = 120;
-        
+
         /// <summary>
         /// Optional predicate to determine if this column should be visible for a search result context.
         /// </summary>

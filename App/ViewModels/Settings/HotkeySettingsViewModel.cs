@@ -16,7 +16,7 @@ namespace SwiftList.App.ViewModels.Settings
         public HotkeySettingsViewModel(UserSettings userSettings)
         {
             _userSettings = userSettings;
-            
+
             // Initialize local bindings from user settings
             _toggleType = _userSettings.ToggleWindowHotkey?.Type ?? "ModifierClick";
             _toggleClickModifier = _userSettings.ToggleWindowHotkey?.ClickModifier ?? "Control";
@@ -146,27 +146,27 @@ namespace SwiftList.App.ViewModels.Settings
             new("KeyCombo", TranslationManager.Instance["Hotkeys_TypeCombo"])
         };
 
-        public List<HotkeyOptionItem> ModifierOptions => 
+        public List<HotkeyOptionItem> ModifierOptions =>
             new List<string> { "Control", "Alt", "Shift", "Win" }
             .Select(x => new HotkeyOptionItem(x, x)).ToList();
 
-        public List<HotkeyOptionItem> ClickModifierOptions => 
+        public List<HotkeyOptionItem> ClickModifierOptions =>
             new List<string> { "Control", "Alt", "Shift", "Win" }
             .Select(x => new HotkeyOptionItem(x, x)).ToList();
 
-        public List<HotkeyOptionItem> ClickCountOptions => 
+        public List<HotkeyOptionItem> ClickCountOptions =>
             new List<int> { 1, 2, 3 }
             .Select(x => new HotkeyOptionItem(x, x.ToString())).ToList();
-        
-        public List<HotkeyOptionItem> SelectIndexModifierOptions => 
+
+        public List<HotkeyOptionItem> SelectIndexModifierOptions =>
             new List<string> { "Control", "Alt", "Shift" }
             .Select(x => new HotkeyOptionItem(x, x)).ToList();
 
-        public List<HotkeyOptionItem> KeyOptions => 
+        public List<HotkeyOptionItem> KeyOptions =>
             new List<string>
             {
                 "Space", "Tab", "Enter", "Escape",
-                "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", 
+                "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
                 "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
                 "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
                 "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"
