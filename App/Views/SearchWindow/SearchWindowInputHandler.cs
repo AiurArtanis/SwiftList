@@ -22,6 +22,25 @@ namespace SwiftList.App.Views.SearchWindow
 
         public void HandleWindowPreviewKeyDown(KeyEventArgs e)
         {
+            if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                if (_window.LstGridResultsControl.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult)
+                {
+                    if (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath))
+                    {
+                        try
+                        {
+                            var fileList = new System.Collections.Specialized.StringCollection { result.FullPath };
+                            System.Windows.Clipboard.SetFileDropList(fileList);
+                            _window.Close();
+                            e.Handled = true;
+                            return;
+                        }
+                        catch { }
+                    }
+                }
+            }
+
             var quickLookModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
             var checkKey = e.Key == Key.System ? e.SystemKey : e.Key;
             if ((checkKey == Key.P && Keyboard.Modifiers == quickLookModifier) ||

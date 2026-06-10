@@ -1,0 +1,9 @@
+{
+  "WebSearch_PluginName": "网页搜索与快捷直达插件",
+  "WebSearch_ProviderName": "网页搜索",
+  "WebSearch_Baidu": "百度",
+  "WebSearch_PlaceholderTitle": "使用 {0} 搜索",
+  "WebSearch_PlaceholderDesc": "输入关键字并回车进行搜索",
+  "WebSearch_ResultTitle": "使用 {0} 搜索: {1}",
+  "WebSearch_ResultDesc": "回车或单击直接在浏览器中打开搜索结果"
+}

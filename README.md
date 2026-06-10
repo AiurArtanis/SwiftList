@@ -61,6 +61,7 @@ Features a lightweight, reusable **Plugin SDK** that enables seamless third-part
   * **Environment Variables Expansion**: Instantly expands Windows environment variables (e.g., `%appdata%`). If the resolved path exists, Enter opens it; otherwise, it defaults to copy-to-clipboard.
   * **Command Runner**: Instantly executes system command lines.
   * **Bing Translator**: Input `tr hello` or `tr 你好` to instantly display the translation result and the detected source language. Press Enter or click to copy. The source language is automatically detected, and the target language is automatically set to the current app interface language. If the source language matches the target language, it automatically translates to English.
+  * **Web Search**: Type engine prefixes followed by keywords to search instantly in your default web browser. Supported prefixes: `gg <keyword>` (Google), `bd <keyword>` (Baidu), `bing <keyword>` (Bing), `gh <keyword>` (GitHub), `wiki <keyword>` (Wikipedia).
 
 ---
 
@@ -71,6 +72,7 @@ Features a lightweight, reusable **Plugin SDK** that enables seamless third-part
 * **Blind Selection**: 
   * Shortcuts indicator (`Ctrl+1` through `Ctrl+9`) are permanently docked on the right side of the list.
   * Instead of reaching for your mouse, simply press `Ctrl+number` to instantly open/trigger the corresponding result.
+* **Copy File/Folder Entity (Ctrl+C)**: Select a file or folder in any search result list, press `Ctrl+C` to copy the actual file/folder entity directly to the clipboard and **automatically close the search window**, allowing you to paste it (`Ctrl+V`) directly inside Windows File Explorer.
 * **Actions Menu**:
   * Select a search result and press `Tab` (or right-click) to open the actions menu.
   * Features high-frequency actions such as "Open", "Open Folder", "Run as Administrator", "Copy Path", and "Copy File".

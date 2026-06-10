@@ -4,4 +4,5 @@
   <Project Path="Plugins/DirectoryOpus/DirectoryOpus.csproj" />
   <Project Path="Plugins/ListSearch/ListSearch.csproj" />
   <Project Path="Plugins/Translation/Translation.csproj" />
+  <Project Path="Plugins/WebSearch/WebSearch.csproj" />
 </Solution>

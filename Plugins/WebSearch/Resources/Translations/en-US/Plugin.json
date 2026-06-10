@@ -1,0 +1,9 @@
+{
+  "WebSearch_PluginName": "Web Search Plugin",
+  "WebSearch_ProviderName": "Web Search",
+  "WebSearch_Baidu": "Baidu",
+  "WebSearch_PlaceholderTitle": "Search with {0}",
+  "WebSearch_PlaceholderDesc": "Type keywords and press Enter to search",
+  "WebSearch_ResultTitle": "Search with {0}: {1}",
+  "WebSearch_ResultDesc": "Press Enter or click to open search results in your browser"
+}

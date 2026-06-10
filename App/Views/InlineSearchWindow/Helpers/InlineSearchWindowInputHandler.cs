@@ -28,6 +28,25 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
 
         public void HandlePreviewKeyDown(System.Windows.Input.KeyEventArgs e)
         {
+            if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult)
+                {
+                    if (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath))
+                    {
+                        try
+                        {
+                            var fileList = new System.Collections.Specialized.StringCollection { result.FullPath };
+                            System.Windows.Clipboard.SetFileDropList(fileList);
+                            _window.HideWindow();
+                            e.Handled = true;
+                            return;
+                        }
+                        catch { }
+                    }
+                }
+            }
+
             // Escape key
 
             if (e.Key == Key.Escape)
