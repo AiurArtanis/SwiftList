@@ -1,0 +1,7 @@
+{
+  "Translation_ProviderName": "Bing Translator",
+  "Translation_PluginName": "Bing Translator Plugin",
+  "Translation_PlaceholderTitle": "tr <text>",
+  "Translation_PlaceholderDesc": "Input text to translate using Bing Translator (Auto-detect ➔ App Language)",
+  "Translation_ResultDesc": "Translated from: {0} - Enter or click to copy"
+}

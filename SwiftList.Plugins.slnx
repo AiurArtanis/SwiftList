@@ -3,4 +3,5 @@
   <Project Path="Plugins/PinyinAlias/PinyinAlias.csproj" />
   <Project Path="Plugins/DirectoryOpus/DirectoryOpus.csproj" />
   <Project Path="Plugins/ListSearch/ListSearch.csproj" />
+  <Project Path="Plugins/Translation/Translation.csproj" />
 </Solution>

@@ -60,6 +60,7 @@ Features a lightweight, reusable **Plugin SDK** that enables seamless third-part
   * **Scientific Calculator**: Parses arithmetic expressions in real-time, supporting nested brackets, scientific functions, and base conversions (e.g., `255 to hex` 👉 `0xFF`). Press `Tab` to autocomplete the result.
   * **Environment Variables Expansion**: Instantly expands Windows environment variables (e.g., `%appdata%`). If the resolved path exists, Enter opens it; otherwise, it defaults to copy-to-clipboard.
   * **Command Runner**: Instantly executes system command lines.
+  * **Bing Translator**: Input `tr hello` or `tr 你好` to instantly display the translation result and the detected source language. Press Enter or click to copy. The source language is automatically detected, and the target language is automatically set to the current app interface language. If the source language matches the target language, it automatically translates to English.
 
 ---
 
