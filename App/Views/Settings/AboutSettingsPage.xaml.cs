@@ -177,5 +177,33 @@ namespace SwiftList.App.Views.Settings
                 SwiftList.Core.Logger.Log($"[AboutSettingsPage] Failed to open URL: {ex.Message}", SwiftList.Core.LogLevel.Warn);
             }
         }
+
+        private void BtnStartTutorial_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var exePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SwiftList.Tutorial.exe");
+                if (File.Exists(exePath))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = exePath,
+                        UseShellExecute = true
+                    });
+                }
+                else
+                {
+                    MessageBox.Show(
+                        $"SwiftList.Tutorial.exe was not found at {exePath}",
+                        "Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 }

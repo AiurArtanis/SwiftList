@@ -6,7 +6,7 @@
         xmlns:plugins="clr-namespace:SwiftList.App.Views.Settings.Plugins"
         xmlns:services="clr-namespace:SwiftList.App.Services"
         Title="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Title]}"
-        Height="600" Width="900"
+        Height="650" Width="900"
         WindowStartupLocation="CenterScreen"
         Background="Transparent"
         AllowsTransparency="True"

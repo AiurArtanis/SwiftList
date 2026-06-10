@@ -26,34 +26,7 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
 
         public bool CanTrigger(IntPtr focusedHwnd, string className)
         {
-            if (focusedHwnd == IntPtr.Zero) return false;
-            
-            if (className.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase) ||
-                className.Equals("Progman", StringComparison.OrdinalIgnoreCase) ||
-                className.Equals("WorkerW", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            IntPtr current = focusedHwnd;
-            for (int depth = 0; depth < 12 && current != IntPtr.Zero; depth++)
-            {
-                var sbClass = new StringBuilder(128);
-                if (ExplorerAdapterHelpers.GetClassName(current, sbClass, sbClass.Capacity) > 0)
-                {
-                    string cls = sbClass.ToString();
-                    if (cls.Equals("SHELLDLL_DefView", StringComparison.OrdinalIgnoreCase) ||
-                        cls.Equals("SysListView32", StringComparison.OrdinalIgnoreCase) ||
-                        cls.Equals("DirectUIHWND", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-                }
-
-                current = ExplorerAdapterHelpers.GetParent(current);
-            }
-
-            return false;
+            return true;
         }
 
         public string? GetSearchScope(IntPtr hwnd)

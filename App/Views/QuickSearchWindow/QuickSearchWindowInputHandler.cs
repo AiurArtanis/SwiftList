@@ -22,7 +22,7 @@ namespace SwiftList.App.Views.QuickSearchWindow
         {
             if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
             {
-                if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult)
+                if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult && !result.IsApplication)
                 {
                     if (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath))
                     {
@@ -30,6 +30,14 @@ namespace SwiftList.App.Views.QuickSearchWindow
                         {
                             var fileList = new System.Collections.Specialized.StringCollection { result.FullPath };
                             System.Windows.Clipboard.SetFileDropList(fileList);
+                            
+                            try
+                            {
+                                string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "swiftlist_copied.tmp");
+                                System.IO.File.WriteAllText(tempPath, result.FullPath);
+                            }
+                            catch { }
+
                             _window.HideWindow();
                             e.Handled = true;
                             return;

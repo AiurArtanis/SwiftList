@@ -16,87 +16,115 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <StackPanel>
-        <TextBlock Style="{StaticResource SettingsSectionTitle}" 
-                   Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Title]}"/>
-        <TextBlock Style="{StaticResource SettingsHintText}" 
-                   Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Hint]}"/>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Style="{StaticResource SettingsSectionTitle}" 
+                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Title]}"/>
+            <TextBlock Style="{StaticResource SettingsHintText}" 
+                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Hint]}"/>
 
-        <Border Style="{StaticResource SettingsCard}">
-            <StackPanel>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Desc1]}" 
-                               FontSize="22" FontWeight="SemiBold" FontFamily="Microsoft YaHei UI"/>
-                    <TextBlock Text="{Binding AppVersion}" 
-                               FontSize="14" Foreground="{DynamicResource TextSecondary2}" 
-                               VerticalAlignment="Bottom" Margin="8,0,0,3"/>
-                </StackPanel>
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Desc2]}"
-                           Foreground="{DynamicResource TextSecondary2}"
-                           Margin="0,6,0,0"/>
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Desc3]}"
-                           Foreground="{DynamicResource TextSecondary2}"
-                           TextWrapping="Wrap"
-                           Margin="0,14,0,0"/>
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Desc4]}"
-                           Foreground="{DynamicResource TextSecondary2}"
-                           TextWrapping="Wrap"
-                           Margin="0,8,0,0"/>
-                <WrapPanel Margin="0,14,0,0">
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Homepage]}" Foreground="{DynamicResource TextSecondary2}"/>
-                    <TextBlock>
-                        <Hyperlink NavigateUri="https://github.com/swiftlist/SwiftList" RequestNavigate="Hyperlink_RequestNavigate">
-                            <Run Text="https://github.com/swiftlist/SwiftList"/>
-                        </Hyperlink>
-                    </TextBlock>
-                </WrapPanel>
-            </StackPanel>
-        </Border>
-
-        <!-- Update Section -->
-        <TextBlock Style="{StaticResource SettingsSectionTitle}" 
-                   Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_CheckUpdate]}"
-                   Margin="0,20,0,0"/>
-        <Border Style="{StaticResource SettingsCard}">
-            <StackPanel>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    
-                    <TextBlock x:Name="TxtUpdateStatus" 
-                               Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_UpdateStatusHint]}" 
-                               VerticalAlignment="Center" 
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Desc1]}" 
+                                   FontSize="22" FontWeight="SemiBold" FontFamily="Microsoft YaHei UI"/>
+                        <TextBlock Text="{Binding AppVersion}" 
+                                   FontSize="14" Foreground="{DynamicResource TextSecondary2}" 
+                                   VerticalAlignment="Bottom" Margin="8,0,0,3"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Desc2]}"
+                               Foreground="{DynamicResource TextSecondary2}"
+                               Margin="0,6,0,0"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Desc3]}"
                                Foreground="{DynamicResource TextSecondary2}"
                                TextWrapping="Wrap"
-                               Margin="0,0,16,0"/>
-                    
-                    <Button x:Name="BtnCheckUpdate" Grid.Column="1" 
-                            Style="{StaticResource PrimarySettingsButton}" 
-                            Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_CheckUpdate]}" 
-                            Click="BtnCheckUpdate_Click" MinWidth="120"/>
-                </Grid>
-
-                <!-- Update Progress Bar -->
-                <ProgressBar x:Name="PbUpdate" Height="8" Margin="0,12,0,0" Visibility="Collapsed"
-                             Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource ContentBg}"/>
-
-                <!-- Warning Tip for Non-Admins -->
-                <TextBlock x:Name="TxtNoAdminWarning" Visibility="Collapsed"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_NoAdminTip]}"
-                           Foreground="#E81123" TextWrapping="Wrap" Margin="0,12,0,0" FontSize="12"/>
-
-                <!-- Actions when new version found -->
-                <StackPanel x:Name="SpUpdateActions" Orientation="Horizontal" Margin="0,12,0,0" Visibility="Collapsed">
-                    <Button x:Name="BtnAutoUpdate" Style="{StaticResource PrimarySettingsButton}" 
-                             Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_ActionUpdate]}" 
-                             Click="BtnAutoUpdate_Click" Margin="0,0,12,0" MinWidth="130"/>
-                    <Button x:Name="BtnGoToPage" Style="{StaticResource SettingsButton}" 
-                             Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_ActionPage]}" 
-                             Click="BtnGoToPage_Click" MinWidth="130"/>
+                               Margin="0,14,0,0"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Desc4]}"
+                               Foreground="{DynamicResource TextSecondary2}"
+                               TextWrapping="Wrap"
+                               Margin="0,8,0,0"/>
+                    <WrapPanel Margin="0,14,0,0">
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Homepage]}" Foreground="{DynamicResource TextSecondary2}"/>
+                        <TextBlock>
+                            <Hyperlink NavigateUri="https://github.com/swiftlist/SwiftList" RequestNavigate="Hyperlink_RequestNavigate">
+                                <Run Text="https://github.com/swiftlist/SwiftList"/>
+                            </Hyperlink>
+                        </TextBlock>
+                    </WrapPanel>
                 </StackPanel>
-            </StackPanel>
-        </Border>
-    </StackPanel>
+            </Border>
+
+            <!-- Update Section -->
+            <TextBlock Style="{StaticResource SettingsSectionTitle}" 
+                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_CheckUpdate]}"
+                       Margin="0,20,0,0"/>
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock x:Name="TxtUpdateStatus" 
+                                   Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_UpdateStatusHint]}" 
+                                   VerticalAlignment="Center" 
+                                   Foreground="{DynamicResource TextSecondary2}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,16,0"/>
+                        
+                        <Button x:Name="BtnCheckUpdate" Grid.Column="1" 
+                                Style="{StaticResource PrimarySettingsButton}" 
+                                Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_CheckUpdate]}" 
+                                Click="BtnCheckUpdate_Click" MinWidth="120"/>
+                    </Grid>
+
+                    <!-- Update Progress Bar -->
+                    <ProgressBar x:Name="PbUpdate" Height="8" Margin="0,12,0,0" Visibility="Collapsed"
+                                 Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource ContentBg}"/>
+
+                    <!-- Warning Tip for Non-Admins -->
+                    <TextBlock x:Name="TxtNoAdminWarning" Visibility="Collapsed"
+                               Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_NoAdminTip]}"
+                               Foreground="#E81123" TextWrapping="Wrap" Margin="0,12,0,0" FontSize="12"/>
+
+                    <!-- Actions when new version found -->
+                    <StackPanel x:Name="SpUpdateActions" Orientation="Horizontal" Margin="0,12,0,0" Visibility="Collapsed">
+                        <Button x:Name="BtnAutoUpdate" Style="{StaticResource PrimarySettingsButton}" 
+                                 Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_ActionUpdate]}" 
+                                 Click="BtnAutoUpdate_Click" Margin="0,0,12,0" MinWidth="130"/>
+                        <Button x:Name="BtnGoToPage" Style="{StaticResource SettingsButton}" 
+                                 Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_ActionPage]}" 
+                                 Click="BtnGoToPage_Click" MinWidth="130"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Tutorial Section -->
+            <TextBlock Style="{StaticResource SettingsSectionTitle}" 
+                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_TutorialTitle]}"
+                       Margin="0,20,0,0"/>
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_TutorialHint]}" 
+                                   VerticalAlignment="Center" 
+                                   Foreground="{DynamicResource TextSecondary2}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,16,0"/>
+                        
+                        <Button x:Name="BtnStartTutorial" Grid.Column="1" 
+                                Style="{StaticResource PrimarySettingsButton}" 
+                                Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_TutorialBtn]}" 
+                                Click="BtnStartTutorial_Click" MinWidth="120"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

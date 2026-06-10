@@ -308,5 +308,8 @@
   "Blacklist_RemoveTooltip": "Remove this process from blacklist",
   "Blacklist_EditTooltip": "Edit this process name",
   "Search_LocalFolderHeader": "Current Folder",
-  "Search_GlobalSearchHeader": "Global Search"
+  "Search_GlobalSearchHeader": "Global Search",
+  "About_TutorialTitle": "Interactive Tutorial",
+  "About_TutorialHint": "Learn and master the core high-efficiency features of SwiftList step-by-step",
+  "About_TutorialBtn": "Start Guide"
 }
