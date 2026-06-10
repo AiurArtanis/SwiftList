@@ -15,13 +15,27 @@ namespace SwiftList.Plugins.ListSearch
         private IntPtr _lastHwnd = IntPtr.Zero;
         private int _lastPreviewIndex = -1;
 
+        private static bool IsListBoxClass(string className)
+        {
+            if (string.IsNullOrEmpty(className)) return false;
+            return className.Equals("ListBox", StringComparison.OrdinalIgnoreCase) ||
+                   className.Contains(".ListBox.", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsListViewClass(string className)
+        {
+            if (string.IsNullOrEmpty(className)) return false;
+            return className.Equals("SysListView32", StringComparison.OrdinalIgnoreCase) ||
+                   className.Contains(".SysListView32.", StringComparison.OrdinalIgnoreCase);
+        }
+
         public bool CanHandle(IntPtr hwnd, string className, string processName)
         {
             if (string.IsNullOrEmpty(className)) return false;
             if (processName.Equals("explorer", StringComparison.OrdinalIgnoreCase)) return false;
 
-            return className.Contains("SysListView32", StringComparison.OrdinalIgnoreCase) ||
-                   className.Contains("ListBox", StringComparison.OrdinalIgnoreCase);
+            return IsListViewClass(className) ||
+                   IsListBoxClass(className);
         }
 
         public bool CanTrigger(IntPtr focusedHwnd, string className)
@@ -29,14 +43,11 @@ namespace SwiftList.Plugins.ListSearch
             if (focusedHwnd == IntPtr.Zero || string.IsNullOrEmpty(className))
                 return false;
 
-            return className.Contains("SysListView32", StringComparison.OrdinalIgnoreCase) ||
-                   className.Contains("ListBox", StringComparison.OrdinalIgnoreCase);
+            return IsListViewClass(className) ||
+                   IsListBoxClass(className);
         }
 
-        public string? GetSearchScope(IntPtr hwnd)
-        {
-            return "__UniversalList__";
-        }
+        public string? GetSearchScope(IntPtr hwnd) => "__UniversalList__";
 
         public bool ExecuteItem(IntPtr hwnd, string path, string searchInput)
         {
@@ -47,8 +58,8 @@ namespace SwiftList.Plugins.ListSearch
             Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
             string className = sbClass.ToString();
 
-            if (!className.Contains("SysListView32", StringComparison.OrdinalIgnoreCase) &&
-                !className.Contains("ListBox", StringComparison.OrdinalIgnoreCase))
+            if (!IsListViewClass(className) &&
+                !IsListBoxClass(className))
             {
                 IntPtr focusedCtrl = ListControlHelper.GetFocusedControl(hwnd);
                 if (focusedCtrl != IntPtr.Zero)
@@ -103,8 +114,8 @@ namespace SwiftList.Plugins.ListSearch
             Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
             string className = sbClass.ToString();
 
-            if (!className.Contains("SysListView32", StringComparison.OrdinalIgnoreCase) &&
-                !className.Contains("ListBox", StringComparison.OrdinalIgnoreCase))
+            if (!IsListViewClass(className) &&
+                !IsListBoxClass(className))
             {
                 IntPtr focusedCtrl = ListControlHelper.GetFocusedControl(hwnd);
                 if (focusedCtrl != IntPtr.Zero)
@@ -128,10 +139,7 @@ namespace SwiftList.Plugins.ListSearch
             return false;
         }
 
-        public bool CanEnterActionsMode(IntPtr hwnd)
-        {
-            return false;
-        }
+        public bool CanEnterActionsMode(IntPtr hwnd) => false;
 
         public IEnumerable<string> GetListItems(IntPtr hwnd)
         {
@@ -142,8 +150,8 @@ namespace SwiftList.Plugins.ListSearch
             Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
             string className = sbClass.ToString();
 
-            if (!className.Contains("SysListView32", StringComparison.OrdinalIgnoreCase) &&
-                !className.Contains("ListBox", StringComparison.OrdinalIgnoreCase))
+            if (!IsListViewClass(className) &&
+                !IsListBoxClass(className))
             {
                 IntPtr focusedCtrl = ListControlHelper.GetFocusedControl(hwnd);
                 if (focusedCtrl != IntPtr.Zero)
@@ -186,8 +194,8 @@ namespace SwiftList.Plugins.ListSearch
             Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
             string className = sbClass.ToString();
 
-            if (!className.Contains("SysListView32", StringComparison.OrdinalIgnoreCase) &&
-                !className.Contains("ListBox", StringComparison.OrdinalIgnoreCase))
+            if (!IsListViewClass(className) &&
+                !IsListBoxClass(className))
             {
                 IntPtr focusedCtrl = ListControlHelper.GetFocusedControl(hwnd);
                 if (focusedCtrl != IntPtr.Zero)
@@ -229,8 +237,8 @@ namespace SwiftList.Plugins.ListSearch
             Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
             string className = sbClass.ToString();
 
-            if (!className.Contains("SysListView32", StringComparison.OrdinalIgnoreCase) &&
-                !className.Contains("ListBox", StringComparison.OrdinalIgnoreCase))
+            if (!IsListViewClass(className) &&
+                !IsListBoxClass(className))
             {
                 IntPtr focusedCtrl = ListControlHelper.GetFocusedControl(hwnd);
                 if (focusedCtrl != IntPtr.Zero)
@@ -275,13 +283,7 @@ namespace SwiftList.Plugins.ListSearch
         {
             if (string.IsNullOrEmpty(path)) return -1;
             int count = 0;
-            for (int i = path.Length - 1; i >= 0; i--)
-            {
-                if (path[i] == '\u200B')
-                    count++;
-                else
-                    break;
-            }
+            for (int i = path.Length - 1; i >= 0 && path[i] == '\u200B'; i--) count++;
             return count - 1;
         }
     }

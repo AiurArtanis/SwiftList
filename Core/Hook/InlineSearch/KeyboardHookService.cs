@@ -79,10 +79,10 @@ namespace SwiftList.Core.Hook.InlineSearch
                 uint time = hookStruct.time;
 
                 // 1. Detect Toggle Window Hotkey
-                bool isProcessBlacklisted = KeyboardUtils.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses)
-                                            && !_explorerTracker.IsActiveWindowDialog;
-                bool bypassToggleHotkey = IsHotkeysDisabledTemporarily || isProcessBlacklisted;
-                if (!bypassToggleHotkey && _hotkeyDetector.CheckToggleWindowHotkey(vkCode, time, out bool consumeToggleKey, OnDoubleCtrl))
+                bool shouldDisableAllHooks = (IsHotkeysDisabledTemporarily || KeyboardUtils.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses))
+                                             && !_explorerTracker.IsActiveWindowDialog;
+
+                if (!shouldDisableAllHooks && _hotkeyDetector.CheckToggleWindowHotkey(vkCode, time, out bool consumeToggleKey, OnDoubleCtrl))
                 {
                     if (consumeToggleKey)
                     {
@@ -104,10 +104,17 @@ namespace SwiftList.Core.Hook.InlineSearch
                     {
                         return KeyboardNativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
                     }
+
+                    IntPtr rootFg = ExplorerNativeHooks.GetAncestor(fgHwnd, ExplorerNativeHooks.GA_ROOTOWNER);
+                    if (rootFg == IntPtr.Zero) rootFg = fgHwnd;
+                    if (_explorerTracker.ActiveHwnd != IntPtr.Zero && rootFg != _explorerTracker.ActiveHwnd)
+                    {
+                        _explorerTracker.DeactivateWindow();
+                    }
                 }
 
                 // 3. Detect and handle Quick Switch Hotkey
-                if (_hotkeyDetector.CheckAndHandleQuickSwitch(vkCode, time, out bool consumeQuickSwitchKey))
+                if (!shouldDisableAllHooks && _hotkeyDetector.CheckAndHandleQuickSwitch(vkCode, time, out bool consumeQuickSwitchKey))
                 {
                     if (consumeQuickSwitchKey)
                     {
@@ -127,7 +134,7 @@ namespace SwiftList.Core.Hook.InlineSearch
                 }
 
                 // 4. Handle Inline Search key events
-                if (!isProcessBlacklisted && HandleInlineSearchKeys(vkCode, hookStruct, fgHwnd))
+                if (!shouldDisableAllHooks && HandleInlineSearchKeys(vkCode, hookStruct, fgHwnd))
                 {
                     return (IntPtr)1;
                 }
@@ -154,6 +161,8 @@ namespace SwiftList.Core.Hook.InlineSearch
             string className = sbClass.ToString();
 
             string processName = KeyboardUtils.GetProcessNameWithoutExtension(fgPid);
+
+            Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: targetFocus=0x{0:X}, className={1}, processName={2}", targetFocus.ToInt64(), className, processName), LogLevel.Debug);
 
             if (_explorerTracker.ActiveInlineAdapter == null)
             {
