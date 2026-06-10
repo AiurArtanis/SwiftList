@@ -109,7 +109,10 @@ namespace SwiftList.Core.Hook.InlineSearch
                     if (rootFg == IntPtr.Zero) rootFg = fgHwnd;
                     if (_explorerTracker.ActiveHwnd != IntPtr.Zero && rootFg != _explorerTracker.ActiveHwnd)
                     {
-                        _explorerTracker.DeactivateWindow();
+                        if (!IsDescendantOrOwned(_explorerTracker.ActiveHwnd, fgHwnd) && !IsImeWindow(fgHwnd))
+                        {
+                            _explorerTracker.DeactivateWindow();
+                        }
                     }
                 }
 
@@ -288,6 +291,38 @@ namespace SwiftList.Core.Hook.InlineSearch
         public void Dispose()
         {
             Stop();
+        }
+
+        private bool IsDescendantOrOwned(IntPtr parent, IntPtr child)
+        {
+            if (parent == IntPtr.Zero || child == IntPtr.Zero) return false;
+            if (parent == child) return true;
+
+            IntPtr current = child;
+            while (current != IntPtr.Zero)
+            {
+                if (current == parent) return true;
+                IntPtr temp = ExplorerNativeHooks.GetParent(current);
+                if (temp == IntPtr.Zero || temp == current) break;
+                current = temp;
+            }
+
+            IntPtr rootOwner = ExplorerNativeHooks.GetAncestor(child, ExplorerNativeHooks.GA_ROOTOWNER);
+            if (rootOwner == parent) return true;
+
+            return false;
+        }
+
+        private bool IsImeWindow(IntPtr hwnd)
+        {
+            if (hwnd == IntPtr.Zero) return false;
+            var sbClass = new StringBuilder(256);
+            ExplorerNativeHooks.GetClassName(hwnd, sbClass, sbClass.Capacity);
+            string fgClass = sbClass.ToString();
+            return fgClass.Contains("IME", StringComparison.OrdinalIgnoreCase) ||
+                   fgClass.Contains("Candidate", StringComparison.OrdinalIgnoreCase) ||
+                   fgClass.Contains("InputTip", StringComparison.OrdinalIgnoreCase) ||
+                   fgClass.Contains("InputSwitch", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

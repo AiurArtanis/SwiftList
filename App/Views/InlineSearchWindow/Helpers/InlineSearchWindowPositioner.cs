@@ -74,8 +74,11 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
 
                 var screen = System.Windows.Forms.Screen.PrimaryScreen ?? System.Windows.Forms.Screen.AllScreens[0];
                 var workingArea = screen.WorkingArea;
-                _window.Left = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
-                _window.Top = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
+                double targetLeft = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
+                double targetTop = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
+
+                if (Math.Abs(_window.Left - targetLeft) > 0.5) _window.Left = targetLeft;
+                if (Math.Abs(_window.Top - targetTop) > 0.5) _window.Top = targetTop;
             }
             else if (tracker.ActiveHwnd != IntPtr.Zero)
             {
@@ -90,6 +93,9 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                     double winRight = rect.Right * dpiScaleX;
                     double winBottom = rect.Bottom * dpiScaleY;
 
+                    double targetLeft = 0;
+                    double targetTop = 0;
+
                     if (tracker.IsActiveWindowDialog)
                     {
                         // Swap layout: Search Box on top (Row 0), Results on bottom (Row 2)
@@ -98,9 +104,9 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                         Grid.SetRow(_window.ResultsPanelControl, 2);
 
                         double winWidth = (rect.Right - rect.Left) * dpiScaleX;
-                        _window.Left = winLeft + (winWidth - windowWidth) / 2;
+                        targetLeft = winLeft + (winWidth - windowWidth) / 2;
                         // Align top of search window to bottom of dialog
-                        _window.Top = winBottom - xamlMargin + visibleMargin;
+                        targetTop = winBottom - xamlMargin + visibleMargin;
                     }
                     else
                     {
@@ -109,8 +115,8 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                         Grid.SetRow(_window.ResultsSeparator, 1);
                         Grid.SetRow(_window.SearchBoxBorder, 2);
 
-                        _window.Left = winRight - windowWidth + xamlMargin - visibleMargin;
-                        _window.Top = winBottom - windowHeight + xamlMargin - visibleMargin;
+                        targetLeft = winRight - windowWidth + xamlMargin - visibleMargin;
+                        targetTop = winBottom - windowHeight + xamlMargin - visibleMargin;
                     }
 
                     // Constrain within the monitor work area where the active window is located
@@ -121,10 +127,13 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                     double maxLeft = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
                     double maxTop = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
 
-                    if (_window.Left < minLeft) _window.Left = minLeft;
-                    if (_window.Top < minTop) _window.Top = minTop;
-                    if (_window.Left > maxLeft) _window.Left = maxLeft;
-                    if (_window.Top > maxTop) _window.Top = maxTop;
+                    if (targetLeft < minLeft) targetLeft = minLeft;
+                    if (targetTop < minTop) targetTop = minTop;
+                    if (targetLeft > maxLeft) targetLeft = maxLeft;
+                    if (targetTop > maxTop) targetTop = maxTop;
+
+                    if (Math.Abs(_window.Left - targetLeft) > 0.5) _window.Left = targetLeft;
+                    if (Math.Abs(_window.Top - targetTop) > 0.5) _window.Top = targetTop;
                 }
                 else
                 {
@@ -133,8 +142,11 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                         ? System.Windows.Forms.Screen.FromHandle(tracker.ActiveHwnd)
                         : System.Windows.Forms.Screen.PrimaryScreen ?? System.Windows.Forms.Screen.AllScreens[0];
                     var workingArea = screen.WorkingArea;
-                    _window.Left = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
-                    _window.Top = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
+                    double targetLeft = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
+                    double targetTop = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
+
+                    if (Math.Abs(_window.Left - targetLeft) > 0.5) _window.Left = targetLeft;
+                    if (Math.Abs(_window.Top - targetTop) > 0.5) _window.Top = targetTop;
                 }
             }
         }

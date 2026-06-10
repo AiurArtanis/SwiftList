@@ -48,6 +48,12 @@ namespace SwiftList.Plugins.ListSearch.Helpers
             return false;
         }
 
+        [DllImport("user32.dll", EntryPoint = "SendMessageW")]
+        private static extern int SendMessageGetSelItems(IntPtr hWnd, uint Msg, IntPtr wParam, int[] lParam);
+
+        private const uint LB_GETSELCOUNT = 0x0190;
+        private const uint LB_GETSELITEMS = 0x0191;
+
         public static HashSet<int> GetSelectedIndices(IntPtr hwnd, string className)
         {
             if (ListControlIpcBridge.GetSelectedIndicesFunc != null)
@@ -62,13 +68,17 @@ namespace SwiftList.Plugins.ListSearch.Helpers
                 bool isMulti = IsMultiSelect(hwnd, className);
                 if (isMulti)
                 {
-                    int count = (int)Win32Api.SendMessage(hwnd, Win32Api.LB_GETCOUNT, IntPtr.Zero, IntPtr.Zero);
-                    for (int i = 0; i < count; i++)
+                    int selCount = (int)Win32Api.SendMessage(hwnd, LB_GETSELCOUNT, IntPtr.Zero, IntPtr.Zero);
+                    if (selCount > 0)
                     {
-                        int sel = (int)Win32Api.SendMessage(hwnd, Win32Api.LB_GETSEL, (IntPtr)i, IntPtr.Zero);
-                        if (sel > 0)
+                        int[] indices = new int[selCount];
+                        int retrieved = SendMessageGetSelItems(hwnd, LB_GETSELITEMS, (IntPtr)selCount, indices);
+                        if (retrieved > 0)
                         {
-                            selected.Add(i);
+                            for (int i = 0; i < retrieved; i++)
+                            {
+                                selected.Add(indices[i]);
+                            }
                         }
                     }
                 }

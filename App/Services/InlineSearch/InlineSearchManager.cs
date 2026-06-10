@@ -192,19 +192,28 @@ namespace SwiftList.App.Services
 
             if (!isTextInputFocused && !_explorerTracker.IsActiveWindowDialog)
             {
-                _window.Dispatcher.BeginInvoke(new Action(() =>
+                // Try to activate and focus synchronously first while we are still in the input/hook processing thread context
+                if (_window.ActivateAndFocusSearchBox())
                 {
-                    if (_window == null || !_window.IsVisible)
+                    _keyboardHook.IsInlineSearchVisible = false;
+                    _keyboardHook.Stop();
+                }
+                else
+                {
+                    _window.Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        return;
-                    }
+                        if (_window == null || !_window.IsVisible)
+                        {
+                            return;
+                        }
 
-                    if (_window.ActivateAndFocusSearchBox())
-                    {
-                        _keyboardHook.IsInlineSearchVisible = false;
-                        _keyboardHook.Stop();
-                    }
-                }), DispatcherPriority.Input);
+                        if (_window.ActivateAndFocusSearchBox())
+                        {
+                            _keyboardHook.IsInlineSearchVisible = false;
+                            _keyboardHook.Stop();
+                        }
+                    }), DispatcherPriority.Input);
+                }
             }
             else
             {

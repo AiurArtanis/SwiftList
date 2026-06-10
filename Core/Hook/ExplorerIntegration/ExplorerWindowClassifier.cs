@@ -169,6 +169,14 @@ namespace SwiftList.Core.Hook
                     }
                     else
                     {
+                        if (_tracker.IsActiveWindowDialog && _tracker.ActiveHwnd != IntPtr.Zero)
+                        {
+                            IntPtr fgHwnd = ExplorerNativeHooks.GetForegroundWindow();
+                            if (IsDescendantOrOwned(_tracker.ActiveHwnd, fgHwnd) || IsImeWindow(fgHwnd))
+                            {
+                                return;
+                            }
+                        }
                         _tracker.Deactivate();
                     }
                 }
@@ -189,6 +197,15 @@ namespace SwiftList.Core.Hook
             ExplorerNativeHooks.GetWindowThreadProcessId(hwnd, out uint activePid);
             if (activePid == Environment.ProcessId || (activePid != 0 && activePid == _tracker.AppProcessId))
                 return true;
+
+            // If there is an active tracked window, ignore focus changes to other windows in the SAME process.
+            // This prevents false deactivation when autocomplete dropdowns, tooltips, or child controls of the active dialog are shown or updated.
+            if (_tracker.ActiveHwnd != IntPtr.Zero)
+            {
+                ExplorerNativeHooks.GetWindowThreadProcessId(_tracker.ActiveHwnd, out uint activeTrackerPid);
+                if (activePid != 0 && activePid == activeTrackerPid)
+                    return true;
+            }
 
             return false;
         }
@@ -254,6 +271,38 @@ namespace SwiftList.Core.Hook
 
             adapter = null;
             return IntPtr.Zero;
+        }
+
+        private bool IsDescendantOrOwned(IntPtr parent, IntPtr child)
+        {
+            if (parent == IntPtr.Zero || child == IntPtr.Zero) return false;
+            if (parent == child) return true;
+
+            IntPtr current = child;
+            while (current != IntPtr.Zero)
+            {
+                if (current == parent) return true;
+                IntPtr temp = ExplorerNativeHooks.GetParent(current);
+                if (temp == IntPtr.Zero || temp == current) break;
+                current = temp;
+            }
+
+            IntPtr rootOwner = ExplorerNativeHooks.GetAncestor(child, ExplorerNativeHooks.GA_ROOTOWNER);
+            if (rootOwner == parent) return true;
+
+            return false;
+        }
+
+        private bool IsImeWindow(IntPtr hwnd)
+        {
+            if (hwnd == IntPtr.Zero) return false;
+            var sbClass = new StringBuilder(256);
+            ExplorerNativeHooks.GetClassName(hwnd, sbClass, sbClass.Capacity);
+            string fgClass = sbClass.ToString();
+            return fgClass.Contains("IME", StringComparison.OrdinalIgnoreCase) ||
+                   fgClass.Contains("Candidate", StringComparison.OrdinalIgnoreCase) ||
+                   fgClass.Contains("InputTip", StringComparison.OrdinalIgnoreCase) ||
+                   fgClass.Contains("InputSwitch", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

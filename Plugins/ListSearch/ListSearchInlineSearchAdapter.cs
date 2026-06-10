@@ -14,6 +14,7 @@ namespace SwiftList.Plugins.ListSearch
         private readonly HashSet<int> _originallySelectedIndices = new HashSet<int>();
         private IntPtr _lastHwnd = IntPtr.Zero;
         private int _lastPreviewIndex = -1;
+        private List<string>? _cachedItems;
 
         private static bool IsListBoxClass(string className)
         {
@@ -163,6 +164,11 @@ namespace SwiftList.Plugins.ListSearch
                 }
             }
 
+            if (_cachedItems != null && targetHwnd == _lastHwnd)
+            {
+                return _cachedItems;
+            }
+
             _originallySelectedIndices.Clear();
             _lastHwnd = targetHwnd;
             _lastPreviewIndex = -1;
@@ -180,8 +186,17 @@ namespace SwiftList.Plugins.ListSearch
             var result = new List<string>(items.Count);
             for (int i = 0; i < items.Count; i++)
             {
-                result.Add(items[i] + new string('\u200B', i + 1));
+                // Encode the index into a very short zero-width binary suffix to avoid heavy string allocations and WPF layout lag
+                var sbSuffix = new StringBuilder();
+                sbSuffix.Append('\u200D'); // Start marker
+                string binary = Convert.ToString(i, 2);
+                foreach (char bit in binary)
+                {
+                    sbSuffix.Append(bit == '1' ? '\u200C' : '\u200B');
+                }
+                result.Add(items[i] + sbSuffix.ToString());
             }
+            _cachedItems = result;
             return result;
         }
 
@@ -277,14 +292,31 @@ namespace SwiftList.Plugins.ListSearch
             _originallySelectedIndices.Clear();
             _lastPreviewIndex = -1;
             _lastHwnd = IntPtr.Zero;
+            _cachedItems = null;
         }
 
         private int DecodeIndex(string path)
         {
             if (string.IsNullOrEmpty(path)) return -1;
-            int count = 0;
-            for (int i = path.Length - 1; i >= 0 && path[i] == '\u200B'; i--) count++;
-            return count - 1;
+            int markerIndex = path.LastIndexOf('\u200D');
+            if (markerIndex == -1 || markerIndex == path.Length - 1) return -1;
+
+            var sb = new StringBuilder();
+            for (int i = markerIndex + 1; i < path.Length; i++)
+            {
+                char c = path[i];
+                if (c == '\u200C') sb.Append('1');
+                else if (c == '\u200B') sb.Append('0');
+                else break;
+            }
+            try
+            {
+                return Convert.ToInt32(sb.ToString(), 2);
+            }
+            catch
+            {
+                return -1;
+            }
         }
     }
 }

@@ -226,6 +226,12 @@ namespace SwiftList.Core.Hook.InlineSearch
             }
         }
 
+        [DllImport("user32.dll", EntryPoint = "SendMessageW")]
+        private static extern int SendMessageGetSelItems(IntPtr hWnd, uint Msg, IntPtr wParam, int[] lParam);
+
+        private const uint LB_GETSELCOUNT = 0x0190;
+        private const uint LB_GETSELITEMS = 0x0191;
+
         public static List<int> GetSelectedIndices(IntPtr hwnd, string className)
         {
             var selected = new List<int>();
@@ -238,13 +244,17 @@ namespace SwiftList.Core.Hook.InlineSearch
                                (style & (int)ListSearchNativeMethods.LBS_EXTENDEDSEL) != 0;
                 if (isMulti)
                 {
-                    int count = (int)ListSearchNativeMethods.SendMessage(hwnd, ListSearchNativeMethods.LB_GETCOUNT, IntPtr.Zero, IntPtr.Zero);
-                    for (int i = 0; i < count; i++)
+                    int selCount = (int)ListSearchNativeMethods.SendMessage(hwnd, LB_GETSELCOUNT, IntPtr.Zero, IntPtr.Zero);
+                    if (selCount > 0)
                     {
-                        int sel = (int)ListSearchNativeMethods.SendMessage(hwnd, ListSearchNativeMethods.LB_GETSEL, (IntPtr)i, IntPtr.Zero);
-                        if (sel > 0)
+                        int[] indices = new int[selCount];
+                        int retrieved = SendMessageGetSelItems(hwnd, LB_GETSELITEMS, (IntPtr)selCount, indices);
+                        if (retrieved > 0)
                         {
-                            selected.Add(i);
+                            for (int i = 0; i < retrieved; i++)
+                            {
+                                selected.Add(indices[i]);
+                            }
                         }
                     }
                 }
