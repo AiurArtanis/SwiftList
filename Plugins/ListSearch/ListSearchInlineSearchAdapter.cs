@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Text;
 using SwiftList.PluginSdk;
 using SwiftList.Plugins.ListSearch.Helpers;
@@ -16,51 +15,16 @@ namespace SwiftList.Plugins.ListSearch
         private int _lastPreviewIndex = -1;
         private List<string>? _cachedItems;
 
-        private static bool IsListBoxClass(string className)
+        private (IntPtr targetHwnd, string className) ResolveTargetControl(IntPtr hwnd)
         {
-            if (string.IsNullOrEmpty(className)) return false;
-            return className.Equals("ListBox", StringComparison.OrdinalIgnoreCase) ||
-                   className.Contains(".ListBox.", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsListViewClass(string className)
-        {
-            if (string.IsNullOrEmpty(className)) return false;
-            return className.Equals("SysListView32", StringComparison.OrdinalIgnoreCase) ||
-                   className.Contains(".SysListView32.", StringComparison.OrdinalIgnoreCase);
-        }
-
-        public bool CanHandle(IntPtr hwnd, string className, string processName)
-        {
-            if (string.IsNullOrEmpty(className)) return false;
-            if (processName.Equals("explorer", StringComparison.OrdinalIgnoreCase)) return false;
-
-            return IsListViewClass(className) ||
-                   IsListBoxClass(className);
-        }
-
-        public bool CanTrigger(IntPtr focusedHwnd, string className)
-        {
-            if (focusedHwnd == IntPtr.Zero || string.IsNullOrEmpty(className))
-                return false;
-
-            return IsListViewClass(className) ||
-                   IsListBoxClass(className);
-        }
-
-        public string? GetSearchScope(IntPtr hwnd) => "__UniversalList__";
-
-        public bool ExecuteItem(IntPtr hwnd, string path, string searchInput)
-        {
-            if (hwnd == IntPtr.Zero) return false;
-
+            if (hwnd == IntPtr.Zero) return (IntPtr.Zero, string.Empty);
             IntPtr targetHwnd = hwnd;
             var sbClass = new StringBuilder(256);
             Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
             string className = sbClass.ToString();
 
-            if (!IsListViewClass(className) &&
-                !IsListBoxClass(className))
+            if (!ListSearchIndexEncoder.IsListViewClass(className) &&
+                !ListSearchIndexEncoder.IsListBoxClass(className))
             {
                 IntPtr focusedCtrl = ListControlHelper.GetFocusedControl(hwnd);
                 if (focusedCtrl != IntPtr.Zero)
@@ -71,15 +35,40 @@ namespace SwiftList.Plugins.ListSearch
                     className = sbClass.ToString();
                 }
             }
+            return (targetHwnd, className);
+        }
 
-            int matchedIndex = DecodeIndex(path);
+        public bool CanHandle(IntPtr hwnd, string className, string processName)
+        {
+            if (string.IsNullOrEmpty(className)) return false;
+            if (processName.Equals("explorer", StringComparison.OrdinalIgnoreCase)) return false;
 
+            return ListSearchIndexEncoder.IsListViewClass(className) ||
+                   ListSearchIndexEncoder.IsListBoxClass(className);
+        }
+
+        public bool CanTrigger(IntPtr focusedHwnd, string className)
+        {
+            if (focusedHwnd == IntPtr.Zero || string.IsNullOrEmpty(className))
+                return false;
+
+            return ListSearchIndexEncoder.IsListViewClass(className) ||
+                   ListSearchIndexEncoder.IsListBoxClass(className);
+        }
+
+        public string? GetSearchScope(IntPtr hwnd) => "__UniversalList__";
+
+        public bool ExecuteItem(IntPtr hwnd, string path, string searchInput)
+        {
+            var (targetHwnd, className) = ResolveTargetControl(hwnd);
+            if (targetHwnd == IntPtr.Zero) return false;
+
+            int matchedIndex = ListSearchIndexEncoder.DecodeIndex(path);
             if (matchedIndex != -1)
             {
                 bool isMulti = ListControlHelper.IsMultiSelect(targetHwnd, className);
                 if (isMulti)
                 {
-                    // Toggle: if the item was originally selected, deselect it; otherwise select it.
                     bool wasSelected = _originallySelectedIndices.Contains(matchedIndex);
                     ListControlHelper.SelectItem(targetHwnd, className, matchedIndex,
                         clearOthers: false,
@@ -108,22 +97,8 @@ namespace SwiftList.Plugins.ListSearch
         public bool GetDockBounds(IntPtr hwnd, out AdapterRect rect)
         {
             rect = default;
-            if (hwnd == IntPtr.Zero) return false;
-
-            IntPtr targetHwnd = hwnd;
-            var sbClass = new StringBuilder(256);
-            Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
-            string className = sbClass.ToString();
-
-            if (!IsListViewClass(className) &&
-                !IsListBoxClass(className))
-            {
-                IntPtr focusedCtrl = ListControlHelper.GetFocusedControl(hwnd);
-                if (focusedCtrl != IntPtr.Zero)
-                {
-                    targetHwnd = focusedCtrl;
-                }
-            }
+            var (targetHwnd, _) = ResolveTargetControl(hwnd);
+            if (targetHwnd == IntPtr.Zero) return false;
 
             var nativeRect = new Win32Api.RECT();
             if (Win32Api.GetWindowRect(targetHwnd, out nativeRect))
@@ -144,25 +119,8 @@ namespace SwiftList.Plugins.ListSearch
 
         public IEnumerable<string> GetListItems(IntPtr hwnd)
         {
-            if (hwnd == IntPtr.Zero) return Array.Empty<string>();
-
-            IntPtr targetHwnd = hwnd;
-            var sbClass = new StringBuilder(256);
-            Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
-            string className = sbClass.ToString();
-
-            if (!IsListViewClass(className) &&
-                !IsListBoxClass(className))
-            {
-                IntPtr focusedCtrl = ListControlHelper.GetFocusedControl(hwnd);
-                if (focusedCtrl != IntPtr.Zero)
-                {
-                    targetHwnd = focusedCtrl;
-                    sbClass.Clear();
-                    Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
-                    className = sbClass.ToString();
-                }
-            }
+            var (targetHwnd, className) = ResolveTargetControl(hwnd);
+            if (targetHwnd == IntPtr.Zero) return Array.Empty<string>();
 
             if (_cachedItems != null && targetHwnd == _lastHwnd)
             {
@@ -182,48 +140,30 @@ namespace SwiftList.Plugins.ListSearch
             }
             catch { }
 
+            return GetListItemsLazy(targetHwnd, className);
+        }
+
+        private IEnumerable<string> GetListItemsLazy(IntPtr targetHwnd, string className)
+        {
             var items = ListControlHelper.GetListItemsInternal(targetHwnd, className);
-            var result = new List<string>(items.Count);
-            for (int i = 0; i < items.Count; i++)
+            var resultList = new List<string>();
+            int i = 0;
+            foreach (var item in items)
             {
-                // Encode the index into a very short zero-width binary suffix to avoid heavy string allocations and WPF layout lag
-                var sbSuffix = new StringBuilder();
-                sbSuffix.Append('\u200D'); // Start marker
-                string binary = Convert.ToString(i, 2);
-                foreach (char bit in binary)
-                {
-                    sbSuffix.Append(bit == '1' ? '\u200C' : '\u200B');
-                }
-                result.Add(items[i] + sbSuffix.ToString());
+                string encoded = ListSearchIndexEncoder.EncodeIndex(item, i);
+                resultList.Add(encoded);
+                i++;
+                yield return encoded;
             }
-            _cachedItems = result;
-            return result;
+            _cachedItems = resultList;
         }
 
         public void OnSelectionChanged(IntPtr hwnd, string path)
         {
-            if (hwnd == IntPtr.Zero) return;
+            var (targetHwnd, className) = ResolveTargetControl(hwnd);
+            if (targetHwnd == IntPtr.Zero) return;
 
-            IntPtr targetHwnd = hwnd;
-            var sbClass = new StringBuilder(256);
-            Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
-            string className = sbClass.ToString();
-
-            if (!IsListViewClass(className) &&
-                !IsListBoxClass(className))
-            {
-                IntPtr focusedCtrl = ListControlHelper.GetFocusedControl(hwnd);
-                if (focusedCtrl != IntPtr.Zero)
-                {
-                    targetHwnd = focusedCtrl;
-                    sbClass.Clear();
-                    Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
-                    className = sbClass.ToString();
-                }
-            }
-
-            int matchedIndex = DecodeIndex(path);
-
+            int matchedIndex = ListSearchIndexEncoder.DecodeIndex(path);
             if (matchedIndex != -1)
             {
                 bool isMulti = ListControlHelper.IsMultiSelect(targetHwnd, className);
@@ -245,25 +185,8 @@ namespace SwiftList.Plugins.ListSearch
 
         public void OnSearchFinished(IntPtr hwnd, bool executed)
         {
-            if (hwnd == IntPtr.Zero) return;
-
-            IntPtr targetHwnd = hwnd;
-            var sbClass = new StringBuilder(256);
-            Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
-            string className = sbClass.ToString();
-
-            if (!IsListViewClass(className) &&
-                !IsListBoxClass(className))
-            {
-                IntPtr focusedCtrl = ListControlHelper.GetFocusedControl(hwnd);
-                if (focusedCtrl != IntPtr.Zero)
-                {
-                    targetHwnd = focusedCtrl;
-                    sbClass.Clear();
-                    Win32Api.GetClassName(targetHwnd, sbClass, sbClass.Capacity);
-                    className = sbClass.ToString();
-                }
-            }
+            var (targetHwnd, className) = ResolveTargetControl(hwnd);
+            if (targetHwnd == IntPtr.Zero) return;
 
             if (!executed)
             {
@@ -293,30 +216,6 @@ namespace SwiftList.Plugins.ListSearch
             _lastPreviewIndex = -1;
             _lastHwnd = IntPtr.Zero;
             _cachedItems = null;
-        }
-
-        private int DecodeIndex(string path)
-        {
-            if (string.IsNullOrEmpty(path)) return -1;
-            int markerIndex = path.LastIndexOf('\u200D');
-            if (markerIndex == -1 || markerIndex == path.Length - 1) return -1;
-
-            var sb = new StringBuilder();
-            for (int i = markerIndex + 1; i < path.Length; i++)
-            {
-                char c = path[i];
-                if (c == '\u200C') sb.Append('1');
-                else if (c == '\u200B') sb.Append('0');
-                else break;
-            }
-            try
-            {
-                return Convert.ToInt32(sb.ToString(), 2);
-            }
-            catch
-            {
-                return -1;
-            }
         }
     }
 }

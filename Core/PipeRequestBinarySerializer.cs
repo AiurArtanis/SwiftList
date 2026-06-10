@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SwiftList.Core.Extensions;
+
 namespace SwiftList.Core
 {
     public static class PipeRequestBinarySerializer
@@ -17,7 +18,6 @@ namespace SwiftList.Core
         {
             using var payload = new MemoryStream();
             using (var writer = new BinaryWriter(payload, Encoding.UTF8, leaveOpen: true))
-
                 writer.Write(command ?? string.Empty);
             return WriteFrameAsync(stream, VersionString, payload.ToArray(), token);
         }
@@ -27,7 +27,6 @@ namespace SwiftList.Core
             byte[] payload = await ReadFrameAsync(stream, VersionString, token).ConfigureAwait(false);
             using var ms = new MemoryStream(payload);
             using var reader = new BinaryReader(ms, Encoding.UTF8);
-
             return reader.ReadString();
         }
 
@@ -35,7 +34,6 @@ namespace SwiftList.Core
         {
             using var payload = new MemoryStream();
             using (var writer = new BinaryWriter(payload, Encoding.UTF8, leaveOpen: true))
-
                 WritePayload(writer, msg);
             return WriteFrameAsync(stream, VersionIpc, payload.ToArray(), token);
         }
@@ -45,7 +43,6 @@ namespace SwiftList.Core
             byte[] payload = await ReadFrameAsync(stream, VersionIpc, token).ConfigureAwait(false);
             using var ms = new MemoryStream(payload);
             using var reader = new BinaryReader(ms, Encoding.UTF8);
-
             return ReadPayload(reader);
         }
 
@@ -129,11 +126,12 @@ namespace SwiftList.Core
                     break;
 
                 case IpcMessageId.GetListItemsResponse:
-                    WriteStringArray(writer, msg.StringArray);
+                    PipeArraySerializer.WriteStringArray(writer, msg.StringArray);
+                    writer.Write(msg.BoolVal);
                     break;
 
                 case IpcMessageId.GetSelectedIndicesResponse:
-                    WriteIntArray(writer, msg.IntArray);
+                    PipeArraySerializer.WriteIntArray(writer, msg.IntArray);
                     break;
             }
         }
@@ -220,11 +218,12 @@ namespace SwiftList.Core
                     break;
 
                 case IpcMessageId.GetListItemsResponse:
-                    msg.StringArray = ReadStringArray(reader);
+                    msg.StringArray = PipeArraySerializer.ReadStringArray(reader);
+                    msg.BoolVal = reader.ReadBoolean();
                     break;
 
                 case IpcMessageId.GetSelectedIndicesResponse:
-                    msg.IntArray = ReadIntArray(reader);
+                    msg.IntArray = PipeArraySerializer.ReadIntArray(reader);
                     break;
             }
 
@@ -259,41 +258,5 @@ namespace SwiftList.Core
                 throw new InvalidDataException($"Invalid IPC payload length: {length}");
             return await stream.ReadExactlyAsync(length, token).ConfigureAwait(false);
         }
-
-        private static void WriteStringArray(BinaryWriter writer, string[]? values)
-        {
-            writer.Write(values?.Length ?? 0);
-            if (values == null) return;
-            foreach (var value in values)
-                writer.Write(value ?? string.Empty);
-        }
-
-        private static string[] ReadStringArray(BinaryReader reader)
-        {
-            int count = reader.ReadInt32();
-            var values = new string[count];
-            for (int i = 0; i < count; i++)
-                values[i] = reader.ReadString();
-            return values;
-        }
-
-        private static void WriteIntArray(BinaryWriter writer, int[]? values)
-        {
-            writer.Write(values?.Length ?? 0);
-            if (values == null) return;
-            foreach (int value in values)
-                writer.Write(value);
-        }
-
-        private static int[] ReadIntArray(BinaryReader reader)
-        {
-            int count = reader.ReadInt32();
-            var values = new int[count];
-            for (int i = 0; i < count; i++)
-                values[i] = reader.ReadInt32();
-            return values;
-        }
-
-        // Stream operations have been moved to StreamExtensions.cs
     }
 }

@@ -305,5 +305,7 @@
   "Blacklist_ApplyBtn": "应用文本",
   "Blacklist_GenerateBtn": "生成文本",
   "Blacklist_RemoveTooltip": "从黑名单中删除该进程",
-  "Blacklist_EditTooltip": "编辑该进程名称"
+  "Blacklist_EditTooltip": "编辑该进程名称",
+  "Search_LocalFolderHeader": "当前文件夹",
+  "Search_GlobalSearchHeader": "全局搜索"
 }

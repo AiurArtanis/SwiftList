@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Threading;
 
 namespace SwiftList.Core.Hook
@@ -7,8 +8,7 @@ namespace SwiftList.Core.Hook
     public static class ListIpcCoordinator
     {
         private static readonly object _listQueryLock = new object();
-        private static AutoResetEvent? _listItemsEvent;
-        private static string[]? _listItemsResult;
+        private static BlockingCollection<string>? _listItemsQueue;
         private static AutoResetEvent? _selectedIndicesEvent;
         private static int[]? _selectedIndicesResult;
 
@@ -16,17 +16,27 @@ namespace SwiftList.Core.Hook
         {
             lock (_listQueryLock)
             {
-                using var evt = new AutoResetEvent(false);
-                _listItemsEvent = evt;
-                _listItemsResult = null;
+                var queue = new BlockingCollection<string>();
+                _listItemsQueue = queue;
 
                 sendMsg(new IpcMessage { Id = IpcMessageId.GetListItems, Hwnd = hwnd.ToInt64() });
 
-                if (evt.WaitOne(1000))
+                while (true)
                 {
-                    return _listItemsResult ?? Array.Empty<string>();
+                    string? item;
+                    if (queue.TryTake(out item, 2000))
+                    {
+                        if (item == null)
+                        {
+                            break;
+                        }
+                        yield return item;
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
-                return Array.Empty<string>();
             }
         }
 
@@ -53,14 +63,24 @@ namespace SwiftList.Core.Hook
             }
         }
 
-        public static void SetListItemsResult(string[]? result)
+        public static void AddListItemsChunk(string[]? chunk, bool isFinal)
         {
-            _listItemsResult = result;
-            try
+            var queue = _listItemsQueue;
+            if (queue == null) return;
+
+            if (chunk != null)
             {
-                _listItemsEvent?.Set();
+                foreach (var item in chunk)
+                {
+                    queue.Add(item);
+                }
             }
-            catch { }
+
+            if (isFinal)
+            {
+                queue.Add(null!);
+                queue.CompleteAdding();
+            }
         }
 
         public static void SetSelectedIndicesResult(int[]? result)
@@ -74,3 +94,4 @@ namespace SwiftList.Core.Hook
         }
     }
 }
+

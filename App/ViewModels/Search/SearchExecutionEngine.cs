@@ -83,19 +83,23 @@ namespace SwiftList.App.ViewModels.Search
                     if (isInlineSearchContext && adapter != null && tracker.ActiveHwnd != IntPtr.Zero)
                     {
                         var listItems = adapter.GetListItems(tracker.ActiveHwnd);
-                        // Use list-based search when the adapter provides items;
-
-                        // fall back to streaming search when the list is empty.
-
                         if (listItems.Any())
                         {
                             string? contextDirectory = !string.IsNullOrWhiteSpace(searchScope)
-
                                 ? searchScope
-
                                 : (tracker.ActivePath ?? tracker.LastActiveExplorerPath);
-                            InlineListSearchHelper.PerformInlineListProviderSearch(query, adapter, tracker.ActiveHwnd, listItems, contextDirectory, searchVersion, () => Volatile.Read(ref _searchVersion), onResultsUpdated, token);
-                            return;
+
+                            if (tracker.IsActiveWindowExplorer)
+                            {
+                                var localMatches = InlineListSearchHelper.GetLocalMatches(query, listItems, contextDirectory, token);
+                                 await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, searchVersion, onResultsUpdated, onServiceUnavailable, token, localMatches);
+                                return;
+                            }
+                            else
+                            {
+                                InlineListSearchHelper.PerformInlineListProviderSearch(query, adapter, tracker.ActiveHwnd, listItems, contextDirectory, searchVersion, () => Volatile.Read(ref _searchVersion), onResultsUpdated, token);
+                                return;
+                            }
                         }
                     }
 
@@ -143,7 +147,6 @@ namespace SwiftList.App.ViewModels.Search
         }
 
         private async Task PerformStreamingSearchAsync(
-
             string query,
             string? searchScope,
             string? contextDirectory,
@@ -151,7 +154,8 @@ namespace SwiftList.App.ViewModels.Search
             int searchVersion,
             Action<List<AppSearchResult>, string, bool> onResultsUpdated,
             Action onServiceUnavailable,
-            CancellationToken token)
+            CancellationToken token,
+            List<AppSearchResult>? localMatches = null)
         {
             var streamedResponse = new SearchResponse();
             object responseLock = new();
@@ -172,11 +176,41 @@ namespace SwiftList.App.ViewModels.Search
                         {
                             AppResults = new List<SearchResult>(streamedResponse.AppResults),
                             FileResults = new List<SearchResult>(streamedResponse.FileResults)
-
                         };
                     }
 
                     var uiResults = SearchResultMapper.BuildQuickResults(snapshot, query, searchScope, contextDirectory, isInlineSearchContext);
+                    
+                    if (localMatches != null && localMatches.Count > 0)
+                    {
+                        var combinedResults = new List<AppSearchResult>();
+                        
+                        if (uiResults.Count > 0)
+                        {
+                            SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_LocalFolderHeader"] ?? "Current Folder", query);
+                        }
+                        
+                        foreach (var match in localMatches)
+                        {
+                            combinedResults.Add(match);
+                        }
+                        
+                        if (uiResults.Count > 0)
+                        {
+                            SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_GlobalSearchHeader"] ?? "Global Search", query);
+                            foreach (var res in uiResults)
+                            {
+                                combinedResults.Add(res);
+                            }
+                        }
+                        
+                        for (int idx = 0; idx < combinedResults.Count; idx++)
+                        {
+                            combinedResults[idx].Index = idx;
+                        }
+                        uiResults = combinedResults;
+                    }
+
                     if (final && uiResults.Count == 0)
                         uiResults.Add(SearchResultMapper.CreateNoResultsResult(query));
                     string statusText = "";

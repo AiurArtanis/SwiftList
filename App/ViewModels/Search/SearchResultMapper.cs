@@ -20,6 +20,11 @@ namespace SwiftList.App.ViewModels.Search
             var appResults = response.AppResults;
             var fileResults = response.FileResults;
 
+            if (isInlineWindow && scope != "__UniversalList__")
+            {
+                appResults = new List<SearchResult>();
+            }
+
             // If a directory scope is provided, filter out start menu apps completely
             // and keep only file/folder results that reside inside the scoped path.
             if (!string.IsNullOrEmpty(scope))

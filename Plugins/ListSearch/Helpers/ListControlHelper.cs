@@ -24,14 +24,13 @@ namespace SwiftList.Plugins.ListSearch.Helpers
             return IntPtr.Zero;
         }
 
-        public static List<string> GetListItemsInternal(IntPtr hwnd, string className)
+        public static IEnumerable<string> GetListItemsInternal(IntPtr hwnd, string className)
         {
             if (ListControlIpcBridge.GetListItemsFunc != null)
             {
-                var items = ListControlIpcBridge.GetListItemsFunc(hwnd);
-                return new List<string>(items);
+                return ListControlIpcBridge.GetListItemsFunc(hwnd);
             }
-            return new List<string>();
+            return Array.Empty<string>();
         }
 
         public static bool IsMultiSelect(IntPtr hwnd, string className)

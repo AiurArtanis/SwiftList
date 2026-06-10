@@ -267,7 +267,7 @@ namespace SwiftList.Core.Hook
                         break;
 
                     case IpcMessageId.GetListItemsResponse:
-                        ListIpcCoordinator.SetListItemsResult(msg.StringArray);
+                        ListIpcCoordinator.AddListItemsChunk(msg.StringArray, msg.BoolVal);
                         break;
 
                     case IpcMessageId.GetSelectedIndicesResponse:

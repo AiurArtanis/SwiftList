@@ -133,11 +133,33 @@ namespace SwiftList.Core.Hook
                             System.Threading.ThreadPool.QueueUserWorkItem(_ =>
                             {
                                 var items = ElevatedListControlHelper.GetListItems(hwnd);
-                                _process.IpcServer.SendMessage(new IpcMessage
+                                int chunkSize = 500;
+                                if (items == null || items.Count == 0)
                                 {
-                                    Id = IpcMessageId.GetListItemsResponse,
-                                    StringArray = items.ToArray()
-                                });
+                                    _process.IpcServer.SendMessage(new IpcMessage
+                                    {
+                                        Id = IpcMessageId.GetListItemsResponse,
+                                        StringArray = Array.Empty<string>(),
+                                        BoolVal = true
+                                    });
+                                }
+                                else
+                                {
+                                    for (int i = 0; i < items.Count; i += chunkSize)
+                                    {
+                                        int count = Math.Min(chunkSize, items.Count - i);
+                                        var chunk = new string[count];
+                                        items.CopyTo(i, chunk, 0, count);
+                                        bool isFinal = (i + count >= items.Count);
+
+                                        _process.IpcServer.SendMessage(new IpcMessage
+                                        {
+                                            Id = IpcMessageId.GetListItemsResponse,
+                                            StringArray = chunk,
+                                            BoolVal = isFinal
+                                        });
+                                    }
+                                }
                             });
                         }
                         break;

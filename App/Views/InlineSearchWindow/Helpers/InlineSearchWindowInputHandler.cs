@@ -13,6 +13,12 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
         private readonly SwiftList.App.InlineSearchWindow _window;
         private readonly InlineSearchWindowLayoutManager _layoutManager;
         private bool _suppressExplorerSelectionSync;
+        private bool _userNavigatedSinceLastQuery;
+
+        public void ResetUserNavigation()
+        {
+            _userNavigatedSinceLastQuery = false;
+        }
 
         public InlineSearchWindowInputHandler(SwiftList.App.InlineSearchWindow window)
         {
@@ -213,9 +219,8 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
             {
                 _suppressExplorerSelectionSync = false;
 
-                // Auto-select the first valid result if nothing is selected
-
-                if (_window.LstResults.SelectedIndex < 0 || _window.LstResults.SelectedItem == null)
+                // Auto-select the first valid result if nothing is selected or if user has not navigated yet
+                if (!_userNavigatedSinceLastQuery || _window.LstResults.SelectedIndex < 0 || _window.LstResults.SelectedItem == null)
                 {
                     for (int i = 0; i < _window.LstResults.Items.Count; i++)
                     {
@@ -235,6 +240,7 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
 
         private void MoveResultSelection(int direction)
         {
+            _userNavigatedSinceLastQuery = true;
             int count = _window.LstResults.Items.Count;
             if (count == 0) return;
             int index = _window.LstResults.SelectedIndex;

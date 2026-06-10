@@ -66,6 +66,8 @@ namespace SwiftList.App
                     _viewModel.IsInlineSearchContext = true;
                     _searchText = SearchBox.SearchTextBox.Text;
                     SearchBox.PlaceholderTextBlock.Visibility = string.IsNullOrEmpty(_searchText) ? Visibility.Visible : Visibility.Collapsed;
+                    LstResults.SelectedIndex = -1;
+                    _inputHandler.ResetUserNavigation();
                     _viewModel.SearchQuery = _searchText;
                 }
 
@@ -238,6 +240,8 @@ namespace SwiftList.App
         public void UpdateSearchDisplay(string text)
         {
             _searchText = text;
+            LstResults.SelectedIndex = -1;
+            _inputHandler.ResetUserNavigation();
             SearchBox.SearchTextBox.Text = text;
             SearchBox.SearchTextBox.CaretIndex = SearchBox.SearchTextBox.Text.Length;
             SearchBox.PlaceholderTextBlock.Visibility = string.IsNullOrEmpty(text) ? Visibility.Visible : Visibility.Collapsed;

@@ -34,12 +34,21 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
 
                 int count = _window.ViewModel.Results.Count;
                 int selectableCount = CountSelectableResults();
-                double itemHeight = UiMetrics.SearchResultItemHeight;
-                if (count > 0 && _window.ViewModel.Results[0].IsListItem)
+                double resultsHeight = 0;
+                int foundSelectable = 0;
+                for (int i = 0; i < count; i++)
                 {
-                    itemHeight = 34;
+                    var item = _window.ViewModel.Results[i];
+                    resultsHeight += GetItemHeight(item);
+                    if (!item.IsEmptyResult && !item.IsSearchSectionHeader)
+                    {
+                        foundSelectable++;
+                        if (foundSelectable == 9)
+                        {
+                            break;
+                        }
+                    }
                 }
-                double resultsHeight = Math.Min(count, 9) * itemHeight;
                 bool heightChanged = !AreClose(_lastResultsHeight, resultsHeight);
                 if (heightChanged)
                 {
@@ -225,6 +234,12 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers
                 }
             }
             return null;
+        }
+        private double GetItemHeight(AppSearchResult item)
+        {
+            if (item.IsSearchSectionHeader) return 31;
+            if (item.IsListItem) return 34;
+            return 46; // Rendered height in inline template is 46px
         }
     }
 }

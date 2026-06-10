@@ -32,12 +32,22 @@ namespace SwiftList.App.ViewModels.Search
             try
             {
                 int index = 0;
+                int lastUpdateCount = 0;
+                var lastUpdateTime = DateTime.UtcNow;
+
                 foreach (var item in rawItems)
                 {
+                    token.ThrowIfCancellationRequested();
                     if (string.IsNullOrWhiteSpace(item))
                         continue;
 
-                    bool isFullPath = Path.IsPathRooted(item);
+                    bool isFullPath = false;
+                    try
+                    {
+                        isFullPath = Path.IsPathRooted(item);
+                    }
+                    catch { }
+
                     string displayName = isFullPath
                         ? Path.GetFileName(item.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
                         : item;
@@ -57,7 +67,8 @@ namespace SwiftList.App.ViewModels.Search
                         AppSearchResult result;
                         if (isFullPath)
                         {
-                            bool isDir = Directory.Exists(item);
+                            bool isDir = false;
+                            try { isDir = Directory.Exists(item); } catch { }
                             result = new AppSearchResult
                             {
                                 Name = displayName,
@@ -84,6 +95,32 @@ namespace SwiftList.App.ViewModels.Search
                         }
                         listResults.Add(result);
                         index++;
+
+                        if (listResults.Count - lastUpdateCount >= 50 || (DateTime.UtcNow - lastUpdateTime).TotalMilliseconds > 100)
+                        {
+                            var partialResults = new List<AppSearchResult>(uiResults);
+                            if (hasPluginSearchActions && listResults.Count > 0)
+                            {
+                                SearchResultMapper.AddSectionHeader(partialResults, TranslationManager.Instance["Search_SectionHeader"], query);
+                            }
+                            foreach (var res in listResults)
+                            {
+                                res.Index = partialResults.Count;
+                                partialResults.Add(res);
+                            }
+
+                            System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
+                            {
+                                if (searchVersion == getLatestSearchVersion() && !token.IsCancellationRequested)
+                                {
+                                    string status = string.Format(TranslationManager.Instance["Search_StatsFilesOnly"], partialResults.Count);
+                                    onResultsUpdated(partialResults, status, false);
+                                }
+                            }));
+
+                            lastUpdateCount = listResults.Count;
+                            lastUpdateTime = DateTime.UtcNow;
+                        }
                     }
                 }
             }
@@ -119,6 +156,81 @@ namespace SwiftList.App.ViewModels.Search
 
                 onResultsUpdated(uiResults, statusText, true);
             }));
+        }
+
+        public static List<AppSearchResult> GetLocalMatches(
+            string query,
+            IEnumerable<string> rawItems,
+            string? contextDirectory,
+            CancellationToken token)
+        {
+            var results = new List<AppSearchResult>();
+            token.ThrowIfCancellationRequested();
+
+            int index = 0;
+            foreach (var item in rawItems)
+            {
+                token.ThrowIfCancellationRequested();
+                if (string.IsNullOrWhiteSpace(item))
+                    continue;
+
+                bool isFullPath = false;
+                try
+                {
+                    isFullPath = Path.IsPathRooted(item);
+                }
+                catch { }
+
+                string displayName = isFullPath
+                    ? Path.GetFileName(item.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+                    : item;
+                if (string.IsNullOrWhiteSpace(displayName))
+                    displayName = item;
+
+                bool isMatch = displayName.Contains(query, StringComparison.OrdinalIgnoreCase);
+                if (!isMatch)
+                {
+                    var highlights = new bool[displayName.Length];
+                    FuzzyHighlightMatcher.MarkFuzzyMatch(displayName, query, highlights);
+                    isMatch = highlights.Any(h => h);
+                }
+
+                if (isMatch)
+                {
+                    AppSearchResult result;
+                    if (isFullPath)
+                    {
+                        bool isDir = false;
+                        try { isDir = Directory.Exists(item); } catch { }
+                        result = new AppSearchResult
+                        {
+                            Name = displayName,
+                            FullPath = item,
+                            ParentDir = string.Empty,
+                            ContextDirectory = isDir ? item : (Path.GetDirectoryName(item) ?? string.Empty),
+                            IsDir = isDir,
+                            Drive = Path.GetPathRoot(item)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, Path.VolumeSeparatorChar) ?? string.Empty,
+                            ResultKind = "File",
+                            Index = index,
+                            SearchQuery = query
+                        };
+                    }
+                    else
+                    {
+                        result = new AppSearchResult
+                        {
+                            Name = displayName,
+                            FullPath = item,
+                            ResultKind = "ListItem",
+                            Index = index,
+                            SearchQuery = query
+                        };
+                    }
+                    results.Add(result);
+                    index++;
+                }
+            }
+            return results;
         }
     }
 }

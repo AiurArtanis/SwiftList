@@ -27,6 +27,14 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
         public bool CanTrigger(IntPtr focusedHwnd, string className)
         {
             if (focusedHwnd == IntPtr.Zero) return false;
+            
+            if (className.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase) ||
+                className.Equals("Progman", StringComparison.OrdinalIgnoreCase) ||
+                className.Equals("WorkerW", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
             IntPtr current = focusedHwnd;
             for (int depth = 0; depth < 12 && current != IntPtr.Zero; depth++)
             {
@@ -36,7 +44,6 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
                     string cls = sbClass.ToString();
                     if (cls.Equals("SHELLDLL_DefView", StringComparison.OrdinalIgnoreCase) ||
                         cls.Equals("SysListView32", StringComparison.OrdinalIgnoreCase) ||
-
                         cls.Equals("DirectUIHWND", StringComparison.OrdinalIgnoreCase))
                     {
                         return true;
@@ -132,49 +139,58 @@ namespace SwiftList.Plugins.CoreExtensions.InlineSearch
 
         public System.Collections.Generic.IEnumerable<string> GetListItems(IntPtr hwnd)
         {
-            var results = new System.Collections.Generic.List<string>();
-            if (hwnd == IntPtr.Zero) return results;
+            if (hwnd == IntPtr.Zero) yield break;
+            dynamic? shellWindows = null;
             try
             {
                 var shellWindowsType = Type.GetTypeFromCLSID(new Guid("9BA05972-F6A8-11CF-A442-00A0C90A8F39"));
-                if (shellWindowsType == null) return results;
-                dynamic shellWindows = Activator.CreateInstance(shellWindowsType)!;
-                int count = shellWindows.Count;
-                for (int i = 0; i < count; i++)
+                if (shellWindowsType == null) yield break;
+                shellWindows = Activator.CreateInstance(shellWindowsType)!;
+            }
+            catch { yield break; }
+
+            int count = 0;
+            try { count = shellWindows.Count; } catch { yield break; }
+
+            for (int i = 0; i < count; i++)
+            {
+                dynamic? window = null;
+                try
                 {
+                    window = shellWindows.Item(i);
+                    if (window == null) continue;
+                    var windowHwnd = new IntPtr(Convert.ToInt64(window.HWND));
+                    if (windowHwnd != hwnd) continue;
+                }
+                catch { continue; }
+
+                dynamic? folderItems = null;
+                try { folderItems = window.Document.Folder.Items(); } catch { continue; }
+
+                int itemCount = 0;
+                try { itemCount = folderItems.Count; } catch { continue; }
+
+                for (int j = 0; j < itemCount; j++)
+                {
+                    string path = string.Empty;
                     try
                     {
-                        dynamic? window = shellWindows.Item(i);
-                        if (window == null) continue;
-                        var windowHwnd = new IntPtr(Convert.ToInt64(window.HWND));
-                        if (windowHwnd != hwnd) continue;
-                        dynamic folderItems = window.Document.Folder.Items();
-                        int itemCount = folderItems.Count;
-                        for (int j = 0; j < itemCount; j++)
-                        {
-                            dynamic? fi = folderItems.Item(j);
-                            if (fi == null) continue;
-                            string path = fi.Path;
-                            if (string.IsNullOrWhiteSpace(path)) continue;
-                            if (path.StartsWith("::", StringComparison.Ordinal)
-                             || path.Contains("::{", StringComparison.Ordinal)
-
-                             || path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
-
-                                continue;
-                            results.Add(path);
-                        }
-
-                        break;
+                        dynamic? fi = folderItems.Item(j);
+                        if (fi == null) continue;
+                        path = fi.Path;
                     }
+                    catch { continue; }
 
-                    catch { }
+                    if (string.IsNullOrWhiteSpace(path)) continue;
+                    if (path.StartsWith("::", StringComparison.Ordinal)
+                     || path.Contains("::{", StringComparison.Ordinal)
+                     || path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    yield return path;
                 }
+                break;
             }
-
-            catch { }
-
-            return results;
         }
 
         public bool GetDockBounds(IntPtr hwnd, out AdapterRect rect)
