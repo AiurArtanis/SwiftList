@@ -11,6 +11,8 @@ namespace SwiftList.App
         {
             PaddingProperty.OverrideMetadata(typeof(SearchBoxControl),
                 new FrameworkPropertyMetadata(new Thickness(21, 19, 21, 19)));
+            FontSizeProperty.OverrideMetadata(typeof(SearchBoxControl),
+                new FrameworkPropertyMetadata(24.0));
         }
 
         public SearchBoxControl()

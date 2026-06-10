@@ -120,7 +120,6 @@
             <ListBox x:Name="LstActions" Grid.Row="1"
                      Background="Transparent"
                      BorderThickness="0"
-                     MaxHeight="420"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                      Style="{StaticResource SleekListBoxStyle}"
