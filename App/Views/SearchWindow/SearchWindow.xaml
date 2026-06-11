@@ -37,7 +37,8 @@
                 </Grid.RowDefinitions>
                 <!-- ═══════════ 1. Title Bar + Search ═══════════ -->
                 <Border Grid.Row="0" Background="{DynamicResource HeaderBg}"
-                        BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1">
+                        BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1"
+                        CornerRadius="9,9,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -124,6 +125,7 @@
                 <!-- ═══════════ 3. Status Bar ═══════════ -->
                 <Border Grid.Row="2" Background="{DynamicResource StatusBarBg}"
                         BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0"
+                        CornerRadius="0,0,9,9"
                         Padding="16,8,16,8">
                     <Grid>
                         <Grid.ColumnDefinitions>

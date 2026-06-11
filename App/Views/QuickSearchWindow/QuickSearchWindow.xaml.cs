@@ -108,6 +108,11 @@ public partial class QuickSearchWindow : Window, ISearchWindow
     {
         Logger.Log("[QuickSearchWindow] Window loaded. Registering hotkey and triggering index build.", LogLevel.Debug);
 
+        if (ThemeManager.Instance.ActiveTheme != null)
+        {
+            Helpers.WindowEffectHelper.ApplyThemeEffects(this, ThemeManager.Instance.ActiveTheme);
+        }
+
         // Start index build
 
         _viewModel.TriggerIndexBuild();

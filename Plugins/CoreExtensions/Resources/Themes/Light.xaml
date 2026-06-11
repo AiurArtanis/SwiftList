@@ -5,6 +5,7 @@
     <!-- Theme Metadata -->
     <sys:String x:Key="ThemeId">Light</sys:String>
     <sys:Boolean x:Key="IsDark">False</sys:Boolean>
+    <sys:Double x:Key="WindowOpacity">1.0</sys:Double>
     <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="CardBorderBrush" Color="#E2E8F0"/>
     <SolidColorBrush x:Key="TextPrimary" Color="#0F172A"/>

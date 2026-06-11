@@ -5,6 +5,7 @@
     <!-- Theme Metadata -->
     <sys:String x:Key="ThemeId">Nord</sys:String>
     <sys:Boolean x:Key="IsDark">False</sys:Boolean>
+    <sys:Double x:Key="WindowOpacity">0.9</sys:Double>
 
     <SolidColorBrush x:Key="CardBackground" Color="#E5E9F0"/>
     <SolidColorBrush x:Key="CardBorderBrush" Color="#D8DEE9"/>

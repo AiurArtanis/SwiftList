@@ -1,11 +1,13 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:helpers="clr-namespace:SwiftList.App.Helpers">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="Colors.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
     <!-- ═══════════ ListBox Item Style ═══════════ -->
     <Style x:Key="ResultItemStyle" TargetType="ListBoxItem">
+        <Setter Property="helpers:RippleAdorner.EnableRipple" Value="True"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Margin" Value="0"/>
         <Setter Property="Height" Value="51"/>
@@ -50,8 +52,8 @@
         </Setter>
     </Style>
 
-    <!-- ═══════════ Action MenuItem Style ═══════════ -->
     <Style x:Key="ActionItemStyle" TargetType="ListBoxItem">
+        <Setter Property="helpers:RippleAdorner.EnableRipple" Value="True"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Margin" Value="0"/>
         <Setter Property="Height" Value="Auto"/>

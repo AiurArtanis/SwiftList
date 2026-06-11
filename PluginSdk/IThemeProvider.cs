@@ -14,4 +14,6 @@ public interface ITheme
     string DisplayName { get; }
     bool IsDark { get; }
     ResourceDictionary GetResources();
+
+    double WindowOpacity => 1.0;
 }

@@ -17,6 +17,7 @@
     </Window.Resources>
     
     <Border x:Name="WindowBorder" CornerRadius="12" BorderThickness="1.5"
+            Margin="12"
             Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorderBrush}">
         <Border.Effect>
             <DropShadowEffect Color="{DynamicResource ShadowColor}" BlurRadius="20" ShadowDepth="2" Opacity="0.5"/>

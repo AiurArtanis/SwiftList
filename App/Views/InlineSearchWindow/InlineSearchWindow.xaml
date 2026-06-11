@@ -38,9 +38,12 @@
                                   Visibility="{Binding ResultsPanelVisibility}"/>
             <!-- ═══════════ 2. Separator ═══════════ -->
             <Rectangle x:Name="ResultsSeparator" Grid.Row="1" Height="1" Fill="{DynamicResource SeparatorBrush}"
+                       Margin="12,0,12,0"
                        Visibility="{Binding ResultsSeparatorVisibility}"/>
             <!-- ═══════════ 3. Search Box (Bottom Anchored) ═══════════ -->
-            <Border x:Name="SearchBoxBorder" Grid.Row="2" Background="{DynamicResource HeaderBg}" Padding="13,11,13,11">
+            <Border x:Name="SearchBoxBorder" Grid.Row="2" Background="{DynamicResource HeaderBg}" 
+                    CornerRadius="0,0,7,7"
+                    Padding="13,11,13,11">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>

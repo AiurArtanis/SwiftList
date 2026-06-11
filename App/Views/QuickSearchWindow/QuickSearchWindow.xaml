@@ -53,14 +53,14 @@
     </Window.Resources>
 
     <Grid>
-        <!-- Main card container with drop shadow -->
         <Border Margin="24,40,24,24" CornerRadius="12" Background="{DynamicResource CardBackground}"
                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="32" ShadowDepth="4" Opacity="0.25" Color="{DynamicResource ShadowColor}"/>
             </Border.Effect>
 
-        <Grid>
+            <Border CornerRadius="11" ClipToBounds="True">
+                <Grid>
             <Grid.RowDefinitions>
                 <!-- Search bar -->
                 <RowDefinition Height="Auto"/>
@@ -79,6 +79,7 @@
             <Rectangle x:Name="ResultsSeparator"
                        Grid.Row="1"
                        Height="1"
+                       Margin="12,0,12,0"
                        Fill="{DynamicResource SeparatorBrush}"
                        Visibility="{Binding ResultsSeparatorVisibility}"/>
 
@@ -93,7 +94,8 @@
             <local:StatusBarControl x:Name="StatusBarControl" Grid.Row="3" 
                                     Visibility="{Binding StatusBarVisibility}"/>
         </Grid>
-    </Border>
+            </Border>
+        </Border>
 
     <!-- Floating Open full search window button -->
     <Button x:Name="BtnOpenMore"

@@ -69,6 +69,7 @@ public class CoreThemeProvider : IThemeProvider
 public class CoreTheme : ITheme
 {
     private readonly string _packUri;
+    private ResourceDictionary? _cachedResources;
 
     public string Id { get; }
     public string DisplayName => TranslationService.Get($"Theme_{Id}");
@@ -81,8 +82,10 @@ public class CoreTheme : ITheme
         _packUri = packUri;
     }
 
-    public ResourceDictionary GetResources() => new ResourceDictionary
+    public ResourceDictionary GetResources() => _cachedResources ??= new ResourceDictionary
     {
         Source = new Uri(_packUri, UriKind.Absolute)
     };
+
+    public double WindowOpacity => (double)GetResources()["WindowOpacity"];
 }

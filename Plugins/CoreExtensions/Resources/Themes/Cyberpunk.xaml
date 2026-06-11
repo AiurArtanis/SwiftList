@@ -5,6 +5,7 @@
     <!-- Theme Metadata -->
     <sys:String x:Key="ThemeId">Cyberpunk</sys:String>
     <sys:Boolean x:Key="IsDark">True</sys:Boolean>
+    <sys:Double x:Key="WindowOpacity">0.85</sys:Double>
 
     <SolidColorBrush x:Key="CardBackground" Color="#0F0C1B"/>
     <SolidColorBrush x:Key="CardBorderBrush" Color="#2A1B4E"/>
