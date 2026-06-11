@@ -183,37 +183,36 @@
                         <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Margin="4,4,4,4"
                                     Visibility="{Binding IsArray, Converter={StaticResource BoolToVis}}">
                             <Grid Margin="0,0,0,6">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                                     <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" FontFamily="Microsoft YaHei UI"/>
                                 </StackPanel>
-                                <Button Grid.Column="1" Command="{Binding AddCommand}" Style="{StaticResource PrimarySettingsButton}" Height="24" MinWidth="80" Padding="8,0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_Add]}" FontSize="11" Cursor="Hand"/>
                             </Grid>
                             <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" FontFamily="Microsoft YaHei UI" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
 
                             <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0">
-                                <ItemsControl ItemsSource="{Binding ArrayItems}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,0,0,1" Padding="0,4" Margin="0,0,0,4">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <ItemsControl ItemsSource="{Binding ArrayItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,0,0,1" Padding="0,4" Margin="0,0,0,4">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
 
-                                                    <ContentPresenter Grid.Column="0" Content="{Binding SimpleValueViewModel}"/>
-                                                    <ItemsControl Grid.Column="0" ItemsSource="{Binding Children}"/>
+                                                        <ContentPresenter Grid.Column="0" Content="{Binding SimpleValueViewModel}"/>
+                                                        <ItemsControl Grid.Column="0" ItemsSource="{Binding Children}"/>
 
-                                                    <Button Grid.Column="1" Command="{Binding DeleteCommand}" Style="{StaticResource SettingsButton}" Height="24" MinWidth="60" Padding="8,0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_Delete]}" FontSize="11" Foreground="#FFF44336" Cursor="Hand" Margin="8,0,0,0"/>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                                        <Button Grid.Column="1" Command="{Binding DeleteCommand}" Style="{StaticResource SettingsButton}" Height="24" MinWidth="60" Padding="8,0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_Delete]}" FontSize="11" Foreground="#FFF44336" Cursor="Hand" Margin="8,0,0,0"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    
+                                    <Button Command="{Binding AddCommand}" Style="{StaticResource PrimarySettingsButton}" Height="24" MinWidth="80" Padding="8,0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_Add]}" FontSize="11" Cursor="Hand" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+                                </StackPanel>
                             </Border>
                         </StackPanel>
                     </Grid>
