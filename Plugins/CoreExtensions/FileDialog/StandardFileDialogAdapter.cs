@@ -79,7 +79,25 @@ public class StandardFileDialogAdapter : IFileDialogAdapter
             {
                 await Task.Delay(150);
                 var currentActive = GetForegroundWindow();
-                if (currentActive == hwnd)
+                var isAllowed = (currentActive == hwnd);
+                if (!isAllowed && currentActive != IntPtr.Zero)
+                {
+                    GetWindowThreadProcessId(currentActive, out var activePid);
+                    if (activePid != 0)
+                    {
+                        try
+                        {
+                            using var proc = System.Diagnostics.Process.GetProcessById((int)activePid);
+                            if (string.Equals(proc.ProcessName, "SwiftList.App", StringComparison.OrdinalIgnoreCase))
+                            {
+                                isAllowed = true;
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
+                if (isAllowed)
                 {
                     var targetThread = GetWindowThreadProcessId(targetEdit, out var _);
                     var currentThread = GetCurrentThreadId();
