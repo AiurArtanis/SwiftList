@@ -23,7 +23,26 @@ public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
                 className.Equals("WorkerW", StringComparison.OrdinalIgnoreCase));
     }
 
-    public bool CanTrigger(IntPtr focusedHwnd, string className) => true;
+    public bool CanTrigger(IntPtr focusedHwnd, string className)
+    {
+        if (focusedHwnd == IntPtr.Zero) return false;
+        var current = focusedHwnd;
+        var sbClass = new StringBuilder(256);
+        while (current != IntPtr.Zero)
+        {
+            sbClass.Clear();
+            ExplorerAdapterHelpers.GetClassName(current, sbClass, sbClass.Capacity);
+            var cls = sbClass.ToString();
+            if (cls.Equals("SHELLDLL_DefView", StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (cls.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase) ||
+                cls.Equals("Progman", StringComparison.OrdinalIgnoreCase) ||
+                cls.Equals("WorkerW", StringComparison.OrdinalIgnoreCase))
+                break;
+            current = ExplorerAdapterHelpers.GetParent(current);
+        }
+        return false;
+    }
 
     public string? GetSearchScope(IntPtr hwnd)
     {

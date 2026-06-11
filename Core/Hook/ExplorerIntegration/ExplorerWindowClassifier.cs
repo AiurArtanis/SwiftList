@@ -193,12 +193,11 @@ internal sealed class ExplorerWindowClassifier
         if (activePid == Environment.ProcessId || (activePid != 0 && activePid == _tracker.AppProcessId))
             return true;
 
-        // If there is an active tracked window, ignore focus changes to other windows in the SAME process.
-        // This prevents false deactivation when autocomplete dropdowns, tooltips, or child controls of the active dialog are shown or updated.
         if (_tracker.ActiveHwnd != IntPtr.Zero)
         {
-            ExplorerNativeHooks.GetWindowThreadProcessId(_tracker.ActiveHwnd, out var activeTrackerPid);
-            if (activePid != 0 && activePid == activeTrackerPid)
+            var rootHwnd = ExplorerNativeHooks.GetAncestor(hwnd, ExplorerNativeHooks.GA_ROOTOWNER);
+            if (rootHwnd == IntPtr.Zero) rootHwnd = hwnd;
+            if (rootHwnd == _tracker.ActiveHwnd)
                 return true;
         }
 

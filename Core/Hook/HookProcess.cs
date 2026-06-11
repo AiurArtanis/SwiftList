@@ -20,6 +20,12 @@ public sealed class HookProcess : IDisposable
     [DllImport("kernel32.dll")]
     private static extern int GetCurrentThreadId();
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool AllowSetForegroundWindow(int dwProcessId);
+
+
+
     [StructLayout(LayoutKind.Sequential)]
     private struct MSG { public IntPtr hwnd; public uint message; public IntPtr wParam; public IntPtr lParam; public uint time; public int ptX; public int ptY; }
 
@@ -137,6 +143,10 @@ public sealed class HookProcess : IDisposable
             _keyboardHook.OnDoubleCtrl += () =>
             {
                 Logger.Log("[HookProcess] Double-Ctrl detected, sending ACTIVATE.", LogLevel.Debug);
+                if (_appProcessId != 0)
+                {
+                    AllowSetForegroundWindow((int)_appProcessId);
+                }
                 _ipcServer.SendActivate();
             };
             _keyboardHook.OnCharacterTyped += ch => _ipcServer.SendMessage(new IpcMessage { Id = IpcMessageId.KeyChar, CharVal = ch });

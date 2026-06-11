@@ -77,6 +77,7 @@ public static class PipeRequestBinarySerializer
 
             case IpcMessageId.RestoreDialogFocus:
             case IpcMessageId.GetListItems:
+            case IpcMessageId.ForceForeground:
                 writer.Write(msg.Hwnd);
                 break;
 
@@ -167,6 +168,7 @@ public static class PipeRequestBinarySerializer
 
             case IpcMessageId.RestoreDialogFocus:
             case IpcMessageId.GetListItems:
+            case IpcMessageId.ForceForeground:
                 msg.Hwnd = reader.ReadInt64();
                 break;
 

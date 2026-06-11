@@ -158,11 +158,13 @@ public class KeyboardHookService : IDisposable
             }
         }
         var isAdapterActive = _explorerTracker.ActiveInlineAdapter != null;
+        Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: isAdapterActive={0}, ActiveInlineAdapter={1}", isAdapterActive, _explorerTracker.ActiveInlineAdapter?.GetType().Name ?? "null"), LogLevel.Debug);
         if (IsInlineSearchVisible || isAdapterActive)
         {
             if (!IsInlineSearchVisible && isAdapterActive)
             {
                 var canTrigger = _explorerTracker.ActiveInlineAdapter!.CanTrigger(targetFocus, className);
+                Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: CanTrigger={0}", canTrigger), LogLevel.Debug);
                 if (!canTrigger)
                 {
                     return false;

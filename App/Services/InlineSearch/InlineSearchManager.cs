@@ -20,6 +20,7 @@ public class InlineSearchManager : IDisposable
     private readonly KeyboardHookService _keyboardHook;
     private readonly MouseHookService _mouseHook;
     private string _searchText = string.Empty;
+    private IntPtr _currentHostHwnd = IntPtr.Zero;
 
     public ExplorerTracker ExplorerTracker => _explorerTracker;
     public KeyboardHookService KeyboardHook => _keyboardHook;
@@ -62,19 +63,24 @@ public class InlineSearchManager : IDisposable
     {
         _explorerTracker.OnExplorerActivated += (hwnd, title, className, isDesktop) => Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
+                if (_window != null && _currentHostHwnd == hwnd)
+                {
+                    return;
+                }
+
                 if (_explorerTracker.IsActiveWindowDialog)
                 {
-                    CloseInlineSearch();
+                    CloseInlineSearch("ExplorerActivated (Dialog)");
                     EnsureWindowCreated();
                     _window?.UpdateSearchDisplay(string.Empty);
                 }
                 else
                 {
-                    CloseInlineSearch();
+                    CloseInlineSearch("ExplorerActivated (Non-Dialog)");
                 }
             }));
 
-        _explorerTracker.OnExplorerDeactivated += () => Application.Current.Dispatcher.BeginInvoke(new Action(() => CloseInlineSearch()));
+        _explorerTracker.OnExplorerDeactivated += () => Application.Current.Dispatcher.BeginInvoke(new Action(() => CloseInlineSearch("ExplorerDeactivated")));
 
         _explorerTracker.OnError += (msg) => Logger.Log($"[InlineSearchManager] ExplorerTracker error: {msg}", LogLevel.Error);
 
@@ -99,7 +105,7 @@ public class InlineSearchManager : IDisposable
                                                  {
                                                      if (_explorerTracker.IsActiveWindowDialog)
                                                          return;
-                                                     CloseInlineSearch();
+                                                     CloseInlineSearch("ClickOutside");
                                                  }));
 
     private void WireUpKeyboardEvents()
@@ -143,6 +149,7 @@ public class InlineSearchManager : IDisposable
         viewModel.IsInlineSearchContext = true;
 
         _window = new InlineSearchWindow(viewModel, this);
+        _currentHostHwnd = _explorerTracker.ActiveHwnd;
         _keyboardHook.IsInlineSearchVisible = true;
         _mouseHook.Start();
 
@@ -198,7 +205,7 @@ public class InlineSearchManager : IDisposable
 
     public bool IsExecuting { get; set; }
 
-    public void CloseInlineSearch()
+    public void CloseInlineSearch(string reason = "Unknown")
     {
         if (_window == null) return;
 
@@ -222,17 +229,18 @@ public class InlineSearchManager : IDisposable
 
         var win = _window;
         _window = null;
+        _currentHostHwnd = IntPtr.Zero;
         win.Hide();
         win.Close();
 
-        Logger.Log("[InlineSearchManager] InlineSearchWindow closed and destroyed.", LogLevel.Debug);
+        Logger.Log($"[InlineSearchManager] InlineSearchWindow closed and destroyed. Reason: {reason}", LogLevel.Debug);
     }
 
 
 
     public void Dispose()
     {
-        CloseInlineSearch();
+        CloseInlineSearch("Dispose");
         _keyboardHook.Dispose();
         _mouseHook.Dispose();
         _explorerTracker.Dispose();

@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using SwiftList.App.Services;
+using SwiftList.Core;
 
 namespace SwiftList.App.Views.QuickSearchWindow;
 
@@ -13,23 +14,15 @@ public class QuickSearchWindowController
 
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetForegroundWindow(IntPtr hWnd);
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, [MarshalAs(UnmanagedType.Bool)] bool fAttach);
-    [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
-    [DllImport("user32.dll")] private static extern IntPtr SetActiveWindow(IntPtr hWnd);
-    [DllImport("user32.dll")] private static extern IntPtr SetFocus(IntPtr hWnd);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
     [DllImport("user32.dll")] private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
     [DllImport("user32.dll")] private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)] private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-    [DllImport("user32.dll")] private static extern IntPtr GetShellWindow();
-    [DllImport("user32.dll")] private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, IntPtr dwExtraInfo);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
     private const int SW_RESTORE = 9;
     private const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
     private const uint WINEVENT_OUTOFCONTEXT = 0;
-    private const byte VK_MENU = 0x12;
-    private const uint KEYEVENTF_KEYUP = 0x0002;
 
     private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
 
@@ -79,35 +72,11 @@ public class QuickSearchWindowController
         var fgHwnd = GetForegroundWindow();
         if (fgHwnd == hwnd) return;
 
-        keybd_event(VK_MENU, 0, 0, IntPtr.Zero);
-        keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
-
-        var fgThreadId = GetWindowThreadProcessId(fgHwnd, out _);
-        var appThreadId = GetCurrentThreadId();
-
-        var attached = fgThreadId != appThreadId && fgThreadId != 0 && AttachThreadInput(appThreadId, fgThreadId, true);
-        var shellAttached = false;
-        var shellHwnd = GetShellWindow();
-        if (shellHwnd != IntPtr.Zero)
+        App.HookClient?.SendMessage(new IpcMessage
         {
-            var shellThreadId = GetWindowThreadProcessId(shellHwnd, out _);
-            if (shellThreadId != appThreadId && shellThreadId != fgThreadId && shellThreadId != 0)
-            {
-                shellAttached = AttachThreadInput(appThreadId, shellThreadId, true);
-            }
-        }
-
-        try
-        {
-            SetForegroundWindow(hwnd);
-            SetActiveWindow(hwnd);
-            SetFocus(hwnd);
-        }
-        finally
-        {
-            if (attached) AttachThreadInput(appThreadId, fgThreadId, false);
-            if (shellAttached) AttachThreadInput(appThreadId, GetWindowThreadProcessId(shellHwnd, out _), false);
-        }
+            Id = IpcMessageId.ForceForeground,
+            Hwnd = hwnd.ToInt64()
+        });
     }
 
     public QuickSearchWindowController(SwiftList.App.QuickSearchWindow window) => _window = window;
@@ -208,7 +177,7 @@ public class QuickSearchWindowController
         Task.Run(async () =>
         {
             await Task.Delay(100);
-            try { Core.Win32Api.TrimWorkingSet(); } catch { }
+            try { Win32Api.TrimWorkingSet(); } catch { }
         });
     }
 }

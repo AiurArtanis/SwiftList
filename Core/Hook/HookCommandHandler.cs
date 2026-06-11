@@ -8,6 +8,35 @@ public sealed class HookCommandHandler
 {
     private readonly HookProcess _process;
 
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)] bool fAttach);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr SetActiveWindow(IntPtr hWnd);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr SetFocus(IntPtr hWnd);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, IntPtr dwExtraInfo);
+
+    private const byte VK_MENU = 0x12;
+    private const uint KEYEVENTF_KEYUP = 0x0002;
+
     public HookCommandHandler(HookProcess process) => _process = process;
 
     public void HandleAppCommand(IpcMessage msg)
@@ -95,6 +124,44 @@ public sealed class HookCommandHandler
 
                                 adapter?.RestoreFocus(activeHwnd);
                             });
+                        }
+                    }
+                    break;
+
+                case IpcMessageId.ForceForeground:
+                    {
+                        var appHwnd = (IntPtr)msg.Hwnd;
+                        if (appHwnd != IntPtr.Zero)
+                        {
+                            Logger.Log($"[HookCommandHandler] Forcing foreground for HWND 0x{appHwnd.ToInt64():X}", LogLevel.Debug);
+
+                            // Simulate Alt key press to bypass SetForegroundWindow restrictions
+                            keybd_event(VK_MENU, 0, 0, IntPtr.Zero);
+                            keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
+
+                            var fgHwnd = GetForegroundWindow();
+                            var fgThreadId = GetWindowThreadProcessId(fgHwnd, out _);
+                            var currentThreadId = GetCurrentThreadId();
+
+                            var attached = false;
+                            if (fgThreadId != 0 && fgThreadId != currentThreadId)
+                            {
+                                attached = AttachThreadInput(currentThreadId, fgThreadId, true);
+                            }
+
+                            try
+                            {
+                                SetForegroundWindow(appHwnd);
+                                SetActiveWindow(appHwnd);
+                                SetFocus(appHwnd);
+                            }
+                            finally
+                            {
+                                if (attached)
+                                {
+                                    AttachThreadInput(currentThreadId, fgThreadId, false);
+                                }
+                            }
                         }
                     }
                     break;
