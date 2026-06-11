@@ -121,16 +121,16 @@ public static class QueryExtensions
         if (pattern.Length == 0)
             return;
 
-        char bestKey = '\0';
-        int minCount = int.MaxValue;
+        var bestKey = '\0';
+        var minCount = int.MaxValue;
 
-        for (int i = 0; i < pattern.Length; i++)
+        for (var i = 0; i < pattern.Length; i++)
         {
             var c = char.ToLowerInvariant(pattern[i]);
             if (c == ' ' || c == '/' || c == '\\')
                 continue;
 
-            int count = 0;
+            var count = 0;
             if (index.NameCharBuckets.TryGetValue(c, out var b))
             {
                 count += b.Length;
