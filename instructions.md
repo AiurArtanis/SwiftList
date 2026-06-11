@@ -61,3 +61,21 @@ When using the project's toolchains, compiling code, or performing development, 
    * Do not create multi-dot source code files such as `aa.bb.cs` or `SomeFeature.Helper.cs`.
    * Instead, strictly use subdirectories and nested namespace hierarchies (e.g., place the helper in `SomeFeature/Helper.cs` and match it with the nested namespace `SwiftList.SomeFeature`). This keeps filenames simple, intuitive, and standard.
 
+8. **App Versioning, Tagging, and Release Flow**
+   * When releasing a new version, follow these steps in order:
+     1. Locate `<Version>X.Y.Z</Version>` inside `App/App.csproj` and bump it to the next version (e.g. `1.5.3`).
+     2. Commit all functional/code modifications (after formatting).
+     3. Commit the version bump change:
+        ```bash
+        git add App/App.csproj
+        git commit -m "bump: version vX.Y.Z"
+        ```
+     4. Tag the commit with the version number (prefixed with `v`):
+        ```bash
+        git tag vX.Y.Z
+        ```
+     5. Push both the branch commits and the tag to the remote repository:
+        ```bash
+        git push origin main
+        git push origin vX.Y.Z
+        ```
