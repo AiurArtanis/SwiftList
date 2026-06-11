@@ -228,6 +228,11 @@ internal static class NameSearchExtensions
                 {
                     if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, slab))
                     {
+                        var span = aliasMatch.MaxEnd - aliasMatch.MinBegin;
+                        var queryLen = pattern.GetTotalTermLength();
+                        if (span > Math.Max(queryLen * 3, 20) || aliasMatch.Score < queryLen * 5)
+                            continue;
+
                         if (!aliasMatched || aliasMatch.Score > match.Score)
                         {
                             aliasMatched = true;

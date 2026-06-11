@@ -116,9 +116,48 @@ public static class QueryExtensions
 
     internal static void GetNameCandidateStorage(this RuntimeIndex index, string pattern, out int[]? bucket, out List<int>? delta)
     {
-        var key = pattern.Length > 0 ? char.ToLowerInvariant(pattern[0]) : '\0';
-        index.NameCharBuckets.TryGetValue(key, out bucket);
-        index.NameCharDelta.TryGetValue(key, out delta);
+        bucket = null;
+        delta = null;
+        if (pattern.Length == 0)
+            return;
+
+        char bestKey = '\0';
+        int minCount = int.MaxValue;
+
+        for (int i = 0; i < pattern.Length; i++)
+        {
+            var c = char.ToLowerInvariant(pattern[i]);
+            if (c == ' ' || c == '/' || c == '\\')
+                continue;
+
+            int count = 0;
+            if (index.NameCharBuckets.TryGetValue(c, out var b))
+            {
+                count += b.Length;
+            }
+            if (index.NameCharDelta.TryGetValue(c, out var d))
+            {
+                count += d.Count;
+            }
+
+            if (count < minCount)
+            {
+                minCount = count;
+                bestKey = c;
+            }
+        }
+
+        if (bestKey != '\0')
+        {
+            index.NameCharBuckets.TryGetValue(bestKey, out bucket);
+            index.NameCharDelta.TryGetValue(bestKey, out delta);
+        }
+        else
+        {
+            var key = char.ToLowerInvariant(pattern[0]);
+            index.NameCharBuckets.TryGetValue(key, out bucket);
+            index.NameCharDelta.TryGetValue(key, out delta);
+        }
     }
 
     public static bool TryResolvePath(this RuntimeIndex index, string pathLower, out UInt128 id, out string childPrefixLower)

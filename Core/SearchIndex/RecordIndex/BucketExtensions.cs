@@ -19,10 +19,7 @@ public static class BucketExtensions
             for (var charIdx = 0; charIdx < name.Length; charIdx++)
             {
                 var c = name[charIdx];
-                if (c > 127)
-                {
-                    seenKeys.Add(char.ToLowerInvariant(c));
-                }
+                seenKeys.Add(char.ToLowerInvariant(c));
             }
 
             if (index.TryGetAliases(i, out var aliases))
@@ -83,15 +80,10 @@ public static class BucketExtensions
             return;
 
         var seenKeys = new HashSet<char>();
-        seenKeys.Add(char.ToLowerInvariant(name[0]));
-
         for (var charIdx = 0; charIdx < name.Length; charIdx++)
         {
             var c = name[charIdx];
-            if (c > 127)
-            {
-                seenKeys.Add(char.ToLowerInvariant(c));
-            }
+            seenKeys.Add(char.ToLowerInvariant(c));
         }
 
         if (index.TryGetAliases(idx, out var aliases))

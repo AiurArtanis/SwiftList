@@ -12,6 +12,20 @@ internal sealed class FzfPattern
     public FzfTermSet[] TermSets { get; }
     public bool IsEmpty => TermSets.Length == 0;
 
+    public int GetTotalTermLength()
+    {
+        var len = 0;
+        foreach (var set in TermSets)
+        {
+            foreach (var term in set.Terms)
+            {
+                if (!term.Inverse)
+                    len += term.Text.Length;
+            }
+        }
+        return len;
+    }
+
     public static FzfPattern Parse(string query)
     {
         string? targetDrive = null;

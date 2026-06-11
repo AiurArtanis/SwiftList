@@ -12,6 +12,11 @@ public static class ShellIconHelper
 {
     private static readonly ConcurrentDictionary<string, ImageSource> _iconCache = new(StringComparer.OrdinalIgnoreCase);
 
+    public static void ClearCache()
+    {
+        _iconCache.Clear();
+    }
+
     public static ImageSource? GetIconFromCacheOnly(string path, bool isDir, out bool needsLoad)
     {
         needsLoad = false;

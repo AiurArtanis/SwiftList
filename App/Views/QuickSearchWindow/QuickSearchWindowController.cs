@@ -177,6 +177,7 @@ public class QuickSearchWindowController
         Task.Run(async () =>
         {
             await Task.Delay(100);
+            try { ShellIconHelper.ClearCache(); } catch { }
             try { Win32Api.TrimWorkingSet(); } catch { }
         });
     }

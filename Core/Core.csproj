@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PluginSdk\PluginSdk.csproj" />
+    <InternalsVisibleTo Include="TestSearch" />
   </ItemGroup>
 
 </Project>

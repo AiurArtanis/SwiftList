@@ -58,6 +58,11 @@ internal static class CacheExtensions
                     {
                         if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, slab))
                         {
+                            var span = aliasMatch.MaxEnd - aliasMatch.MinBegin;
+                            var queryLen = pattern.GetTotalTermLength();
+                            if (span > Math.Max(queryLen * 3, 20) || aliasMatch.Score < queryLen * 5)
+                                continue;
+
                             if (!aliasMatched || aliasMatch.Score > match.Score)
                             {
                                 aliasMatched = true;
@@ -138,6 +143,11 @@ internal static class CacheExtensions
                                 var aliasMatch = FzfAlgorithm.FuzzyMatchV1(alias, term.Text, term.CaseSensitive, FzfScoringScheme.Default);
                                 if (aliasMatch.IsMatch)
                                 {
+                                    var span = aliasMatch.End - aliasMatch.Start;
+                                    var patternLen = term.Text.Length;
+                                    if (span > Math.Max(patternLen * 3, 20) || aliasMatch.Score < patternLen * 5)
+                                        continue;
+
                                     if (!aliasMatched || aliasMatch.Score > match.Score)
                                     {
                                         aliasMatched = true;
@@ -229,6 +239,11 @@ internal static class CacheExtensions
                             {
                                 if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, worker.Slab))
                                 {
+                                    var span = aliasMatch.MaxEnd - aliasMatch.MinBegin;
+                                    var queryLen = pattern.GetTotalTermLength();
+                                    if (span > Math.Max(queryLen * 3, 20) || aliasMatch.Score < queryLen * 5)
+                                        continue;
+
                                     if (!aliasMatched || aliasMatch.Score > match.Score)
                                     {
                                         aliasMatched = true;

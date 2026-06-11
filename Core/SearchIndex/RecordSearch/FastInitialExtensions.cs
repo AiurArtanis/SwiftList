@@ -155,6 +155,11 @@ internal static class FastInitialExtensions
                                 var aliasMatch = FzfAlgorithm.FuzzyMatchV1(alias, term.Text, term.CaseSensitive, FzfScoringScheme.Default);
                                 if (aliasMatch.IsMatch)
                                 {
+                                    var span = aliasMatch.End - aliasMatch.Start;
+                                    var patternLen = term.Text.Length;
+                                    if (span > Math.Max(patternLen * 3, 20) || aliasMatch.Score < patternLen * 5)
+                                        continue;
+
                                     if (!aliasMatched || aliasMatch.Score > match.Score)
                                     {
                                         aliasMatched = true;
@@ -241,6 +246,11 @@ internal static class FastInitialExtensions
                     var aliasMatch = FzfAlgorithm.FuzzyMatchV1(alias, term.Text, term.CaseSensitive, FzfScoringScheme.Default);
                     if (aliasMatch.IsMatch)
                     {
+                        var span = aliasMatch.End - aliasMatch.Start;
+                        var patternLen = term.Text.Length;
+                        if (span > Math.Max(patternLen * 3, 20) || aliasMatch.Score < patternLen * 5)
+                            continue;
+
                         if (!aliasMatched || aliasMatch.Score > match.Score)
                         {
                             aliasMatched = true;
