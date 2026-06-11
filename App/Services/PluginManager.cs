@@ -53,6 +53,10 @@ public class PluginManager : PluginRegistry
         PluginSdk.InlineSearchAdapterRegistry.FilterFunc = prov =>
             _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.InlineSearchAdapter, prov.GetType().Name);
 
+        // Wire up the settings delegate for plugins using the in-memory UserSettings cache
+        PluginSdk.PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
+            UserSettings.Load().GetPluginSetting(pluginId, key, defaultValue);
+
         PluginLoader.Load(this);
     }
 

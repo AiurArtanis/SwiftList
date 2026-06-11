@@ -66,9 +66,53 @@ public class UserSettings
     /// </summary>
     public List<string> DisabledPluginComponents { get; set; } = new();
 
+    public Dictionary<string, Dictionary<string, object>> PluginSettings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public T GetPluginSetting<T>(string pluginId, string key, T defaultValue)
+    {
+        if (PluginSettings.TryGetValue(pluginId, out var settingsDict) && settingsDict.TryGetValue(key, out var val))
+        {
+            try
+            {
+                if (val is T typedVal)
+                {
+                    return typedVal;
+                }
+                if (val is JsonElement element)
+                {
+                    return JsonSerializer.Deserialize<T>(element.GetRawText())!;
+                }
+                return (T)Convert.ChangeType(val, typeof(T));
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
+    public void SetPluginSetting(string pluginId, string key, object? value)
+    {
+        if (!PluginSettings.TryGetValue(pluginId, out var settingsDict))
+        {
+            settingsDict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            PluginSettings[pluginId] = settingsDict;
+        }
+        if (value == null)
+        {
+            settingsDict.Remove(key);
+        }
+        else
+        {
+            settingsDict[key] = value;
+        }
+    }
+
     public static string SettingsPath => Path.Combine(Logger.UserDataDir, "user-settings.json");
 
     private static UserSettings? _cachedSettings;
+    private static string? _lastJsonOnDisk;
     private static readonly object _cacheLock = new();
 
     public static UserSettings Load()
@@ -105,6 +149,10 @@ public class UserSettings
                 using var stream = new FileStream(SettingsPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 using var reader = new StreamReader(stream);
                 var json = reader.ReadToEnd();
+                lock (_cacheLock)
+                {
+                    _lastJsonOnDisk = json;
+                }
                 return JsonSerializer.Deserialize<UserSettings>(json) ?? new UserSettings();
             }
             catch (IOException)
@@ -128,6 +176,15 @@ public class UserSettings
         var options = new JsonSerializerOptions { WriteIndented = true };
         var json = JsonSerializer.Serialize(this, options);
 
+        lock (_cacheLock)
+        {
+            if (json == _lastJsonOnDisk)
+            {
+                _cachedSettings = this;
+                return;
+            }
+        }
+
         var retries = 5;
         while (retries > 0)
         {
@@ -149,6 +206,7 @@ public class UserSettings
         lock (_cacheLock)
         {
             _cachedSettings = this;
+            _lastJsonOnDisk = json;
         }
         ExclusionRuleSet.InvalidateCache();
     }

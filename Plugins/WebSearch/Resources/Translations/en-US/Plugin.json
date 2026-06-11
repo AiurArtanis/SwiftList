@@ -1,9 +1,14 @@
 {
   "WebSearch_PluginName": "Web Search Plugin",
   "WebSearch_ProviderName": "Web Search",
-  "WebSearch_Baidu": "Baidu",
   "WebSearch_PlaceholderTitle": "Search with {0}",
   "WebSearch_PlaceholderDesc": "Type keywords and press Enter to search",
   "WebSearch_ResultTitle": "Search with {0}: {1}",
-  "WebSearch_ResultDesc": "Press Enter or click to open search results in your browser"
+  "WebSearch_ResultDesc": "Press Enter or click to open search results in your browser",
+  "WebSearch_Config_SourcesLabel": "Custom Search Sources",
+  "WebSearch_Config_SourcesDesc": "Configure custom search engines and keywords for web search.",
+  "WebSearch_Config_NameLabel": "Name",
+  "WebSearch_Config_KeywordLabel": "Trigger Keyword",
+  "WebSearch_Config_IconLabel": "Icon",
+  "WebSearch_Config_UrlLabel": "URL (use %s as placeholder)"
 }

@@ -52,13 +52,15 @@ public class PluginInfoViewModel : ViewModelBase
         string version,
         string dllFileName,
         string sdkVersion,
-        List<PluginComponentViewModel> components)
+        List<PluginComponentViewModel> components,
+        List<PluginConfigFieldViewModel> configFields)
     {
         Name = name;
         Version = version;
         DllFileName = dllFileName;
         SdkVersion = sdkVersion;
         RawComponents = components;
+        ConfigFields = new ObservableCollection<PluginConfigFieldViewModel>(configFields);
 
         // Group components by type
         var groups = components
@@ -76,7 +78,9 @@ public class PluginInfoViewModel : ViewModelBase
     public string SdkVersion { get; }
     public List<PluginComponentViewModel> RawComponents { get; }
     public ObservableCollection<PluginComponentGroupViewModel> ComponentGroups { get; }
+    public ObservableCollection<PluginConfigFieldViewModel> ConfigFields { get; }
 
+    public bool HasConfigFields => ConfigFields.Count > 0;
     public bool HasNoComponents => RawComponents.Count == 0;
 
     public bool IsExpanded

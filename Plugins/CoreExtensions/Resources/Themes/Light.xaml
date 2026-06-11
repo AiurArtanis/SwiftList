@@ -89,7 +89,7 @@
     <!-- Dynamic icon colors for sidebar and plugins -->
     <SolidColorBrush x:Key="VideoIconColor" Color="#EC4899"/>
     <SolidColorBrush x:Key="ArchiveIconColor" Color="#8B5CF6"/>
-    <SolidColorBrush x:Key="DefaultPluginIconColor" Color="#FF3366"/>
+    <SolidColorBrush x:Key="DefaultPluginIconColor" Color="#3B82F6"/>
 
     <!-- ScrollBar and CloseButton custom dynamic colors -->
     <SolidColorBrush x:Key="ScrollBarThumbBackground" Color="#CCCCCC"/>

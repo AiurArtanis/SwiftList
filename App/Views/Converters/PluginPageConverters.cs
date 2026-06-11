@@ -70,3 +70,16 @@ public class ComponentTypeToBadgeBrushConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => throw new NotImplementedException();
 }
+
+/// <summary>Converts a string to Visibility (non-empty -> Visible, empty/null -> Collapsed).</summary>
+public class StringToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var hasText = value is string s && !string.IsNullOrWhiteSpace(s);
+        return hasText ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}

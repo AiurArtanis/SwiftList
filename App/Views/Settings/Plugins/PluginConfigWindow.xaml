@@ -1,0 +1,278 @@
+<Window x:Class="SwiftList.App.Views.Settings.Plugins.PluginConfigWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:services="clr-namespace:SwiftList.App.Services"
+        xmlns:vm="clr-namespace:SwiftList.App.ViewModels.Settings.Plugins"
+        mc:Ignorable="d"
+        MinWidth="480" MaxWidth="720" MaxHeight="750" SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterOwner"
+        Background="Transparent"
+        AllowsTransparency="True"
+        WindowStyle="None"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize">
+
+    <Window.Title>
+        <MultiBinding StringFormat="{}{0} - {1}">
+            <Binding Path="Name"/>
+            <Binding Source="{x:Static services:TranslationManager.Instance}" Path="[Plugins_Config_TitleSuffix]"/>
+        </MultiBinding>
+    </Window.Title>
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/SwiftList.App;component/Resources/Styles.xaml"/>
+                <ResourceDictionary Source="../../../Resources/Styles/SearchWindow.xaml"/>
+                <ResourceDictionary Source="../../../Resources/Styles/SettingsWindow.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <conv:BoolToVisibilityConverter x:Key="BoolToVis" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
+            <conv:BoolToVisibilityConverter x:Key="InvertBoolToVis" Invert="True" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
+            <conv:StringToVisibilityConverter x:Key="StringToVis" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
+
+            <!-- Implicit TextBox styling matching settings theme -->
+            <Style TargetType="TextBox">
+                <Setter Property="Height" Value="26"/>
+                <Setter Property="Padding" Value="6,2"/>
+                <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TextBox">
+                            <Border x:Name="border" CornerRadius="4"
+                                    Background="{TemplateBinding Background}" 
+                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                    BorderThickness="{TemplateBinding BorderThickness}">
+                                <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="true">
+                                    <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource AccentBlue}"/>
+                                </Trigger>
+                                <Trigger Property="IsFocused" Value="true">
+                                    <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource AccentBlue}"/>
+                                    <Setter Property="Background" TargetName="border" Value="{DynamicResource ControlHoverBackground}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Implicit ComboBox styling to match SettingsComboBox -->
+            <Style TargetType="ComboBox" BasedOn="{StaticResource SettingsComboBox}">
+                <Setter Property="Height" Value="26"/>
+            </Style>
+
+            <!-- Implicit DataTemplate for recursive/nested plugin config fields rendering -->
+            <DataTemplate DataType="{x:Type vm:PluginConfigFieldViewModel}">
+                <Border Style="{StaticResource SettingsRow}" Padding="8,6" Margin="0,0,0,6">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Label & Description for simple inputs -->
+                        <StackPanel Grid.Column="0" Grid.Row="0" VerticalAlignment="Center" Margin="0,0,12,0" 
+                                    Visibility="{Binding IsSimpleField, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" FontFamily="Microsoft YaHei UI" Visibility="{Binding Label, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" FontFamily="Microsoft YaHei UI" TextWrapping="Wrap" Margin="0,2,0,0" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                        </StackPanel>
+
+                        <!-- Field Controls for simple inputs -->
+                        <ContentControl Content="{Binding}" Grid.Column="1" Grid.Row="0" VerticalAlignment="Center" Focusable="False">
+                            <ContentControl.Style>
+                                <Style TargetType="ContentControl">
+                                    <Setter Property="ContentTemplate">
+                                        <Setter.Value>
+                                            <DataTemplate/>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <!-- Boolean fields -->
+                                        <DataTrigger Binding="{Binding IsBoolean}" Value="True">
+                                            <Setter Property="ContentTemplate">
+                                                <Setter.Value>
+                                                    <DataTemplate>
+                                                        <CheckBox IsChecked="{Binding Value, Mode=TwoWay}" Margin="0"/>
+                                                    </DataTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
+
+                                        <!-- Text fields -->
+                                        <DataTrigger Binding="{Binding IsText}" Value="True">
+                                            <Setter Property="ContentTemplate">
+                                                <Setter.Value>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="180"/>
+                                                            <!-- Spacer for non-icon fields to align them with the icon field preview -->
+                                                            <Border Width="24" Height="24" Margin="8,0,0,0" CornerRadius="4" 
+                                                                    Background="Transparent" BorderBrush="Transparent" BorderThickness="1"
+                                                                    Visibility="{Binding IsIconField, Converter={StaticResource InvertBoolToVis}}"
+                                                                    VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <!-- Preview Icon if it's the Icon field -->
+                                                            <Border Width="24" Height="24" Margin="8,0,0,0" CornerRadius="4" 
+                                                                    Background="{DynamicResource ControlBackground}"
+                                                                    BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1"
+                                                                    Visibility="{Binding IsIconField, Converter={StaticResource BoolToVis}}"
+                                                                    VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                <Path Data="{Binding Value}" Fill="{DynamicResource DefaultPluginIconColor}" 
+                                                                      Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </Border>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
+
+                                        <!-- Integer fields -->
+                                        <DataTrigger Binding="{Binding IsInteger}" Value="True">
+                                            <Setter Property="ContentTemplate">
+                                                <Setter.Value>
+                                                    <DataTemplate>
+                                                        <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="80"/>
+                                                    </DataTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
+
+                                        <!-- Choice fields -->
+                                        <DataTrigger Binding="{Binding IsChoice}" Value="True">
+                                            <Setter Property="ContentTemplate">
+                                                <Setter.Value>
+                                                    <DataTemplate>
+                                                        <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Value, Mode=TwoWay}" Width="180"/>
+                                                    </DataTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ContentControl.Style>
+                        </ContentControl>
+
+                        <!-- Object layout -->
+                        <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Margin="4,4,4,4"
+                                    Visibility="{Binding IsObject, Converter={StaticResource BoolToVis}}">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" FontFamily="Microsoft YaHei UI"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" FontFamily="Microsoft YaHei UI" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                            
+                            <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0">
+                                <ItemsControl ItemsSource="{Binding Children}"/>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Array layout -->
+                        <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Margin="4,4,4,4"
+                                    Visibility="{Binding IsArray, Converter={StaticResource BoolToVis}}">
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" FontFamily="Microsoft YaHei UI"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Command="{Binding AddCommand}" Style="{StaticResource PrimarySettingsButton}" Height="24" MinWidth="80" Padding="8,0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_Add]}" FontSize="11" Cursor="Hand"/>
+                            </Grid>
+                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" FontFamily="Microsoft YaHei UI" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+
+                            <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0">
+                                <ItemsControl ItemsSource="{Binding ArrayItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,0,0,1" Padding="0,4" Margin="0,0,0,4">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <ContentPresenter Grid.Column="0" Content="{Binding SimpleValueViewModel}"/>
+                                                    <ItemsControl Grid.Column="0" ItemsSource="{Binding Children}"/>
+
+                                                    <Button Grid.Column="1" Command="{Binding DeleteCommand}" Style="{StaticResource SettingsButton}" Height="24" MinWidth="60" Padding="8,0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_Delete]}" FontSize="11" Foreground="#FFF44336" Cursor="Hand" Margin="8,0,0,0"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Border CornerRadius="10" Background="{DynamicResource ContentBg}"
+            BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" Margin="8">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="2" Opacity="0.2" Color="{DynamicResource ShadowColor}"/>
+        </Border.Effect>
+        <Border CornerRadius="10" ClipToBounds="True">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="44"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="52"/>
+                </Grid.RowDefinitions>
+
+                <!-- Titlebar -->
+                <Border Grid.Row="0" Background="{DynamicResource HeaderBg}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1"
+                        MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                    <Grid>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                            <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource TextPrimary2}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock FontFamily="Microsoft YaHei UI" FontSize="13" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}{0} - {1}">
+                                        <Binding Path="Name"/>
+                                        <Binding Source="{x:Static services:TranslationManager.Instance}" Path="[Plugins_Config_TitleSuffix]"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </StackPanel>
+                        <Button Content="&#xE8BB;" Style="{StaticResource CloseButton}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,6,0" Click="BtnClose_Click"/>
+                    </Grid>
+                </Border>
+
+                <!-- Config content scroll list -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" Padding="16,12">
+                    <StackPanel>
+                        <ItemsControl ItemsSource="{Binding ConfigFields}"/>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Footer -->
+                <Border Grid.Row="2" Background="{DynamicResource StatusBarBg}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0">
+                    <Grid Margin="16,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource PrimarySettingsButton}" 
+                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_OK]}" 
+                                    Click="BtnOk_Click" Width="80"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Border>
+</Window>

@@ -1,9 +1,14 @@
 {
   "WebSearch_PluginName": "网页搜索与快捷直达插件",
   "WebSearch_ProviderName": "网页搜索",
-  "WebSearch_Baidu": "百度",
   "WebSearch_PlaceholderTitle": "使用 {0} 搜索",
   "WebSearch_PlaceholderDesc": "输入关键字并回车进行搜索",
   "WebSearch_ResultTitle": "使用 {0} 搜索: {1}",
-  "WebSearch_ResultDesc": "回车或单击直接在浏览器中打开搜索结果"
+  "WebSearch_ResultDesc": "回车或单击直接在浏览器中打开搜索结果",
+  "WebSearch_Config_SourcesLabel": "自定义搜索源",
+  "WebSearch_Config_SourcesDesc": "配置网页搜索的自定义搜索引擎和关键字。",
+  "WebSearch_Config_NameLabel": "名称",
+  "WebSearch_Config_KeywordLabel": "触发关键字",
+  "WebSearch_Config_IconLabel": "图标",
+  "WebSearch_Config_UrlLabel": "网址 (使用 %s 作为占位符)"
 }
