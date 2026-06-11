@@ -38,6 +38,9 @@ public class ThemeManager
             return false;
         }
 
+        _currentThemeId = theme.Id;
+        _activeTheme = theme;
+
         try
         {
             var newDict = theme.GetResources();
@@ -48,8 +51,6 @@ public class ThemeManager
                 var appResources = System.Windows.Application.Current.Resources;
                 appResources.MergedDictionaries.Add(newDict);
                 _activeThemeDictionary = newDict;
-                _currentThemeId = theme.Id;
-                _activeTheme = theme;
 
                 foreach (Window window in System.Windows.Application.Current.Windows)
                 {
@@ -82,8 +83,6 @@ public class ThemeManager
 
                         appResources.MergedDictionaries.Add(newDict);
                         _activeThemeDictionary = newDict;
-                        _currentThemeId = theme.Id;
-                        _activeTheme = theme;
 
                         foreach (Window window in System.Windows.Application.Current.Windows)
                         {

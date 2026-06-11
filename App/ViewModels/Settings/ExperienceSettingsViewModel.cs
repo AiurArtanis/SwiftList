@@ -8,6 +8,9 @@ public class ExperienceSettingsViewModel : ViewModelBase
     private readonly UserSettings _userSettings;
     private LogLevelOption? _selectedLogLevel;
     private ThemeOption? _selectedTheme;
+    private IReadOnlyList<LogLevelOption>? _logLevelOptions;
+    private IReadOnlyList<LanguageOption>? _languageOptions;
+    private IReadOnlyList<ThemeOption>? _themeOptions;
 
     public ExperienceSettingsViewModel(UserSettings userSettings)
     {
@@ -23,8 +26,13 @@ public class ExperienceSettingsViewModel : ViewModelBase
         // Dynamically refresh properties when the language changes
         TranslationManager.Instance.PropertyChanged += (s, e) =>
         {
+            _logLevelOptions = null;
+            _themeOptions = null;
+            _languageOptions = null;
+
             OnPropertyChanged(nameof(LogLevelOptions));
             OnPropertyChanged(nameof(ThemeOptions));
+            OnPropertyChanged(nameof(LanguageOptions));
 
             // Let WPF bind the new ItemsSource first, then restore selections
             System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
@@ -82,7 +90,7 @@ public class ExperienceSettingsViewModel : ViewModelBase
                 _userSettings.Save();
                 if (isThemeIdChanged)
                 {
-                    ThemeManager.Instance.ApplyTheme(value.Value, saveSettings: true);
+                    ThemeManager.Instance.ApplyTheme(value.Value, saveSettings: false);
                 }
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(PreferredTheme));
@@ -90,24 +98,38 @@ public class ExperienceSettingsViewModel : ViewModelBase
         }
     }
 
-    public IReadOnlyList<LogLevelOption> LogLevelOptions => new[]
+    public IReadOnlyList<LogLevelOption> LogLevelOptions
     {
-        new LogLevelOption("Error", TranslationManager.Instance["LogLevel_Error"]),
-        new LogLevelOption("Warn", TranslationManager.Instance["LogLevel_Warn"]),
-        new LogLevelOption("Info", TranslationManager.Instance["LogLevel_Info"]),
-        new LogLevelOption("Debug", TranslationManager.Instance["LogLevel_Debug"])
-    };
+        get
+        {
+            if (_logLevelOptions == null)
+            {
+                _logLevelOptions = new[]
+                {
+                    new LogLevelOption("Error", TranslationManager.Instance["LogLevel_Error"]),
+                    new LogLevelOption("Warn", TranslationManager.Instance["LogLevel_Warn"]),
+                    new LogLevelOption("Info", TranslationManager.Instance["LogLevel_Info"]),
+                    new LogLevelOption("Debug", TranslationManager.Instance["LogLevel_Debug"])
+                };
+            }
+            return _logLevelOptions;
+        }
+    }
 
     public IReadOnlyList<LanguageOption> LanguageOptions
     {
         get
         {
-            var options = new List<LanguageOption>();
-            foreach (var culture in TranslationManager.Instance.GetAvailableCultures())
+            if (_languageOptions == null)
             {
-                options.Add(new LanguageOption(culture, LanguageOption.GetLanguageDisplayName(culture)));
+                var options = new List<LanguageOption>();
+                foreach (var culture in TranslationManager.Instance.GetAvailableCultures())
+                {
+                    options.Add(new LanguageOption(culture, LanguageOption.GetLanguageDisplayName(culture)));
+                }
+                _languageOptions = options;
             }
-            return options;
+            return _languageOptions;
         }
     }
 
@@ -115,12 +137,16 @@ public class ExperienceSettingsViewModel : ViewModelBase
     {
         get
         {
-            var options = new List<ThemeOption>();
-            foreach (var t in ThemeManager.Instance.GetAvailableThemes())
+            if (_themeOptions == null)
             {
-                options.Add(new ThemeOption(t.Id, t.DisplayName));
+                var options = new List<ThemeOption>();
+                foreach (var t in ThemeManager.Instance.GetAvailableThemes())
+                {
+                    options.Add(new ThemeOption(t.Id, t.DisplayName));
+                }
+                _themeOptions = options;
             }
-            return options;
+            return _themeOptions;
         }
     }
 
