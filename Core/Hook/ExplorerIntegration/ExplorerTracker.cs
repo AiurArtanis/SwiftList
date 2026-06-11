@@ -252,6 +252,10 @@ public class ExplorerTracker : IDisposable
             if (!string.IsNullOrEmpty(activePath) && activePath != LastPath)
             {
                 LastPath = activePath;
+                if (!IsActiveWindowDialog)
+                {
+                    _dialogTracker.SetLastActiveExplorerPath(activePath);
+                }
                 OnPathCaptured?.Invoke(activePath, false);
             }
         }

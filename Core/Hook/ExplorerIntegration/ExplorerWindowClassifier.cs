@@ -213,7 +213,13 @@ internal sealed class ExplorerWindowClassifier
         _dialogTracker.HandleDialogSeen(mainDialog, _tracker.ActiveAdapter);
 
         var activePath = _tracker.ActiveAdapter?.GetCurrentPath(mainDialog);
-        _tracker.LastPath = !string.IsNullOrEmpty(activePath) ? activePath : string.Empty;
+        if (string.IsNullOrEmpty(activePath))
+        {
+            activePath = !string.IsNullOrEmpty(_dialogTracker.LastActiveExplorerPath)
+                ? _dialogTracker.LastActiveExplorerPath
+                : (!string.IsNullOrEmpty(_tracker.LastPath) ? _tracker.LastPath : string.Empty);
+        }
+        _tracker.LastPath = activePath;
 
         var windowTitle = new StringBuilder(256);
         ExplorerNativeHooks.GetWindowText(mainDialog, windowTitle, windowTitle.Capacity);

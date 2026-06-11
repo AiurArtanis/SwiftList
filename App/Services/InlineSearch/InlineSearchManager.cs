@@ -98,6 +98,11 @@ public class InlineSearchManager : IDisposable
                             _window.ViewModel.Search.PerformSearch(string.Empty);
                     }
                 }
+                else if (_explorerTracker.IsActiveWindowDialog)
+                {
+                    EnsureWindowCreated();
+                    _window?.UpdateSearchDisplay(string.Empty);
+                }
             }));
     }
 
