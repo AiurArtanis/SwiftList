@@ -39,10 +39,14 @@ public class StandardFileDialogAdapter : IFileDialogAdapter
                         if (!isDriveLetter && colonIndex + 1 < text.Length)
                             potentialPath = text.Substring(colonIndex + 1).Trim();
                     }
+
                     if (!string.IsNullOrEmpty(potentialPath))
                     {
                         var resolved = ShellPathHelper.ResolveSpecialFolder(potentialPath);
-                        if (Directory.Exists(resolved)) return resolved;
+                        var isValid = Directory.Exists(resolved) ||
+                                      (resolved.Length >= 3 && resolved[1] == ':' && resolved[2] == '\\' && char.IsLetter(resolved[0]));
+
+                        if (isValid) return resolved;
                     }
                     child = FindWindowEx(breadcrumbParent, child, "ToolbarWindow32", null);
                 }

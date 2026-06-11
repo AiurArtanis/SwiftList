@@ -116,9 +116,11 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
             ReplaceResults(Array.Empty<AppSearchResult>());
 
             var tracker = InlineSearchManager.Instance.ExplorerTracker;
-            var isDialog = tracker.IsActiveWindowDialog;
             var lastPath = tracker.LastActiveExplorerPath;
-            var dirExists = !string.IsNullOrEmpty(lastPath) && Directory.Exists(lastPath);
+            var isDialog = tracker.IsActiveWindowDialog;
+            var dirExists = !string.IsNullOrEmpty(lastPath) &&
+                            (Directory.Exists(lastPath) ||
+                             (lastPath.Length >= 3 && lastPath[1] == ':' && lastPath[2] == '\\' && char.IsLetter(lastPath[0])));
 
             var searchScopeTrimmed = SearchScope?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             var lastPathTrimmed = lastPath?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);

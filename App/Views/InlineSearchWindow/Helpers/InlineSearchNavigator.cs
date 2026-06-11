@@ -75,7 +75,7 @@ public static class InlineSearchNavigator
 
                 });
 
-            window.ResetInlineSearchAndFocusDialog();
+            window.UpdateSearchDisplay(string.Empty);
             window.HideWindow();
             return;
         }
