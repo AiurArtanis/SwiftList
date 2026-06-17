@@ -8,9 +8,9 @@ namespace SwiftList.App.ViewModels.Settings.Plugins;
 public class PluginConfigArrayItemViewModel : ViewModelBase
 {
     private readonly PluginConfigFieldViewModel _parent;
-    
+
     public ObservableCollection<PluginConfigFieldViewModel> Children { get; } = new();
-    
+
     public PluginConfigFieldViewModel? SimpleValueViewModel { get; }
 
     public ICommand DeleteCommand { get; }
@@ -31,7 +31,7 @@ public class PluginConfigArrayItemViewModel : ViewModelBase
             {
                 dict.TryGetValue(sf.Key, out var val);
                 var valToUse = ConfigValueHelper.UnpackValue(val ?? sf.DefaultValue);
-                
+
                 var subFieldVM = new PluginConfigFieldViewModel(parent.PluginId, sf, parent.Settings, () => parent.OnChildChanged())
                 {
                     LocalValueStore = valToUse
@@ -49,7 +49,7 @@ public class PluginConfigArrayItemViewModel : ViewModelBase
                 FieldType = MapTypeToFieldType(parent.SchemaField.DefaultValue),
                 DefaultValue = string.Empty
             };
-            
+
             SimpleValueViewModel = new PluginConfigFieldViewModel(parent.PluginId, sf, parent.Settings, () => parent.OnChildChanged())
             {
                 LocalValueStore = ConfigValueHelper.UnpackValue(initialValue) ?? string.Empty

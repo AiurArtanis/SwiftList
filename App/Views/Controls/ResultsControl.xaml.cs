@@ -18,9 +18,10 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
     {
         InitializeComponent();
         InitializeSelectionChangedHandlers();
-        
+
         // Dynamically load custom GridView columns from ResultColumnProviders
-        Loaded += (s, e) => {
+        Loaded += (s, e) =>
+        {
             UpdateViewModeVisibility();
             LoadDynamicColumns();
         };
@@ -270,7 +271,7 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
                                 }
                             }
                         }
-                        catch {}
+                        catch { }
                     }
                 }
             }

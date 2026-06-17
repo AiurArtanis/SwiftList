@@ -68,12 +68,12 @@ public static class InlineSearchNavigator
         if (path != "__SHOW_MORE__" && tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
         {
             App.HookClient?.SendMessage(new IpcMessage
-                {
-                    Id = IpcMessageId.NavigateDialog,
-                    Hwnd = tracker.ActiveHwnd.ToInt64(),
-                    StringVal1 = path
+            {
+                Id = IpcMessageId.NavigateDialog,
+                Hwnd = tracker.ActiveHwnd.ToInt64(),
+                StringVal1 = path
 
-                });
+            });
 
             window.UpdateSearchDisplay(string.Empty);
             window.HideWindow();

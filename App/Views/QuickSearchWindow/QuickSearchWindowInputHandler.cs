@@ -23,7 +23,7 @@ public class QuickSearchWindowInputHandler
                     {
                         var fileList = new System.Collections.Specialized.StringCollection { result.FullPath };
                         System.Windows.Clipboard.SetFileDropList(fileList);
-                        
+
                         try
                         {
                             var tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "swiftlist_copied.tmp");

@@ -67,7 +67,7 @@ internal sealed class SearchExecutionEngine : IDisposable
                         if (tracker.IsActiveWindowExplorer)
                         {
                             var localMatches = InlineListSearchHelper.GetLocalMatches(query, listItems, contextDirectory, token);
-                             await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, searchVersion, onResultsUpdated, onServiceUnavailable, token, localMatches);
+                            await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, searchVersion, onResultsUpdated, onServiceUnavailable, token, localMatches);
                             return;
                         }
                         else
@@ -155,7 +155,7 @@ internal sealed class SearchExecutionEngine : IDisposable
                 }
 
                 var uiResults = SearchResultMapper.BuildQuickResults(snapshot, query, searchScope, contextDirectory, isInlineSearchContext);
-                
+
                 if (localMatches != null && localMatches.Count > 0)
                 {
                     var combinedResults = new List<AppSearchResult>();
