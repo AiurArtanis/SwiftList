@@ -136,7 +136,7 @@ public sealed class GlobalHotkeyDetector
 
             if (isValid)
             {
-                var navPath = lastExplorerPath.EndsWith("\\") ? lastExplorerPath : lastExplorerPath + "\\";
+                var navPath = lastExplorerPath!.EndsWith("\\") ? lastExplorerPath : lastExplorerPath + "\\";
                 var adapter = _explorerTracker.ActiveAdapter;
                 var hwnd = _explorerTracker.ActiveHwnd;
                 ThreadPool.QueueUserWorkItem(_ => adapter.NavigateTo(hwnd, navPath));
