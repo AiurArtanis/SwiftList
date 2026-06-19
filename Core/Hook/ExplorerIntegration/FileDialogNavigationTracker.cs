@@ -16,7 +16,7 @@ internal sealed class FileDialogNavigationTracker
         _lastExplorerPathUpdateTime = DateTime.Now;
     }
 
-    public void HandleDialogSeen(IntPtr mainDialog, PluginSdk.IFileDialogAdapter? adapter)
+    public void HandleDialogSeen(IntPtr mainDialog, PluginSdk.IFileDialogAdapter? adapter, bool previousWasPathProvider)
     {
         var isNewDialog = false;
         var dialogFirstSeenTime = _dialogFirstSeenTimes.GetOrAdd(mainDialog, _ =>
@@ -41,12 +41,12 @@ internal sealed class FileDialogNavigationTracker
         }
         else
         {
-            if (_lastExplorerPathUpdateTime > dialogFirstSeenTime)
+            if (_lastExplorerPathUpdateTime > dialogFirstSeenTime || previousWasPathProvider)
             {
                 var currentPath = _lastActiveExplorerPath;
                 if (!string.IsNullOrEmpty(currentPath))
                 {
-                    Logger.Log($"[ExplorerTracker] Dialog 0x{mainDialog:X} reactivated. Explorer path updated at {_lastExplorerPathUpdateTime} which is later than dialog creation time {dialogFirstSeenTime}. Auto-navigating!", LogLevel.Debug);
+                    Logger.Log($"[ExplorerTracker] Dialog 0x{mainDialog:X} reactivated. PreviousWasPathProvider={previousWasPathProvider}, PathUpdatedLater={_lastExplorerPathUpdateTime > dialogFirstSeenTime}. Auto-navigating!", LogLevel.Debug);
                     ThreadPool.QueueUserWorkItem(_ => adapter?.NavigateTo(mainDialog, currentPath));
                 }
 

@@ -35,7 +35,8 @@ internal sealed class ExplorerWindowClassifier
             var dialogHwnd = FindMatchingDialogWindow(hwnd, out var adapter);
             if (dialogHwnd != IntPtr.Zero && adapter != null)
             {
-                TrackFileDialogWindow(dialogHwnd);
+                var previousWasPathProvider = _tracker.IsExplorerOrDesktopActive && !_tracker.IsActiveWindowDialog;
+                TrackFileDialogWindow(dialogHwnd, previousWasPathProvider);
                 return;
             }
 
@@ -204,13 +205,13 @@ internal sealed class ExplorerWindowClassifier
         return false;
     }
 
-    private void TrackFileDialogWindow(IntPtr mainDialog)
+    private void TrackFileDialogWindow(IntPtr mainDialog, bool previousWasPathProvider)
     {
         _tracker.IsExplorerOrDesktopActive = true;
         _tracker.IsDesktop = false;
         _tracker.ActiveHwnd = mainDialog;
 
-        _dialogTracker.HandleDialogSeen(mainDialog, _tracker.ActiveAdapter);
+        _dialogTracker.HandleDialogSeen(mainDialog, _tracker.ActiveAdapter, previousWasPathProvider);
 
         var activePath = _tracker.ActiveAdapter?.GetCurrentPath(mainDialog);
         if (string.IsNullOrEmpty(activePath))
