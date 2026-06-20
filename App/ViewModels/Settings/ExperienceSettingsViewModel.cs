@@ -191,11 +191,14 @@ public class ExperienceSettingsViewModel : ViewModelBase
                 _userSettings.AutoCheckUpdates = value;
                 _userSettings.Save();
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsAutoSilentUpdateEnabled));
             }
         }
     }
 
     public bool IsUserAdmin => UpdateService.Instance.IsUserAdmin();
+
+    public bool IsAutoSilentUpdateEnabled => IsUserAdmin && AutoCheckUpdates;
 
     public bool AutoSilentUpdate
     {

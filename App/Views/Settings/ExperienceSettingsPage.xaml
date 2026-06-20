@@ -43,7 +43,7 @@
 
                     <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_AutoSilentUpdate]}"
                               IsChecked="{Binding Experience.AutoSilentUpdate, Mode=TwoWay}"
-                              IsEnabled="{Binding Experience.IsUserAdmin}"
+                              IsEnabled="{Binding Experience.IsAutoSilentUpdateEnabled}"
                               Margin="0,4"/>
                     
                     <Grid Margin="0,12,0,0">
