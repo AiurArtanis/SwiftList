@@ -6,7 +6,6 @@ namespace SwiftList.Plugins.DirectoryOpus;
 public class DirectoryOpusPathCollector : IActivePathCollector
 {
     public string Name => "Directory Opus";
-
     public string TargetName => "Directory Opus";
 
     public bool CanHandle(string className)
@@ -15,154 +14,148 @@ public class DirectoryOpusPathCollector : IActivePathCollector
         return className.Equals("dopus.lister", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static readonly Dictionary<IntPtr, IntPtr> _lastActiveContainers = new Dictionary<IntPtr, IntPtr>();
+    private static readonly Dictionary<IntPtr, string> _lastActiveSides = new Dictionary<IntPtr, string>();
 
     public string? TryGetPath(IntPtr activeHwnd, string activeClassName, IntPtr windowHwnd, string windowClassName, string processName)
     {
         if (windowHwnd == IntPtr.Zero) return null;
 
+        CleanUpDeadKeys();
+
+        var containers = Win32Helper.GetVisibleContainers(windowHwnd);
+        if (containers.Count == 0) return null;
+
         var activeContainer = IntPtr.Zero;
 
-        // 1. If currently focused control is inside a pane container, update our tracker
-        if (activeHwnd != IntPtr.Zero)
+        if (containers.Count == 1)
         {
-            activeContainer = Win32Helper.GetAncestorOfClass(activeHwnd, "dopus.filedisplaycontainer");
-            if (activeContainer != IntPtr.Zero)
+            activeContainer = containers[0];
+        }
+        else
+        {
+            containers.Sort((a, b) =>
             {
-                lock (_lastActiveContainers)
+                Win32Helper.TryGetWindowRect(a, out var rA);
+                Win32Helper.TryGetWindowRect(b, out var rB);
+                if (Math.Abs(rA.Left - rB.Left) > 10)
                 {
-                    _lastActiveContainers[windowHwnd] = activeContainer;
+                    return rA.Left.CompareTo(rB.Left);
+                }
+                return rA.Top.CompareTo(rB.Top);
+            });
+
+            var activeIndex = -1;
+            if (activeHwnd != IntPtr.Zero)
+            {
+                for (var i = 0; i < containers.Count; i++)
+                {
+                    if (Win32Helper.IsDescendant(containers[i], activeHwnd))
+                    {
+                        activeIndex = i;
+                        break;
+                    }
+                }
+
+                if (activeIndex == -1 && Win32Helper.TryGetWindowRect(activeHwnd, out var rActive))
+                {
+                    Win32Helper.TryGetWindowRect(containers[0], out var r0);
+                    Win32Helper.TryGetWindowRect(containers[1], out var r1);
+                    var isHorizontalSplit = Math.Abs(r0.Left - r1.Left) <= 10;
+
+                    var minDistance = int.MaxValue;
+                    for (var i = 0; i < containers.Count; i++)
+                    {
+                        if (Win32Helper.TryGetWindowRect(containers[i], out var rCont))
+                        {
+                            var dist = isHorizontalSplit
+                                ? Math.Abs(rActive.Top - rCont.Top)
+                                : Math.Abs(rActive.Left - rCont.Left);
+
+                            if (dist < minDistance)
+                            {
+                                minDistance = dist;
+                                activeIndex = i;
+                            }
+                        }
+                    }
                 }
             }
-        }
 
-        // 2. If focus is elsewhere (e.g. folder tree), retrieve the last active container for this Lister window
-        if (activeContainer == IntPtr.Zero)
-        {
-            lock (_lastActiveContainers)
+            if (activeIndex != -1)
             {
-                _lastActiveContainers.TryGetValue(windowHwnd, out activeContainer);
-            }
-        }
-
-        // 3. Fallback: If no history exists or the tracked window is no longer valid/visible, find a replacement visible container
-        if (activeContainer == IntPtr.Zero || !Win32Helper.IsWindow(activeContainer))
-        {
-            activeContainer = Win32Helper.FindFirstVisibleContainer(windowHwnd);
-            lock (_lastActiveContainers)
-            {
-                if (activeContainer != IntPtr.Zero)
+                lock (_lastActiveSides)
                 {
-                    _lastActiveContainers[windowHwnd] = activeContainer;
+                    _lastActiveSides[windowHwnd] = activeIndex.ToString();
                 }
-                CleanUpDeadKeys();
+                activeContainer = containers[activeIndex];
             }
-        }
-        else if (!Win32Helper.IsWindowVisible(activeContainer))
-        {
-            // The tracked container is hidden (e.g. user switched tabs in this pane while focus was in the tree).
-            // Find the new visible container occupying the same position/pane.
-            if (Win32Helper.TryGetWindowRect(activeContainer, out var oldRect))
+            else
             {
-                var replacement = Win32Helper.FindReplacementContainer(windowHwnd, oldRect);
-                if (replacement != IntPtr.Zero)
-                    activeContainer = replacement;
-            }
+                string lastSideIndexStr;
+                lock (_lastActiveSides)
+                {
+                    if (!_lastActiveSides.TryGetValue(windowHwnd, out lastSideIndexStr!))
+                    {
+                        lastSideIndexStr = "0";
+                    }
+                }
 
-            lock (_lastActiveContainers)
-            {
-                _lastActiveContainers[windowHwnd] = activeContainer;
-                CleanUpDeadKeys();
+                if (int.TryParse(lastSideIndexStr, out var targetIndex) && targetIndex < containers.Count)
+                {
+                    activeContainer = containers[targetIndex];
+                }
             }
         }
 
         if (activeContainer != IntPtr.Zero)
         {
-            // Try to get path from the Edit control under the active container
-            var editWnd = Win32Helper.FindWindowExRecursively(activeContainer, IntPtr.Zero, "Edit", null);
-            if (editWnd != IntPtr.Zero)
-            {
-                var path = Win32Helper.GetWindowText(editWnd);
-                var resolved = ShellPathHelper.ResolveSpecialFolder(path);
-                if (!string.IsNullOrEmpty(resolved) && Directory.Exists(resolved))
-                {
-                    return resolved;
-                }
-            }
-
-            // Try to get path from dopus.ctl.treepath under the active container
-            var locationBar = Win32Helper.FindWindowExRecursively(activeContainer, IntPtr.Zero, "dopus.ctl.treepath", null);
-            if (locationBar != IntPtr.Zero)
-            {
-                var path = Win32Helper.GetWindowText(locationBar);
-                var resolved = ShellPathHelper.ResolveSpecialFolder(path);
-                if (!string.IsNullOrEmpty(resolved) && Directory.Exists(resolved))
-                {
-                    return resolved;
-                }
-            }
-
-            // Fallback to active container's text
-            {
-                var path = Win32Helper.GetWindowText(activeContainer);
-                var resolved = ShellPathHelper.ResolveSpecialFolder(path);
-                if (!string.IsNullOrEmpty(resolved) && Directory.Exists(resolved))
-                {
-                    return resolved;
-                }
-            }
-        }
-
-        // 4. Global fallback if everything else fails:
-        // Try to find the first address bar Edit control in the window
-        var globalAddressBarEdit = Win32Helper.GetAddressBar(windowHwnd);
-        if (globalAddressBarEdit != IntPtr.Zero)
-        {
-            var path = Win32Helper.GetWindowText(globalAddressBarEdit);
+            var path = ExtractPathFromContainer(activeContainer);
             if (!string.IsNullOrEmpty(path))
             {
-                var resolved = ShellPathHelper.ResolveSpecialFolder(path);
-                if (!string.IsNullOrEmpty(resolved) && Directory.Exists(resolved))
-                {
-                    return resolved;
-                }
-            }
-        }
-
-        // Try to find the first dopus.ctl.treepath in the window
-        var globalLocationBar = Win32Helper.FindWindowExRecursively(windowHwnd, IntPtr.Zero, "dopus.ctl.treepath", null);
-        if (globalLocationBar != IntPtr.Zero)
-        {
-            var path = Win32Helper.GetWindowText(globalLocationBar);
-            if (!string.IsNullOrEmpty(path))
-            {
-                var resolved = ShellPathHelper.ResolveSpecialFolder(path);
-                if (!string.IsNullOrEmpty(resolved) && Directory.Exists(resolved))
-                {
-                    return resolved;
-                }
+                return path;
             }
         }
 
         return null;
     }
 
+    private string? ExtractPathFromContainer(IntPtr containerHwnd)
+    {
+        var locationBar = Win32Helper.FindWindowExRecursively(containerHwnd, IntPtr.Zero, "dopus.ctl.treepath", null);
+        if (locationBar != IntPtr.Zero)
+        {
+            var path = Win32Helper.GetWindowText(locationBar);
+            return ResolveAndVerify(path);
+        }
+        return null;
+    }
+
+    private string? ResolveAndVerify(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        var resolved = ShellPathHelper.ResolveSpecialFolder(path);
+        if (!string.IsNullOrEmpty(resolved) && Directory.Exists(resolved))
+        {
+            return resolved;
+        }
+        return null;
+    }
+
     private static void CleanUpDeadKeys()
     {
-        List<IntPtr>? deadKeys = null;
-        foreach (var key in _lastActiveContainers.Keys)
+        lock (_lastActiveSides)
         {
-            if (!Win32Helper.IsWindow(key))
+            var deadKeys = new List<IntPtr>();
+            foreach (var key in _lastActiveSides.Keys)
             {
-                deadKeys ??= new List<IntPtr>();
-                deadKeys.Add(key);
+                if (!Win32Helper.IsWindow(key))
+                {
+                    deadKeys.Add(key);
+                }
             }
-        }
-        if (deadKeys != null)
-        {
             foreach (var key in deadKeys)
             {
-                _lastActiveContainers.Remove(key);
+                _lastActiveSides.Remove(key);
             }
         }
     }
