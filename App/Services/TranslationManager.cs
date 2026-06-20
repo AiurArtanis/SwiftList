@@ -79,15 +79,42 @@ public class TranslationManager : INotifyPropertyChanged
     {
         _translations.Clear();
 
-        // Load translations from registered plugins
+        // Load translations from registered plugins with fallbacks
         foreach (var provider in PluginManager.Instance.TranslationProviders)
         {
             try
             {
-                var dict = provider.GetTranslations(_currentCulture);
-                if (dict != null)
+                // 1. Get first supported language translations (lowest priority fallback)
+                IReadOnlyDictionary<string, string>? fallbackDict = null;
+                if (provider.SupportedCultures != null && provider.SupportedCultures.Count > 0)
                 {
-                    foreach (var kvp in dict)
+                    fallbackDict = provider.GetTranslations(provider.SupportedCultures[0]);
+                }
+
+                // 2. Get English translations (middle priority fallback)
+                var engDict = provider.GetTranslations("en-US");
+
+                // 3. Get target translations (highest priority)
+                var targetDict = provider.GetTranslations(_currentCulture);
+
+                // Merge them in order of increasing priority so higher priorities overwrite lower ones
+                if (fallbackDict != null)
+                {
+                    foreach (var kvp in fallbackDict)
+                    {
+                        _translations[kvp.Key] = kvp.Value;
+                    }
+                }
+                if (engDict != null)
+                {
+                    foreach (var kvp in engDict)
+                    {
+                        _translations[kvp.Key] = kvp.Value;
+                    }
+                }
+                if (targetDict != null)
+                {
+                    foreach (var kvp in targetDict)
                     {
                         _translations[kvp.Key] = kvp.Value;
                     }
