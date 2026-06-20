@@ -3,12 +3,11 @@ using SwiftList.PluginSdk;
 namespace SwiftList.Core.Hook;
 public class ExplorerTracker : IDisposable
 {
-    private ExplorerNativeHooks.WinEventDelegate? _foregroundHookDelegate;
-    private ExplorerNativeHooks.WinEventDelegate? _nameChangeHookDelegate;
-    private ExplorerNativeHooks.WinEventDelegate? _locationChangeHookDelegate;
+    private ExplorerNativeHooks.WinEventDelegate? _winEventDelegate;
     private IntPtr _hForegroundHook = IntPtr.Zero;
     private IntPtr _hNameChangeHook = IntPtr.Zero;
     private IntPtr _hLocationChangeHook = IntPtr.Zero;
+    private IntPtr _hFocusHook = IntPtr.Zero;
     private bool _isRunning;
     private readonly FileDialogNavigationTracker _dialogTracker = new();
     private readonly ExplorerWindowClassifier _classifier;
@@ -105,19 +104,20 @@ public class ExplorerTracker : IDisposable
     public void Start()
     {
         if (_isRunning) return;
-        _foregroundHookDelegate = new ExplorerNativeHooks.WinEventDelegate(WinEventProc);
-        _nameChangeHookDelegate = new ExplorerNativeHooks.WinEventDelegate(WinEventProc);
-        _locationChangeHookDelegate = new ExplorerNativeHooks.WinEventDelegate(WinEventProc);
+        _winEventDelegate = new ExplorerNativeHooks.WinEventDelegate(WinEventProc);
         _hForegroundHook = ExplorerNativeHooks.SetWinEventHook(
             ExplorerNativeHooks.EVENT_SYSTEM_FOREGROUND, ExplorerNativeHooks.EVENT_SYSTEM_FOREGROUND,
-            IntPtr.Zero, _foregroundHookDelegate, 0, 0, ExplorerNativeHooks.WINEVENT_OUTOFCONTEXT);
+            IntPtr.Zero, _winEventDelegate, 0, 0, ExplorerNativeHooks.WINEVENT_OUTOFCONTEXT);
         _hNameChangeHook = ExplorerNativeHooks.SetWinEventHook(
             ExplorerNativeHooks.EVENT_OBJECT_NAMECHANGE, ExplorerNativeHooks.EVENT_OBJECT_NAMECHANGE,
-            IntPtr.Zero, _nameChangeHookDelegate, 0, 0, ExplorerNativeHooks.WINEVENT_OUTOFCONTEXT);
+            IntPtr.Zero, _winEventDelegate, 0, 0, ExplorerNativeHooks.WINEVENT_OUTOFCONTEXT);
         _hLocationChangeHook = ExplorerNativeHooks.SetWinEventHook(
             ExplorerNativeHooks.EVENT_OBJECT_LOCATIONCHANGE, ExplorerNativeHooks.EVENT_OBJECT_LOCATIONCHANGE,
-            IntPtr.Zero, _locationChangeHookDelegate, 0, 0, ExplorerNativeHooks.WINEVENT_OUTOFCONTEXT);
-        if (_hForegroundHook == IntPtr.Zero || _hNameChangeHook == IntPtr.Zero || _hLocationChangeHook == IntPtr.Zero)
+            IntPtr.Zero, _winEventDelegate, 0, 0, ExplorerNativeHooks.WINEVENT_OUTOFCONTEXT);
+        _hFocusHook = ExplorerNativeHooks.SetWinEventHook(
+            ExplorerNativeHooks.EVENT_OBJECT_FOCUS, ExplorerNativeHooks.EVENT_OBJECT_FOCUS,
+            IntPtr.Zero, _winEventDelegate, 0, 0, ExplorerNativeHooks.WINEVENT_OUTOFCONTEXT);
+        if (_hForegroundHook == IntPtr.Zero || _hNameChangeHook == IntPtr.Zero || _hLocationChangeHook == IntPtr.Zero || _hFocusHook == IntPtr.Zero)
         {
             Stop();
             Logger.Log("[ExplorerTracker] Failed to register WinEvent hooks!", LogLevel.Error);
@@ -129,24 +129,11 @@ public class ExplorerTracker : IDisposable
     }
     public void Stop()
     {
-        if (_hForegroundHook != IntPtr.Zero)
-        {
-            ExplorerNativeHooks.UnhookWinEvent(_hForegroundHook);
-            _hForegroundHook = IntPtr.Zero;
-        }
-        if (_hNameChangeHook != IntPtr.Zero)
-        {
-            ExplorerNativeHooks.UnhookWinEvent(_hNameChangeHook);
-            _hNameChangeHook = IntPtr.Zero;
-        }
-        if (_hLocationChangeHook != IntPtr.Zero)
-        {
-            ExplorerNativeHooks.UnhookWinEvent(_hLocationChangeHook);
-            _hLocationChangeHook = IntPtr.Zero;
-        }
-        _foregroundHookDelegate = null;
-        _nameChangeHookDelegate = null;
-        _locationChangeHookDelegate = null;
+        if (_hForegroundHook != IntPtr.Zero) { ExplorerNativeHooks.UnhookWinEvent(_hForegroundHook); _hForegroundHook = IntPtr.Zero; }
+        if (_hNameChangeHook != IntPtr.Zero) { ExplorerNativeHooks.UnhookWinEvent(_hNameChangeHook); _hNameChangeHook = IntPtr.Zero; }
+        if (_hLocationChangeHook != IntPtr.Zero) { ExplorerNativeHooks.UnhookWinEvent(_hLocationChangeHook); _hLocationChangeHook = IntPtr.Zero; }
+        if (_hFocusHook != IntPtr.Zero) { ExplorerNativeHooks.UnhookWinEvent(_hFocusHook); _hFocusHook = IntPtr.Zero; }
+        _winEventDelegate = null;
         _isRunning = false;
         LastPath = null;
         LastActiveHwnd = IntPtr.Zero;
@@ -197,6 +184,12 @@ public class ExplorerTracker : IDisposable
         {
             if (hwnd == ActiveHwnd && IsActiveWindowDialog)
                 OnActiveWindowMoved?.Invoke();
+        }
+        else if (eventType == ExplorerNativeHooks.EVENT_OBJECT_FOCUS)
+        {
+            var root = ExplorerNativeHooks.GetAncestor(hwnd, ExplorerNativeHooks.GA_ROOTOWNER);
+            if (root == ExplorerNativeHooks.GetForegroundWindow())
+                _classifier.CheckActiveWindow(root);
         }
         var currentFg = ExplorerNativeHooks.GetForegroundWindow();
         if (currentFg != IntPtr.Zero && currentFg != ActiveHwnd)

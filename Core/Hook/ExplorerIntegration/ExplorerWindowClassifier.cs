@@ -187,21 +187,21 @@ internal sealed class ExplorerWindowClassifier
     {
         var sbClass = new StringBuilder(256);
         ExplorerNativeHooks.GetClassName(hwnd, sbClass, sbClass.Capacity);
-        if (sbClass.ToString().Contains("InputSwitch", StringComparison.OrdinalIgnoreCase))
-            return true;
-
+        if (sbClass.ToString().Contains("InputSwitch", StringComparison.OrdinalIgnoreCase)) return true;
         ExplorerNativeHooks.GetWindowThreadProcessId(hwnd, out var activePid);
-        if (activePid == Environment.ProcessId || (activePid != 0 && activePid == _tracker.AppProcessId))
-            return true;
-
+        if (activePid == Environment.ProcessId || (activePid != 0 && activePid == _tracker.AppProcessId)) return true;
         if (_tracker.ActiveHwnd != IntPtr.Zero)
         {
             var rootHwnd = ExplorerNativeHooks.GetAncestor(hwnd, ExplorerNativeHooks.GA_ROOTOWNER);
             if (rootHwnd == IntPtr.Zero) rootHwnd = hwnd;
             if (rootHwnd == _tracker.ActiveHwnd)
+            {
+                var sbClass2 = new StringBuilder(256);
+                ExplorerNativeHooks.GetClassName(rootHwnd, sbClass2, sbClass2.Capacity);
+                if (sbClass2.ToString().Equals("dopus.lister", StringComparison.OrdinalIgnoreCase)) return false;
                 return true;
+            }
         }
-
         return false;
     }
 
@@ -276,7 +276,6 @@ internal sealed class ExplorerWindowClassifier
     {
         if (parent == IntPtr.Zero || child == IntPtr.Zero) return false;
         if (parent == child) return true;
-
         var current = child;
         while (current != IntPtr.Zero)
         {
@@ -285,11 +284,7 @@ internal sealed class ExplorerWindowClassifier
             if (temp == IntPtr.Zero || temp == current) break;
             current = temp;
         }
-
-        var rootOwner = ExplorerNativeHooks.GetAncestor(child, ExplorerNativeHooks.GA_ROOTOWNER);
-        if (rootOwner == parent) return true;
-
-        return false;
+        return ExplorerNativeHooks.GetAncestor(child, ExplorerNativeHooks.GA_ROOTOWNER) == parent;
     }
 
     private bool IsImeWindow(IntPtr hwnd)
@@ -298,9 +293,6 @@ internal sealed class ExplorerWindowClassifier
         var sbClass = new StringBuilder(256);
         ExplorerNativeHooks.GetClassName(hwnd, sbClass, sbClass.Capacity);
         var fgClass = sbClass.ToString();
-        return fgClass.Contains("IME", StringComparison.OrdinalIgnoreCase) ||
-               fgClass.Contains("Candidate", StringComparison.OrdinalIgnoreCase) ||
-               fgClass.Contains("InputTip", StringComparison.OrdinalIgnoreCase) ||
-               fgClass.Contains("InputSwitch", StringComparison.OrdinalIgnoreCase);
+        return fgClass.Contains("IME", StringComparison.OrdinalIgnoreCase) || fgClass.Contains("Candidate", StringComparison.OrdinalIgnoreCase) || fgClass.Contains("InputTip", StringComparison.OrdinalIgnoreCase) || fgClass.Contains("InputSwitch", StringComparison.OrdinalIgnoreCase);
     }
 }

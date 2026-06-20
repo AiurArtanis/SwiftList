@@ -45,7 +45,35 @@ public class DirectoryOpusPathCollector : IActivePathCollector
             });
 
             var activeIndex = -1;
-            if (activeHwnd != IntPtr.Zero)
+
+            var listerTitle = Win32Helper.GetWindowText(windowHwnd);
+            if (!string.IsNullOrEmpty(listerTitle))
+            {
+                var matchCount = 0;
+                var lastMatchIdx = -1;
+                for (var i = 0; i < containers.Count; i++)
+                {
+                    var path = ExtractPathFromContainer(containers[i]);
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        var dirName = Path.GetFileName(path);
+                        if (!string.IsNullOrEmpty(dirName) && (
+                            listerTitle.Contains(path, StringComparison.OrdinalIgnoreCase) ||
+                            listerTitle.StartsWith(dirName + " ", StringComparison.OrdinalIgnoreCase) ||
+                            listerTitle.Equals(dirName, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            matchCount++;
+                            lastMatchIdx = i;
+                        }
+                    }
+                }
+                if (matchCount == 1)
+                {
+                    activeIndex = lastMatchIdx;
+                }
+            }
+
+            if (activeIndex == -1 && activeHwnd != IntPtr.Zero)
             {
                 for (var i = 0; i < containers.Count; i++)
                 {
@@ -134,9 +162,20 @@ public class DirectoryOpusPathCollector : IActivePathCollector
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
         var resolved = ShellPathHelper.ResolveSpecialFolder(path);
-        if (!string.IsNullOrEmpty(resolved) && Directory.Exists(resolved))
+        if (resolved.Length == 2 && resolved[1] == ':')
         {
-            return resolved;
+            resolved += "\\";
+        }
+        if (!string.IsNullOrEmpty(resolved))
+        {
+            if (Path.IsPathRooted(resolved) && (resolved.Contains(":\\") || resolved.StartsWith("\\\\")))
+            {
+                return resolved;
+            }
+            if (Directory.Exists(resolved))
+            {
+                return resolved;
+            }
         }
         return null;
     }

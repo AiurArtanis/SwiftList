@@ -79,6 +79,7 @@ public static class ExplorerNativeHooks
         public int Left, Top, Right, Bottom;
     }
 
+    public const uint EVENT_OBJECT_FOCUS = 0x8005;
     public const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
     public const uint EVENT_OBJECT_NAMECHANGE = 0x800C;
     public const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
