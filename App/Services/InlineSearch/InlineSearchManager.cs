@@ -243,6 +243,10 @@ public class InlineSearchManager : IDisposable
 
 
 
+    public bool IsInlineSearchActive => _window != null && _window.IsVisible;
+
+    public void FocusSearchBox() => _window?.ActivateAndFocusSearchBox();
+
     public void Dispose()
     {
         CloseInlineSearch("Dispose");

@@ -92,8 +92,15 @@ public partial class App : Application
 
         HookClient.OnActivated += () => Dispatcher.BeginInvoke(new Action(() =>
             {
-                var quickSearchWindow = Current.MainWindow as QuickSearchWindow;
-                quickSearchWindow?.ToggleVisibility();
+                if (InlineSearchManager.Instance.IsInlineSearchActive)
+                {
+                    InlineSearchManager.Instance.FocusSearchBox();
+                }
+                else
+                {
+                    var quickSearchWindow = Current.MainWindow as QuickSearchWindow;
+                    quickSearchWindow?.ToggleVisibility();
+                }
             }));
         HookClient.Start();
 
