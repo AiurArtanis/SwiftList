@@ -16,6 +16,10 @@ public sealed class Searcher
 
         var parsed = SearchQueryParser.Parse(query);
         var directoryFilterLower = Helpers.NormalizeFilter(directoryFilter);
+        if (directoryFilterLower != null && directoryFilterLower.Equals(index.SourceRootLower, StringComparison.Ordinal))
+        {
+            directoryFilterLower = null;
+        }
 
         if (parsed.IsPathMode)
         {

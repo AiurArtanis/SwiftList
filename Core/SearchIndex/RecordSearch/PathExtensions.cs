@@ -26,10 +26,21 @@ internal static class PathExtensions
         var matches = new FzfTopN(keep);
         var slab = new FzfSlab();
 
+        var filterAncestorIndex = -1;
+        if (directoryFilterLower != null &&
+            index.TryResolvePath(directoryFilterLower, out var ancestorId, out var childPrefix) &&
+            index.TryGetIndexById(ancestorId, out var ancestorIndex))
+        {
+            filterAncestorIndex = ancestorIndex;
+        }
+
         for (var i = 0; i < index.Count; i++)
         {
             token.ThrowIfCancellationRequested();
             if (index.IsDeleted(i))
+                continue;
+
+            if (filterAncestorIndex >= 0 && !index.IsUnderDirectoryIndex(i, filterAncestorIndex))
                 continue;
 
             var path = index.GetFullPath(i);

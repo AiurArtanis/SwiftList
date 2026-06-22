@@ -73,10 +73,7 @@ internal static class StreamingSearchExtensions
         if (cacheable && searcher.TryGetRankCache(index, cacheTerm, limit, out var cachedRanks))
         {
             foreach (var r in index.Finish(new List<FzfRank>(cachedRanks), limit))
-            {
-                token.ThrowIfCancellationRequested();
                 onResult(r);
-            }
             return;
         }
 
@@ -146,7 +143,15 @@ internal static class StreamingSearchExtensions
                 return;
         }
 
-        var directoryMembershipCache = directoryRootId != null ? new Dictionary<int, bool>() : null;
+        var filterAncestorIndex = -1;
+        if (directoryFilterLower != null &&
+            index.TryResolvePath(directoryFilterLower, out var ancestorId, out var childPrefix) &&
+            index.TryGetIndexById(ancestorId, out var ancestorIndex))
+        {
+            filterAncestorIndex = ancestorIndex;
+        }
+
+        var directoryMembershipCache = (directoryRootId != null || directoryFilterLower != null) ? new Dictionary<int, bool>() : null;
         var queryMask = pattern.GetQueryMask(out var canFilter);
 
         for (var candidateIndex = 0; candidateIndex < count; candidateIndex++)
@@ -167,6 +172,12 @@ internal static class StreamingSearchExtensions
             }
             else if (directoryFilterLower != null)
             {
+                if (filterAncestorIndex >= 0 &&
+                    !index.IsUnderDirectoryCached(i, filterAncestorIndex, directoryMembershipCache!))
+                {
+                    continue;
+                }
+
                 var path = index.GetFullPath(i);
                 if (!path.StartsWith(directoryFilterLower, StringComparison.OrdinalIgnoreCase))
                     continue;
