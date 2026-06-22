@@ -16,95 +16,10 @@ public class SearchWindowInputHandler
 
     public void HandleWindowPreviewKeyDown(KeyEventArgs e)
     {
-        if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            if (_window.LstGridResultsControl.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult)
-            {
-                if (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath))
-                {
-                    try
-                    {
-                        var fileList = new System.Collections.Specialized.StringCollection { result.FullPath };
-                        System.Windows.Clipboard.SetFileDropList(fileList);
-                        _window.Close();
-                        e.Handled = true;
-                        return;
-                    }
-                    catch { }
-                }
-            }
-        }
-
-        var quickLookModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
-        var checkKey = e.Key == Key.System ? e.SystemKey : e.Key;
-        if ((checkKey == Key.P && Keyboard.Modifiers == quickLookModifier) ||
-            (checkKey == Key.Space && Keyboard.Modifiers == quickLookModifier))
-        {
-            if (_window.LstGridResultsControl.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult && !result.IsApplication && result.FullPath != "__SHOW_MORE__")
-            {
-                QuickLookManager.Instance.Toggle(_window, result.FullPath);
-                e.Handled = true;
-                return;
-            }
-        }
-
-        var menuPresenter = _window.MenuPresenter;
-
-        // Route actions mode keys if active
-
-        if (menuPresenter != null && menuPresenter.IsInActionsMode)
-        {
-            if (e.Key == Key.Escape)
-            {
-                menuPresenter.ExitActionsMode();
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key == Key.Left || e.Key == Key.Back)
-            {
-                menuPresenter.GoBackMenuOrExit();
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key == Key.Right)
-            {
-                menuPresenter.EnterSubMenu();
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key == Key.Down)
-            {
-                menuPresenter.NavigateActionsList(1);
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key == Key.Up)
-            {
-                menuPresenter.NavigateActionsList(-1);
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key == Key.Enter)
-            {
-                menuPresenter.ExecuteSelectedAction();
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key != Key.System && e.Key != Key.LeftAlt && e.Key != Key.RightAlt)
-            {
-                e.Handled = true;
-                return;
-            }
-        }
+        if (SearchInputHelper.HandleCommonSearchKeys(e, _window, _window.MenuPresenter))
+            return;
 
         // Normal mode keys
-
         if (Keyboard.FocusedElement == _window.TxtSearchBoxControl &&
             (e.Key == Key.Down || e.Key == Key.Up || e.Key == Key.Enter))
         {
@@ -118,7 +33,6 @@ public class SearchWindowInputHandler
             {
                 _window.Close();
             }
-
             else
             {
                 _window.TxtSearchBoxControl.Text = string.Empty;
@@ -130,12 +44,11 @@ public class SearchWindowInputHandler
         }
 
         // Right arrow key enters Actions Mode if caret is at the end
-
         if (e.Key == Key.Right && IsSearchCaretAtEnd())
         {
             if (_window.LstGridResultsControl.SelectedItem is AppSearchResult result)
             {
-                menuPresenter?.EnterActionsMode(result);
+                _window.MenuPresenter?.EnterActionsMode(result);
                 e.Handled = true;
                 return;
             }

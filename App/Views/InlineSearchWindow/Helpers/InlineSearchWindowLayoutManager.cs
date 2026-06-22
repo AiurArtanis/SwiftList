@@ -230,6 +230,6 @@ public sealed class InlineSearchWindowLayoutManager
     {
         if (item.IsSearchSectionHeader) return 31;
         if (item.IsListItem) return 34;
-        return 46; // Rendered height in inline template is 46px
+        return 51; // ponytail: match ResultItemStyle default height to prevent bottom clipping
     }
 }

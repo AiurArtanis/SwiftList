@@ -91,6 +91,12 @@ public partial class SearchWindow : Window, ISearchWindow
 
     public void UpdateActionsLayout() { /* Fixed-size window, no dynamic resizing needed */ }
 
+    public void FocusSearch()
+    {
+        SearchBox.SearchTextBox.Focus();
+        Keyboard.Focus(SearchBox.SearchTextBox);
+    }
+
     public void OpenFileOrFolderExternal(string path) => FileExecutor.OpenFileOrFolder(path);
     public void OpenFileOrFolderAsAdminExternal(string path) => FileExecutor.OpenFileOrFolderAsAdmin(path);
     public void LocateInExplorerExternal(string path) => FileExecutor.LocateInExplorer(path);

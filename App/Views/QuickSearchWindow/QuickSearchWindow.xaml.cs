@@ -66,6 +66,12 @@ public partial class QuickSearchWindow : Window, ISearchWindow
     public TextBlock TxtActionsTarget => ResultsPanelControl.ActionsTargetTextBlock;
     public ListBox LstActions => ResultsPanelControl.ActionsListBox;
     public void UpdateActionsLayout() => _layoutManager.UpdateActionsLayout();
+
+    public void FocusSearch()
+    {
+        TxtSearch.Focus();
+        Keyboard.Focus(TxtSearch);
+    }
     public UIElement StatusBar => StatusBarControl;
     public System.Windows.Shapes.Ellipse DotStatus => StatusBarControl.StatusDot;
     public TextBlock TxtStatusInfo => StatusBarControl.StatusInfoTextBlock;

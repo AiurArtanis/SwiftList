@@ -90,6 +90,52 @@
                                             ItemsSource="{Binding FilteredResults}"
                                             ViewMode="Grid"
                                             Visibility="Visible"/>
+                        <!-- No Results Hint -->
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_NoResult]}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontSize="16"
+                                   Foreground="{DynamicResource TextSecondary2}"
+                                   FontFamily="Microsoft YaHei UI">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ShowNoResultsHint}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <!-- Welcome View -->
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ShowWelcomeHint}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <!-- Search Icon -->
+                            <TextBlock Text="&#xE11A;"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       FontSize="48"
+                                       Foreground="{DynamicResource TextSecondary2}"
+                                       HorizontalAlignment="Center"
+                                       Opacity="0.5"
+                                       Margin="0,0,0,16"/>
+                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_WelcomeTitle]}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimary}"
+                                       HorizontalAlignment="Center"
+                                       FontFamily="Microsoft YaHei UI"
+                                       Margin="0,0,0,0"/>
+                        </StackPanel>
                         <!-- Actions View (Self-drawn context actions menu, decoupled and shared) -->
                         <Grid x:Name="GridActions" Visibility="Collapsed">
                             <Grid.RowDefinitions>
@@ -127,6 +173,15 @@
                         BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0"
                         CornerRadius="0,0,9,9"
                         Padding="16,8,16,8">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding FilteredResults.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>

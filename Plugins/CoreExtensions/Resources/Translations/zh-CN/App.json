@@ -316,5 +316,6 @@
   "Search_GlobalSearchHeader": "全局搜索",
   "About_TutorialTitle": "新手引导教程",
   "About_TutorialHint": "通过一步步的交互引导，快速掌握 SwiftList 的核心效率特性",
-  "About_TutorialBtn": "开始引导"
+  "About_TutorialBtn": "开始引导",
+  "Search_WelcomeTitle": "开始输入以检索文件或应用"
 }

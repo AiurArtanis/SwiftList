@@ -67,6 +67,9 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
                         value,
                         SearchScope,
                         IsInlineSearchContext,
+                        fileLimit: 51,
+                        appLimit: 51,
+                        resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, value, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
                         state => IsSearching = state,
                         (results, status, final) => ApplySearchResults(value, results, status, final),
                         OnServiceUnavailable
@@ -191,6 +194,9 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
             query,
             SearchScope,
             IsInlineSearchContext,
+            fileLimit: 51,
+            appLimit: 51,
+            resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, query, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
             state => IsSearching = state,
             (results, status, final) => ApplySearchResults(query, results, status, final),
             OnServiceUnavailable

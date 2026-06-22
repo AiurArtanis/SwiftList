@@ -107,6 +107,11 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Items.Count, RelativeSource={RelativeSource AncestorType=ListView}}" Value="0">
+                <Setter Property="Visibility" Value="Collapsed"/>
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <!-- ═══════════ Close/Minimize Button Style ═══════════ -->

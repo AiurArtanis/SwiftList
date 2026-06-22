@@ -316,5 +316,6 @@
   "Search_GlobalSearchHeader": "Global Search",
   "About_TutorialTitle": "Interactive Tutorial",
   "About_TutorialHint": "Learn and master the core high-efficiency features of SwiftList step-by-step",
-  "About_TutorialBtn": "Start Guide"
+  "About_TutorialBtn": "Start Guide",
+  "Search_WelcomeTitle": "Start typing to search files or apps"
 }

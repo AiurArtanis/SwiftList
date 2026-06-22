@@ -57,14 +57,17 @@ public class InlineSearchWindowPositioner
         const double visibleMargin = 0;
 
         var tracker = _window.Manager.ExplorerTracker;
+        var isResultsVisible = _window.ResultsPanelControl.Visibility == Visibility.Visible;
+
+        // Default layout: results on top, search box on bottom with rounded corners
+        Grid.SetRow(_window.ResultsPanelControl, 0);
+        Grid.SetRow(_window.ResultsSeparator, 1);
+        Grid.SetRow(_window.SearchBoxBorder, 2);
+        _window.MainBorder.CornerRadius = new CornerRadius(8);
+        _window.SearchBoxBorder.CornerRadius = isResultsVisible ? new CornerRadius(0, 0, 7, 7) : new CornerRadius(7);
 
         if (tracker.IsDesktop)
         {
-            // Standard layout: Results on top (Row 0), Search Box on bottom (Row 2)
-            Grid.SetRow(_window.ResultsPanelControl, 0);
-            Grid.SetRow(_window.ResultsSeparator, 1);
-            Grid.SetRow(_window.SearchBoxBorder, 2);
-
             var screen = Screen.PrimaryScreen ?? Screen.AllScreens[0];
             var workingArea = screen.WorkingArea;
             var targetLeft = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
@@ -94,6 +97,8 @@ public class InlineSearchWindowPositioner
                     Grid.SetRow(_window.SearchBoxBorder, 0);
                     Grid.SetRow(_window.ResultsSeparator, 1);
                     Grid.SetRow(_window.ResultsPanelControl, 2);
+                    _window.MainBorder.CornerRadius = new CornerRadius(0, 0, 8, 8);
+                    _window.SearchBoxBorder.CornerRadius = isResultsVisible ? new CornerRadius(0) : new CornerRadius(0, 0, 7, 7);
 
                     var winWidth = (rect.Right - rect.Left) * dpiScaleX;
                     targetLeft = winLeft + (winWidth - windowWidth) / 2;
@@ -102,11 +107,6 @@ public class InlineSearchWindowPositioner
                 }
                 else
                 {
-                    // Standard layout: Results on top (Row 0), Search Box on bottom (Row 2)
-                    Grid.SetRow(_window.ResultsPanelControl, 0);
-                    Grid.SetRow(_window.ResultsSeparator, 1);
-                    Grid.SetRow(_window.SearchBoxBorder, 2);
-
                     targetLeft = winRight - windowWidth + xamlMargin - visibleMargin;
                     targetTop = winBottom - windowHeight + xamlMargin - visibleMargin;
                 }

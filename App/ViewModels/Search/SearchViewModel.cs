@@ -14,7 +14,7 @@ public class SearchViewModel : ViewModelBase, IDisposable
     private const int FullSearchAppLimit = 0;
 
     private readonly SearchService _searchService;
-    private readonly SearchRunner _searchRunner;
+    private readonly SearchExecutionEngine _searchEngine;
     private readonly SearchServiceStatusViewModel _serviceStatus;
 
     private string _advancedQuery = string.Empty;
@@ -46,7 +46,7 @@ public class SearchViewModel : ViewModelBase, IDisposable
     public SearchViewModel(string initialQuery = "")
     {
         _searchService = new SearchService();
-        _searchRunner = new SearchRunner(_searchService);
+        _searchEngine = new SearchExecutionEngine(_searchService);
         FilteredResults = new ObservableRangeCollection<AppSearchResult>();
 
         _serviceStatus = new SearchServiceStatusViewModel(this, _searchService);
@@ -90,13 +90,15 @@ public class SearchViewModel : ViewModelBase, IDisposable
             {
                 if (string.IsNullOrWhiteSpace(value))
                 {
-                    _searchRunner.Cancel();
+                    _searchEngine.CancelPendingSearch();
                     PerformSearch(value);
                 }
                 else
                 {
                     OnAdvancedQueryChanged(value);
                 }
+                OnPropertyChanged(nameof(ShowWelcomeHint));
+                OnPropertyChanged(nameof(ShowNoResultsHint));
             }
         }
     }
@@ -142,12 +144,33 @@ public class SearchViewModel : ViewModelBase, IDisposable
     // Typing Debounce & Search logic
     // ==========================================
 
-    private void OnAdvancedQueryChanged(string query) => _searchRunner.QueueSearch(
+    private void OnAdvancedQueryChanged(string query) => _searchEngine.QueueSearch(
             query,
-            FullSearchFileLimit,
-            FullSearchAppLimit,
+            searchScope: null,
+            isInlineSearchContext: false,
+            fileLimit: FullSearchFileLimit,
+            appLimit: FullSearchAppLimit,
+            resultMapper: (response, _) =>
+            {
+                var results = new List<AppSearchResult>();
+                if (response.AppResults != null)
+                {
+                    for (var i = 0; i < response.AppResults.Count; i++)
+                    {
+                        results.Add(SearchResultMapper.CreateUiResult(response.AppResults[i], query, results.Count, isApplication: true, scope: null));
+                    }
+                }
+                if (response.FileResults != null)
+                {
+                    for (var i = 0; i < response.FileResults.Count; i++)
+                    {
+                        results.Add(SearchResultMapper.CreateUiResult(response.FileResults[i], query, results.Count, isApplication: false, scope: null));
+                    }
+                }
+                return results;
+            },
             searching => IsSearching = searching,
-            (results, final) =>
+            (results, status, final) =>
             {
                 _serviceStatus.ResetAutoInstallFlag();
                 LoadingPanelVisibility = Visibility.Collapsed;
@@ -164,6 +187,7 @@ public class SearchViewModel : ViewModelBase, IDisposable
     {
         if (string.IsNullOrWhiteSpace(query))
         {
+            _searchEngine.CancelPendingSearch();
             IsSearching = false;
             _allResults.Clear();
             ApplyFiltersAndRender();
@@ -213,11 +237,16 @@ public class SearchViewModel : ViewModelBase, IDisposable
         var finalResults = resultsList.ToList();
         FilteredResults.ReplaceRange(finalResults);
         ResultCountText = string.Format(TranslationManager.Instance["Search_Total"], finalResults.Count);
+        OnPropertyChanged(nameof(ShowNoResultsHint));
+        OnPropertyChanged(nameof(ShowWelcomeHint));
     }
+
+    public bool ShowNoResultsHint => FilteredResults.Count == 0 && !string.IsNullOrWhiteSpace(AdvancedQuery);
+    public bool ShowWelcomeHint => string.IsNullOrWhiteSpace(AdvancedQuery);
 
     public void Dispose()
     {
-        _searchRunner.Dispose();
+        _searchEngine.Dispose();
         _serviceStatus.Dispose();
         _searchService.Dispose();
     }

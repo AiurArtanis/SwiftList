@@ -227,4 +227,57 @@ internal static class InlineListSearchHelper
         }
         return results;
     }
+
+    public static List<AppSearchResult> MergeLocalMatches(
+        List<AppSearchResult> uiResults,
+        List<AppSearchResult> localMatches,
+        string query)
+    {
+        var combinedResults = new List<AppSearchResult>();
+        var instantItems = new List<AppSearchResult>();
+        var globalItems = new List<AppSearchResult>();
+        var passedHeader = false;
+        var searchHeaderTitle = TranslationManager.Instance["Search_SectionHeader"];
+
+        foreach (var item in uiResults)
+        {
+            if (!passedHeader)
+            {
+                if (item.ResultKind == "SectionHeader" && item.Name == searchHeaderTitle)
+                {
+                    passedHeader = true;
+                    continue;
+                }
+                if (item.IsInstantResult || item.IsPluginSearchAction || item.ResultKind == "SectionHeader")
+                {
+                    instantItems.Add(item);
+                }
+                else
+                {
+                    passedHeader = true;
+                    globalItems.Add(item);
+                }
+            }
+            else
+            {
+                globalItems.Add(item);
+            }
+        }
+
+        combinedResults.AddRange(instantItems);
+        SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_LocalFolderHeader"] ?? "Current Folder", query);
+        combinedResults.AddRange(localMatches);
+
+        if (globalItems.Count > 0)
+        {
+            SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_GlobalSearchHeader"] ?? "Global Search", query);
+            combinedResults.AddRange(globalItems);
+        }
+
+        for (var idx = 0; idx < combinedResults.Count; idx++)
+        {
+            combinedResults[idx].Index = idx;
+        }
+        return combinedResults;
+    }
 }

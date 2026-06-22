@@ -2,6 +2,8 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using SwiftList.Core;
+using SwiftList.App.Helpers;
+
 namespace SwiftList.App.Views.InlineSearchWindow.Helpers;
 
 public class InlineSearchWindowInputHandler
@@ -21,65 +23,33 @@ public class InlineSearchWindowInputHandler
 
     public void HandlePreviewKeyDown(System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult)
-            {
-                if (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath))
-                {
-                    try
-                    {
-                        var fileList = new System.Collections.Specialized.StringCollection { result.FullPath };
-                        System.Windows.Clipboard.SetFileDropList(fileList);
-                        _window.HideWindow();
-                        e.Handled = true;
-                        return;
-                    }
-                    catch { }
-                }
-            }
-        }
+        if (SearchInputHelper.HandleCommonSearchKeys(e, _window, _window.MenuPresenter))
+            return;
 
         // Escape key
-
         if (e.Key == Key.Escape)
         {
             e.Handled = true;
-            if (_window.MenuPresenter.IsInActionsMode)
-            {
-                _window.MenuPresenter.ExitActionsMode();
-            }
-
-            else if (_window.Manager.ExplorerTracker.IsActiveWindowDialog)
+            if (_window.Manager.ExplorerTracker.IsActiveWindowDialog)
             {
                 _window.ResetInlineSearchAndFocusDialog();
             }
-
             else
             {
                 _window.HideWindow();
             }
-
             return;
         }
 
         // Enter key
-
         if (e.Key == Key.Enter)
         {
             e.Handled = true;
-            if (_window.MenuPresenter.IsInActionsMode)
-            {
-                _window.MenuPresenter.ExecuteSelectedAction();
-                return;
-            }
-
             var asAdmin = Keyboard.Modifiers == GetWpfModifier(UserSettings.Load().SelectIndexModifier);
             if (_window.LstResults.SelectedItem is AppSearchResult result)
             {
                 ExecuteResult(result, asAdmin);
             }
-
             else if (_window.LstResults.Items.Count > 0)
             {
                 _window.LstResults.SelectedIndex = 0;
@@ -88,69 +58,33 @@ public class InlineSearchWindowInputHandler
                     ExecuteResult(firstResult, asAdmin);
                 }
             }
-
             return;
         }
 
         // Up arrow
-
         if (e.Key == Key.Up)
         {
             e.Handled = true;
-            if (_window.MenuPresenter.IsInActionsMode)
-            {
-                _window.MenuPresenter.NavigateActionsList(-1);
-                return;
-            }
-
             MoveResultSelection(-1);
             return;
         }
 
         // Down arrow
-
         if (e.Key == Key.Down)
         {
             e.Handled = true;
-            if (_window.MenuPresenter.IsInActionsMode)
-            {
-                _window.MenuPresenter.NavigateActionsList(1);
-                return;
-            }
-
             MoveResultSelection(1);
             return;
         }
 
-        // Left arrow / Backspace
-
-        if (e.Key == Key.Left || e.Key == Key.Back)
-        {
-            if (_window.MenuPresenter.IsInActionsMode)
-            {
-                e.Handled = true;
-                _window.MenuPresenter.GoBackMenuOrExit();
-            }
-
-            return;
-        }
-
         // Right arrow
-
         if (e.Key == Key.Right)
         {
-            if (_window.MenuPresenter.IsInActionsMode)
-            {
-                e.Handled = true;
-                _window.MenuPresenter.EnterSubMenu();
-            }
-
-            else if (_window.LstResults.SelectedItem is AppSearchResult result)
+            if (_window.LstResults.SelectedItem is AppSearchResult result)
             {
                 e.Handled = true;
                 _window.MenuPresenter.EnterActionsMode(result);
             }
-
             return;
         }
 

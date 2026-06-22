@@ -199,6 +199,7 @@ public class ShellMenuPresenter : IDisposable
         {
             _view.LstResults.ScrollIntoView(_view.LstResults.SelectedItem);
         }
+        _view.FocusSearch();
     }
 
     public void ExecuteSelectedAction()

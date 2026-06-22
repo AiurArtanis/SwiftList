@@ -3,6 +3,7 @@ using SwiftList.Core;
 using SwiftList.Core.Hook;
 using Application = System.Windows.Application;
 using SwiftList.App.ViewModels.Search;
+using SwiftList.App.Views.InlineSearchWindow.Helpers;
 
 namespace SwiftList.App.Services;
 
@@ -245,7 +246,20 @@ public class InlineSearchManager : IDisposable
 
     public bool IsInlineSearchActive => _window != null && _window.IsVisible;
 
-    public void FocusSearchBox() => _window?.ActivateAndFocusSearchBox();
+    public void FocusSearchBox()
+    {
+        if (_window != null && _window.IsVisible)
+        {
+            if (_explorerTracker.IsActiveWindowDialog 
+                && _window.SearchBox.SearchTextBox.IsKeyboardFocusWithin 
+                && string.IsNullOrEmpty(_window.SearchText))
+            {
+                _window.ResetInlineSearchAndFocusDialog();
+                return;
+            }
+            _window.ActivateAndFocusSearchBox();
+        }
+    }
 
     public void Dispose()
     {

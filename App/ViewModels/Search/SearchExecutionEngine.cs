@@ -12,17 +12,26 @@ internal sealed class SearchExecutionEngine : IDisposable
 
     public SearchExecutionEngine(SearchService searchService) => _searchService = searchService;
 
-    public void QueueSearch(string query, string? searchScope, bool isInlineSearchContext, Action<bool> onSearchStateChanged, Action<List<AppSearchResult>, string, bool> onResultsUpdated, Action onServiceUnavailable)
+    public void QueueSearch(
+        string query,
+        string? searchScope,
+        bool isInlineSearchContext,
+        int fileLimit,
+        int appLimit,
+        Func<SearchResponse, string?, List<AppSearchResult>> resultMapper,
+        Action<bool> onSearchStateChanged,
+        Action<List<AppSearchResult>, string, bool> onResultsUpdated,
+        Action onServiceUnavailable)
     {
         _debounceCts?.Cancel();
         _debounceCts?.Dispose();
         var cts = new CancellationTokenSource();
         _debounceCts = cts;
 
-        var delay = string.IsNullOrEmpty(query) || query.Length <= 1 ? 0 : 30;
+        var delay = string.IsNullOrEmpty(query) || query.Length <= 1 ? 0 : (fileLimit > 100 ? 150 : 30);
         if (delay == 0)
         {
-            PerformSearch(query, searchScope, isInlineSearchContext, onSearchStateChanged, onResultsUpdated, onServiceUnavailable);
+            PerformSearch(query, searchScope, isInlineSearchContext, fileLimit, appLimit, resultMapper, onSearchStateChanged, onResultsUpdated, onServiceUnavailable);
         }
         else
         {
@@ -30,12 +39,21 @@ internal sealed class SearchExecutionEngine : IDisposable
             {
                 if (t.IsCanceled) return;
                 _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                    PerformSearch(query, searchScope, isInlineSearchContext, onSearchStateChanged, onResultsUpdated, onServiceUnavailable)));
+                    PerformSearch(query, searchScope, isInlineSearchContext, fileLimit, appLimit, resultMapper, onSearchStateChanged, onResultsUpdated, onServiceUnavailable)));
             }, cts.Token);
         }
     }
 
-    public void PerformSearch(string query, string? searchScope, bool isInlineSearchContext, Action<bool> onSearchStateChanged, Action<List<AppSearchResult>, string, bool> onResultsUpdated, Action onServiceUnavailable)
+    public void PerformSearch(
+        string query,
+        string? searchScope,
+        bool isInlineSearchContext,
+        int fileLimit,
+        int appLimit,
+        Func<SearchResponse, string?, List<AppSearchResult>> resultMapper,
+        Action<bool> onSearchStateChanged,
+        Action<List<AppSearchResult>, string, bool> onResultsUpdated,
+        Action onServiceUnavailable)
     {
         CancelPendingSearch();
         if (string.IsNullOrWhiteSpace(query))
@@ -72,7 +90,7 @@ internal sealed class SearchExecutionEngine : IDisposable
                         if (tracker.IsActiveWindowExplorer)
                         {
                             var localMatches = InlineListSearchHelper.GetLocalMatches(query, listItems, contextDirectory, token);
-                            await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, searchVersion, onResultsUpdated, onServiceUnavailable, token, localMatches);
+                            await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, fileLimit, appLimit, resultMapper, searchVersion, onResultsUpdated, onServiceUnavailable, token, localMatches);
                             return;
                         }
                         else
@@ -84,14 +102,13 @@ internal sealed class SearchExecutionEngine : IDisposable
                 }
                 var streamingScope = tracker.IsActiveWindowExplorer ? searchScope : null;
                 var streamingContextDirectory = isInlineSearchContext ? (!string.IsNullOrWhiteSpace(searchScope) ? searchScope : tracker.ActivePath ?? tracker.LastActiveExplorerPath) : tracker.LastActiveExplorerPath;
-                await PerformStreamingSearchAsync(query, streamingScope, streamingContextDirectory, isInlineSearchContext, searchVersion, onResultsUpdated, onServiceUnavailable, token);
+                await PerformStreamingSearchAsync(query, streamingScope, streamingContextDirectory, isInlineSearchContext, fileLimit, appLimit, resultMapper, searchVersion, onResultsUpdated, onServiceUnavailable, token);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
                 Logger.Log($"[SearchExecutionEngine] PerformSearch failed: {ex}", LogLevel.Error);
             }
-
             finally
             {
                 _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -103,10 +120,8 @@ internal sealed class SearchExecutionEngine : IDisposable
                             onSearchStateChanged(false);
                         }
                     }
-
                 }));
             }
-
         }, token);
     }
 
@@ -115,6 +130,9 @@ internal sealed class SearchExecutionEngine : IDisposable
         string? searchScope,
         string? contextDirectory,
         bool isInlineSearchContext,
+        int fileLimit,
+        int appLimit,
+        Func<SearchResponse, string?, List<AppSearchResult>> resultMapper,
         int searchVersion,
         Action<List<AppSearchResult>, string, bool> onResultsUpdated,
         Action onServiceUnavailable,
@@ -144,61 +162,13 @@ internal sealed class SearchExecutionEngine : IDisposable
                     };
                 }
 
-                var uiResults = SearchResultMapper.BuildQuickResults(snapshot, query, searchScope, contextDirectory, isInlineSearchContext);
+                var uiResults = resultMapper(snapshot, contextDirectory);
 
                 if (localMatches != null && localMatches.Count > 0)
                 {
-                    var combinedResults = new List<AppSearchResult>();
-                    var instantItems = new List<AppSearchResult>();
-                    var globalItems = new List<AppSearchResult>();
-                    var passedHeader = false;
-                    var searchHeaderTitle = TranslationManager.Instance["Search_SectionHeader"];
-
-                    foreach (var item in uiResults)
-                    {
-                        if (!passedHeader)
-                        {
-                            if (item.ResultKind == "SectionHeader" && item.Name == searchHeaderTitle)
-                            {
-                                passedHeader = true;
-                                continue;
-                            }
-                            if (item.IsInstantResult || item.IsPluginSearchAction || item.ResultKind == "SectionHeader")
-                            {
-                                instantItems.Add(item);
-                            }
-                            else
-                            {
-                                passedHeader = true;
-                                globalItems.Add(item);
-                            }
-                        }
-                        else
-                        {
-                            globalItems.Add(item);
-                        }
-                    }
-
-                    // 1. Instant Commands first
-                    combinedResults.AddRange(instantItems);
-
-                    // 2. Current Folder second
-                    SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_LocalFolderHeader"] ?? "Current Folder", query);
-                    combinedResults.AddRange(localMatches);
-
-                    // 3. Global Search third
-                    if (globalItems.Count > 0)
-                    {
-                        SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_GlobalSearchHeader"] ?? "Global Search", query);
-                        combinedResults.AddRange(globalItems);
-                    }
-
-                    for (var idx = 0; idx < combinedResults.Count; idx++)
-                    {
-                        combinedResults[idx].Index = idx;
-                    }
-                    uiResults = combinedResults;
+                    uiResults = InlineListSearchHelper.MergeLocalMatches(uiResults, localMatches, query);
                 }
+
 
                 if (final && uiResults.Count == 0)
                     uiResults.Add(SearchResultMapper.CreateNoResultsResult(query));
@@ -216,7 +186,7 @@ internal sealed class SearchExecutionEngine : IDisposable
                 _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplySnapshot));
         }
 
-        var ok = await _searchService.SearchStreamingAsync(query, 51, 51, searchScope, (result, isApplication) =>
+        var ok = await _searchService.SearchStreamingAsync(query, fileLimit, appLimit, searchScope, (result, isApplication) =>
         {
             token.ThrowIfCancellationRequested();
 

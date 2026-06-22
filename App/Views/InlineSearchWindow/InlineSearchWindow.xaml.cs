@@ -246,6 +246,12 @@ public partial class InlineSearchWindow : Window, ISearchWindow
     }
 
     public void UpdateActionsLayout() => _inputHandler.UpdateActionsLayout();
+
+    public void FocusSearch()
+    {
+        SearchBox.SearchTextBox.Focus();
+        Keyboard.Focus(SearchBox.SearchTextBox);
+    }
     public void LaunchByShortcutIndex(int num) => _inputHandler.LaunchByShortcutIndex(num);
     public void OpenFileOrFolderExternal(string path) => InlineSearchNavigator.OpenFileOrFolderExternal(this, path);
     public void OpenFileOrFolderAsAdminExternal(string path) => InlineSearchNavigator.OpenFileOrFolderAsAdminExternal(this, path);

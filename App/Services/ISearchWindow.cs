@@ -20,4 +20,5 @@ public interface ISearchWindow : IPluginSearchWindow
     ListBox LstActions { get; }
     string SearchText { get; }
     void UpdateActionsLayout();
+    void FocusSearch();
 }
