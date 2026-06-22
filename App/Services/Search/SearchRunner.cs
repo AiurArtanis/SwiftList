@@ -31,20 +31,20 @@ public class SearchRunner : IDisposable
 
         // Short debounce for typing
 
-        _ = Task.Delay(50, token).ContinueWith(t =>
+        _ = Task.Delay(150, token).ContinueWith(t =>
         {
             if (t.IsCanceled) return;
             if (string.IsNullOrWhiteSpace(query))
             {
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     onSearchStateChanged(false);
                     onResultsUpdated(new List<AppSearchResult>(), true);
-                });
+                }));
                 return;
             }
 
-            System.Windows.Application.Current.Dispatcher.Invoke(() => onSearchStateChanged(true));
+            _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => onSearchStateChanged(true)));
 
             _ = Task.Run(async () =>
             {

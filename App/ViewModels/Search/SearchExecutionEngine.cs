@@ -19,11 +19,11 @@ internal sealed class SearchExecutionEngine : IDisposable
         var cts = new CancellationTokenSource();
         _debounceCts = cts;
 
-        _ = Task.Delay(35, cts.Token).ContinueWith(t =>
+        _ = Task.Delay(150, cts.Token).ContinueWith(t =>
         {
             if (t.IsCanceled) return;
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                PerformSearch(query, searchScope, isInlineSearchContext, onSearchStateChanged, onResultsUpdated, onServiceUnavailable));
+            _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                PerformSearch(query, searchScope, isInlineSearchContext, onSearchStateChanged, onResultsUpdated, onServiceUnavailable)));
         }, cts.Token);
     }
 
@@ -221,7 +221,7 @@ internal sealed class SearchExecutionEngine : IDisposable
             }
 
             if (final)
-                System.Windows.Application.Current.Dispatcher.Invoke(new Action(ApplySnapshot));
+                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplySnapshot));
             else
                 _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplySnapshot));
         }
@@ -267,6 +267,14 @@ internal sealed class SearchExecutionEngine : IDisposable
 
     public void CancelPendingSearch()
     {
+        try
+        {
+            _debounceCts?.Cancel();
+            _debounceCts?.Dispose();
+            _debounceCts = null;
+        }
+        catch { }
+
         lock (_searchCtsLock)
         {
             if (_searchCts != null)

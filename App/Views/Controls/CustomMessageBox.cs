@@ -59,10 +59,32 @@ public static class CustomMessageBox
                 }
             }
 
+            if (win.Owner == null)
+            {
+                // Fallback to any visible window (excluding other messagebox windows)
+                foreach (Window w in Application.Current.Windows)
+                {
+                    if (w.IsVisible && w != win && w.GetType().Name != "CustomMessageBoxWindow")
+                    {
+                        win.Owner = w;
+                        break;
+                    }
+                }
+            }
+
             if (win.Owner == null && Application.Current.MainWindow != null && Application.Current.MainWindow != win && Application.Current.MainWindow.IsVisible)
             {
                 win.Owner = Application.Current.MainWindow;
             }
+        }
+
+        if (win.Owner != null)
+        {
+            win.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+        else
+        {
+            win.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         }
 
         win.ShowDialog();
