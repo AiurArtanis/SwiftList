@@ -19,12 +19,20 @@ internal sealed class SearchExecutionEngine : IDisposable
         var cts = new CancellationTokenSource();
         _debounceCts = cts;
 
-        _ = Task.Delay(150, cts.Token).ContinueWith(t =>
+        var delay = string.IsNullOrEmpty(query) || query.Length <= 1 ? 0 : 30;
+        if (delay == 0)
         {
-            if (t.IsCanceled) return;
-            _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                PerformSearch(query, searchScope, isInlineSearchContext, onSearchStateChanged, onResultsUpdated, onServiceUnavailable)));
-        }, cts.Token);
+            PerformSearch(query, searchScope, isInlineSearchContext, onSearchStateChanged, onResultsUpdated, onServiceUnavailable);
+        }
+        else
+        {
+            _ = Task.Delay(delay, cts.Token).ContinueWith(t =>
+            {
+                if (t.IsCanceled) return;
+                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                    PerformSearch(query, searchScope, isInlineSearchContext, onSearchStateChanged, onResultsUpdated, onServiceUnavailable)));
+            }, cts.Token);
+        }
     }
 
     public void PerformSearch(string query, string? searchScope, bool isInlineSearchContext, Action<bool> onSearchStateChanged, Action<List<AppSearchResult>, string, bool> onResultsUpdated, Action onServiceUnavailable)
@@ -60,10 +68,7 @@ internal sealed class SearchExecutionEngine : IDisposable
                     var listItems = adapter.GetListItems(tracker.ActiveHwnd);
                     if (listItems.Any())
                     {
-                        var contextDirectory = !string.IsNullOrWhiteSpace(searchScope)
-                            ? searchScope
-                            : (tracker.ActivePath ?? tracker.LastActiveExplorerPath);
-
+                        var contextDirectory = !string.IsNullOrWhiteSpace(searchScope) ? searchScope : (tracker.ActivePath ?? tracker.LastActiveExplorerPath);
                         if (tracker.IsActiveWindowExplorer)
                         {
                             var localMatches = InlineListSearchHelper.GetLocalMatches(query, listItems, contextDirectory, token);
@@ -77,27 +82,11 @@ internal sealed class SearchExecutionEngine : IDisposable
                         }
                     }
                 }
-
-                // Fall through to streaming search when the adapter provides no list items
-
-                // (e.g. desktop, or adapters that only implement ExecuteItem).
-
-                // Only restrict scope to the current directory when an actual Explorer window is active;
-
-                // for all other contexts (desktop, dialog, etc.) scope must be null so global search runs.
-
                 var streamingScope = tracker.IsActiveWindowExplorer ? searchScope : null;
-
-                var streamingContextDirectory = isInlineSearchContext
-
-                    ? (!string.IsNullOrWhiteSpace(searchScope) ? searchScope : tracker.ActivePath ?? tracker.LastActiveExplorerPath)
-
-                    : tracker.LastActiveExplorerPath;
+                var streamingContextDirectory = isInlineSearchContext ? (!string.IsNullOrWhiteSpace(searchScope) ? searchScope : tracker.ActivePath ?? tracker.LastActiveExplorerPath) : tracker.LastActiveExplorerPath;
                 await PerformStreamingSearchAsync(query, streamingScope, streamingContextDirectory, isInlineSearchContext, searchVersion, onResultsUpdated, onServiceUnavailable, token);
             }
-
             catch (OperationCanceledException) { }
-
             catch (Exception ex)
             {
                 Logger.Log($"[SearchExecutionEngine] PerformSearch failed: {ex}", LogLevel.Error);
@@ -135,7 +124,8 @@ internal sealed class SearchExecutionEngine : IDisposable
         var streamedResponse = new SearchResponse();
         object responseLock = new();
         var streamedCount = 0;
-        var hasRenderedFirstBatch = 0;
+        var renderState = 0;
+        var startTime = Environment.TickCount;
 
         void RenderSnapshot(bool final)
         {
@@ -239,11 +229,26 @@ internal sealed class SearchExecutionEngine : IDisposable
                 streamedCount++;
             }
 
-            if (Volatile.Read(ref hasRenderedFirstBatch) == 0 && Volatile.Read(ref streamedCount) < 9)
+            if (Volatile.Read(ref renderState) == 0 && Volatile.Read(ref streamedCount) < 9)
                 return;
-            if (Interlocked.CompareExchange(ref hasRenderedFirstBatch, 1, 0) == 0)
+            if (Interlocked.CompareExchange(ref renderState, 1, 0) == 0)
             {
-                RenderSnapshot(final: false);
+                var elapsed = Environment.TickCount - startTime;
+                if (elapsed < 40)
+                {
+                    _ = Task.Delay(40 - elapsed, token).ContinueWith(t =>
+                    {
+                        if (t.IsCanceled) return;
+                        if (Volatile.Read(ref renderState) == 1)
+                        {
+                            RenderSnapshot(final: false);
+                        }
+                    }, token);
+                }
+                else
+                {
+                    RenderSnapshot(final: false);
+                }
             }
 
         }, token);
@@ -261,34 +266,20 @@ internal sealed class SearchExecutionEngine : IDisposable
         }
 
         token.ThrowIfCancellationRequested();
-        Interlocked.Exchange(ref hasRenderedFirstBatch, 1);
+        Interlocked.Exchange(ref renderState, 2);
         RenderSnapshot(final: true);
     }
 
     public void CancelPendingSearch()
     {
-        try
-        {
-            _debounceCts?.Cancel();
-            _debounceCts?.Dispose();
-            _debounceCts = null;
-        }
-        catch { }
-
+        try { _debounceCts?.Cancel(); _debounceCts?.Dispose(); _debounceCts = null; } catch { }
         lock (_searchCtsLock)
         {
-            if (_searchCts != null)
-            {
-                _searchCts.Cancel();
-                _searchCts.Dispose();
-                _searchCts = null;
-            }
+            _searchCts?.Cancel();
+            _searchCts?.Dispose();
+            _searchCts = null;
         }
     }
 
-    public void Dispose()
-    {
-        CancelPendingSearch();
-        _debounceCts?.Dispose();
-    }
+    public void Dispose() { CancelPendingSearch(); _debounceCts?.Dispose(); }
 }

@@ -5,6 +5,68 @@ namespace SwiftList.Core;
 
 public class SearchService : IDisposable
 {
+    private static NamedPipeClientStream? _preconnectedPipe;
+    private static readonly object _pipeLock = new();
+    private static Task? _preconnectTask;
+
+    public SearchService() => StartPreconnect();
+
+    private static void StartPreconnect()
+    {
+        lock (_pipeLock)
+        {
+            if (_preconnectedPipe != null && _preconnectedPipe.IsConnected)
+                return;
+            if (_preconnectTask != null && !_preconnectTask.IsCompleted)
+                return;
+
+            _preconnectTask = Task.Run(async () =>
+            {
+                try
+                {
+                    var pipe = new NamedPipeClientStream(".", "SwiftListPipe", PipeDirection.InOut, PipeOptions.Asynchronous);
+                    await pipe.ConnectAsync(5000).ConfigureAwait(false);
+                    lock (_pipeLock)
+                    {
+                        if (_preconnectedPipe != null)
+                        {
+                            try { _preconnectedPipe.Dispose(); } catch { }
+                        }
+                        _preconnectedPipe = pipe;
+                    }
+                }
+                catch
+                {
+                    // Silent catch for background preconnection failures
+                }
+            });
+        }
+    }
+
+    private static async Task<NamedPipeClientStream> GetPipeAsync(CancellationToken token)
+    {
+        NamedPipeClientStream? pipe = null;
+        lock (_pipeLock)
+        {
+            if (_preconnectedPipe != null && _preconnectedPipe.IsConnected)
+            {
+                pipe = _preconnectedPipe;
+                _preconnectedPipe = null;
+            }
+        }
+
+        if (pipe != null)
+        {
+            StartPreconnect();
+            return pipe;
+        }
+
+        pipe = new NamedPipeClientStream(".", "SwiftListPipe", PipeDirection.InOut, PipeOptions.Asynchronous);
+        await pipe.ConnectAsync(1000, token).ConfigureAwait(false);
+        StartPreconnect();
+        return pipe;
+    }
+
     public async Task<UsnIndexer.IndexerStatus> GetStatusAsync(CancellationToken token = default)
     {
         var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.Status }, token).ConfigureAwait(false);
@@ -134,16 +196,27 @@ public class SearchService : IDisposable
 
     private static async Task SendSearchPipeCommandAsync(SearchRequestMessage msg, Action<SearchResult, bool> onResult, CancellationToken token)
     {
-        using var pipe = new NamedPipeClientStream(".", "SwiftListPipe", PipeDirection.InOut, PipeOptions.Asynchronous);
-
-        await pipe.ConnectAsync(1000, token).ConfigureAwait(false);
-        await SearchRequestBinarySerializer.WriteSearchRequestAsync(pipe, msg, token).ConfigureAwait(false);
-
-        await SearchResponseBinarySerializer.ReadAsync(pipe, (result, isApp) =>
+        NamedPipeClientStream pipe;
+        try
         {
-            token.ThrowIfCancellationRequested();
-            onResult(result, isApp);
-        }, token).ConfigureAwait(false);
+            pipe = await GetPipeAsync(token).ConfigureAwait(false);
+        }
+        catch
+        {
+            pipe = new NamedPipeClientStream(".", "SwiftListPipe", PipeDirection.InOut, PipeOptions.Asynchronous);
+            await pipe.ConnectAsync(1000, token).ConfigureAwait(false);
+        }
+
+        using (pipe)
+        {
+            await SearchRequestBinarySerializer.WriteSearchRequestAsync(pipe, msg, token).ConfigureAwait(false);
+
+            await SearchResponseBinarySerializer.ReadAsync(pipe, (result, isApp) =>
+            {
+                token.ThrowIfCancellationRequested();
+                onResult(result, isApp);
+            }, token).ConfigureAwait(false);
+        }
     }
 
     private static bool SearchNetworkDrives(string query, int maxResults, string? directoryFilter, ExclusionRuleSet exclusionRules, Action<SearchResult, bool> onResult, CancellationToken token)
