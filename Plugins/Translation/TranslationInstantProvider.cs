@@ -285,4 +285,8 @@ public class TranslationInstantProvider : IInstantResultProvider
             TokenSemaphore.Release();
         }
     }
+
+    public bool[]? GetHighlightMask(string text, string query) =>
+        // Translation text does not share characters with query, return empty mask to prevent fuzzy matching
+        new bool[text.Length];
 }

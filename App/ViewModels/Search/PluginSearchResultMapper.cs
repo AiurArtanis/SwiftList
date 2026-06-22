@@ -58,7 +58,8 @@ public static class PluginSearchResultMapper
                         IconOverride = iconOverride,
                         InstantResultActionType = item.ActionType ?? "Copy",
                         InstantResultActionArgument = item.ActionArgument ?? string.Empty,
-                        TabCompletion = item.TabCompletion
+                        TabCompletion = item.TabCompletion,
+                        SourceProvider = provider
                     });
                 }
             }
@@ -96,7 +97,8 @@ public static class PluginSearchResultMapper
                 SearchQuery = query,
                 PluginActionId = match.Registration.RuntimeActionId,
                 PluginActionArgumentText = match.ArgumentText,
-                IconOverride = action.Icon
+                IconOverride = action.Icon,
+                SourceProvider = match.Registration.Plugin
             });
             added = true;
         }

@@ -179,4 +179,39 @@ public class EnvironmentVariableInstantProvider : IInstantResultProvider
             };
         }
     }
+
+    public bool[]? GetHighlightMask(string text, string query)
+    {
+        if (string.IsNullOrEmpty(query)) return null;
+        var trimmed = query.Trim();
+
+        var mask = new bool[text.Length];
+        if (text.StartsWith("%") && text.EndsWith("%") && trimmed.StartsWith("%"))
+        {
+            var searchTerm = trimmed.Substring(1);
+            if (searchTerm.EndsWith("%"))
+            {
+                searchTerm = searchTerm.Substring(0, searchTerm.Length - 1);
+            }
+
+            if (string.IsNullOrEmpty(searchTerm)) return mask;
+
+            var textLower = text.ToLowerInvariant();
+            var searchLower = searchTerm.ToLowerInvariant();
+
+            var idx = textLower.IndexOf(searchLower, StringComparison.Ordinal);
+            if (idx >= 0)
+            {
+                for (var i = idx; i < idx + searchLower.Length && i < mask.Length; i++)
+                {
+                    mask[i] = true;
+                }
+            }
+            return mask;
+        }
+        else
+        {
+            return mask;
+        }
+    }
 }

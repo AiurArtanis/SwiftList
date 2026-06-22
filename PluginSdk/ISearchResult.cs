@@ -22,4 +22,9 @@ public interface ISearchResult
 
     /// <summary>Last modified date of the file or folder.</summary>
     DateTime DateModified { get; }
+
+    /// <summary>
+    /// Returns a custom highlight mask if supported.
+    /// </summary>
+    bool[]? GetHighlightMask(string text, string query) => null;
 }

@@ -166,4 +166,33 @@ public class CalculatorInstantProvider : IInstantResultProvider
             TabCompletion = resultStr
         };
     }
+
+    public bool[]? GetHighlightMask(string text, string query)
+    {
+        if (string.IsNullOrEmpty(query)) return null;
+        var trimmed = query.Trim();
+        var mask = new bool[text.Length];
+        
+        if (text.StartsWith(trimmed, StringComparison.OrdinalIgnoreCase))
+        {
+            for (var i = 0; i < trimmed.Length && i < mask.Length; i++)
+            {
+                mask[i] = true;
+            }
+            return mask;
+        }
+
+        var idx = text.IndexOf("=");
+        if (idx > 0)
+        {
+            for (var i = 0; i < idx && i < mask.Length; i++)
+            {
+                if (!char.IsWhiteSpace(text[i]))
+                    mask[i] = true;
+            }
+            return mask;
+        }
+
+        return mask;
+    }
 }

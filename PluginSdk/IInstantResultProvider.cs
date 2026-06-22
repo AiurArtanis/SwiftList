@@ -24,6 +24,11 @@ public interface IInstantResultProvider
     /// Returns null or empty if this query is not handled by the provider.
     /// </summary>
     IEnumerable<InstantResultItem> GetInstantResults(string query);
+
+    /// <summary>
+    /// Returns a custom highlight mask if supported.
+    /// </summary>
+    bool[]? GetHighlightMask(string text, string query) => null;
 }
 
 /// <summary>

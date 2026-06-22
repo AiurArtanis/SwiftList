@@ -49,5 +49,26 @@ public class CommandInstantProvider : IInstantResultProvider
             ActionArgument = actionArg,
             TabCompletion = query
         };
-    }
+     }
+
+     public bool[]? GetHighlightMask(string text, string query)
+     {
+        if (string.IsNullOrEmpty(query)) return null;
+        var trimmed = query.Trim();
+        var target = trimmed.Substring(1).Trim();
+        var mask = new bool[text.Length];
+        if (string.IsNullOrEmpty(target)) return mask;
+
+        var textLower = text.ToLowerInvariant();
+        var targetLower = target.ToLowerInvariant();
+        var idx = textLower.IndexOf(targetLower, StringComparison.Ordinal);
+        if (idx >= 0)
+        {
+            for (var i = idx; i < idx + targetLower.Length && i < mask.Length; i++)
+            {
+                mask[i] = true;
+            }
+        }
+        return mask;
+     }
 }

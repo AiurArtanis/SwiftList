@@ -55,70 +55,90 @@ public static class TextHighlighter
             return;
         }
 
-        // Split highlight into terms and normalize them (same logic as Search)
-        string? targetDrive = null;
-        var termsList = new List<string>();
-        var normalizedHighlight = NormalizePathSeparators(highlight.Trim()).ToLowerInvariant();
-
-        if (ContainsPathSeparator(normalizedHighlight))
+        bool[]? highlights = null;
+        if (textBlock.DataContext is PluginSdk.ISearchResult searchResult)
         {
-            if (TryNormalizeDrivePath(normalizedHighlight, out _, out var normalizedDrivePath))
+            try
             {
-                termsList.Add(normalizedDrivePath);
+                var mask = searchResult.GetHighlightMask(fullText, highlight);
+                if (mask != null && mask.Length == fullText.Length)
+                {
+                    highlights = mask;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                termsList.Add(normalizedHighlight);
+                Core.Logger.Log($"[TextHighlighter] Custom highlighting error: {ex.Message}", Core.LogLevel.Error);
             }
         }
-        else
-        {
-            var rawTerms = normalizedHighlight.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-            foreach (var rawTerm in rawTerms)
+        if (highlights == null)
+        {
+            // Split highlight into terms and normalize them (same logic as Search)
+            string? targetDrive = null;
+            var termsList = new List<string>();
+            var normalizedHighlight = NormalizePathSeparators(highlight.Trim()).ToLowerInvariant();
+
+            if (ContainsPathSeparator(normalizedHighlight))
             {
-                if (rawTerm.Length >= 2 && char.IsLetter(rawTerm[0]) && rawTerm[1] == Path.VolumeSeparatorChar)
+                if (TryNormalizeDrivePath(normalizedHighlight, out _, out var normalizedDrivePath))
                 {
-                    targetDrive = rawTerm[0].ToString();
+                    termsList.Add(normalizedDrivePath);
                 }
                 else
                 {
-                    termsList.Add(rawTerm);
+                    termsList.Add(normalizedHighlight);
+                }
+            }
+            else
+            {
+                var rawTerms = normalizedHighlight.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (var rawTerm in rawTerms)
+                {
+                    if (rawTerm.Length >= 2 && char.IsLetter(rawTerm[0]) && rawTerm[1] == Path.VolumeSeparatorChar)
+                    {
+                        targetDrive = rawTerm[0].ToString();
+                    }
+                    else
+                    {
+                        termsList.Add(rawTerm);
+                    }
+                }
+
+                if (targetDrive != null)
+                {
+                    termsList.Add(targetDrive + Path.VolumeSeparatorChar);
                 }
             }
 
-            if (targetDrive != null)
+            var terms = termsList.ToArray();
+
+            // Build a list of highlight ranges
+            highlights = new bool[fullText.Length];
+            var fullTextLower = fullText.ToLowerInvariant();
+
+            foreach (var term in terms)
             {
-                termsList.Add(targetDrive + Path.VolumeSeparatorChar);
-            }
-        }
+                var termLower = term;
+                var foundAny = false;
+                var startIdx = 0;
+                while (startIdx < fullTextLower.Length)
+                {
+                    var foundIdx = fullTextLower.IndexOf(termLower, startIdx, StringComparison.Ordinal);
+                    if (foundIdx < 0) break;
 
-        var terms = termsList.ToArray();
+                    for (var i = foundIdx; i < foundIdx + termLower.Length && i < highlights.Length; i++)
+                        highlights[i] = true;
 
-        // Build a list of highlight ranges
-        var highlights = new bool[fullText.Length];
-        var fullTextLower = fullText.ToLowerInvariant();
+                    foundAny = true;
+                    startIdx = foundIdx + 1;
+                }
 
-        foreach (var term in terms)
-        {
-            var termLower = term;
-            var foundAny = false;
-            var startIdx = 0;
-            while (startIdx < fullTextLower.Length)
-            {
-                var foundIdx = fullTextLower.IndexOf(termLower, startIdx, StringComparison.Ordinal);
-                if (foundIdx < 0) break;
-
-                for (var i = foundIdx; i < foundIdx + termLower.Length && i < highlights.Length; i++)
-                    highlights[i] = true;
-
-                foundAny = true;
-                startIdx = foundIdx + 1;
-            }
-
-            if (!foundAny)
-            {
-                FuzzyHighlightMatcher.MarkFuzzyMatch(fullTextLower, termLower, highlights);
+                if (!foundAny)
+                {
+                    FuzzyHighlightMatcher.MarkFuzzyMatch(fullTextLower, termLower, highlights);
+                }
             }
         }
 

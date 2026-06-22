@@ -32,6 +32,16 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     public string InstantResultActionType { get; set; } = "Copy";
     public string InstantResultActionArgument { get; set; } = string.Empty;
     public string? TabCompletion { get; set; }
+    public object? SourceProvider { get; set; }
+
+    public bool[]? GetHighlightMask(string text, string query)
+    {
+        if (SourceProvider is PluginSdk.IInstantResultProvider instantProvider)
+        {
+            return instantProvider.GetHighlightMask(text, query);
+        }
+        return null;
+    }
 
     // Visual properties
 

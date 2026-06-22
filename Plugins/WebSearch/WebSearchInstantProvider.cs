@@ -145,4 +145,40 @@ public class WebSearchInstantProvider : IInstantResultProvider
 
         return (iconNameOrPath.Trim(), string.Empty);
     }
+
+    public bool[]? GetHighlightMask(string text, string query)
+    {
+        if (string.IsNullOrEmpty(query)) return null;
+        var sources = LoadSearchSources();
+        SearchSourceItem? matchedSource = null;
+        var prefix = "";
+
+        foreach (var src in sources)
+        {
+            var pfx = src.Keyword + " ";
+            if (query.StartsWith(pfx, StringComparison.OrdinalIgnoreCase))
+            {
+                matchedSource = src;
+                prefix = pfx;
+                break;
+            }
+        }
+
+        if (matchedSource == null) return null;
+        var mask = new bool[text.Length];
+        var searchTerm = query.Substring(prefix.Length).Trim();
+        if (string.IsNullOrEmpty(searchTerm)) return mask;
+
+        var textLower = text.ToLowerInvariant();
+        var termLower = searchTerm.ToLowerInvariant();
+        var idx = textLower.IndexOf(termLower, StringComparison.Ordinal);
+        if (idx >= 0)
+        {
+            for (var i = idx; i < idx + termLower.Length && i < mask.Length; i++)
+            {
+                mask[i] = true;
+            }
+        }
+        return mask;
+    }
 }
