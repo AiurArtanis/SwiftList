@@ -5,7 +5,7 @@ public sealed class RuntimeIndex
     private int _loadedCount;
     private readonly Dictionary<UInt128, int> _deltaIdToIndex = new();
     private readonly Dictionary<char, List<int>> _nameCharDelta = new();
-    private readonly Dictionary<UInt128, string> _pathMemo = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<UInt128, string> _pathMemo = new();
     private readonly List<UInt128> _ids = new();
     private readonly List<int> _parentIndexes = new();
     private readonly List<int> _nameIds = new();
@@ -40,7 +40,7 @@ public sealed class RuntimeIndex
     }
     internal Dictionary<UInt128, int> DeltaIdToIndex => _deltaIdToIndex;
     internal Dictionary<char, List<int>> NameCharDelta => _nameCharDelta;
-    internal Dictionary<UInt128, string> PathMemo => _pathMemo;
+    internal System.Collections.Concurrent.ConcurrentDictionary<UInt128, string> PathMemo => _pathMemo;
     internal NameTable Names => _names;
     internal Dictionary<int, string[]> DeltaNameAliases => _deltaNameAliases;
     internal System.Collections.BitArray HasAlias
