@@ -114,6 +114,12 @@ internal sealed class NetworkIndex
             results.AddRange(_searcher.Search(_runtime, rawQuery, limit, token, directoryFilterLower));
     }
 
+    public void SearchStreaming(ParsedSearchQuery parsed, string rawQuery, string? directoryFilterLower, int limit, Action<SearchResult> onResult, CancellationToken token)
+    {
+        lock (_gate)
+            _searcher.SearchStreaming(_runtime, rawQuery, limit, onResult, token, directoryFilterLower);
+    }
+
     public bool ApplyCreatedOrChanged(string root, string path, ExclusionRuleSet? exclusionRules = null)
     {
         lock (_gate)

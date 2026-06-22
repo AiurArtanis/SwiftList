@@ -27,30 +27,49 @@ public class SearchService : IDisposable
             AppLimit = maxAppResults,
             DirectoryFilter = directoryFilter,
             Query = query
-
         };
 
-        try
+        var localTask = Task.Run(async () =>
         {
-            await SendSearchPipeCommandAsync(msg, (result, isApp) =>
+            try
             {
-                if (isApp || !exclusionRules.IsExcluded(result))
-                    onResult(result, isApp);
-            }, token).ConfigureAwait(false);
-            SearchNetworkDrives(query, fileCandidateLimit, directoryFilter, exclusionRules, onResult, token);
-            return true;
-        }
+                await SendSearchPipeCommandAsync(msg, (result, isApp) =>
+                {
+                    if (isApp || !exclusionRules.IsExcluded(result))
+                        onResult(result, isApp);
+                }, token).ConfigureAwait(false);
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[SearchService] Streaming local search failed: {ex.Message}", LogLevel.Error);
+                return false;
+            }
+        }, token);
 
-        catch (OperationCanceledException)
+        var networkTask = Task.Run(() =>
         {
-            throw;
-        }
+            try
+            {
+                return SearchNetworkDrives(query, fileCandidateLimit, directoryFilter, exclusionRules, onResult, token);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[SearchService] Network drive search failed: {ex.Message}", LogLevel.Error);
+                return false;
+            }
+        }, token);
 
-        catch (Exception ex)
-        {
-            Logger.Log($"[SearchService] Streaming search failed: {ex.Message}", LogLevel.Error);
-            return SearchNetworkDrives(query, fileCandidateLimit, directoryFilter, exclusionRules, onResult, token);
-        }
+        var results = await Task.WhenAll(localTask, networkTask).ConfigureAwait(false);
+        return results[0] || results[1];
     }
 
     public void RefreshNetworkIndexes() => UserNetworkDriveSearch.Refresh();
@@ -131,15 +150,18 @@ public class SearchService : IDisposable
     {
         try
         {
-            var results = UserNetworkDriveSearch.Search(query, maxResults, token, directoryFilter);
-            foreach (var result in results)
+            var found = 0;
+            UserNetworkDriveSearch.SearchStreaming(query, maxResults, result =>
             {
                 token.ThrowIfCancellationRequested();
                 if (!exclusionRules.IsExcluded(result))
+                {
+                    Interlocked.Increment(ref found);
                     onResult(result, false);
-            }
+                }
+            }, token, directoryFilter);
 
-            return results.Count > 0;
+            return found > 0;
         }
 
         catch (OperationCanceledException)

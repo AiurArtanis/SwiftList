@@ -80,11 +80,7 @@ internal static class SearchCoordinator
 
         if (snapshots.Length == 1)
         {
-            foreach (var result in _recordSearcher.Search(snapshots[0], query, limit, token, directoryFilter))
-            {
-                token.ThrowIfCancellationRequested();
-                onResult(result);
-            }
+            _recordSearcher.SearchStreaming(snapshots[0], query, limit, onResult, token, directoryFilter);
             return;
         }
 
@@ -100,8 +96,7 @@ internal static class SearchCoordinator
             i =>
             {
                 token.ThrowIfCancellationRequested();
-                var driveResults = _recordSearcher.Search(snapshots[i], query, limit, token, directoryFilter);
-                foreach (var result in driveResults)
+                _recordSearcher.SearchStreaming(snapshots[i], query, limit, result =>
                 {
                     token.ThrowIfCancellationRequested();
                     lock (writeLock)
@@ -109,7 +104,7 @@ internal static class SearchCoordinator
                         token.ThrowIfCancellationRequested();
                         onResult(result);
                     }
-                }
+                }, token, directoryFilter);
             });
     }
 
