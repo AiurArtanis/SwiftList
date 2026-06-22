@@ -138,47 +138,6 @@ public class SearchEngine : IDisposable
         }
     }
 
-    public SearchResponse Search(string query, int fileLimit = 1000, int appLimit = 1000, string? directoryFilter = null, CancellationToken requestToken = default)
-    {
-        RecordSearchActivity();
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            return new SearchResponse();
-        }
-
-        // Cancel any previous search
-        CancellationTokenSource searchCts;
-        lock (_searchLock)
-        {
-            _searchCts?.Cancel();
-            _searchCts = new CancellationTokenSource();
-            searchCts = _searchCts;
-        }
-
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(searchCts.Token, requestToken);
-        var searchToken = linkedCts.Token;
-
-        var parsed = SearchQueryParser.Parse(query);
-        var appResults = parsed.IsPathMode
-            ? new List<SearchResult>()
-            : _appIndex.Search(query, appLimit, searchToken);
-
-        var status = GetStatus();
-        if (status.State != "ready")
-        {
-            Logger.Log($"[SearchEngine] File search skipped because index is not ready. State: {status.State}", LogLevel.Warn);
-            return new SearchResponse
-            {
-                AppResults = appResults
-            };
-        }
-
-        return new SearchResponse
-        {
-            FileResults = _indexer.Search(query, fileLimit, searchToken, directoryFilter),
-            AppResults = appResults
-        };
-    }
 
     public bool SearchStreaming(
         string query,

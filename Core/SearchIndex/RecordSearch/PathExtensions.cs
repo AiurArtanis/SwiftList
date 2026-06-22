@@ -52,19 +52,32 @@ internal static class PathExtensions
         List<SearchResult> results,
         CancellationToken token)
     {
-        if (!parsed.PathEndsWithSeparator || parsed.ExactPathLower == null || parsed.TargetDrive == null)
+        if (parsed.ExactPathLower == null || parsed.TargetDrive == null)
             return false;
 
         if (!index.TryResolvePath(parsed.ExactPathLower, out var parentId, out var childPrefixLower))
             return false;
 
+        if (childPrefixLower.Length == 0)
+        {
+            if (index.TryGetIndexById(parentId, out var parentIndex))
+            {
+                results.Add(new SearchResult
+                {
+                    Name = index.GetName(parentIndex),
+                    Path = index.GetFullPath(parentIndex),
+                    IsDir = index.IsDirectory(parentIndex),
+                    Drive = index.SourceKey,
+                    RankSortKey = 0
+                });
+            }
+        }
+
         var pattern = childPrefixLower.Length == 0 ? null : Helpers.GetPattern("child|" + childPrefixLower, "^" + childPrefixLower, parseText: true);
         var matches = new FzfTopN(Math.Max(limit * 8, 64));
         var slab = new FzfSlab();
-        var childCount = 0;
         foreach (var childIndex in index.EnumerateChildren(parentId))
         {
-            childCount++;
             token.ThrowIfCancellationRequested();
             var name = index.GetName(childIndex);
             if (index.IsDeleted(childIndex))
@@ -77,9 +90,6 @@ internal static class PathExtensions
                 ? FzfResultRank.ForDefaultScheme(childIndex, name, new FzfPatternResult(0, 0, 0, 0, false))
                 : FzfResultRank.ForDefaultScheme(childIndex, name, match));
         }
-
-        if (childCount == 0)
-            return false;
 
         foreach (var item in index.Finish(matches.Finish(Math.Max(limit * 8, 64)), limit))
             results.Add(item);

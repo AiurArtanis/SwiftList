@@ -108,11 +108,6 @@ internal sealed class NetworkIndex
         }
     }
 
-    public void Search(ParsedSearchQuery parsed, string rawQuery, string? directoryFilterLower, int limit, List<SearchResult> results, CancellationToken token)
-    {
-        lock (_gate)
-            results.AddRange(_searcher.Search(_runtime, rawQuery, limit, token, directoryFilterLower));
-    }
 
     public void SearchStreaming(ParsedSearchQuery parsed, string rawQuery, string? directoryFilterLower, int limit, Action<SearchResult> onResult, CancellationToken token)
     {

@@ -43,7 +43,6 @@ public class UsnIndexer : IDisposable
         public long NextUsn { get; set; }
     }
 
-    public List<SearchResult> Search(string query, int limit = 500, CancellationToken token = default, string? directoryFilter = null) => SearchCoordinator.Search(_recordIndexes, LockObj, query, limit, token, directoryFilter);
 
     public void SearchStreaming(string query, int limit, Action<SearchResult> onResult, CancellationToken token = default, string? directoryFilter = null) => SearchCoordinator.SearchStreaming(_recordIndexes, LockObj, query, limit, onResult, token, directoryFilter);
 
