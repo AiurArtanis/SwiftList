@@ -18,6 +18,8 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
     {
         InitializeComponent();
         InitializeSelectionChangedHandlers();
+        Views.Controls.ResultsDragDropHelper.Register(LstResults);
+        Views.Controls.ResultsDragDropHelper.Register(LstGridResults);
 
         // Dynamically load custom GridView columns from ResultColumnProviders
         Loaded += (s, e) =>

@@ -128,7 +128,7 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
 
             Logger.Log($"[Diagnosis] SearchScope='{SearchScope}', isDialog={isDialog}, lastPath='{lastPath}', dirExists={dirExists}, isSamePath={isSamePath}", LogLevel.Debug);
 
-            if (isDialog && dirExists && !string.IsNullOrEmpty(lastPath) && (string.IsNullOrEmpty(SearchScope) || !isSamePath))
+            if (IsInlineSearchContext && isDialog && dirExists && !string.IsNullOrEmpty(lastPath) && (string.IsNullOrEmpty(SearchScope) || !isSamePath))
             {
                 string? targetName = null;
                 var className = tracker.LastActiveExplorerClassName;
