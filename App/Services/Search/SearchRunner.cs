@@ -137,9 +137,9 @@ public class SearchRunner : IDisposable
 
     private static AppSearchResult CreateUiResult(SearchResult item, string query, int index) => new AppSearchResult
     {
-        Name = item.Name,
+        Name = string.IsNullOrWhiteSpace(item.Name) ? item.Path : item.Name,
         FullPath = item.Path,
-        ParentDir = Path.GetDirectoryName(item.Path) ?? item.Drive + ":\\",
+        ParentDir = Path.GetDirectoryName(item.Path) ?? string.Empty,
         IsDir = item.IsDir,
         Drive = item.Drive,
         ResultKind = "File",

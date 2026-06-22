@@ -15,6 +15,20 @@ public static class SearchResultMapper
         var appResults = response.AppResults;
         var fileResults = response.FileResults;
 
+        if (fileResults != null && !string.IsNullOrWhiteSpace(query))
+        {
+            try
+            {
+                var trimmed = query.Trim();
+                if (trimmed.EndsWith(":\\") || trimmed.EndsWith(":/") || Directory.Exists(trimmed))
+                {
+                    var normalizedQuery = NormalizePath(trimmed);
+                    fileResults.RemoveAll(x => string.Equals(NormalizePath(x.Path), normalizedQuery, StringComparison.OrdinalIgnoreCase));
+                }
+            }
+            catch { }
+        }
+
         if (isInlineWindow && scope != "__UniversalList__")
         {
             appResults = new List<SearchResult>();
@@ -174,12 +188,12 @@ public static class SearchResultMapper
         var parentDir = Path.GetDirectoryName(item.Path);
         return new AppSearchResult
         {
-            Name = item.Name,
+            Name = string.IsNullOrWhiteSpace(item.Name) ? item.Path : item.Name,
             FullPath = item.Path,
             ParentDir = GetParentDisplayText(item, isApplication, scope),
             ContextDirectory = item.IsDir ? item.Path : (parentDir ?? item.Drive + ":\\"),
             IsDir = item.IsDir,
-            Drive = item.Drive,
+            Drive = item.Drive.ToString(),
             ResultKind = isApplication ? "Application" : "File",
             Index = index,
             SearchQuery = query
@@ -213,7 +227,7 @@ public static class SearchResultMapper
             return FormatRelativeParentPath(parentDir, scope);
         }
 
-        return parentDir ?? item.Drive + ":\\";
+        return parentDir ?? string.Empty;
     }
 
     public static string FormatRelativeParentPath(string parentDir, string scope)

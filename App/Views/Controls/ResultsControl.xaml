@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:controls="clr-namespace:SwiftList.App.Views.Controls"
              xmlns:services="clr-namespace:SwiftList.App.Services"
+             xmlns:helpers="clr-namespace:SwiftList.App.Helpers"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="600">
     <UserControl.Resources>
@@ -56,16 +57,22 @@
                             <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderName]}" Width="320">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Image Source="{Binding Icon}" Width="18" Height="18" Margin="0,0,10,0" VerticalAlignment="Center"
+                                        <Grid Width="{Binding Path=ActualWidth, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" VerticalAlignment="Center">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Image Grid.Column="0" Source="{Binding Icon}" Width="18" Height="18" Margin="0,0,10,0" VerticalAlignment="Center"
                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
-                                            <TextBlock Text="{Binding Name}"
-                                                       FontFamily="Microsoft YaHei UI"
-                                                       FontSize="13"
-                                                       Foreground="{DynamicResource TextPrimary2}"
-                                                       VerticalAlignment="Center"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
+                                            <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="0,0,26,0">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontFamily="Microsoft YaHei UI"
+                                                           FontSize="13"
+                                                           Foreground="{DynamicResource TextPrimary2}"
+                                                           VerticalAlignment="Center"
+                                                           helpers:MarqueeBehavior.EnableMarquee="True"/>
+                                            </ScrollViewer>
+                                        </Grid>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
@@ -73,11 +80,16 @@
                             <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderPath]}" Width="260">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding FullPath}"
-                                                   FontFamily="Microsoft YaHei UI"
-                                                   Foreground="{DynamicResource TextSecondary2}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   FontSize="12"/>
+                                        <Grid Width="{Binding Path=ActualWidth, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" VerticalAlignment="Center">
+                                            <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="0,0,24,0">
+                                                <TextBlock Text="{Binding ParentDir}"
+                                                           FontFamily="Microsoft YaHei UI"
+                                                           Foreground="{DynamicResource TextSecondary2}"
+                                                           FontSize="12"
+                                                           VerticalAlignment="Center"
+                                                           helpers:MarqueeBehavior.EnableMarquee="True"/>
+                                            </ScrollViewer>
+                                        </Grid>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
