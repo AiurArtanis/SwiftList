@@ -53,6 +53,9 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
             // File icon (document shape)
             : "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z");
 
+    private static readonly SemaphoreSlim _dateModifiedSemaphore = new(8);
+    private static readonly SemaphoreSlim _iconSemaphore = new(4);
+
     private System.Windows.Media.ImageSource? _icon;
     private bool _iconLoadingStarted;
 
@@ -83,8 +86,9 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         var pathCopy = FullPath;
         var isDirCopy = IsDir;
 
-        Task.Run(() =>
+        Task.Run(async () =>
         {
+            await _iconSemaphore.WaitAsync();
             try
             {
                 var realIcon = ShellIconHelper.GetIconForPath(pathCopy, isDirCopy);
@@ -93,7 +97,7 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
                     var app = System.Windows.Application.Current;
                     if (app != null)
                     {
-                        app.Dispatcher.BeginInvoke(new Action(() =>
+                        _ = app.Dispatcher.BeginInvoke(new Action(() =>
                         {
                             _icon = realIcon;
                             OnPropertyChanged(nameof(Icon));
@@ -108,6 +112,10 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
             catch
             {
                 // Ignore
+            }
+            finally
+            {
+                _iconSemaphore.Release();
             }
         });
     }
@@ -142,31 +150,66 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
 
     // Lazy-loaded File Date Modified
     private DateTime? _dateModified;
+    private bool _dateModifiedLoadingStarted;
     public DateTime DateModified
     {
         get
         {
             if (_dateModified.HasValue) return _dateModified.Value;
+            if (!_dateModifiedLoadingStarted)
+            {
+                _dateModifiedLoadingStarted = true;
+                LoadDateModifiedAsync();
+            }
+            return DateTime.MinValue;
+        }
+    }
+
+    private void LoadDateModifiedAsync()
+    {
+        var pathCopy = FullPath;
+        var isDirCopy = IsDir;
+        Task.Run(async () =>
+        {
+            await _dateModifiedSemaphore.WaitAsync();
             try
             {
-                var physicalPath = FullPath;
-                if (System.IO.File.Exists(physicalPath) || System.IO.Directory.Exists(physicalPath))
+                var dt = DateTime.MinValue;
+                if (isDirCopy)
                 {
-                    _dateModified = System.IO.Directory.Exists(physicalPath)
-                        ? System.IO.Directory.GetLastWriteTime(physicalPath)
-                        : System.IO.File.GetLastWriteTime(physicalPath);
+                    if (System.IO.Directory.Exists(pathCopy))
+                        dt = System.IO.Directory.GetLastWriteTime(pathCopy);
                 }
                 else
                 {
-                    _dateModified = DateTime.MinValue;
+                    if (System.IO.File.Exists(pathCopy))
+                        dt = System.IO.File.GetLastWriteTime(pathCopy);
+                }
+
+                var app = System.Windows.Application.Current;
+                if (app != null)
+                {
+                    _ = app.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        _dateModified = dt;
+                        OnPropertyChanged(nameof(DateModified));
+                        OnPropertyChanged(nameof(DateModifiedText));
+                    }), System.Windows.Threading.DispatcherPriority.Background);
+                }
+                else
+                {
+                    _dateModified = dt;
                 }
             }
             catch
             {
                 _dateModified = DateTime.MinValue;
             }
-            return _dateModified.Value;
-        }
+            finally
+            {
+                _dateModifiedSemaphore.Release();
+            }
+        });
     }
 
     public string DateModifiedText
