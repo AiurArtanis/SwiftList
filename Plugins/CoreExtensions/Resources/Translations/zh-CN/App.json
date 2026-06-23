@@ -132,6 +132,8 @@
   "General_ThemeSelect": "界面主题",
   "About_Title": "关于",
   "About_Version": "版本 {0}",
+  "About_CoreVersion": "内核版本 {0}",
+  "About_ServiceVersion": "服务版本 {0}",
   "About_Hint": "SwiftList 是一个面向 Windows 的快速启动和文件检索工具。",
   "About_Desc1": "SwiftList",
   "About_Desc2": "快速定位应用、文件、目录和当前窗口内容。",

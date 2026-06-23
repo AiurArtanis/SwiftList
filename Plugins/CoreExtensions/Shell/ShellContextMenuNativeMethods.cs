@@ -22,6 +22,45 @@ internal static class ShellContextMenuNativeMethods
 
     [ComImport]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("000214F4-0000-0000-C000-000000000046")]
+    public interface IContextMenu2
+    {
+        [PreserveSig]
+        int QueryContextMenu(IntPtr hmenu, uint indexMenu, uint idCmdFirst, uint idCmdLast, uint uFlags);
+
+        [PreserveSig]
+        int InvokeCommand(ref CMINVOKECOMMANDINFO lpici);
+
+        [PreserveSig]
+        int GetCommandString(UIntPtr idCmd, uint uFlags, IntPtr pwzReserved, StringBuilder pszName, uint cchMax);
+
+        [PreserveSig]
+        int HandleMenuMsg(uint uMsg, IntPtr wParam, IntPtr lParam);
+    }
+
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("340E1B03-087E-11D1-9E99-00A0C91110C3")]
+    public interface IContextMenu3
+    {
+        [PreserveSig]
+        int QueryContextMenu(IntPtr hmenu, uint indexMenu, uint idCmdFirst, uint idCmdLast, uint uFlags);
+
+        [PreserveSig]
+        int InvokeCommand(ref CMINVOKECOMMANDINFO lpici);
+
+        [PreserveSig]
+        int GetCommandString(UIntPtr idCmd, uint uFlags, IntPtr pwzReserved, StringBuilder pszName, uint cchMax);
+
+        [PreserveSig]
+        int HandleMenuMsg(uint uMsg, IntPtr wParam, IntPtr lParam);
+
+        [PreserveSig]
+        int HandleMenuMsg2(uint uMsg, IntPtr wParam, IntPtr lParam, out IntPtr plResult);
+    }
+
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     [Guid("000214E6-0000-0000-C000-000000000046")]
     public interface IShellFolder
     {

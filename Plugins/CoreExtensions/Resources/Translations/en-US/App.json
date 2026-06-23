@@ -132,6 +132,8 @@
   "General_ThemeSelect": "Interface Theme",
   "About_Title": "About",
   "About_Version": "Version {0}",
+  "About_CoreVersion": "Core Version {0}",
+  "About_ServiceVersion": "Service Version {0}",
   "About_Hint": "SwiftList is a fast application and file search tool for Windows.",
   "About_Desc1": "SwiftList",
   "About_Desc2": "Locate applications, files, directories, and active explorer contents rapidly.",

@@ -1,14 +1,35 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.ComponentModel;
 using SwiftList.App.Services;
+using SwiftList.Core;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
+using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
 
 namespace SwiftList.App.Views.Settings;
 
-public partial class AboutSettingsPage : System.Windows.Controls.UserControl
+public partial class AboutSettingsPage : System.Windows.Controls.UserControl, INotifyPropertyChanged
 {
     private GitHubReleaseInfo? _latestRelease;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    private Brush _serviceStatusBrush = Brushes.Gray;
+    public Brush ServiceStatusBrush
+    {
+        get => _serviceStatusBrush;
+        private set
+        {
+            if (_serviceStatusBrush != value)
+            {
+                _serviceStatusBrush = value;
+                OnPropertyChanged(nameof(ServiceStatusBrush));
+            }
+        }
+    }
 
     public string AppVersion
     {
@@ -19,10 +40,68 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl
         }
     }
 
+    public string CoreVersion
+    {
+        get
+        {
+            var version = typeof(Logger).Assembly.GetName().Version;
+            return string.Format(TranslationManager.Instance["About_CoreVersion"], version?.ToString(3));
+        }
+    }
+
+    public string ServiceVersion
+    {
+        get
+        {
+            var dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SwiftList.Service.dll");
+            if (File.Exists(dllPath))
+            {
+                try
+                {
+                    var assemblyName = System.Reflection.AssemblyName.GetAssemblyName(dllPath);
+                    var version = assemblyName.Version;
+                    if (version != null)
+                    {
+                        return string.Format(TranslationManager.Instance["About_ServiceVersion"], version.ToString(3));
+                    }
+                }
+                catch
+                {
+                    // Fallback
+                }
+            }
+            return string.Format(TranslationManager.Instance["About_ServiceVersion"], "Unknown");
+        }
+    }
+
     public AboutSettingsPage()
     {
         InitializeComponent();
         DataContext = this;
+        Loaded += AboutSettingsPage_Loaded;
+    }
+
+    private void AboutSettingsPage_Loaded(object sender, RoutedEventArgs e) => CheckServiceStatus();
+
+    private async void CheckServiceStatus()
+    {
+        try
+        {
+            using var searchService = new SearchService();
+            var status = await searchService.GetStatusAsync();
+            if (status != null && status.State != "error")
+            {
+                ServiceStatusBrush = System.Windows.Application.Current.TryFindResource("SuccessBadgeText") as Brush ?? Brushes.Green;
+            }
+            else
+            {
+                ServiceStatusBrush = System.Windows.Application.Current.TryFindResource("ErrorBrush") as Brush ?? Brushes.Red;
+            }
+        }
+        catch
+        {
+            ServiceStatusBrush = System.Windows.Application.Current.TryFindResource("ErrorBrush") as Brush ?? Brushes.Red;
+        }
     }
 
     private async void BtnCheckUpdate_Click(object sender, RoutedEventArgs e)
@@ -150,7 +229,7 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl
         }
         catch (Exception ex)
         {
-            Core.Logger.Log($"[AboutSettingsPage] Failed to open URL: {ex.Message}", Core.LogLevel.Warn);
+            Logger.Log($"[AboutSettingsPage] Failed to open URL: {ex.Message}", LogLevel.Warn);
         }
     }
 
@@ -167,7 +246,7 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl
         }
         catch (Exception ex)
         {
-            Core.Logger.Log($"[AboutSettingsPage] Failed to open URL: {ex.Message}", Core.LogLevel.Warn);
+            Logger.Log($"[AboutSettingsPage] Failed to open URL: {ex.Message}", LogLevel.Warn);
         }
     }
 

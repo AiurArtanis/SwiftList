@@ -31,6 +31,12 @@
                         <TextBlock Text="{Binding AppVersion}" 
                                    FontSize="14" Foreground="{DynamicResource TextSecondary2}" 
                                    VerticalAlignment="Bottom" Margin="8,0,0,3"/>
+                        <TextBlock Text="{Binding CoreVersion}" 
+                                   FontSize="14" Foreground="{DynamicResource AccentColor}" 
+                                   VerticalAlignment="Bottom" Margin="12,0,0,3"/>
+                        <TextBlock Text="{Binding ServiceVersion}" 
+                                   FontSize="14" Foreground="{Binding ServiceStatusBrush}" 
+                                   VerticalAlignment="Bottom" Margin="12,0,0,3"/>
                     </StackPanel>
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Desc2]}"
                                Foreground="{DynamicResource TextSecondary2}"

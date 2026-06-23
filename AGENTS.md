@@ -79,8 +79,11 @@ When interacting with this repository, performing code modification, compilation
    * Instead, strictly use subdirectories and nested namespace hierarchies (e.g., place the helper in `Feature/Helper.cs` and match it with the nested namespace `MyProject.Feature`). This keeps filenames simple, intuitive, and standard.
 
 7. **App Versioning, Tagging, and Release Flow**
+   * **Release-Only Version Bump**: Version numbers in `.csproj` files must **ONLY** be modified/bumped during the formal release process (Release Flow). Do **NOT** modify or bump version numbers during regular development, bug fixing, or feature modification tasks.
+   * **Project Modification Detection**: During the release flow, check which subprojects (e.g., Core, App, Service) have been modified since the last release (last git tag). If a subproject has been modified, its version number must be bumped.
+   * **Version Bump Rule**: Locate `<Version>X.Y.Z</Version>` inside the modified project's `.csproj` file and bump it to the next version. The version number must increment in decimal format (where Y and Z are treated as a two-digit decimal number; hence, adding 1 to the last segment carries over to the middle segment when it reaches 9, e.g., `1.6.3` -> `1.6.4`, `1.0.9` -> `1.1.0`, or `1.6.9` -> `1.7.0`).
    * When releasing a new version, follow these steps in order:
-     1. Locate `<Version>X.Y.Z</Version>` inside the primary `.csproj` file and bump it to the next version (e.g., `2.0.0`).
+     1. Bump the version of all modified projects.
      2. Commit all functional/code modifications (after running `dotnet format`).
      3. Commit the version bump change:
         ```bash

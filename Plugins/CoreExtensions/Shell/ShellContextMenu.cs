@@ -133,6 +133,11 @@ public class ShellMenuSession : IDisposable
                 continue;
             }
 
+            if (mii.hSubMenu != IntPtr.Zero)
+            {
+                InitializeSubMenu(mii.hSubMenu, i);
+            }
+
             var mii2 = new ShellContextMenuNativeMethods.MENUITEMINFOW();
             mii2.cbSize = (uint)Marshal.SizeOf<ShellContextMenuNativeMethods.MENUITEMINFOW>();
             mii2.fMask = ShellContextMenuNativeMethods.MIIM_STRING;
@@ -166,6 +171,24 @@ public class ShellMenuSession : IDisposable
 
         return items;
     }
+
+    private void InitializeSubMenu(IntPtr hSubMenu, uint index)
+    {
+        if (_contextMenu == null) return;
+
+        const uint WM_INITMENUPOPUP = 0x0117;
+        var lParam = (IntPtr)index;
+
+        if (_contextMenu is ShellContextMenuNativeMethods.IContextMenu3 contextMenu3)
+        {
+            contextMenu3.HandleMenuMsg2(WM_INITMENUPOPUP, hSubMenu, lParam, out _);
+        }
+        else if (_contextMenu is ShellContextMenuNativeMethods.IContextMenu2 contextMenu2)
+        {
+            contextMenu2.HandleMenuMsg(WM_INITMENUPOPUP, hSubMenu, lParam);
+        }
+    }
+
 
     public void InvokeCommand(uint commandId, IntPtr ownerHwnd)
     {

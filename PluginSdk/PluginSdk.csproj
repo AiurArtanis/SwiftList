@@ -6,6 +6,7 @@
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Version>1.0.0</Version>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
   </PropertyGroup>
 
 </Project>

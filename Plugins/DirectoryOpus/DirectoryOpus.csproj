@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>SwiftList.Plugins.DirectoryOpus</AssemblyName>
     <Version>1.1.0</Version>
+      <GenerateDependencyFile>false</GenerateDependencyFile>
   </PropertyGroup>
 
   <ItemGroup>
