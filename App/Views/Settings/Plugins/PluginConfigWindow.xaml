@@ -34,7 +34,7 @@
             <conv:StringToVisibilityConverter x:Key="StringToVis" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
 
             <!-- Implicit TextBox styling matching settings theme -->
-            <Style TargetType="TextBox">
+            <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
                 <Setter Property="Height" Value="26"/><Setter Property="Padding" Value="6,2"/><Setter Property="Background" Value="{DynamicResource ControlBackground}"/><Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="12"/><Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/><Setter Property="VerticalScrollBarVisibility" Value="Hidden"/>
                 <Setter Property="Template">
                     <Setter.Value>

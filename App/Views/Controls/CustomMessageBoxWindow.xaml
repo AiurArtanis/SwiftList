@@ -44,9 +44,7 @@
                                         FontSize="12.5" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0">
-                            <Button Content="&#xE8BB;" Style="{StaticResource CloseButton}" Width="32" Height="32" Click="BtnClose_Click"/>
-                        </StackPanel>
+                        <!-- Title Bar (no close button needed for simple alert message boxes) -->
                     </Grid>
                 </Border>
 
@@ -76,7 +74,7 @@
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button Style="{StaticResource PrimarySettingsButton}" 
                                     Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_OK]}" 
-                                    Width="80" Height="28" Click="BtnOK_Click"/>
+                                    Width="80" Height="28" Click="BtnOK_Click" IsDefault="True"/>
                         </StackPanel>
                     </Grid>
                 </Border>

@@ -55,12 +55,6 @@ public partial class CustomMessageBoxWindow : Window
         }
     }
 
-    private void BtnClose_Click(object sender, RoutedEventArgs e)
-    {
-        Result = MessageBoxResult.OK;
-        Close();
-    }
-
     private void BtnOK_Click(object sender, RoutedEventArgs e)
     {
         Result = MessageBoxResult.OK;

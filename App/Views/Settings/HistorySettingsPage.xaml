@@ -14,7 +14,7 @@
                 <ResourceDictionary Source="../../Resources/Styles/SettingsWindow.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <Style x:Key="SearchTextBox" TargetType="TextBox">
+            <Style x:Key="SearchTextBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
                 <Setter Property="Height" Value="34"/>
                 <Setter Property="Padding" Value="10,6"/>
                 <Setter Property="FontSize" Value="13"/>
