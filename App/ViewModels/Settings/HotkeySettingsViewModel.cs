@@ -27,9 +27,26 @@ public class HotkeySettingsViewModel : ViewModelBase
         _quickSwitchKey = _userSettings.QuickSwitchHotkey?.Key ?? "G";
 
         _selectIndexModifier = _userSettings.SelectIndexModifier ?? "Control";
+        _quickNavTriggerOnDoubleClick = _userSettings.QuickNavTriggerOnDoubleClick;
+        _quickNavTriggerOnMiddleClick = _userSettings.QuickNavTriggerOnMiddleClick;
 
         // Dynamically refresh properties when the language changes
         TranslationManager.Instance.PropertyChanged += (s, e) => OnPropertyChanged(nameof(HotkeyTypeOptions));
+    }
+
+    // Quick Navigation properties
+    private bool _quickNavTriggerOnDoubleClick;
+    public bool QuickNavTriggerOnDoubleClick
+    {
+        get => _quickNavTriggerOnDoubleClick;
+        set => SetProperty(ref _quickNavTriggerOnDoubleClick, value);
+    }
+
+    private bool _quickNavTriggerOnMiddleClick;
+    public bool QuickNavTriggerOnMiddleClick
+    {
+        get => _quickNavTriggerOnMiddleClick;
+        set => SetProperty(ref _quickNavTriggerOnMiddleClick, value);
     }
 
     // Toggle Window properties
@@ -185,14 +202,11 @@ public class HotkeySettingsViewModel : ViewModelBase
         };
 
         _userSettings.SelectIndexModifier = SelectIndexModifier;
+        _userSettings.QuickNavTriggerOnDoubleClick = QuickNavTriggerOnDoubleClick;
+        _userSettings.QuickNavTriggerOnMiddleClick = QuickNavTriggerOnMiddleClick;
         _userSettings.Save();
 
         // Notify hook service process via IPC to reload settings!
         App.HookClient?.SendMessage(new IpcMessage { Id = IpcMessageId.ReloadSettings });
     }
-}
-
-public sealed record HotkeyOptionItem(object Value, string Label)
-{
-    public override string ToString() => Label;
 }

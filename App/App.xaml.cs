@@ -61,6 +61,7 @@ public partial class App : Application
 
         HookClient.OnMouseDoubleClick += (x, y) =>
         {
+            if (!UserSettings.Load().QuickNavTriggerOnDoubleClick) return;
             if (Views.InlineSearchWindow.Helpers.InlineSearchWindowNativeMethods.IsPointInsideWindow(x, y)) return;
             var trk = InlineSearchManager.Instance.ExplorerTracker;
             var proc = GetProcessNameOfWindow(trk.ActiveHwnd);
@@ -71,6 +72,7 @@ public partial class App : Application
 
         HookClient.OnMouseMiddleClick += (x, y) =>
         {
+            if (!UserSettings.Load().QuickNavTriggerOnMiddleClick) return;
             if (Views.InlineSearchWindow.Helpers.InlineSearchWindowNativeMethods.IsPointInsideWindow(x, y)) return;
             var trk = InlineSearchManager.Instance.ExplorerTracker;
             var proc = GetProcessNameOfWindow(trk.ActiveHwnd);

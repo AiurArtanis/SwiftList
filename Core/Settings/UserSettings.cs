@@ -27,6 +27,8 @@ public class UserSettings
     public bool AutoElevateIfAdmin { get; set; }
     public bool AutoCheckUpdates { get; set; } = true;
     public bool AutoSilentUpdate { get; set; } = false;
+    public bool QuickNavTriggerOnDoubleClick { get; set; } = true;
+    public bool QuickNavTriggerOnMiddleClick { get; set; } = true;
     public string LogLevel { get; set; } = "Info";
     public string PreferredLanguage { get; set; } = GetDefaultSystemLanguage();
     public string Theme { get; set; } = "Light";

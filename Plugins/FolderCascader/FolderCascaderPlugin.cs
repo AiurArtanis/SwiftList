@@ -22,31 +22,6 @@ public class FolderCascaderPlugin : IActionPlugin, IConfigurablePlugin
         {
             new PluginConfigField
             {
-                Key = "TriggersGroup",
-                LabelKey = "FolderCascader_Group_Triggers",
-                FieldType = ConfigFieldType.Group,
-                SubFields = new List<PluginConfigField>
-                {
-                    new PluginConfigField
-                    {
-                        Key = "TriggerOnDoubleClick",
-                        LabelKey = "FolderCascader_Config_DoubleClick",
-                        DescriptionKey = "FolderCascader_Config_DoubleClickDesc",
-                        FieldType = ConfigFieldType.Boolean,
-                        DefaultValue = true
-                    },
-                    new PluginConfigField
-                    {
-                        Key = "TriggerOnMiddleClick",
-                        LabelKey = "FolderCascader_Config_MiddleClick",
-                        DescriptionKey = "FolderCascader_Config_MiddleClickDesc",
-                        FieldType = ConfigFieldType.Boolean,
-                        DefaultValue = true
-                    }
-                }
-            },
-            new PluginConfigField
-            {
                 Key = "ContentGroup",
                 LabelKey = "FolderCascader_Group_Content",
                 FieldType = ConfigFieldType.Group,
