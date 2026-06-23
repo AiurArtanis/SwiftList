@@ -36,12 +36,18 @@ public static class MenuBuilder
                         continue;
                     }
                     if (string.IsNullOrWhiteSpace(folder.Path)) continue;
+                    var pathExists = true;
+                    if (!folder.Path.StartsWith("::") && !folder.Path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        pathExists = Directory.Exists(folder.Path);
+                    }
                     items.Add(new DynamicMenuItem
                     {
                         Text = GetDisplayName(folder.Path, folder.Name),
-                        HasSubMenu = true,
-                        SubMenuHandle = provider.AllocateHandle(folder.Path),
-                        HBitmapItem = IntPtr.Zero
+                        HasSubMenu = pathExists,
+                        SubMenuHandle = pathExists ? provider.AllocateHandle(folder.Path) : IntPtr.Zero,
+                        HBitmapItem = IntPtr.Zero,
+                        IsDisabled = !pathExists
                     });
                 }
             }
@@ -51,9 +57,34 @@ public static class MenuBuilder
                 "ShowHistory",
                 true);
 
+            var favoritesStr = PluginSettingsService.GetSetting(
+                "SwiftList.Plugins.FolderCascader",
+                "Favorites",
+                "");
+
+            var favoritesList = favoritesStr.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim())
+                .Where(p => !string.IsNullOrEmpty(p))
+                .ToList();
+
+            if (favoritesList.Count > 0)
+            {
+                if (items.Count > 0 && !items.Last().IsSeparator)
+                {
+                    items.Add(new DynamicMenuItem { IsSeparator = true });
+                }
+                items.Add(new DynamicMenuItem
+                {
+                    Text = TranslationService.Get("FolderCascader_Favorites") ?? "Favorites",
+                    HasSubMenu = true,
+                    SubMenuHandle = provider.AllocateHandle("foldercascader://favorites"),
+                    HBitmapItem = Helper.FavoritesHBitmap
+                });
+            }
+
             if (showHistory)
             {
-                if (items.Count > 0)
+                if (items.Count > 0 && !items.Last().IsSeparator)
                 {
                     items.Add(new DynamicMenuItem { IsSeparator = true });
                 }
@@ -72,6 +103,15 @@ public static class MenuBuilder
         if (provider.TryGetPath(hMenu, out var path) && path != null)
         {
             var items = new List<DynamicMenuItem>();
+            var favoritesStr = PluginSettingsService.GetSetting(
+                "SwiftList.Plugins.FolderCascader",
+                "Favorites",
+                "");
+            var favoritesList = favoritesStr.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim())
+                .Where(p => !string.IsNullOrEmpty(p))
+                .ToList();
+
             if (path == "foldercascader://history")
             {
                 var recentPaths = Helper.GetHistoryPaths();
@@ -100,6 +140,33 @@ public static class MenuBuilder
                 }
                 if (items.Count == 0)
                     items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_NoHistory") ?? "(No history)", IsDisabled = true });
+            }
+            else if (path == "foldercascader://favorites")
+            {
+                foreach (var favPath in favoritesList)
+                {
+                    if (Directory.Exists(favPath))
+                    {
+                        items.Add(new DynamicMenuItem
+                        {
+                            Text = GetDisplayName(favPath, ""),
+                            HasSubMenu = true,
+                            SubMenuHandle = provider.AllocateHandle(favPath),
+                            HBitmapItem = IntPtr.Zero
+                        });
+                    }
+                    else if (File.Exists(favPath))
+                    {
+                        items.Add(new DynamicMenuItem
+                        {
+                            Text = Path.GetFileName(favPath) + $" ({Path.GetDirectoryName(favPath)})",
+                            CommandId = provider.AllocateCommand(favPath),
+                            HBitmapItem = IntPtr.Zero
+                        });
+                    }
+                }
+                if (items.Count == 0)
+                    items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_NoFavorites") ?? "(No favorites)", IsDisabled = true });
             }
             else
             {
@@ -154,47 +221,7 @@ public static class MenuBuilder
                     }
                     else if (scanPath.StartsWith("::") || scanPath.StartsWith("shell:"))
                     {
-                        var shellType = Type.GetTypeFromProgID("Shell.Application");
-                        if (shellType != null)
-                        {
-                            var shell = Activator.CreateInstance(shellType);
-                            if (shell != null)
-                            {
-                                dynamic dShell = shell;
-                                var fullShellPath = scanPath.StartsWith("::") ? "shell:::" + scanPath : scanPath;
-                                dynamic folder = dShell.NameSpace(fullShellPath);
-                                if (folder != null)
-                                {
-                                    foreach (var item in folder.Items())
-                                    {
-                                        string p = item.Path;
-                                        string name = item.Name;
-                                        if (!string.IsNullOrEmpty(p))
-                                        {
-                                            if (item.IsFolder)
-                                            {
-                                                items.Add(new DynamicMenuItem
-                                                {
-                                                    Text = name,
-                                                    HasSubMenu = true,
-                                                    SubMenuHandle = provider.AllocateHandle(p),
-                                                    HBitmapItem = IntPtr.Zero
-                                                });
-                                            }
-                                            else
-                                            {
-                                                items.Add(new DynamicMenuItem
-                                                {
-                                                    Text = name,
-                                                    CommandId = provider.AllocateCommand(p),
-                                                    HBitmapItem = IntPtr.Zero
-                                                });
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        ShellEnumerator.EnumerateShellFolder(scanPath, items, provider);
                     }
 
                     if (items.Count == 0)

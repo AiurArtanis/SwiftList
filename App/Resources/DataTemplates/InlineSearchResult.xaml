@@ -21,7 +21,7 @@
             <TextBlock Grid.ColumnSpan="3"
                        FontSize="12"
                        FontWeight="SemiBold"
-                       FontFamily="Microsoft YaHei UI, Segoe UI"
+                       
                        Foreground="{DynamicResource AccentBlue}"
                        VerticalAlignment="Center"
                        Text="{Binding Name}">
@@ -81,7 +81,7 @@
                 </StackPanel.Style>
                 <!-- Standard text block (for normal search results) -->
                 <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False">
-                    <TextBlock FontFamily="Microsoft YaHei UI, Segoe UI"
+                    <TextBlock 
                                Foreground="{DynamicResource TextPrimary}"
                                local:TextHighlighter.Text="{Binding Name}"
                                local:TextHighlighter.HighlightText="{Binding SearchQuery}"
@@ -145,7 +145,7 @@
                                         </TextBlock.Style>
                                     </TextBlock>
                                     <!-- Column text -->
-                                    <TextBlock FontFamily="Microsoft YaHei UI, Segoe UI"
+                                    <TextBlock 
                                                FontSize="14"
                                                Foreground="{DynamicResource TextPrimary}"
                                                VerticalAlignment="Center"
@@ -172,7 +172,7 @@
                         </Style>
                     </ScrollViewer.Style>
                     <TextBlock FontSize="11"
-                               FontFamily="Microsoft YaHei UI, Segoe UI"
+                               
                                Foreground="{DynamicResource TextSecondary}"
                                HorizontalAlignment="Left"
                                helpers:MarqueeBehavior.EnableMarquee="True"
@@ -185,7 +185,6 @@
             <TextBlock Grid.Column="2"
                        Text="{Binding ShortcutHint}"
                        FontSize="12"
-                       FontFamily="Segoe UI"
                        Foreground="{DynamicResource ShortcutColor}"
                        VerticalAlignment="Center"
                        Margin="14,0,0,0">

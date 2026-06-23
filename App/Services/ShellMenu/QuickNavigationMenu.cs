@@ -16,6 +16,8 @@ namespace SwiftList.App.Services;
 
 public static class QuickNavigationMenu
 {
+    public static bool IsShowingShellMenu { get; set; }
+
     public static void Show(int mouseX, int mouseY)
     {
         var path = InlineSearchManager.Instance.ExplorerTracker.ActivePath;
@@ -45,7 +47,7 @@ public static class QuickNavigationMenu
         }
 
         var helperWin = new MenuHelperWindow(mouseX * dpiScaleX, mouseY * dpiScaleY);
-        helperWin.Deactivated += (s, e) => contextMenu.IsOpen = false;
+        helperWin.Deactivated += (s, e) => { if (!IsShowingShellMenu) contextMenu.IsOpen = false; };
         helperWin.Show();
         helperWin.Activate();
 
@@ -161,6 +163,37 @@ public static class QuickNavigationMenu
             }), System.Windows.Threading.DispatcherPriority.Background);
         };
 
+        Action triggerRightClickAction = () =>
+        {
+            if (canNavigate)
+            {
+                IsShowingShellMenu = true;
+                try
+                {
+                    var hwnd = contextMenu.PlacementTarget is Window win ? new WindowInteropHelper(win).Handle : IntPtr.Zero;
+                    ShellContextMenuHelper.Show(itemPath!, hwnd);
+                }
+                finally
+                {
+                    IsShowingShellMenu = false;
+                    if (contextMenu.PlacementTarget is Window win && contextMenu.IsOpen)
+                    {
+                        win.Activate();
+                        contextMenu.Focus();
+                    }
+                }
+            }
+        };
+
+        menuItem.AddHandler(UIElement.PreviewMouseRightButtonUpEvent, new MouseButtonEventHandler((s, e) =>
+        {
+            if (FindVisualParent<MenuItem>(e.OriginalSource as DependencyObject) == menuItem)
+            {
+                e.Handled = true;
+                triggerRightClickAction();
+            }
+        }), handledEventsToo: true);
+
         if (item.HasSubMenu && item.SubMenuHandle != IntPtr.Zero)
         {
             menuItem.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent, new MouseButtonEventHandler((s, e) =>
@@ -185,50 +218,53 @@ public static class QuickNavigationMenu
                 triggerAction();
                 return;
             }
-            if (item.HasSubMenu && item.SubMenuHandle != IntPtr.Zero)
+            if (menuItem.IsFocused)
             {
-                if (menuItem.IsFocused)
+                if (e.Key == System.Windows.Input.Key.Down)
                 {
-                    if (e.Key == System.Windows.Input.Key.Down && NavigateToSibling(menuItem, forward: true)) { menuItem.IsSubmenuOpen = false; e.Handled = true; }
-                    else if (e.Key == System.Windows.Input.Key.Up && NavigateToSibling(menuItem, forward: false)) { menuItem.IsSubmenuOpen = false; e.Handled = true; }
-                    else if (e.Key == System.Windows.Input.Key.Right)
+                    if (NavigateToSibling(menuItem, forward: true)) { menuItem.IsSubmenuOpen = false; e.Handled = true; }
+                }
+                else if (e.Key == System.Windows.Input.Key.Up)
+                {
+                    if (NavigateToSibling(menuItem, forward: false)) { menuItem.IsSubmenuOpen = false; e.Handled = true; }
+                }
+                else if (e.Key == System.Windows.Input.Key.Right && item.HasSubMenu && item.SubMenuHandle != IntPtr.Zero)
+                {
+                    if (menuItem.Items.OfType<MenuItem>().All(c => !c.IsEnabled)) e.Handled = true;
+                    else
                     {
-                        if (menuItem.Items.OfType<MenuItem>().All(c => !c.IsEnabled)) e.Handled = true;
-                        else
-                        {
-                            var firstChild = menuItem.Items.OfType<MenuItem>().FirstOrDefault(i => i.IsEnabled && i.Focusable);
-                            if (firstChild != null) { firstChild.Focus(); e.Handled = true; }
-                        }
+                        var firstChild = menuItem.Items.OfType<MenuItem>().FirstOrDefault(i => i.IsEnabled && i.Focusable);
+                        if (firstChild != null) { firstChild.Focus(); e.Handled = true; }
                     }
                 }
-                else if (menuItem.IsSubmenuOpen)
+            }
+            else if (menuItem.IsSubmenuOpen && item.HasSubMenu && item.SubMenuHandle != IntPtr.Zero)
+            {
+                if (System.Windows.Input.Keyboard.FocusedElement is MenuItem focused && menuItem.Items.Contains(focused))
                 {
-                    if (System.Windows.Input.Keyboard.FocusedElement is MenuItem focused && menuItem.Items.Contains(focused))
-                    {
-                        if (e.Key == System.Windows.Input.Key.Left)
-                        {
-                            menuItem.IsSubmenuOpen = false;
-                            Application.Current.Dispatcher.BeginInvoke(new Action(() => menuItem.Focus()));
-                            e.Handled = true;
-                        }
-                        else if (e.Key == System.Windows.Input.Key.Down || e.Key == System.Windows.Input.Key.Up)
-                        {
-                            var items = menuItem.Items.OfType<MenuItem>().Where(i => i.IsEnabled && i.Focusable).ToList();
-                            var index = items.IndexOf(focused);
-                            if (index != -1 && items.Count > 0)
-                            {
-                                var nextIndex = e.Key == System.Windows.Input.Key.Down ? (index + 1) % items.Count : (index - 1 + items.Count) % items.Count;
-                                items[nextIndex].Focus();
-                                e.Handled = true;
-                            }
-                        }
-                    }
-                    else if ((e.Key == System.Windows.Input.Key.Up || e.Key == System.Windows.Input.Key.Down) && menuItem.Items.OfType<MenuItem>().All(c => !c.IsEnabled))
+                    if (e.Key == System.Windows.Input.Key.Left)
                     {
                         menuItem.IsSubmenuOpen = false;
                         Application.Current.Dispatcher.BeginInvoke(new Action(() => menuItem.Focus()));
                         e.Handled = true;
                     }
+                    else if (e.Key == System.Windows.Input.Key.Down || e.Key == System.Windows.Input.Key.Up)
+                    {
+                        var items = menuItem.Items.OfType<MenuItem>().Where(i => i.IsEnabled && i.Focusable).ToList();
+                        var index = items.IndexOf(focused);
+                        if (index != -1 && items.Count > 0)
+                        {
+                            var nextIndex = e.Key == System.Windows.Input.Key.Down ? (index + 1) % items.Count : (index - 1 + items.Count) % items.Count;
+                            items[nextIndex].Focus();
+                            e.Handled = true;
+                        }
+                    }
+                }
+                else if ((e.Key == System.Windows.Input.Key.Up || e.Key == System.Windows.Input.Key.Down) && menuItem.Items.OfType<MenuItem>().All(c => !c.IsEnabled))
+                {
+                    menuItem.IsSubmenuOpen = false;
+                    Application.Current.Dispatcher.BeginInvoke(new Action(() => menuItem.Focus()));
+                    e.Handled = true;
                 }
             }
         };
@@ -254,9 +290,8 @@ public static class QuickNavigationMenu
         var parent = System.Windows.Controls.ItemsControl.ItemsControlFromItemContainer(currentItem);
         var items = parent?.Items.OfType<MenuItem>().Where(i => i.IsEnabled && i.Focusable).ToList();
         var idx = items?.IndexOf(currentItem) ?? -1;
-        if (idx == -1) return false;
-        var nextIdx = idx + (forward ? 1 : -1);
-        if (nextIdx < 0 || nextIdx >= items!.Count) return false;
+        if (idx == -1 || items == null || items.Count == 0) return false;
+        var nextIdx = (idx + (forward ? 1 : -1) + items.Count) % items.Count;
         items[nextIdx].Focus();
         return true;
     }

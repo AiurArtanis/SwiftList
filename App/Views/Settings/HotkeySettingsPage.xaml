@@ -27,7 +27,7 @@
             <Border Style="{StaticResource SettingsCard}">
                 <StackPanel>
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ToggleTitle]}" 
-                               FontWeight="SemiBold" FontSize="13" FontFamily="Microsoft YaHei UI" Margin="0,0,0,10"/>
+                               FontWeight="SemiBold" FontSize="13"  Margin="0,0,0,10"/>
                     
                     <Grid Margin="0,4,0,0">
                         <Grid.ColumnDefinitions>
@@ -129,7 +129,7 @@
             <Border Style="{StaticResource SettingsCard}" Margin="0,15,0,0">
                 <StackPanel>
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickSwitchTitle]}" 
-                               FontWeight="SemiBold" FontSize="13" FontFamily="Microsoft YaHei UI" Margin="0,0,0,10"/>
+                               FontWeight="SemiBold" FontSize="13"  Margin="0,0,0,10"/>
 
                     <Grid Margin="0,4,0,0">
                         <Grid.ColumnDefinitions>
@@ -231,7 +231,7 @@
             <Border Style="{StaticResource SettingsCard}" Margin="0,15,0,0">
                 <StackPanel>
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectionTitle]}" 
-                               FontWeight="SemiBold" FontSize="13" FontFamily="Microsoft YaHei UI" Margin="0,0,0,10"/>
+                               FontWeight="SemiBold" FontSize="13"  Margin="0,0,0,10"/>
 
                     <Grid Margin="0,4,0,0">
                         <Grid.ColumnDefinitions>
@@ -253,7 +253,7 @@
             <Border Style="{StaticResource SettingsCard}" Margin="0,15,0,0">
                 <StackPanel>
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickNavTitle]}" 
-                               FontWeight="SemiBold" FontSize="13" FontFamily="Microsoft YaHei UI" Margin="0,0,0,10"/>
+                               FontWeight="SemiBold" FontSize="13"  Margin="0,0,0,10"/>
 
                     <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickNavDoubleClick]}"
                               IsChecked="{Binding QuickNavTriggerOnDoubleClick, Mode=TwoWay}"

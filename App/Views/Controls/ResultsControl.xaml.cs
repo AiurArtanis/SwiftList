@@ -225,7 +225,6 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
                     };
                     var textBlockFactory = new FrameworkElementFactory(typeof(TextBlock));
                     textBlockFactory.SetBinding(TextBlock.TextProperty, binding);
-                    textBlockFactory.SetValue(TextBlock.FontFamilyProperty, new System.Windows.Media.FontFamily("Microsoft YaHei UI"));
                     textBlockFactory.SetValue(TextBlock.ForegroundProperty, new DynamicResourceExtension("TextSecondary2"));
                     textBlockFactory.SetValue(TextBlock.FontSizeProperty, 12.0);
                     textBlockFactory.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);

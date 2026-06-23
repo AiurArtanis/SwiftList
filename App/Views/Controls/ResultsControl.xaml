@@ -66,7 +66,7 @@
                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
                                             <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="0,0,26,0">
                                                 <TextBlock Text="{Binding Name}"
-                                                           FontFamily="Microsoft YaHei UI"
+                                                           
                                                            FontSize="13"
                                                            Foreground="{DynamicResource TextPrimary2}"
                                                            VerticalAlignment="Center"
@@ -83,7 +83,7 @@
                                         <Grid Width="{Binding Path=ActualWidth, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" VerticalAlignment="Center">
                                             <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="0,0,24,0">
                                                 <TextBlock Text="{Binding ParentDir}"
-                                                           FontFamily="Microsoft YaHei UI"
+                                                           
                                                            Foreground="{DynamicResource TextSecondary2}"
                                                            FontSize="12"
                                                            VerticalAlignment="Center"
@@ -98,7 +98,7 @@
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding DateModifiedText}"
-                                                   FontFamily="Microsoft YaHei UI"
+                                                   
                                                    Foreground="{DynamicResource TextSecondary2}"
                                                    FontSize="12"/>
                                     </DataTemplate>

@@ -122,7 +122,7 @@ public static class ShellIconHelper
                 {
                     try
                     {
-                        var flags = ShellIconNativeMethods.SHGFI_ICON | ShellIconNativeMethods.SHGFI_SMALLICON | ShellIconNativeMethods.SHGFI_PIDL;
+                        var flags = ShellIconNativeMethods.SHGFI_ICON | ShellIconNativeMethods.SHGFI_LARGEICON | ShellIconNativeMethods.SHGFI_PIDL;
                         var res = ShellIconNativeMethods.SHGetFileInfoW(pidl, 0, ref shfi, (uint)Marshal.SizeOf(shfi), flags);
                         if (res != IntPtr.Zero && shfi.hIcon != IntPtr.Zero)
                         {
@@ -153,7 +153,7 @@ public static class ShellIconHelper
             if (isUniqueIconType && (File.Exists(checkPath) || Directory.Exists(checkPath)))
             {
                 // For existing EXE/LNK/ICO (or folder fallback), load the actual unique embedded icon from the file path
-                var flags = ShellIconNativeMethods.SHGFI_ICON | ShellIconNativeMethods.SHGFI_SMALLICON;
+                var flags = ShellIconNativeMethods.SHGFI_ICON | ShellIconNativeMethods.SHGFI_LARGEICON;
                 var res = ShellIconNativeMethods.SHGetFileInfoW(checkPath, 0, ref shfi, (uint)Marshal.SizeOf(shfi), flags);
                 if (res != IntPtr.Zero && shfi.hIcon != IntPtr.Zero)
                 {
@@ -176,7 +176,7 @@ public static class ShellIconHelper
             else
             {
                 // Generic fallback for common extensions (highly performant, zero disk I/O)
-                var flags = ShellIconNativeMethods.SHGFI_ICON | ShellIconNativeMethods.SHGFI_SMALLICON | ShellIconNativeMethods.SHGFI_USEFILEATTRIBUTES;
+                var flags = ShellIconNativeMethods.SHGFI_ICON | ShellIconNativeMethods.SHGFI_LARGEICON | ShellIconNativeMethods.SHGFI_USEFILEATTRIBUTES;
                 var attributes = isDir ? ShellIconNativeMethods.FILE_ATTRIBUTE_DIRECTORY : ShellIconNativeMethods.FILE_ATTRIBUTE_NORMAL;
                 var lookupPath = isDir ? "dummy_folder" : ext;
 

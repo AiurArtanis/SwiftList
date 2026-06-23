@@ -111,14 +111,14 @@
             <Border Style="{StaticResource SettingsCard}">
                 <StackPanel>
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_AboutTitle]}" 
-                               FontWeight="SemiBold" FontSize="13" FontFamily="Microsoft YaHei UI" Margin="0,0,0,10"/>
+                               FontWeight="SemiBold" FontSize="13"  Margin="0,0,0,10"/>
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_AboutDesc]}" 
                                FontSize="12" Foreground="{DynamicResource TextSecondary2}" LineHeight="18" TextWrapping="Wrap" Margin="0,0,0,12"/>
                     
                     <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SeparatorBrush}" Margin="0,4,0,12"/>
                     
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_AdvTitle]}" 
-                               FontWeight="SemiBold" FontSize="12" FontFamily="Microsoft YaHei UI" Margin="0,0,0,8"/>
+                               FontWeight="SemiBold" FontSize="12"  Margin="0,0,0,8"/>
                     
                     <StackPanel Orientation="Horizontal" Margin="0,5">
                         <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource SuccessBadgeText}" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>

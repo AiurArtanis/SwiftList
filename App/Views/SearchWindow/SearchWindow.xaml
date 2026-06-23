@@ -96,7 +96,7 @@
                                    VerticalAlignment="Center"
                                    FontSize="16"
                                    Foreground="{DynamicResource TextSecondary2}"
-                                   FontFamily="Microsoft YaHei UI">
+                                   >
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -133,7 +133,7 @@
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimary}"
                                        HorizontalAlignment="Center"
-                                       FontFamily="Microsoft YaHei UI"
+                                       
                                        Margin="0,0,0,0"/>
                         </StackPanel>
                         <!-- Actions View (Self-drawn context actions menu, decoupled and shared) -->
@@ -195,7 +195,7 @@
                             <TextBlock x:Name="TxtResultCount" Text="{Binding ResultCountText}"
                                        FontSize="12" FontWeight="Medium"
                                        Foreground="{DynamicResource TextSecondary2}"
-                                       FontFamily="Microsoft YaHei UI"
+                                       
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                         <!-- Keyboard hint -->
@@ -203,7 +203,7 @@
                                    Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HintKeyboard]}"
                                    FontSize="11"
                                    Foreground="{DynamicResource TextSecondary2}"
-                                   FontFamily="Microsoft YaHei UI"
+                                   
                                    VerticalAlignment="Center"/>
                     </Grid>
                 </Border>

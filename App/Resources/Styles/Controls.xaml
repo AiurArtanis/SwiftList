@@ -52,7 +52,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
+        
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="ContentTemplate">
             <Setter.Value>
@@ -134,7 +134,7 @@
             </Style>
         </Style.Resources>
         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-        <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
+        
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -194,7 +194,7 @@
         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource MenuBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
+        
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="Padding" Value="10,6"/>
         <Setter Property="HasDropShadow" Value="True"/>

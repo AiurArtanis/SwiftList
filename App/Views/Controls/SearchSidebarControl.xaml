@@ -30,7 +30,7 @@
                                 </Rectangle>
                                 <TextBlock Text="{Binding Header}" FontSize="11" FontWeight="Bold"
                                            Foreground="{DynamicResource TextSecondary}" Margin="20,4,20,6"
-                                           FontFamily="Microsoft YaHei UI"/>
+                                           />
                                 <ListBox ItemsSource="{Binding Items}" BorderThickness="0" Background="Transparent"
                                          ItemContainerStyle="{StaticResource SidebarItemStyle}"
                                          SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
@@ -45,7 +45,7 @@
                                                     <Path x:Name="PathIcon" Data="{Binding IconData}" Stretch="Uniform" Visibility="Collapsed"
                                                           Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                                 </Grid>
-                                                <TextBlock Text="{Binding DisplayName}" FontFamily="Microsoft YaHei UI" FontSize="13"
+                                                <TextBlock Text="{Binding DisplayName}"  FontSize="13"
                                                            VerticalAlignment="Center"
                                                            TextWrapping="Wrap"/>
                                             </DockPanel>

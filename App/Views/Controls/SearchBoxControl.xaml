@@ -67,7 +67,7 @@
                      Grid.Column="1"
                      Text="{Binding SearchText, ElementName=root, UpdateSourceTrigger=PropertyChanged}"
                      FontSize="{Binding FontSize, ElementName=root}"
-                     FontFamily="Microsoft YaHei UI, Segoe UI"
+                     
                      Foreground="{DynamicResource TextPrimary}"
                      Background="Transparent"
                      BorderThickness="0"
@@ -79,7 +79,7 @@
                        Grid.Column="1"
                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[QuickSearch_Placeholder]}"
                        FontSize="{Binding FontSize, ElementName=root}"
-                       FontFamily="Microsoft YaHei UI, Segoe UI"
+                       
                        Foreground="{DynamicResource TextSecondary}"
                        VerticalAlignment="Center"
                        IsHitTestVisible="False">

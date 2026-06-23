@@ -18,7 +18,7 @@
                 <TextBlock x:Name="TxtStatusInfo"
                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Status_Ready]}"
                            FontSize="11"
-                           FontFamily="Microsoft YaHei UI"
+                           
                            Foreground="{DynamicResource TextSecondary}"
                            VerticalAlignment="Center"/>
             </StackPanel>

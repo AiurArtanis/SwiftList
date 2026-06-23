@@ -30,7 +30,7 @@
 			<!-- Section Header view (e.g. "Context Menu") -->
 			<TextBlock Text="{Binding SectionTitle}" FontSize="12" FontWeight="SemiBold"
                        Foreground="{DynamicResource AccentBlue}" VerticalAlignment="Center"
-                       FontFamily="Microsoft YaHei UI, Segoe UI"
+                       
                        Margin="0,4,0,0"
                        Visibility="{Binding SectionHeaderVisibility}"/>
 
@@ -43,7 +43,7 @@
 				</Grid.ColumnDefinitions>
 
 				<!-- Item Icon -->
-				<Image Grid.Column="0" Source="{Binding Icon}" Width="23" Height="23" Margin="0,0,14,0" VerticalAlignment="Center"
+				<Image Grid.Column="0" Source="{Binding Icon}" MaxWidth="23" MaxHeight="23" Stretch="Uniform" StretchDirection="DownOnly" Margin="0,0,14,0" VerticalAlignment="Center"
                        Visibility="{Binding IconVisibility}"/>
 
 				<!-- Placeholder bullet when no icon -->
@@ -52,7 +52,7 @@
 
 				<TextBlock Grid.Column="1" Text="{Binding Text}" FontSize="14" VerticalAlignment="Center"
                            Foreground="{DynamicResource TextPrimary}"
-                           FontFamily="Microsoft YaHei UI, Segoe UI"
+                           
                            TextTrimming="CharacterEllipsis"/>
 
 				<!-- Submenu indicator -->

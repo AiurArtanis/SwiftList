@@ -35,7 +35,7 @@
     <Style TargetType="{x:Type MenuItem}">
         <Setter Property="Height" Value="36"/>
         <Setter Property="Foreground" Value="{DynamicResource MenuText}"/>
-        <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
+        
         <Setter Property="FontSize" Value="12.5"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">

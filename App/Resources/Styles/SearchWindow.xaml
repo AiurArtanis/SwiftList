@@ -73,7 +73,7 @@
         <Setter Property="Foreground" Value="{DynamicResource HeaderColumnText}"/>
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
+        
         <Setter Property="Padding" Value="16,10,16,10"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
         <Setter Property="BorderBrush" Value="{DynamicResource SeparatorBrush}"/>

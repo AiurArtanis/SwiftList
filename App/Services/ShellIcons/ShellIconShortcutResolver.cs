@@ -27,7 +27,7 @@ internal static class ShellIconShortcutResolver
 
             if (!string.IsNullOrWhiteSpace(iconPath) && File.Exists(iconPath))
             {
-                var icon = ExtractSmallIcon(iconPath, iconIndex);
+                var icon = ExtractLargeIcon(iconPath, iconIndex);
                 if (icon != null)
                 {
                     return icon;
@@ -39,7 +39,7 @@ internal static class ShellIconShortcutResolver
             var targetPath = Environment.ExpandEnvironmentVariables(targetPathBuilder.ToString());
             if (!string.IsNullOrWhiteSpace(targetPath) && File.Exists(targetPath))
             {
-                return ExtractSmallIcon(targetPath, 0) ?? GetShellIconWithoutLinkOverlay(targetPath);
+                return ExtractLargeIcon(targetPath, 0) ?? GetShellIconWithoutLinkOverlay(targetPath);
             }
         }
         catch (Exception ex)
@@ -57,11 +57,11 @@ internal static class ShellIconShortcutResolver
         return null;
     }
 
-    private static ImageSource? ExtractSmallIcon(string iconPath, int iconIndex)
+    private static ImageSource? ExtractLargeIcon(string iconPath, int iconIndex)
     {
-        var smallIcons = new IntPtr[1];
-        var extracted = ShellIconNativeMethods.ExtractIconEx(iconPath, iconIndex, null, smallIcons, 1);
-        if (extracted == 0 || smallIcons[0] == IntPtr.Zero)
+        var largeIcons = new IntPtr[1];
+        var extracted = ShellIconNativeMethods.ExtractIconEx(iconPath, iconIndex, largeIcons, null, 1);
+        if (extracted == 0 || largeIcons[0] == IntPtr.Zero)
         {
             return null;
         }
@@ -69,7 +69,7 @@ internal static class ShellIconShortcutResolver
         try
         {
             var bitmapSource = Imaging.CreateBitmapSourceFromHIcon(
-                smallIcons[0],
+                largeIcons[0],
                 Int32Rect.Empty,
                 BitmapSizeOptions.FromEmptyOptions());
             bitmapSource.Freeze();
@@ -77,14 +77,14 @@ internal static class ShellIconShortcutResolver
         }
         finally
         {
-            ShellIconNativeMethods.DestroyIcon(smallIcons[0]);
+            ShellIconNativeMethods.DestroyIcon(largeIcons[0]);
         }
     }
 
     public static ImageSource? GetShellIconWithoutLinkOverlay(string targetPath)
     {
         var shfi = new ShellIconNativeMethods.SHFILEINFOW();
-        var res = ShellIconNativeMethods.SHGetFileInfoW(targetPath, 0, ref shfi, (uint)Marshal.SizeOf(shfi), ShellIconNativeMethods.SHGFI_ICON | ShellIconNativeMethods.SHGFI_SMALLICON);
+        var res = ShellIconNativeMethods.SHGetFileInfoW(targetPath, 0, ref shfi, (uint)Marshal.SizeOf(shfi), ShellIconNativeMethods.SHGFI_ICON | ShellIconNativeMethods.SHGFI_LARGEICON);
         if (res == IntPtr.Zero || shfi.hIcon == IntPtr.Zero)
         {
             return null;

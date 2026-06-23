@@ -53,7 +53,7 @@
                     <local:SearchBoxControl x:Name="SearchBox" Grid.Column="0" FontSize="19" Padding="0" IsIconOnLeft="True" SearchText="{Binding SearchQuery, Mode=TwoWay}"/>
                     <!-- Status text (result count) -->
                     <TextBlock x:Name="TxtStatusInfo" Grid.Column="1"
-                               FontSize="15" FontFamily="Microsoft YaHei UI, Segoe UI"
+                               FontSize="15" 
                                Foreground="{DynamicResource TextSecondary2}"
                                VerticalAlignment="Center"
                                Margin="11,0,0,0"/>

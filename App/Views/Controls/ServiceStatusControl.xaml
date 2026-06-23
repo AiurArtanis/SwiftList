@@ -23,14 +23,14 @@
             
             <!-- Title -->
             <TextBlock x:Name="TxtLoadingTitle" Text="{Binding LoadingTitle}"
-                       FontSize="15" FontFamily="Microsoft YaHei UI, Segoe UI" FontWeight="SemiBold"
+                       FontSize="15"  FontWeight="SemiBold"
                        HorizontalAlignment="Center"
                        Foreground="{DynamicResource TextPrimary}"
                        TextAlignment="Center"/>
             
             <!-- Details / Stats -->
             <TextBlock x:Name="TxtLoadingStats" Text="{Binding LoadingStats}"
-                       FontSize="13" FontFamily="Microsoft YaHei UI, Segoe UI"
+                       FontSize="13" 
                        Foreground="{DynamicResource TextSecondary}"
                        HorizontalAlignment="Center"
                        Margin="0,8,0,0"
@@ -44,7 +44,7 @@
                     Margin="0,18,0,0"
                     Background="{DynamicResource AccentBlue}"
                     Foreground="{DynamicResource PrimaryButtonText}"
-                    FontFamily="Microsoft YaHei UI, Segoe UI"
+                    
                     FontWeight="Bold"
                     BorderThickness="0"
                     Cursor="Hand">

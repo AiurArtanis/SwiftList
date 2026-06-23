@@ -10,7 +10,7 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
-        FontFamily="Segoe UI, Inter, Microsoft YaHei">
+        >
     
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>

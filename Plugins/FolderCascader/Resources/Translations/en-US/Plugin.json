@@ -11,5 +11,9 @@
   "FolderCascader_Config_FolderPath": "Path (supports standard and shell::: paths)",
   "FolderCascader_Config_ShowHistory": "Show History",
   "FolderCascader_Config_ShowHistoryDesc": "When enabled, recently accessed folders and files will be displayed below custom folders, separated by a divider",
+  "FolderCascader_Config_Favorites": "Favorites",
+  "FolderCascader_Config_FavoritesDesc": "Quick folders list shown in the cascading menu, one path per line",
+  "FolderCascader_Favorites": "Favorites",
+  "FolderCascader_NoFavorites": "(No favorites)",
   "FolderCascader_Group_Content": "Content Settings"
 }

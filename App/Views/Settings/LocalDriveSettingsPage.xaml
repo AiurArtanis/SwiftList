@@ -48,7 +48,7 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel>
                         <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Local_IndexStatus]}" 
-                                   FontWeight="SemiBold" FontSize="13" FontFamily="Microsoft YaHei UI"/>
+                                   FontWeight="SemiBold" FontSize="13" />
                         <TextBlock Text="{Binding LocalDrive.IndexSummary}"
                                    Foreground="{DynamicResource TextSecondary2}" Margin="0,5,0,0"/>
                     </StackPanel>
@@ -97,7 +97,7 @@
             <Border Style="{StaticResource SettingsCard}">
                 <StackPanel>
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Local_UpdatePolicy]}" 
-                               FontWeight="SemiBold" FontSize="13" FontFamily="Microsoft YaHei UI" Margin="0,0,0,12"/>
+                               FontWeight="SemiBold" FontSize="13"  Margin="0,0,0,12"/>
                     
                     <Grid Margin="0,6">
                         <Grid.ColumnDefinitions>

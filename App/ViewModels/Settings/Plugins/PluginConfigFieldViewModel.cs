@@ -29,6 +29,7 @@ public class PluginConfigFieldViewModel : ViewModelBase
     public bool IsArray => FieldType == ConfigFieldType.Array;
     public bool IsObject => FieldType == ConfigFieldType.Object;
     public bool IsGroup => FieldType == ConfigFieldType.Group;
+    public bool IsMultiline => SchemaField.Multiline;
     public bool IsIconField => SchemaField.Key.Equals("Icon", StringComparison.OrdinalIgnoreCase);
     public bool IsSimpleField => IsBoolean || IsText || IsInteger || IsChoice;
 

@@ -33,7 +33,7 @@
                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_Title]}"
                            VerticalAlignment="Center"/>
                 <Border CornerRadius="4" Background="{DynamicResource BadgeBackground}" BorderBrush="{DynamicResource BadgeBorderBrush}" BorderThickness="1" Margin="8,0,0,0" Padding="5,1,5,2" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding HostSdkVersion, StringFormat='SDK v{0}'}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BadgeText}" FontFamily="Microsoft YaHei UI"/>
+                    <TextBlock Text="{Binding HostSdkVersion, StringFormat='SDK v{0}'}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BadgeText}" />
                 </Border>
             </StackPanel>
             <TextBlock Style="{StaticResource SettingsHintText}"
@@ -80,7 +80,7 @@
                                     <!-- Name + meta -->
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}"
-                                                   FontFamily="Microsoft YaHei UI"
+                                                   
                                                    FontSize="14" FontWeight="SemiBold"
                                                     Foreground="{DynamicResource TextPrimary}"/>
                                         <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
@@ -105,7 +105,7 @@
                                             Margin="4,0" Padding="8,4" VerticalAlignment="Center" Focusable="False">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_Configure]}" FontFamily="Microsoft YaHei UI" FontSize="11" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_Configure]}"  FontSize="11" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
 
@@ -135,7 +135,7 @@
                                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_ComponentsTitle]}"
                                                FontSize="11" FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextSecondary2}" Margin="0,0,0,12"
-                                               FontFamily="Microsoft YaHei UI"/>
+                                               />
 
                                     <!-- No components placeholder -->
                                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_NoComponents]}"
@@ -155,7 +155,7 @@
                                                         <TextBlock Text="{Binding GroupName}"
                                                                    FontSize="11" FontWeight="Bold"
                                                                    Foreground="{Binding ComponentType, Converter={StaticResource TypeToBrush}}"
-                                                                   FontFamily="Microsoft YaHei UI"
+                                                                   
                                                                    VerticalAlignment="Center"/>
                                                     </StackPanel>
 
@@ -173,7 +173,7 @@
                                                                         <TextBlock Grid.Column="0"
                                                                                    Text="{Binding DisplayName}"
                                                                                    FontSize="12"
-                                                                                   FontFamily="Microsoft YaHei UI"
+                                                                                   
                                                                                    Foreground="{DynamicResource TextPrimary}"
                                                                                    VerticalAlignment="Center"/>
 
@@ -217,7 +217,7 @@
                                Foreground="{DynamicResource WarningBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_RestartNote]}"
                                FontSize="12" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center"
-                               FontFamily="Microsoft YaHei UI"/>
+                               />
                 </StackPanel>
             </Border>
         </StackPanel>

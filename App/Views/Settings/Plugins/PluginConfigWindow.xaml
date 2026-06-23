@@ -35,32 +35,14 @@
 
             <!-- Implicit TextBox styling matching settings theme -->
             <Style TargetType="TextBox">
-                <Setter Property="Height" Value="26"/>
-                <Setter Property="Padding" Value="6,2"/>
-                <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
-                <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="VerticalContentAlignment" Value="Center"/>
-                <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
-                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Height" Value="26"/><Setter Property="Padding" Value="6,2"/><Setter Property="Background" Value="{DynamicResource ControlBackground}"/><Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="12"/><Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/><Setter Property="VerticalScrollBarVisibility" Value="Hidden"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="TextBox">
-                            <Border x:Name="border" CornerRadius="4"
-                                    Background="{TemplateBinding Background}" 
-                                    BorderBrush="{TemplateBinding BorderBrush}" 
-                                    BorderThickness="{TemplateBinding BorderThickness}">
-                                <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
-                            </Border>
+                            <Border x:Name="border" CornerRadius="4" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"><ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}" VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"/></Border>
                             <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="true">
-                                    <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource AccentBlue}"/>
-                                </Trigger>
-                                <Trigger Property="IsFocused" Value="true">
-                                    <Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource AccentBlue}"/>
-                                    <Setter Property="Background" TargetName="border" Value="{DynamicResource ControlHoverBackground}"/>
-                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="true"><Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource AccentBlue}"/></Trigger>
+                                <Trigger Property="IsFocused" Value="true"><Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource AccentBlue}"/><Setter Property="Background" TargetName="border" Value="{DynamicResource ControlHoverBackground}"/></Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -88,8 +70,8 @@
                         <!-- Label & Description for simple inputs -->
                         <StackPanel Grid.Column="0" Grid.Row="0" VerticalAlignment="Center" Margin="0,0,12,0" 
                                     Visibility="{Binding IsSimpleField, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" FontFamily="Microsoft YaHei UI" Visibility="{Binding Label, Converter={StaticResource StringToVis}}"/>
-                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" FontFamily="Microsoft YaHei UI" TextWrapping="Wrap" Margin="0,2,0,0" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Visibility="{Binding Label, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,2,0,0" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
                         </StackPanel>
 
                         <!-- Field Controls for simple inputs -->
@@ -119,7 +101,33 @@
                                                 <Setter.Value>
                                                     <DataTemplate>
                                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="180"/>
+                                                            <ContentControl Content="{Binding}" Focusable="False">
+                                                                <ContentControl.Style>
+                                                                    <Style TargetType="ContentControl">
+                                                                        <Setter Property="ContentTemplate">
+                                                                            <Setter.Value>
+                                                                                <DataTemplate>
+                                                                                    <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="180"/>
+                                                                                </DataTemplate>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsMultiline}" Value="True">
+                                                                                <Setter Property="ContentTemplate">
+                                                                                    <Setter.Value>
+                                                                                        <DataTemplate>
+                                                                                            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" 
+                                                                                                     Width="260" Height="80" AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap"
+                                                                                                     HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                                                                                     VerticalContentAlignment="Top" Padding="6,4" FontFamily="Cascadia Mono, Consolas"/>
+                                                                                        </DataTemplate>
+                                                                                    </Setter.Value>
+                                                                                </Setter>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </ContentControl.Style>
+                                                            </ContentControl>
                                                             <!-- Spacer for non-icon fields to align them with the icon field preview -->
                                                             <Border Width="24" Height="24" Margin="8,0,0,0" CornerRadius="4" 
                                                                     Background="Transparent" BorderBrush="Transparent" BorderThickness="1"
@@ -170,9 +178,9 @@
                         <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Margin="4,4,4,4"
                                     Visibility="{Binding IsObject, Converter={StaticResource BoolToVis}}">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" FontFamily="Microsoft YaHei UI"/>
+                                <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
                             </StackPanel>
-                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" FontFamily="Microsoft YaHei UI" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
                             
                             <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0">
                                 <ItemsControl ItemsSource="{Binding Children}"/>
@@ -183,9 +191,9 @@
                         <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Margin="4,4,4,4"
                                     Visibility="{Binding IsGroup, Converter={StaticResource BoolToVis}}">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBlue}" FontFamily="Microsoft YaHei UI"/>
+                                <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBlue}"/>
                             </StackPanel>
-                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" FontFamily="Microsoft YaHei UI" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
                             
                             <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0">
                                 <ItemsControl ItemsSource="{Binding Children}"/>
@@ -197,10 +205,10 @@
                                     Visibility="{Binding IsArray, Converter={StaticResource BoolToVis}}">
                             <Grid Margin="0,0,0,6">
                                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                    <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" FontFamily="Microsoft YaHei UI"/>
+                                    <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
                                 </StackPanel>
                             </Grid>
-                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" FontFamily="Microsoft YaHei UI" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
 
                             <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0">
                                 <StackPanel>
@@ -254,7 +262,7 @@
                     <Grid>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
                             <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource TextPrimary2}" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                            <TextBlock FontFamily="Microsoft YaHei UI" FontSize="13" FontWeight="SemiBold"
+                            <TextBlock FontSize="13" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center">
                                 <TextBlock.Text>
                                     <MultiBinding StringFormat="{}{0} - {1}">
