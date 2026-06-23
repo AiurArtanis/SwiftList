@@ -26,10 +26,12 @@ public static class QuickNavigationNavigator
         {
             try
             {
+                var workingDir = Path.GetDirectoryName(path);
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = path,
-                    UseShellExecute = true
+                    UseShellExecute = true,
+                    WorkingDirectory = string.IsNullOrEmpty(workingDir) ? "" : workingDir
                 });
             }
             catch { }

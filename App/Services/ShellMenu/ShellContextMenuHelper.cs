@@ -190,6 +190,7 @@ public static class ShellContextMenuHelper
         var pIContextMenu2 = IntPtr.Zero;
         var pIContextMenu3 = IntPtr.Zero;
         var subclassed = false;
+        var lpDir = IntPtr.Zero;
 
         try
         {
@@ -236,11 +237,15 @@ public static class ShellContextMenuHelper
             var cmd = (uint)TrackPopupMenuEx(hMenu, TPM_RETURNCMD | TPM_LEFTBUTTON, x, y, hwndOwner, IntPtr.Zero);
             if (cmd >= CMD_FIRST && cmd <= CMD_LAST)
             {
+                var workingDir = System.IO.Directory.Exists(path) ? path : System.IO.Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(workingDir)) lpDir = Marshal.StringToHGlobalAnsi(workingDir);
+
                 var info = new CMINVOKECOMMANDINFO
                 {
                     cbSize = Marshal.SizeOf<CMINVOKECOMMANDINFO>(),
                     hwnd = hwndOwner,
                     lpVerb = (IntPtr)(cmd - CMD_FIRST),
+                    lpDirectory = lpDir,
                     nShow = 1
                 };
                 contextMenu.InvokeCommand(ref info);
@@ -252,6 +257,7 @@ public static class ShellContextMenuHelper
         }
         finally
         {
+            if (lpDir != IntPtr.Zero) Marshal.FreeHGlobal(lpDir);
             if (subclassed) RemoveWindowSubclass(hwndOwner, _subclassProc, new IntPtr(1001));
             _currentContextMenu3 = null;
             _currentContextMenu2 = null;
