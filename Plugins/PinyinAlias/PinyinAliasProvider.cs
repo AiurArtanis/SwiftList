@@ -54,7 +54,7 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
             {
                 foreach (var p in pinyins)
                 {
-                    yield return p.ToLowerInvariant();
+                    yield return p;
                 }
             }
             yield break;
@@ -121,12 +121,7 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
             var c = text[i];
             if (PinyinEngine.TryGetPinyins(c, out var pinyins))
             {
-                var pList = new string[pinyins.Length];
-                for (var j = 0; j < pinyins.Length; j++)
-                {
-                    pList[j] = pinyins[j].ToLowerInvariant();
-                }
-                lists[i] = pList;
+                lists[i] = pinyins;
             }
             else
             {

@@ -17,6 +17,7 @@ public sealed class RuntimeIndex
     private System.Collections.BitArray _hasAlias = new(0);
     private readonly NameTable _names = new();
     private Dictionary<char, int[]> _nameCharBuckets = new();
+    private readonly Dictionary<int, List<int>> _parentToChildren = new();
     private string _sourceRoot = string.Empty;
     private string _sourceRootLower = string.Empty;
 
@@ -24,6 +25,9 @@ public sealed class RuntimeIndex
     public int Count => _ids.Count;
     public int TotalFiles { get; internal set; }
     public int TotalDirs { get; internal set; }
+
+    internal Dictionary<int, List<int>> ParentToChildren => _parentToChildren;
+    public bool TryGetChildren(int parentIndex, out List<int>? children) => _parentToChildren.TryGetValue(parentIndex, out children);
 
     internal readonly record struct ChildRange(int Start, int Count);
 
@@ -81,6 +85,7 @@ public sealed class RuntimeIndex
         _aliasValues = Array.Empty<string[]>();
         _deltaNameAliases.Clear();
         _hasAlias = new System.Collections.BitArray(0);
+        _parentToChildren.Clear();
         _nameCharDelta.Clear();
         _nameCharBuckets.Clear();
         _pathMemo.Clear();
@@ -154,6 +159,16 @@ public sealed class RuntimeIndex
                 }
             }
             _parentIndexes.Add(parentIndex);
+
+            if (parentIndex >= 0)
+            {
+                if (!_parentToChildren.TryGetValue(parentIndex, out var list))
+                {
+                    list = new List<int>();
+                    _parentToChildren[parentIndex] = list;
+                }
+                list.Add(index);
+            }
         }
 
         this.BuildNameCharBuckets();

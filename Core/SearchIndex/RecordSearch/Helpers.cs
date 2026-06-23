@@ -22,12 +22,37 @@ internal static class Helpers
         int directoryRootIndex,
         Dictionary<int, bool> cache)
     {
-        if (cache.TryGetValue(entryIndex, out var cached))
-            return cached;
+        var tempStack = new List<int>();
+        var current = entryIndex;
+        var found = false;
 
-        var result = index.IsUnderDirectoryIndex(entryIndex, directoryRootIndex);
-        cache[entryIndex] = result;
-        return result;
+        while (current >= 0)
+        {
+            if (cache.TryGetValue(current, out var cached))
+            {
+                found = cached;
+                break;
+            }
+
+            if (current == directoryRootIndex)
+            {
+                found = true;
+                break;
+            }
+
+            tempStack.Add(current);
+            var parent = index.ParentIndexes[current];
+            if (parent == current)
+                break;
+            current = parent;
+        }
+
+        foreach (var idx in tempStack)
+        {
+            cache[idx] = found;
+        }
+
+        return found;
     }
 
     public static FzfPatternResult ToPatternResult(FzfMatchResult match) => new FzfPatternResult(match.Score, match.Start, match.End, match.End, match.IsMatch);

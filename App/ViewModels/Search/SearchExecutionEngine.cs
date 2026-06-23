@@ -55,6 +55,7 @@ internal sealed class SearchExecutionEngine : IDisposable
         Action<List<AppSearchResult>, string, bool> onResultsUpdated,
         Action onServiceUnavailable)
     {
+        Logger.Log($"[SearchExecutionEngine] Performing search: '{query}', scope: '{searchScope}'", LogLevel.Debug);
         CancelPendingSearch();
         if (string.IsNullOrWhiteSpace(query))
         {

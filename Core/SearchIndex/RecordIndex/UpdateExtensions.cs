@@ -11,6 +11,24 @@ public static class UpdateExtensions
         if (index.TryGetIndexById(record.Id, out var oldIndex))
         {
             var newParentIndex = index.ResolveParentIndex(record.Id, record.ParentId);
+            var oldParentIndex = index.ParentIndexes[oldIndex];
+            if (oldParentIndex != newParentIndex)
+            {
+                if (oldParentIndex >= 0 && index.ParentToChildren.TryGetValue(oldParentIndex, out var oldList))
+                {
+                    oldList.Remove(oldIndex);
+                }
+                if (newParentIndex >= 0)
+                {
+                    if (!index.ParentToChildren.TryGetValue(newParentIndex, out var newList))
+                    {
+                        newList = new List<int>();
+                        index.ParentToChildren[newParentIndex] = newList;
+                    }
+                    newList.Add(oldIndex);
+                }
+            }
+
             var oldIsDirectory = index.IsDirectory(oldIndex);
 
             index.ParentIndexes[oldIndex] = newParentIndex;
@@ -67,6 +85,15 @@ public static class UpdateExtensions
 
         var parentIndex = index.ResolveParentIndex(record.Id, record.ParentId);
         index.ParentIndexes.Add(parentIndex);
+        if (parentIndex >= 0)
+        {
+            if (!index.ParentToChildren.TryGetValue(parentIndex, out var newList))
+            {
+                newList = new List<int>();
+                index.ParentToChildren[parentIndex] = newList;
+            }
+            newList.Add(idx);
+        }
 
         if (record.IsDirectory)
             index.TotalDirs++;
@@ -99,6 +126,12 @@ public static class UpdateExtensions
 
         index.DeltaIdToIndex.Remove(id);
         index.DeltaNameAliases.Remove(idx);
+
+        var parentIndex = index.ParentIndexes[idx];
+        if (parentIndex >= 0 && index.ParentToChildren.TryGetValue(parentIndex, out var list))
+        {
+            list.Remove(idx);
+        }
 
         if (wasDirectory)
             index.TotalDirs = Math.Max(0, index.TotalDirs - 1);

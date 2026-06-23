@@ -95,7 +95,7 @@ internal sealed class UsnServicePipeServer : IDisposable
                 }
 
                 await pipeServer.WaitForConnectionAsync(token).ConfigureAwait(false);
-                await HandleClientAsync(pipeServer, token).ConfigureAwait(false);
+                _ = Task.Run(() => HandleClientAsync(pipeServer, token), token);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

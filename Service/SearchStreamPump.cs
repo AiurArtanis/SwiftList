@@ -6,6 +6,7 @@ internal static class SearchStreamPump
 {
     public static async Task RunAsync(SearchEngine? engine, SearchRequestMessage msg, Stream stream, CancellationToken token)
     {
+        Logger.Log($"[SearchStreamPump] Starting query: '{msg.Query}', limit={msg.Limit}, appLimit={msg.AppLimit}, directoryFilter='{msg.DirectoryFilter}'", LogLevel.Debug);
         using var queryCts = CancellationTokenSource.CreateLinkedTokenSource(token);
         var queryToken = queryCts.Token;
 

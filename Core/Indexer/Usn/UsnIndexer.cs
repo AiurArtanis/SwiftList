@@ -77,6 +77,7 @@ public class UsnIndexer : IDisposable
 
     public void ApplyUsnRecords(string drive, IReadOnlyList<ParsedUsnRecord> records)
     {
+        Logger.Log($"[UsnIndexer] Applying {records.Count} USN records to drive {drive}", LogLevel.Debug);
         lock (LockObj)
         {
             if (!_recordIndexes.TryGetValue(drive, out var runtime))
