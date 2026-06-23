@@ -22,7 +22,7 @@ public class FolderPreviewProvider : IFilePreviewProvider
         try
         {
             var dirInfo = new DirectoryInfo(path);
-            var items = dirInfo.EnumerateFileSystemInfos().Take(30).ToList();
+            var items = dirInfo.EnumerateFileSystemInfos().Take(31).ToList();
             if (items.Count == 0)
             {
                 panel.Children.Add(new TextBlock {
@@ -32,8 +32,10 @@ public class FolderPreviewProvider : IFilePreviewProvider
             }
             else
             {
-                foreach (var item in items)
+                var displayCount = Math.Min(items.Count, 30);
+                for (var idx = 0; idx < displayCount; idx++)
                 {
+                    var item = items[idx];
                     var isItemDir = (item.Attributes & FileAttributes.Directory) != 0;
                     var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 2) };
                     row.Children.Add(new Image {
@@ -44,7 +46,7 @@ public class FolderPreviewProvider : IFilePreviewProvider
                     });
                     panel.Children.Add(row);
                 }
-                if (dirInfo.EnumerateFileSystemInfos().Count() > 30)
+                if (items.Count > 30)
                 {
                     panel.Children.Add(new TextBlock {
                         Text = TranslationService.Get("QuickLook_MoreItems"),

@@ -30,10 +30,6 @@ public static class SearchRequestBinarySerializer
         try
         {
             var span = buffer.AsSpan();
-            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(0), Magic);
-            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(4), VersionSearchRequest);
-            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(8), payloadSize);
-
             var offset = 12;
             span[offset++] = (byte)msg.Id;
 
@@ -58,6 +54,11 @@ public static class SearchRequestBinarySerializer
                     WriteString(span, ref offset, msg.Query);
                     break;
             }
+
+            var actualPayloadSize = offset - 12;
+            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(0), Magic);
+            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(4), VersionSearchRequest);
+            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(8), actualPayloadSize);
 
             await stream.WriteAsync(buffer.AsMemory(0, offset), token).ConfigureAwait(false);
             await stream.FlushAsync(token).ConfigureAwait(false);

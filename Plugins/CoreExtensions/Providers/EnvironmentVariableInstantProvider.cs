@@ -76,9 +76,17 @@ public class EnvironmentVariableInstantProvider : IInstantResultProvider
             foreach (var (name, val) in results)
             {
                 var varName = $"%{name}%";
-                var isDir = Directory.Exists(val);
-                var isFile = File.Exists(val);
-                var exists = isDir || isFile;
+                var isDir = false;
+                var isFile = false;
+                var exists = false;
+
+                if (IsLocalFixedPath(val))
+                {
+                    isDir = Directory.Exists(val);
+                    isFile = !isDir && File.Exists(val);
+                    exists = isDir || isFile;
+                }
+
                 var typeDesc = isDir
                     ? TranslationService.Get("Column_TypeFolder")
                     : (isFile ? TranslationService.Get("Column_TypeFile") : TranslationService.Get("Env_PathNotExist"));
@@ -212,6 +220,24 @@ public class EnvironmentVariableInstantProvider : IInstantResultProvider
         else
         {
             return mask;
+        }
+    }
+
+    private static bool IsLocalFixedPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || path.Length < 3) return false;
+        if (path[1] != ':' || path[2] != '\\') return false;
+        var driveLetter = char.ToUpper(path[0]);
+        if (driveLetter < 'A' || driveLetter > 'Z') return false;
+
+        try
+        {
+            var drive = new DriveInfo(driveLetter.ToString());
+            return drive.DriveType == DriveType.Fixed || drive.DriveType == DriveType.Ram;
+        }
+        catch
+        {
+            return false;
         }
     }
 }

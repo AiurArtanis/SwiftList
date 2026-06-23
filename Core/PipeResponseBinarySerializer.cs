@@ -89,10 +89,6 @@ public static class PipeResponseBinarySerializer
         try
         {
             var span = buffer.AsSpan();
-            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(0), Magic);
-            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(4), Version);
-            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(8), payloadSize);
-
             var offset = 12;
             span[offset++] = (byte)response.Kind;
 
@@ -108,6 +104,11 @@ public static class PipeResponseBinarySerializer
                     WriteMachineSettings(span, ref offset, response.MachineSettings ?? new MachineSettings());
                     break;
             }
+
+            var actualPayloadSize = offset - 12;
+            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(0), Magic);
+            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(4), Version);
+            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(8), actualPayloadSize);
 
             await stream.WriteAsync(buffer.AsMemory(0, offset), token).ConfigureAwait(false);
             await stream.FlushAsync(token).ConfigureAwait(false);

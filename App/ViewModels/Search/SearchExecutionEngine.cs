@@ -83,8 +83,8 @@ internal sealed class SearchExecutionEngine : IDisposable
                 var adapter = tracker.ActiveInlineAdapter;
                 if (isInlineSearchContext && adapter != null && tracker.ActiveHwnd != IntPtr.Zero)
                 {
-                    var listItems = adapter.GetListItems(tracker.ActiveHwnd);
-                    if (listItems.Any())
+                    var listItems = adapter.GetListItems(tracker.ActiveHwnd).ToList();
+                    if (listItems.Count > 0)
                     {
                         var contextDirectory = !string.IsNullOrWhiteSpace(searchScope) ? searchScope : (tracker.ActivePath ?? tracker.LastActiveExplorerPath);
                         if (tracker.IsActiveWindowExplorer)

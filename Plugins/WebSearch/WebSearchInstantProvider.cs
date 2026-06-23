@@ -28,6 +28,11 @@ public class WebSearchInstantProvider : IInstantResultProvider
 
     private List<SearchSourceItem> LoadSearchSources()
     {
+        if (_cachedSources != null)
+        {
+            return _cachedSources;
+        }
+
         try
         {
             var sources = PluginSettingsService.GetSetting<List<SearchSourceItem>>("SwiftList.Plugins.WebSearch", "SearchSources", null!);
@@ -68,7 +73,10 @@ public class WebSearchInstantProvider : IInstantResultProvider
     public IEnumerable<InstantResultItem> GetInstantResults(string query)
     {
         if (string.IsNullOrEmpty(query))
+        {
+            _cachedSources = null; // Clear cache on empty/reset query to allow picking up configuration changes
             yield break;
+        }
 
         var sources = LoadSearchSources();
         SearchSourceItem? matchedSource = null;

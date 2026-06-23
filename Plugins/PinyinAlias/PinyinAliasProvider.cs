@@ -80,9 +80,8 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
         {
             if (!string.IsNullOrWhiteSpace(init))
             {
-                var lowerInit = init.ToLowerInvariant();
-                if (!uniqueInitials.Contains(lowerInit))
-                    uniqueInitials.Add(lowerInit);
+                if (!uniqueInitials.Contains(init))
+                    uniqueInitials.Add(init);
             }
         }
         if (uniqueInitials.Count > 0)
@@ -100,9 +99,8 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
         {
             if (!string.IsNullOrWhiteSpace(fp))
             {
-                var lowerFp = fp.ToLowerInvariant();
-                if (!uniqueFulls.Contains(lowerFp))
-                    uniqueFulls.Add(lowerFp);
+                if (!uniqueFulls.Contains(fp))
+                    uniqueFulls.Add(fp);
             }
         }
         if (uniqueFulls.Count > 0)
@@ -126,13 +124,13 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
                 var pList = new string[pinyins.Length];
                 for (var j = 0; j < pinyins.Length; j++)
                 {
-                    pList[j] = pinyins[j].ToUpperInvariant();
+                    pList[j] = pinyins[j].ToLowerInvariant();
                 }
                 lists[i] = pList;
             }
             else
             {
-                lists[i] = new string[] { c.ToString().ToUpperInvariant() };
+                lists[i] = new string[] { char.ToLowerInvariant(c).ToString() };
             }
         }
         return lists;
