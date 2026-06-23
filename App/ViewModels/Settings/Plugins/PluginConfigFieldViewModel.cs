@@ -17,6 +17,8 @@ public class PluginConfigFieldViewModel : ViewModelBase
 
     public string Label => string.IsNullOrEmpty(SchemaField.LabelKey) ? string.Empty : TranslationService.Get(SchemaField.LabelKey);
     public string Description => string.IsNullOrEmpty(SchemaField.DescriptionKey) ? string.Empty : TranslationService.Get(SchemaField.DescriptionKey);
+    public string GroupKey => SchemaField.GroupKey;
+    public string GroupName => string.IsNullOrEmpty(GroupKey) ? string.Empty : (TranslationService.Get(GroupKey) ?? string.Empty);
     public ConfigFieldType FieldType => SchemaField.FieldType;
     public List<string>? Choices => SchemaField.Choices?.Select(c => TranslationService.Get(c)).ToList();
 
@@ -36,7 +38,21 @@ public class PluginConfigFieldViewModel : ViewModelBase
 
     public object? LocalValueStore
     {
-        get => _localValueStore ?? SchemaField.DefaultValue;
+        get
+        {
+            if (_localValueStore == null)
+            {
+                if (_onValueChanged != null)
+                {
+                    _localValueStore = SchemaField.DefaultValue;
+                }
+                else
+                {
+                    _localValueStore = ConfigValueHelper.UnpackValue(Settings.GetPluginSetting(PluginId, SchemaField.Key, SchemaField.DefaultValue));
+                }
+            }
+            return _localValueStore;
+        }
         set
         {
             _localValueStore = ConfigValueHelper.UnpackValue(value);
@@ -49,9 +65,8 @@ public class PluginConfigFieldViewModel : ViewModelBase
     {
         get
         {
-            if (_onValueChanged != null) return LocalValueStore;
             if (IsObject || IsArray) return this;
-            return ConfigValueHelper.UnpackValue(Settings.GetPluginSetting(PluginId, SchemaField.Key, SchemaField.DefaultValue));
+            return LocalValueStore;
         }
         set
         {
