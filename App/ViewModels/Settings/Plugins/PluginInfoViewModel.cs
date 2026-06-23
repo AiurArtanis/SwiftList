@@ -42,21 +42,6 @@ public class PluginComponentGroupViewModel : ViewModelBase
 }
 
 /// <summary>
-/// Represents a group of plugin configuration fields under the same functional area.
-/// </summary>
-public class PluginConfigGroupViewModel : ViewModelBase
-{
-    public PluginConfigGroupViewModel(string groupName, List<PluginConfigFieldViewModel> fields)
-    {
-        GroupName = groupName;
-        Fields = new ObservableCollection<PluginConfigFieldViewModel>(fields);
-    }
-
-    public string GroupName { get; }
-    public ObservableCollection<PluginConfigFieldViewModel> Fields { get; }
-}
-
-/// <summary>
 /// Represents a loaded plugin with its name, version, source DLL, and grouped sub-components.
 /// </summary>
 public class PluginInfoViewModel : ViewModelBase
@@ -86,14 +71,6 @@ public class PluginInfoViewModel : ViewModelBase
             .ToList();
 
         ComponentGroups = new ObservableCollection<PluginComponentGroupViewModel>(groups);
-
-        // Group config fields by group name
-        var configGroups = configFields
-            .GroupBy(f => f.GroupName)
-            .Select(g => new PluginConfigGroupViewModel(g.Key, g.ToList()))
-            .ToList();
-
-        ConfigGroups = new ObservableCollection<PluginConfigGroupViewModel>(configGroups);
     }
 
     public string Name { get; }
@@ -103,7 +80,6 @@ public class PluginInfoViewModel : ViewModelBase
     public List<PluginComponentViewModel> RawComponents { get; }
     public ObservableCollection<PluginComponentGroupViewModel> ComponentGroups { get; }
     public ObservableCollection<PluginConfigFieldViewModel> ConfigFields { get; }
-    public ObservableCollection<PluginConfigGroupViewModel> ConfigGroups { get; }
 
     public bool HasConfigFields => ConfigFields.Count > 0;
     public bool HasNoComponents => RawComponents.Count == 0;

@@ -28,6 +28,7 @@ public class PluginConfigFieldViewModel : ViewModelBase
     public bool IsChoice => FieldType == ConfigFieldType.Choice;
     public bool IsArray => FieldType == ConfigFieldType.Array;
     public bool IsObject => FieldType == ConfigFieldType.Object;
+    public bool IsGroup => FieldType == ConfigFieldType.Group;
     public bool IsIconField => SchemaField.Key.Equals("Icon", StringComparison.OrdinalIgnoreCase);
     public bool IsSimpleField => IsBoolean || IsText || IsInteger || IsChoice;
 
@@ -42,7 +43,11 @@ public class PluginConfigFieldViewModel : ViewModelBase
         {
             if (_localValueStore == null)
             {
-                if (_onValueChanged != null)
+                if (IsGroup)
+                {
+                    _localValueStore = null;
+                }
+                else if (_onValueChanged != null)
                 {
                     _localValueStore = SchemaField.DefaultValue;
                 }
@@ -65,7 +70,7 @@ public class PluginConfigFieldViewModel : ViewModelBase
     {
         get
         {
-            if (IsObject || IsArray) return this;
+            if (IsObject || IsArray || IsGroup) return this;
             return LocalValueStore;
         }
         set
@@ -95,6 +100,14 @@ public class PluginConfigFieldViewModel : ViewModelBase
 
     public void Commit()
     {
+        if (IsGroup)
+        {
+            foreach (var child in Children)
+            {
+                child.Commit();
+            }
+            return;
+        }
         if (IsObject)
         {
             var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
@@ -132,7 +145,15 @@ public class PluginConfigFieldViewModel : ViewModelBase
 
     private void LoadChildrenAndArrayItems()
     {
-        if (IsObject && SchemaField.SubFields != null)
+        if (IsGroup && SchemaField.SubFields != null)
+        {
+            foreach (var sf in SchemaField.SubFields)
+            {
+                var childVM = new PluginConfigFieldViewModel(PluginId, sf, Settings, null);
+                Children.Add(childVM);
+            }
+        }
+        else if (IsObject && SchemaField.SubFields != null)
         {
             var rawSetting = Settings.GetPluginSetting<object?>(PluginId, SchemaField.Key, null);
             var dict = ConfigValueHelper.UnpackValue(rawSetting) as Dictionary<string, object>

@@ -179,6 +179,19 @@
                             </Border>
                         </StackPanel>
 
+                        <!-- Group layout -->
+                        <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Margin="4,4,4,4"
+                                    Visibility="{Binding IsGroup, Converter={StaticResource BoolToVis}}">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBlue}" FontFamily="Microsoft YaHei UI"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" FontFamily="Microsoft YaHei UI" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                            
+                            <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0">
+                                <ItemsControl ItemsSource="{Binding Children}"/>
+                            </Border>
+                        </StackPanel>
+
                         <!-- Array layout -->
                         <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Margin="4,4,4,4"
                                     Visibility="{Binding IsArray, Converter={StaticResource BoolToVis}}">
@@ -220,7 +233,7 @@
             </DataTemplate>
         </ResourceDictionary>
     </Window.Resources>
-
+ 
     <Border CornerRadius="10" Background="{DynamicResource ContentBg}"
             BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" Margin="8">
         <Border.Effect>
@@ -233,7 +246,7 @@
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="52"/>
                 </Grid.RowDefinitions>
-
+ 
                 <!-- Titlebar -->
                 <Border Grid.Row="0" Background="{DynamicResource HeaderBg}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1"
                         CornerRadius="9,9,0,0"
@@ -254,23 +267,10 @@
                         <Button Content="&#xE8BB;" Style="{StaticResource CloseButton}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,6,0" Click="BtnClose_Click"/>
                     </Grid>
                 </Border>
-
+ 
                 <!-- Config content scroll list -->
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" Padding="16,12">
-                    <StackPanel>
-                        <ItemsControl ItemsSource="{Binding ConfigGroups}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Margin="0,0,0,16">
-                                        <!-- Group Header (only visible if GroupName is not empty) -->
-                                        <TextBlock Text="{Binding GroupName}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBlue}" 
-                                                   Margin="2,4,0,8" Visibility="{Binding GroupName, Converter={StaticResource StringToVis}}" FontFamily="Microsoft YaHei UI"/>
-                                        <ItemsControl ItemsSource="{Binding Fields}"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding ConfigFields}"/>
                 </ScrollViewer>
 
                 <!-- Footer -->

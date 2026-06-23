@@ -30,6 +30,11 @@ public static class MenuBuilder
             {
                 foreach (var folder in folders)
                 {
+                    if (folder.Path == "-" || folder.Name == "-")
+                    {
+                        items.Add(new DynamicMenuItem { IsSeparator = true });
+                        continue;
+                    }
                     if (string.IsNullOrWhiteSpace(folder.Path)) continue;
                     items.Add(new DynamicMenuItem
                     {

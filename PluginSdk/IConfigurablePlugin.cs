@@ -7,7 +7,8 @@ public enum ConfigFieldType
     Integer,
     Choice,
     Array,
-    Object
+    Object,
+    Group
 }
 
 public class PluginConfigField
