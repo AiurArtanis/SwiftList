@@ -35,18 +35,14 @@
 
             <!-- Implicit TextBox styling matching settings theme -->
             <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                <Setter Property="Height" Value="26"/><Setter Property="Padding" Value="6,2"/><Setter Property="Background" Value="{DynamicResource ControlBackground}"/><Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/><Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="FontSize" Value="12"/><Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/><Setter Property="VerticalScrollBarVisibility" Value="Hidden"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="TextBox">
-                            <Border x:Name="border" CornerRadius="4" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"><ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}" VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"/></Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="true"><Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource AccentBlue}"/></Trigger>
-                                <Trigger Property="IsFocused" Value="true"><Setter Property="BorderBrush" TargetName="border" Value="{DynamicResource AccentBlue}"/><Setter Property="Background" TargetName="border" Value="{DynamicResource ControlHoverBackground}"/></Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="Padding" Value="6,2"/>
+                <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="ContextMenu"><Setter.Value><ContextMenu Style="{DynamicResource {x:Type ContextMenu}}"><MenuItem Command="ApplicationCommands.Cut"/><MenuItem Command="ApplicationCommands.Copy"/><MenuItem Command="ApplicationCommands.Paste"/></ContextMenu></Setter.Value></Setter>
             </Style>
 
             <!-- Implicit ComboBox styling to match SettingsComboBox -->
@@ -101,33 +97,7 @@
                                                 <Setter.Value>
                                                     <DataTemplate>
                                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                            <ContentControl Content="{Binding}" Focusable="False">
-                                                                <ContentControl.Style>
-                                                                    <Style TargetType="ContentControl">
-                                                                        <Setter Property="ContentTemplate">
-                                                                            <Setter.Value>
-                                                                                <DataTemplate>
-                                                                                    <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="180"/>
-                                                                                </DataTemplate>
-                                                                            </Setter.Value>
-                                                                        </Setter>
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding IsMultiline}" Value="True">
-                                                                                <Setter Property="ContentTemplate">
-                                                                                    <Setter.Value>
-                                                                                        <DataTemplate>
-                                                                                            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" 
-                                                                                                     Width="260" Height="80" AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap"
-                                                                                                     HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                                                                                                     VerticalContentAlignment="Top" Padding="6,4" FontFamily="Cascadia Mono, Consolas"/>
-                                                                                        </DataTemplate>
-                                                                                    </Setter.Value>
-                                                                                </Setter>
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </ContentControl.Style>
-                                                            </ContentControl>
+                                                            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="180" Height="26"/>
                                                             <!-- Spacer for non-icon fields to align them with the icon field preview -->
                                                             <Border Width="24" Height="24" Margin="8,0,0,0" CornerRadius="4" 
                                                                     Background="Transparent" BorderBrush="Transparent" BorderThickness="1"
@@ -148,12 +118,26 @@
                                             </Setter>
                                         </DataTrigger>
 
+                                        <!-- StringList fields -->
+                                        <DataTrigger Binding="{Binding IsStringList}" Value="True">
+                                            <Setter Property="ContentTemplate">
+                                                <Setter.Value>
+                                                    <DataTemplate>
+                                                        <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" 
+                                                                 Width="260" Height="80" AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap"
+                                                                 HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                                                 VerticalContentAlignment="Top" Padding="6,4" FontFamily="Cascadia Mono, Consolas"/>
+                                                    </DataTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
+
                                         <!-- Integer fields -->
                                         <DataTrigger Binding="{Binding IsInteger}" Value="True">
                                             <Setter Property="ContentTemplate">
                                                 <Setter.Value>
                                                     <DataTemplate>
-                                                        <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="80"/>
+                                                        <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="80" Height="26"/>
                                                     </DataTemplate>
                                                 </Setter.Value>
                                             </Setter>

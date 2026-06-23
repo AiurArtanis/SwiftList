@@ -57,12 +57,10 @@ public static class MenuBuilder
                 "ShowHistory",
                 true);
 
-            var favoritesStr = PluginSettingsService.GetSetting(
+            var favoritesList = PluginSettingsService.GetSetting(
                 "SwiftList.Plugins.FolderCascader",
                 "Favorites",
-                "");
-
-            var favoritesList = favoritesStr.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                new List<string>())
                 .Select(p => p.Trim())
                 .Where(p => !string.IsNullOrEmpty(p))
                 .ToList();
@@ -108,11 +106,10 @@ public static class MenuBuilder
         if (provider.TryGetPath(hMenu, out var path) && path != null)
         {
             var items = new List<DynamicMenuItem>();
-            var favoritesStr = PluginSettingsService.GetSetting(
+            var favoritesList = PluginSettingsService.GetSetting(
                 "SwiftList.Plugins.FolderCascader",
                 "Favorites",
-                "");
-            var favoritesList = favoritesStr.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                new List<string>())
                 .Select(p => p.Trim())
                 .Where(p => !string.IsNullOrEmpty(p))
                 .ToList();

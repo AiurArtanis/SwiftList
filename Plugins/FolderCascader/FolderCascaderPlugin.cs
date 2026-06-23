@@ -40,9 +40,8 @@ public class FolderCascaderPlugin : IActionPlugin, IConfigurablePlugin
                         Key = "Favorites",
                         LabelKey = "FolderCascader_Config_Favorites",
                         DescriptionKey = "FolderCascader_Config_FavoritesDesc",
-                        FieldType = ConfigFieldType.Text,
-                        DefaultValue = "",
-                        Multiline = true
+                        FieldType = ConfigFieldType.StringList,
+                        DefaultValue = new List<string>()
                     },
                     new PluginConfigField
                     {

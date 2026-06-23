@@ -29,9 +29,9 @@ public class PluginConfigFieldViewModel : ViewModelBase
     public bool IsArray => FieldType == ConfigFieldType.Array;
     public bool IsObject => FieldType == ConfigFieldType.Object;
     public bool IsGroup => FieldType == ConfigFieldType.Group;
-    public bool IsMultiline => SchemaField.Multiline;
+    public bool IsStringList => FieldType == ConfigFieldType.StringList;
     public bool IsIconField => SchemaField.Key.Equals("Icon", StringComparison.OrdinalIgnoreCase);
-    public bool IsSimpleField => IsBoolean || IsText || IsInteger || IsChoice;
+    public bool IsSimpleField => IsBoolean || IsText || IsInteger || IsChoice || IsStringList;
 
     public ObservableCollection<PluginConfigFieldViewModel> Children { get; } = new();
     public ObservableCollection<PluginConfigArrayItemViewModel> ArrayItems { get; } = new();
@@ -72,16 +72,25 @@ public class PluginConfigFieldViewModel : ViewModelBase
         get
         {
             if (IsObject || IsArray || IsGroup) return this;
+            if (IsStringList)
+            {
+                if (LocalValueStore is System.Collections.IEnumerable en && !(LocalValueStore is string))
+                {
+                    var items = new List<string>();
+                    foreach (var item in en) items.Add(item?.ToString() ?? string.Empty);
+                    return string.Join("\r\n", items);
+                }
+                return LocalValueStore?.ToString() ?? string.Empty;
+            }
             return LocalValueStore;
         }
         set
         {
-            var converted = ConfigValueHelper.ConvertValue(value, FieldType);
-            LocalValueStore = converted;
-            if (_onValueChanged == null)
-            {
-                OnPropertyChanged();
-            }
+            if (IsStringList && value is string strVal)
+                LocalValueStore = strVal.Split('\n').Select(s => s.TrimEnd('\r').Trim()).ToList();
+            else
+                LocalValueStore = ConfigValueHelper.ConvertValue(value, FieldType);
+            if (_onValueChanged == null) OnPropertyChanged();
         }
     }
 
@@ -131,7 +140,13 @@ public class PluginConfigFieldViewModel : ViewModelBase
 
         if (_onValueChanged == null)
         {
-            Settings.SetPluginSetting(PluginId, SchemaField.Key, LocalValueStore);
+            if (IsStringList && LocalValueStore is System.Collections.IEnumerable en && !(LocalValueStore is string))
+            {
+                var cleaned = new List<string>();
+                foreach (var item in en) { var s = item?.ToString()?.Trim(); if (!string.IsNullOrEmpty(s)) cleaned.Add(s); }
+                Settings.SetPluginSetting(PluginId, SchemaField.Key, cleaned);
+            }
+            else Settings.SetPluginSetting(PluginId, SchemaField.Key, LocalValueStore);
         }
     }
 

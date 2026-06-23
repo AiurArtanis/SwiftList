@@ -8,7 +8,8 @@ public enum ConfigFieldType
     Choice,
     Array,
     Object,
-    Group
+    Group,
+    StringList
 }
 
 public class PluginConfigField
@@ -21,7 +22,6 @@ public class PluginConfigField
     public object DefaultValue { get; set; } = null!;
     public List<string>? Choices { get; set; }
     public List<PluginConfigField>? SubFields { get; set; }
-    public bool Multiline { get; set; }
 }
 
 public class PluginConfigSchema
