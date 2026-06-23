@@ -195,7 +195,7 @@ public sealed class InlineSearchWindowLayoutManager
         var count = 0;
         foreach (var item in _window.ViewModel.Results)
         {
-            if (!item.IsEmptyResult && !item.IsSearchSectionHeader)
+            if (!item.IsEmptyResult && !item.IsSearchSectionHeader && item.FullPath != "__SHOW_MORE__" && !item.IsJumpToExplorerPath)
                 count++;
         }
         return count;
