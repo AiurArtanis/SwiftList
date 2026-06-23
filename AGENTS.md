@@ -82,6 +82,7 @@ When interacting with this repository, performing code modification, compilation
 7. **App Versioning, Tagging, and Release Flow**
    * **Release-Only Version Bump**: Version numbers in `.csproj` files must **ONLY** be modified/bumped during the formal release process (Release Flow). Do **NOT** modify or bump version numbers during regular development, bug fixing, or feature modification tasks.
    * **Project Modification Detection**: During the release flow, check which subprojects (e.g., Core, App, Service) have been modified since the last release (last git tag). If a subproject has been modified, its version number must be bumped.
+     * **New Plugin Exception**: For new plugins being released for the first time, their version number in their `.csproj` file should remain at `1.0.0` instead of being bumped.
    * **Version Bump Rule**: Locate `<Version>X.Y.Z</Version>` inside the modified project's `.csproj` file and bump it to the next version. The version number must increment in decimal format (where Y and Z are treated as a two-digit decimal number; hence, adding 1 to the last segment carries over to the middle segment when it reaches 9, e.g., `1.6.3` -> `1.6.4`, `1.0.9` -> `1.1.0`, or `1.6.9` -> `1.7.0`).
    * When releasing a new version, follow these steps in order:
      1. Run code formatting (`dotnet format`) first, then commit all functional/code modifications.
