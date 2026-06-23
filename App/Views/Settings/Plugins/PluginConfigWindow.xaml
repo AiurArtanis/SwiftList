@@ -258,7 +258,18 @@
                 <!-- Config content scroll list -->
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" Padding="16,12">
                     <StackPanel>
-                        <ItemsControl ItemsSource="{Binding ConfigFields}"/>
+                        <ItemsControl ItemsSource="{Binding ConfigGroups}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,16">
+                                        <!-- Group Header (only visible if GroupName is not empty) -->
+                                        <TextBlock Text="{Binding GroupName}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBlue}" 
+                                                   Margin="2,4,0,8" Visibility="{Binding GroupName, Converter={StaticResource StringToVis}}" FontFamily="Microsoft YaHei UI"/>
+                                        <ItemsControl ItemsSource="{Binding Fields}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
 

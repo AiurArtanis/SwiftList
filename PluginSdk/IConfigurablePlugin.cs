@@ -13,6 +13,7 @@ public enum ConfigFieldType
 public class PluginConfigField
 {
     public string Key { get; set; } = string.Empty;
+    public string GroupKey { get; set; } = string.Empty;
     public string LabelKey { get; set; } = string.Empty;
     public string DescriptionKey { get; set; } = string.Empty;
     public ConfigFieldType FieldType { get; set; }

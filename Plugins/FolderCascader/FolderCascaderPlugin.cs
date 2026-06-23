@@ -1,0 +1,95 @@
+using SwiftList.PluginSdk;
+
+namespace SwiftList.Plugins.FolderCascader;
+
+public class FolderCascaderPlugin : IActionPlugin, IConfigurablePlugin
+{
+    public string Name => TranslationService.Get("FolderCascader_PluginName") ?? "Folder Cascader";
+
+    public IEnumerable<ISearchResultAction> GetActions() => Array.Empty<ISearchResultAction>();
+
+    public IEnumerable<IDynamicActionProvider> GetDynamicProviders() => Array.Empty<IDynamicActionProvider>();
+
+    public class FolderConfigItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Path { get; set; } = string.Empty;
+    }
+
+    public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
+    {
+        Fields = new List<PluginConfigField>
+        {
+            new PluginConfigField
+            {
+                Key = "TriggerOnDoubleClick",
+                GroupKey = "FolderCascader_Group_Triggers",
+                LabelKey = "FolderCascader_Config_DoubleClick",
+                DescriptionKey = "FolderCascader_Config_DoubleClickDesc",
+                FieldType = ConfigFieldType.Boolean,
+                DefaultValue = true
+            },
+            new PluginConfigField
+            {
+                Key = "TriggerOnMiddleClick",
+                GroupKey = "FolderCascader_Group_Triggers",
+                LabelKey = "FolderCascader_Config_MiddleClick",
+                DescriptionKey = "FolderCascader_Config_MiddleClickDesc",
+                FieldType = ConfigFieldType.Boolean,
+                DefaultValue = true
+            },
+            new PluginConfigField
+            {
+                Key = "ShowHistory",
+                GroupKey = "FolderCascader_Group_Content",
+                LabelKey = "FolderCascader_Config_ShowHistory",
+                DescriptionKey = "FolderCascader_Config_ShowHistoryDesc",
+                FieldType = ConfigFieldType.Boolean,
+                DefaultValue = true
+            },
+            new PluginConfigField
+            {
+                Key = "Folders",
+                GroupKey = "FolderCascader_Group_Content",
+                LabelKey = "FolderCascader_Config_FoldersLabel",
+                DescriptionKey = "FolderCascader_Config_FoldersDesc",
+                FieldType = ConfigFieldType.Array,
+                DefaultValue = new List<object>
+                {
+                    new Dictionary<string, object>
+                    {
+                        { "Name", "" },
+                        { "Path", "shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}" }
+                    },
+                    new Dictionary<string, object>
+                    {
+                        { "Name", "" },
+                        { "Path", "shell:::{20d04fe0-3aea-1069-a2d8-08002b30309d}" }
+                    },
+                    new Dictionary<string, object>
+                    {
+                        { "Name", "" },
+                        { "Path", "shell:::{450d8fba-ad25-11d0-98a8-0800361b1103}" }
+                    }
+                },
+                SubFields = new List<PluginConfigField>
+                {
+                    new PluginConfigField
+                    {
+                        Key = "Name",
+                        LabelKey = "FolderCascader_Config_FolderName",
+                        FieldType = ConfigFieldType.Text,
+                        DefaultValue = ""
+                    },
+                    new PluginConfigField
+                    {
+                        Key = "Path",
+                        LabelKey = "FolderCascader_Config_FolderPath",
+                        FieldType = ConfigFieldType.Text,
+                        DefaultValue = ""
+                    }
+                }
+            }
+        }
+    };
+}

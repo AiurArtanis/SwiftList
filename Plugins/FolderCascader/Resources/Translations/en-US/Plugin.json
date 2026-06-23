@@ -1,7 +1,20 @@
 {
   "Plugin_FolderCascaderGroup": "Folder Cascader",
-  "Action_QuickNav": "Cascading Browse Directory",
-  "QuickNav_History": "History",
-  "QuickNav_EmptyFolder": "(Empty)",
-  "QuickNav_NoHistory": "(No history)"
+  "FolderCascader_Action": "Cascading Browse Directory",
+  "FolderCascader_History": "History",
+  "FolderCascader_EmptyFolder": "(Empty)",
+  "FolderCascader_NoHistory": "(No history)",
+  "FolderCascader_PluginName": "Folder Cascader",
+  "FolderCascader_Config_FoldersLabel": "Custom Folders",
+  "FolderCascader_Config_FoldersDesc": "Configure the main folders list shown in the cascading menu",
+  "FolderCascader_Config_FolderName": "Name (leave empty for auto)",
+  "FolderCascader_Config_FolderPath": "Path (supports standard and shell::: paths)",
+  "FolderCascader_Config_ShowHistory": "Show History",
+  "FolderCascader_Config_ShowHistoryDesc": "When enabled, recently accessed folders and files will be displayed below custom folders, separated by a divider",
+  "FolderCascader_Config_DoubleClick": "Double-Click Trigger",
+  "FolderCascader_Config_DoubleClickDesc": "Double-click mouse left button on empty explorer space to show the quick navigation menu",
+  "FolderCascader_Config_MiddleClick": "Middle-Click Trigger",
+  "FolderCascader_Config_MiddleClickDesc": "Middle-click on empty explorer space to show the quick navigation menu",
+  "FolderCascader_Group_Triggers": "Trigger Settings",
+  "FolderCascader_Group_Content": "Content Settings"
 }
