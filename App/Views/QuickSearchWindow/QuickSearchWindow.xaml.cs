@@ -170,6 +170,11 @@ public partial class QuickSearchWindow : Window, ISearchWindow
                                                                         {
                                                                             if (!IsActive)
                                                                             {
+                                                                                // ponytail: do not hide if there are visible owned windows (e.g. crash MessageBox dialog)
+                                                                                foreach (Window owned in OwnedWindows)
+                                                                                {
+                                                                                    if (owned.IsVisible) return;
+                                                                                }
                                                                                 _controller.HideWindow();
                                                                             }
 

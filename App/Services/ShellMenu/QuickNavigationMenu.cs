@@ -273,7 +273,10 @@ public static class QuickNavigationMenu
     }
 
     private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject {
-        while (child != null) { if (child is T p) return p; child = System.Windows.Media.VisualTreeHelper.GetParent(child); }
+        while (child != null) {
+            if (child is T p) return p;
+            child = child is FrameworkContentElement fce ? fce.Parent : System.Windows.Media.VisualTreeHelper.GetParent(child);
+        }
         return null;
     }
 
