@@ -178,6 +178,12 @@ public static class PluginLoaderHelper
             var id = MakeId(dllName, PluginComponentType.DynamicProvider, prov.GetType().Name);
             components.Add(new PluginComponentViewModel(id, PluginComponentType.DynamicProvider, prov.GroupName, !disabledSet.Contains(id)));
         }
+        foreach (var prov in manager.AllQuickNavigationProviders.Where(p => p.GetType().Assembly == assembly))
+        {
+            var id = MakeId(dllName, PluginComponentType.QuickNavigationProvider, prov.GetType().Name);
+            var displayName = TranslationService.Get("Plugins_Comp_QuickNavigationProvider") ?? "快捷导航";
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.QuickNavigationProvider, displayName, !disabledSet.Contains(id)));
+        }
         foreach (var prov in manager.AllSidebarFilterProviders.Where(p => p.GetType().Assembly == assembly))
         {
             var index = 0;

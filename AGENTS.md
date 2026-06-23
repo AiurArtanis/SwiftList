@@ -55,6 +55,7 @@ When interacting with this repository, performing code modification, compilation
      ```powershell
      dotnet format style <PathToProjectOrSolution> --severity warn
      ```
+   * **Only run formatting immediately before committing (not before every compilation) / 只在commit前才format**.
    * Never execute `git commit` or `git push` without explicit user authorization. All code changes must be reviewed and submitted under the direct instructions of the user.
    * **Commit Message Standard**: All commit messages must be written in **English**.
 
@@ -95,3 +96,8 @@ When interacting with this repository, performing code modification, compilation
         git tag vX.Y.Z
         ```
      5. Push both the branch commits and the tag to the remote repository.
+
+8. **No Lazy #pragma Warning Disables**
+   * **Do NOT use `#pragma warning disable` / `#pragma warning restore` as a shortcut to ignore compiler warnings**.
+   * You must write clean, type-safe, and null-safe code that naturally resolves all compiler warnings (e.g., proper null checks, pattern matching, explicit casting). Warnings must be resolved programmatically rather than suppressed.
+

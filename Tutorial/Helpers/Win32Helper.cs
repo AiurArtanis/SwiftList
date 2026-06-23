@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Windows.Automation;
 
 namespace SwiftList.Tutorial.Helpers;
 
@@ -22,44 +21,51 @@ public static class Win32Helper
     [DllImport("user32.dll")]
     public static extern short GetAsyncKeyState(int vKey);
 
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    private static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string? lpszClass, string? lpszWindow);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, StringBuilder lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumChildWindows(IntPtr hwndParent, EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    // ponytail: Find search text by enumerating edit controls via pure Win32.
+    // Ceiling: Returns text from the first child window containing "Edit" in class name.
     public static string GetForegroundSearchText(IntPtr hWnd)
     {
-        try
+        var result = "";
+        EnumChildWindows(hWnd, (childHwnd, lParam) =>
         {
-            var element = AutomationElement.FromHandle(hWnd);
-            if (element == null) return "";
-
-            var editElement = element.FindFirst(
-                TreeScope.Descendants,
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
-
-            if (editElement != null)
+            var sbClass = new StringBuilder(256);
+            GetClassName(childHwnd, sbClass, sbClass.Capacity);
+            var clsName = sbClass.ToString();
+            if (clsName.Contains("Edit", StringComparison.OrdinalIgnoreCase))
             {
-                if (editElement.GetCurrentPattern(ValuePattern.Pattern) is ValuePattern valuePattern)
-                {
-                    return valuePattern.Current.Value ?? "";
-                }
+                var sbText = new StringBuilder(1024);
+                SendMessage(childHwnd, 0x000D /* WM_GETTEXT */, (IntPtr)sbText.Capacity, sbText);
+                result = sbText.ToString();
+                return false; // Stop enumeration
             }
-        }
-        catch { }
-        return "";
+            return true;
+        }, IntPtr.Zero);
+
+        return result;
     }
 
+    // ponytail: Check if actions menu is open by looking for standard Win32 menu window.
+    // Ceiling: Checks global active class #32768 menu visibility.
     public static bool IsActionsMenuOpen(IntPtr hWnd)
     {
-        try
-        {
-            var element = AutomationElement.FromHandle(hWnd);
-            if (element == null) return false;
-
-            var listElement = element.FindFirst(
-                TreeScope.Descendants,
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.List));
-
-            return listElement != null;
-        }
-        catch { }
-        return false;
+        var menuHwnd = FindWindow("#32768", null);
+        return menuHwnd != IntPtr.Zero && IsWindowVisible(menuHwnd);
     }
 
     public static string GetProcessNameFromWindow(IntPtr hWnd)

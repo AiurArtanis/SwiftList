@@ -59,16 +59,34 @@ public partial class App : Application
         var serviceExe = ServiceInstallManager.GetServiceExePath();
         HookClient = new Core.Hook.HookIpcClient(serviceExe, settings.AutoElevateIfAdmin);
 
-        PluginSdk.ListControlIpcBridge.GetListItemsFunc = hwnd =>
+        HookClient.OnMouseDoubleClick += (x, y) =>
+        {
+            if (Views.InlineSearchWindow.Helpers.InlineSearchWindowNativeMethods.IsPointInsideWindow(x, y)) return;
+            var trk = InlineSearchManager.Instance.ExplorerTracker;
+            var proc = GetProcessNameOfWindow(trk.ActiveHwnd);
+            var cls = GetClassNameOfWindow(trk.ActiveHwnd);
+            if (PluginManager.Instance.QuickNavigationProviders.Any(p => p.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y)))
+            {
+                Dispatcher.BeginInvoke(new Action(() => QuickNavigationMenu.Show(x, y)));
+            }
+        };
 
-            HookClient != null ? Core.Hook.ListIpcCoordinator.GetListItems(hwnd, HookClient.SendMessage) : Array.Empty<string>();
+        HookClient.OnMouseMiddleClick += (x, y) =>
+        {
+            if (Views.InlineSearchWindow.Helpers.InlineSearchWindowNativeMethods.IsPointInsideWindow(x, y)) return;
+            var trk = InlineSearchManager.Instance.ExplorerTracker;
+            var proc = GetProcessNameOfWindow(trk.ActiveHwnd);
+            var cls = GetClassNameOfWindow(trk.ActiveHwnd);
+            if (PluginManager.Instance.QuickNavigationProviders.Any(p => p.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y)))
+            {
+                Dispatcher.BeginInvoke(new Action(() => QuickNavigationMenu.Show(x, y)));
+            }
+        };
 
-        PluginSdk.ListControlIpcBridge.GetSelectedIndicesFunc = (hwnd, className) =>
-
-            HookClient != null ? Core.Hook.ListIpcCoordinator.GetSelectedIndices(hwnd, className, HookClient.SendMessage) : Array.Empty<int>();
+        PluginSdk.ListControlIpcBridge.GetListItemsFunc = hwnd => HookClient != null ? Core.Hook.ListIpcCoordinator.GetListItems(hwnd, HookClient.SendMessage) : Array.Empty<string>();
+        PluginSdk.ListControlIpcBridge.GetSelectedIndicesFunc = (hwnd, className) => HookClient != null ? Core.Hook.ListIpcCoordinator.GetSelectedIndices(hwnd, className, HookClient.SendMessage) : Array.Empty<int>();
 
         PluginSdk.ListControlIpcBridge.SelectItemAction = (hwnd, className, index, clearOthers, selectState) =>
-
             HookClient?.SendMessage(new IpcMessage
             {
                 Id = IpcMessageId.SelectItem,
@@ -77,50 +95,34 @@ public partial class App : Application
                 IntVal = index,
                 BoolVal = clearOthers,
                 IsDesktop = selectState
-
             });
 
         PluginSdk.ListControlIpcBridge.ClearSelectionAction = (hwnd, className) =>
-
             HookClient?.SendMessage(new IpcMessage
             {
                 Id = IpcMessageId.ClearSelection,
                 Hwnd = hwnd.ToInt64(),
                 StringVal1 = className
-
             });
 
         HookClient.OnActivated += () => Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (InlineSearchManager.Instance.IsInlineSearchActive)
             {
-                if (InlineSearchManager.Instance.IsInlineSearchActive)
-                {
-                    InlineSearchManager.Instance.FocusSearchBox();
-                }
-                else
-                {
-                    var quickSearchWindow = Current.MainWindow as QuickSearchWindow;
-                    quickSearchWindow?.ToggleVisibility();
-                }
-            }));
+                InlineSearchManager.Instance.FocusSearchBox();
+            }
+            else
+            {
+                var quickSearchWindow = Current.MainWindow as QuickSearchWindow;
+                quickSearchWindow?.ToggleVisibility();
+            }
+        }));
         HookClient.Start();
 
         // Set up global exception handlers
-
         AppDomain.CurrentDomain.UnhandledException += (s, args) => LogException("AppDomain UnhandledException", args.ExceptionObject as Exception);
-
-        DispatcherUnhandledException += (s, args) =>
-        {
-            LogException("DispatcherUnhandledException", args.Exception);
-
-            args.Handled = true; // Prevent crash if possible
-
-        };
-
-        TaskScheduler.UnobservedTaskException += (s, args) =>
-        {
-            LogException("TaskScheduler UnobservedTaskException", args.Exception);
-            args.SetObserved();
-        };
+        DispatcherUnhandledException += (s, args) => { LogException("DispatcherUnhandledException", args.Exception); args.Handled = true; };
+        TaskScheduler.UnobservedTaskException += (s, args) => { LogException("TaskScheduler UnobservedTaskException", args.Exception); args.SetObserved(); };
 
         // Force load all plugins (actions and alias providers) on startup
 
@@ -240,6 +242,18 @@ public partial class App : Application
 
     public static void HideInlineSearch() => InlineSearchManager.Instance.CloseInlineSearch();
 
+    private static string GetProcessNameOfWindow(IntPtr hwnd)
+    {
+        try { Core.Hook.ExplorerNativeHooks.GetWindowThreadProcessId(hwnd, out var pid); return pid != 0 ? Process.GetProcessById((int)pid).ProcessName : "Unknown"; }
+        catch { return "Unknown"; }
+    }
+
+    private static string GetClassNameOfWindow(IntPtr hwnd)
+    {
+        var sb = new System.Text.StringBuilder(256);
+        return hwnd != IntPtr.Zero && Core.Hook.ExplorerNativeHooks.GetClassName(hwnd, sb, sb.Capacity) > 0 ? sb.ToString() : "Unknown";
+    }
+
     private static void LogException(string source, Exception? ex)
     {
         var details = ex != null ? ex.ToString() : "Null exception object";
@@ -250,38 +264,17 @@ public partial class App : Application
         MessageBox.Show(string.Format(TranslationManager.Instance["Crash_Message"], source, ex?.Message, Logger.LogDir), TranslationManager.Instance["Crash_Title"], MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
-    public static void ShowSettingsWindow(string? targetSection = null)
+    public static void ShowSettingsWindow(string? targetSection = null) => AppWindowManager.ShowSettingsWindow(targetSection);
 
-        => AppWindowManager.ShowSettingsWindow(targetSection);
+    public static void ShowSearchWindow() => AppWindowManager.ShowSearchWindow();
 
-    public static void ShowSearchWindow()
-
-        => AppWindowManager.ShowSearchWindow();
-
-    public static void CloseAllManagedWindows()
-
-        => AppWindowManager.CloseAllManagedWindows();
+    public static void CloseAllManagedWindows() => AppWindowManager.CloseAllManagedWindows();
 
     protected override void OnExit(ExitEventArgs e)
     {
-        HookClient?.Stop();
-        HookClient?.Dispose();
-        HookClient = null;
-        AppPipeService.StopServer();
-        InlineSearchManager.Instance.Dispose();
-        CloseAllManagedWindows();
-        if (_appMutex != null)
-        {
-            try
-            {
-                _appMutex.ReleaseMutex();
-            }
-
-            catch { }
-
-            _appMutex.Dispose();
-        }
-
+        HookClient?.Stop(); HookClient?.Dispose(); HookClient = null;
+        AppPipeService.StopServer(); InlineSearchManager.Instance.Dispose(); CloseAllManagedWindows();
+        if (_appMutex != null) { try { _appMutex.ReleaseMutex(); } catch { } _appMutex.Dispose(); }
         base.OnExit(e);
     }
 }

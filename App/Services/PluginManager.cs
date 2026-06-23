@@ -29,6 +29,7 @@ public class PluginManager : PluginRegistry
     private readonly List<PluginSdk.IThemeProvider> _themeProviders = new();
     private readonly List<PluginSdk.IActivePathCollector> _pathCollectors = new();
     private readonly List<PluginSdk.IFilePreviewProvider> _previewProviders = new();
+    private readonly List<PluginSdk.IQuickNavigationProvider> _quickNavigationProviders = new();
     private uint _nextRuntimeActionId = 0x80000000;
 
     private readonly ComponentFilter _filter = new();
@@ -75,6 +76,7 @@ public class PluginManager : PluginRegistry
         PluginSdk.ActivePathCollectorRegistry.Register(p);
     }
     void PluginRegistry.AddFilePreviewProvider(PluginSdk.IFilePreviewProvider p) => _previewProviders.Add(p);
+    void PluginRegistry.AddQuickNavigationProvider(PluginSdk.IQuickNavigationProvider p) => _quickNavigationProviders.Add(p);
 
     // ── Public API ────────────────────────────────────────────────────────
 
@@ -103,6 +105,11 @@ public class PluginManager : PluginRegistry
 
     public IEnumerable<PluginSdk.IDynamicActionProvider> DynamicProviders
         => _dynamicProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.DynamicProvider, p.GetType().Name));
+
+    public IEnumerable<PluginSdk.IQuickNavigationProvider> QuickNavigationProviders
+        => _quickNavigationProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.QuickNavigationProvider, p.GetType().Name));
+
+    public IEnumerable<PluginSdk.IQuickNavigationProvider> AllQuickNavigationProviders => _quickNavigationProviders;
 
     public IEnumerable<PluginSdk.IInstantResultProvider> InstantResultProviders
         => _instantResultProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.InstantProvider, p.Id));

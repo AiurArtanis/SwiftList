@@ -162,6 +162,16 @@ public sealed class HookProcess : IDisposable
 
             _mouseHook = new MouseHookService();
             _mouseHook.OnMouseClick += (x, y) => _ipcServer.SendMessage(new IpcMessage { Id = IpcMessageId.MouseClick, MouseX = x, MouseY = y });
+            _mouseHook.OnMouseDoubleClick += (x, y) =>
+            {
+                Logger.Log($"[HookProcess] OnMouseDoubleClick at ({x}, {y}). ActiveHwnd={_explorerTracker?.ActiveHwnd}, IsExplorerOrDesktopActive={_explorerTracker?.IsExplorerOrDesktopActive}", LogLevel.Debug);
+                _ipcServer.SendMessage(new IpcMessage { Id = IpcMessageId.MouseDoubleClick, MouseX = x, MouseY = y });
+            };
+            _mouseHook.OnMouseMiddleClick += (x, y) =>
+            {
+                Logger.Log($"[HookProcess] OnMouseMiddleClick at ({x}, {y}). ActiveHwnd={_explorerTracker?.ActiveHwnd}, IsExplorerOrDesktopActive={_explorerTracker?.IsExplorerOrDesktopActive}", LogLevel.Debug);
+                _ipcServer.SendMessage(new IpcMessage { Id = IpcMessageId.MouseMiddleClick, MouseX = x, MouseY = y });
+            };
             _mouseHook.Start();
 
             Logger.Log("[HookProcess] Hooks and ExplorerTracker initialized successfully.", LogLevel.Info);

@@ -16,4 +16,5 @@ internal interface PluginRegistry
     void AddThemeProvider(IThemeProvider provider);
     void AddActivePathCollector(IActivePathCollector provider);
     void AddFilePreviewProvider(IFilePreviewProvider provider);
+    void AddQuickNavigationProvider(IQuickNavigationProvider provider);
 }

@@ -86,11 +86,12 @@ public static class ShellIconHelper
         // We use FullPath as cacheKey for these to avoid caching them under a single generic ".exe" key.
         // Also treat existing directories as unique icon types to extract their customized folder icons.
         var checkPath = path;
+        var isVirtualFolder = isDir && (checkPath.StartsWith("::") || checkPath.StartsWith("shell:"));
         var isUniqueIconType = (!isDir && (
             ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) ||
             ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase) ||
             ext.Equals(".ico", StringComparison.OrdinalIgnoreCase)
-        )) || (isDir && Directory.Exists(checkPath));
+        )) || (isDir && (Directory.Exists(checkPath) || isVirtualFolder));
 
         var cacheKey = isUniqueIconType ? path : ext;
 
@@ -113,7 +114,7 @@ public static class ShellIconHelper
                 }
             }
 
-            if (isUniqueIconType && isDir && Directory.Exists(checkPath))
+            if (isUniqueIconType && isDir && (Directory.Exists(checkPath) || isVirtualFolder))
             {
                 var pidl = IntPtr.Zero;
                 var hr = ShellIconNativeMethods.SHParseDisplayName(checkPath, IntPtr.Zero, out pidl, 0, out var sfgaoOut);

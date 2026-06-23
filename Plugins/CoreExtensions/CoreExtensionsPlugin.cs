@@ -25,6 +25,5 @@ public class CoreExtensionsPlugin : IActionPlugin
     public IEnumerable<IDynamicActionProvider> GetDynamicProviders() => new IDynamicActionProvider[]
         {
             new ShellMenuActionProvider()
-
         };
 }

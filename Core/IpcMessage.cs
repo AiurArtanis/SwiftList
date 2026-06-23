@@ -35,7 +35,9 @@ public enum IpcMessageId : byte
     PathCaptured = 34,
     Error = 35,
     GetListItemsResponse = 36,
-    GetSelectedIndicesResponse = 37
+    GetSelectedIndicesResponse = 37,
+    MouseDoubleClick = 38,
+    MouseMiddleClick = 39
 }
 
 public struct IpcMessage

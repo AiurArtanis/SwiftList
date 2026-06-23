@@ -41,27 +41,65 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type MenuItem}">
-                    <Border x:Name="Bg" CornerRadius="6" Background="Transparent" Margin="2,1">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition x:Name="ColIcon" Width="36" SharedSizeGroup="Icon"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition x:Name="ColShortcut" Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <!-- Icon area -->
-                            <ContentPresenter x:Name="Icon" ContentSource="Icon" Margin="8,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <!-- Text area -->
-                            <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" Margin="12,0,16,0" VerticalAlignment="Center"/>
-                            <!-- Shortcut text area -->
-                            <TextBlock Grid.Column="2"
-                                       Text="{TemplateBinding InputGestureText}"
-                                       Foreground="{DynamicResource TextSecondary}"
-                                       Margin="16,0,12,0"
-                                       VerticalAlignment="Center"
-                                       FontSize="11.5"/>
-                        </Grid>
-                    </Border>
+                    <Grid>
+                        <Border x:Name="Bg" CornerRadius="6" Background="Transparent" Margin="2,1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition x:Name="ColIcon" Width="36" SharedSizeGroup="Icon"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition x:Name="ColArrow" Width="Auto"/>
+                                    <ColumnDefinition x:Name="ColShortcut" Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <!-- Icon area -->
+                                <ContentPresenter x:Name="Icon" ContentSource="Icon" Margin="8,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <!-- Text area -->
+                                <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" Margin="12,0,16,0" VerticalAlignment="Center"/>
+                                <!-- Submenu Arrow indicator -->
+                                <TextBlock x:Name="Arrow"
+                                           Grid.Column="2"
+                                           Text="&#xE76C;"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           Margin="8,0,8,0"
+                                           VerticalAlignment="Center"
+                                           Visibility="Collapsed"/>
+                                <!-- Shortcut text area -->
+                                <TextBlock Grid.Column="3"
+                                           Text="{TemplateBinding InputGestureText}"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           Margin="16,0,12,0"
+                                           VerticalAlignment="Center"
+                                           FontSize="11.5"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Submenu Popup -->
+                        <Popup x:Name="PART_Popup"
+                               Placement="Right"
+                               AllowsTransparency="True"
+                               Focusable="False"
+                               IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                               PopupAnimation="Fade">
+                            <Border Background="{DynamicResource MenuBackground}"
+                                    BorderBrush="{DynamicResource MenuBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="4"
+                                    SnapsToDevicePixels="True">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Direction="270" Color="{DynamicResource ShadowColor}" Opacity="0.08"/>
+                                </Border.Effect>
+                                <ScrollViewer x:Name="SubMenuScrollViewer" Focusable="false">
+                                    <ItemsPresenter KeyboardNavigation.TabNavigation="Cycle"/>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="HasItems" Value="True">
+                            <Setter TargetName="Arrow" Property="Visibility" Value="Visible"/>
+                        </Trigger>
                         <Trigger Property="Icon" Value="{x:Null}">
                             <Setter TargetName="ColIcon" Property="Width" Value="0"/>
                         </Trigger>

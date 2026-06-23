@@ -58,6 +58,8 @@ public sealed class HookIpcClient : IDisposable
     public event Action? OnRightPressed;
     public event Action<int>? OnCtrlNumberPressed;
     public event Action<int, int>? OnMouseClick;
+    public event Action<int, int>? OnMouseDoubleClick;
+    public event Action<int, int>? OnMouseMiddleClick;
     public event Action<IntPtr, string, string, bool>? OnExplorerActivated;
     public event Action? OnExplorerDeactivated;
     public event Action<string, bool>? OnPathCaptured;
@@ -245,6 +247,14 @@ public sealed class HookIpcClient : IDisposable
 
                 case IpcMessageId.MouseClick:
                     OnMouseClick?.Invoke(msg.MouseX, msg.MouseY);
+                    break;
+
+                case IpcMessageId.MouseDoubleClick:
+                    OnMouseDoubleClick?.Invoke(msg.MouseX, msg.MouseY);
+                    break;
+
+                case IpcMessageId.MouseMiddleClick:
+                    OnMouseMiddleClick?.Invoke(msg.MouseX, msg.MouseY);
                     break;
 
                 case IpcMessageId.ExplorerActivated:

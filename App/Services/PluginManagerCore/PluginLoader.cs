@@ -125,6 +125,13 @@ internal static class PluginLoader
                     PluginSdk.InlineSearchAdapterRegistry.Register(provider);
                     Logger.Log($"[PluginManager] Loaded inline search adapter: '{type.Name}' from {fileName}");
                 }
+
+                if (typeof(PluginSdk.IQuickNavigationProvider).IsAssignableFrom(type))
+                {
+                    var provider = (PluginSdk.IQuickNavigationProvider)Activator.CreateInstance(type)!;
+                    registry.AddQuickNavigationProvider(provider);
+                    Logger.Log($"[PluginManager] Loaded quick navigation provider: '{type.Name}' from {fileName}");
+                }
             }
         }
         catch (Exception ex)
