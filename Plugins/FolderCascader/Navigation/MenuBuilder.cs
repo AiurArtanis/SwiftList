@@ -14,37 +14,52 @@ public static class MenuBuilder
             provider.ClearSession();
             var items = new List<DynamicMenuItem>();
 
-            items.Add(new DynamicMenuItem
+            var defaults = new List<FolderCascaderPlugin.FolderConfigItem>
             {
-                Text = ShellPathHelper.GetVirtualFolderDisplayName("shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}", "Quick Access"),
-                HasSubMenu = true,
-                SubMenuHandle = provider.AllocateHandle("shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}"),
-                HBitmapItem = IntPtr.Zero
-            });
+                new FolderCascaderPlugin.FolderConfigItem { Name = "", Path = "shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}" },
+                new FolderCascaderPlugin.FolderConfigItem { Name = "", Path = "shell:::{20d04fe0-3aea-1069-a2d8-08002b30309d}" },
+                new FolderCascaderPlugin.FolderConfigItem { Name = "", Path = "shell:::{450d8fba-ad25-11d0-98a8-0800361b1103}" }
+            };
 
-            items.Add(new DynamicMenuItem
-            {
-                Text = ShellPathHelper.GetVirtualFolderDisplayName("shell:::{20d04fe0-3aea-1069-a2d8-08002b30309d}", "This PC"),
-                HasSubMenu = true,
-                SubMenuHandle = provider.AllocateHandle("shell:::{20d04fe0-3aea-1069-a2d8-08002b30309d}"),
-                HBitmapItem = IntPtr.Zero
-            });
+            var folders = PluginSettingsService.GetSetting(
+                "SwiftList.Plugins.FolderCascader",
+                "Folders",
+                defaults);
 
-            items.Add(new DynamicMenuItem
+            if (folders != null)
             {
-                Text = ShellPathHelper.GetVirtualFolderDisplayName("shell:::{450d8fba-ad25-11d0-98a8-0800361b1103}", "Documents"),
-                HasSubMenu = true,
-                SubMenuHandle = provider.AllocateHandle("shell:::{450d8fba-ad25-11d0-98a8-0800361b1103}"),
-                HBitmapItem = IntPtr.Zero
-            });
+                foreach (var folder in folders)
+                {
+                    if (string.IsNullOrWhiteSpace(folder.Path)) continue;
+                    items.Add(new DynamicMenuItem
+                    {
+                        Text = GetDisplayName(folder.Path, folder.Name),
+                        HasSubMenu = true,
+                        SubMenuHandle = provider.AllocateHandle(folder.Path),
+                        HBitmapItem = IntPtr.Zero
+                    });
+                }
+            }
 
-            items.Add(new DynamicMenuItem
+            var showHistory = PluginSettingsService.GetSetting(
+                "SwiftList.Plugins.FolderCascader",
+                "ShowHistory",
+                true);
+
+            if (showHistory)
             {
-                Text = TranslationService.Get("QuickNav_History"),
-                HasSubMenu = true,
-                SubMenuHandle = provider.AllocateHandle("quicknav://history"),
-                HBitmapItem = Helper.HistoryHBitmap
-            });
+                if (items.Count > 0)
+                {
+                    items.Add(new DynamicMenuItem { IsSeparator = true });
+                }
+                items.Add(new DynamicMenuItem
+                {
+                    Text = TranslationService.Get("FolderCascader_History") ?? "History",
+                    HasSubMenu = true,
+                    SubMenuHandle = provider.AllocateHandle("foldercascader://history"),
+                    HBitmapItem = Helper.HistoryHBitmap
+                });
+            }
 
             return items;
         }
@@ -52,16 +67,17 @@ public static class MenuBuilder
         if (provider.TryGetPath(hMenu, out var path) && path != null)
         {
             var items = new List<DynamicMenuItem>();
-            if (path == "quicknav://history")
+            if (path == "foldercascader://history")
             {
                 var recentPaths = Helper.GetHistoryPaths();
                 foreach (var rpath in recentPaths)
                 {
+                    if (string.IsNullOrWhiteSpace(rpath)) continue;
                     if (Directory.Exists(rpath))
                     {
                         items.Add(new DynamicMenuItem
                         {
-                            Text = rpath,
+                            Text = GetDisplayName(rpath, ""),
                             HasSubMenu = true,
                             SubMenuHandle = provider.AllocateHandle(rpath),
                             HBitmapItem = IntPtr.Zero
@@ -78,7 +94,7 @@ public static class MenuBuilder
                     }
                 }
                 if (items.Count == 0)
-                    items.Add(new DynamicMenuItem { Text = TranslationService.Get("QuickNav_NoHistory") ?? "(No history)", IsDisabled = true });
+                    items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_NoHistory") ?? "(No history)", IsDisabled = true });
             }
             else
             {
@@ -180,7 +196,7 @@ public static class MenuBuilder
                     {
                         items.Add(new DynamicMenuItem
                         {
-                            Text = TranslationService.Get("QuickNav_EmptyFolder") ?? "(Empty)",
+                            Text = TranslationService.Get("FolderCascader_EmptyFolder") ?? "(Empty)",
                             IsDisabled = true
                         });
                     }
@@ -189,7 +205,7 @@ public static class MenuBuilder
                 {
                     items.Add(new DynamicMenuItem
                     {
-                        Text = TranslationService.Get("QuickNav_EmptyFolder") ?? "(Empty)",
+                        Text = TranslationService.Get("FolderCascader_EmptyFolder") ?? "(Empty)",
                         IsDisabled = true
                     });
                 }
@@ -198,5 +214,18 @@ public static class MenuBuilder
         }
 
         return Enumerable.Empty<DynamicMenuItem>();
+    }
+
+    private static string GetDisplayName(string path, string customName)
+    {
+        if (!string.IsNullOrWhiteSpace(customName)) return customName;
+        if (path.StartsWith("shell:::", StringComparison.OrdinalIgnoreCase) || path.StartsWith("::", StringComparison.OrdinalIgnoreCase))
+            return ShellPathHelper.GetVirtualFolderDisplayName(path, path);
+        try
+        {
+            var name = Path.GetFileName(path.TrimEnd('\\', '/'));
+            return string.IsNullOrEmpty(name) ? path : name;
+        }
+        catch { return path; }
     }
 }

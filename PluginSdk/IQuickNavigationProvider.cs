@@ -1,5 +1,11 @@
 namespace SwiftList.PluginSdk;
 
+public enum MouseTriggerType
+{
+    DoubleClick,
+    MiddleClick
+}
+
 /// <summary>
 /// Defines a provider that supplies items for the Quick Navigation menu.
 /// </summary>
@@ -23,7 +29,7 @@ public interface IQuickNavigationProvider
     /// <summary>
     /// Determines whether the quick navigation menu can be shown for the specified active window and process.
     /// </summary>
-    bool CanShow(IntPtr activeHwnd, string processName, string className, bool isDesktop, int x, int y);
+    bool CanShow(IntPtr activeHwnd, string processName, string className, bool isDesktop, int x, int y, MouseTriggerType triggerType);
 
     /// <summary>
     /// Clears any cached handles or states.

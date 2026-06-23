@@ -10,8 +10,19 @@ public class Provider : IQuickNavigationProvider
     private int _nextId = 1;
     private uint _nextCmdId = 1;
 
-    public bool CanShow(IntPtr activeHwnd, string processName, string className, bool isDesktop, int x, int y)
+    public bool CanShow(IntPtr activeHwnd, string processName, string className, bool isDesktop, int x, int y, MouseTriggerType triggerType)
     {
+        if (triggerType == MouseTriggerType.DoubleClick)
+        {
+            if (!PluginSettingsService.GetSetting("SwiftList.Plugins.FolderCascader", "TriggerOnDoubleClick", true))
+                return false;
+        }
+        else if (triggerType == MouseTriggerType.MiddleClick)
+        {
+            if (!PluginSettingsService.GetSetting("SwiftList.Plugins.FolderCascader", "TriggerOnMiddleClick", true))
+                return false;
+        }
+
         if (!string.Equals(processName, "explorer", StringComparison.OrdinalIgnoreCase) && !isDesktop)
         {
             return false;

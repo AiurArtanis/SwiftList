@@ -65,10 +65,8 @@ public partial class App : Application
             var trk = InlineSearchManager.Instance.ExplorerTracker;
             var proc = GetProcessNameOfWindow(trk.ActiveHwnd);
             var cls = GetClassNameOfWindow(trk.ActiveHwnd);
-            if (PluginManager.Instance.QuickNavigationProviders.Any(p => p.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y)))
-            {
-                Dispatcher.BeginInvoke(new Action(() => QuickNavigationMenu.Show(x, y)));
-            }
+            if (PluginManager.Instance.QuickNavigationProviders.Any(p => p.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, PluginSdk.MouseTriggerType.DoubleClick)))
+                Dispatcher.BeginInvoke(() => QuickNavigationMenu.Show(x, y));
         };
 
         HookClient.OnMouseMiddleClick += (x, y) =>
@@ -77,10 +75,8 @@ public partial class App : Application
             var trk = InlineSearchManager.Instance.ExplorerTracker;
             var proc = GetProcessNameOfWindow(trk.ActiveHwnd);
             var cls = GetClassNameOfWindow(trk.ActiveHwnd);
-            if (PluginManager.Instance.QuickNavigationProviders.Any(p => p.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y)))
-            {
-                Dispatcher.BeginInvoke(new Action(() => QuickNavigationMenu.Show(x, y)));
-            }
+            if (PluginManager.Instance.QuickNavigationProviders.Any(p => p.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, PluginSdk.MouseTriggerType.MiddleClick)))
+                Dispatcher.BeginInvoke(() => QuickNavigationMenu.Show(x, y));
         };
 
         PluginSdk.ListControlIpcBridge.GetListItemsFunc = hwnd => HookClient != null ? Core.Hook.ListIpcCoordinator.GetListItems(hwnd, HookClient.SendMessage) : Array.Empty<string>();
