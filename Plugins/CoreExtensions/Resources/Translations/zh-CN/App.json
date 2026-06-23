@@ -9,6 +9,7 @@
   "Settings_About": "关于",
   "Settings_History": "历史记录",
   "Settings_History_Hint": "管理与过滤您在 SwiftList 中的搜索历史和最近打开项，对它们进行删除或清空。",
+  "Settings_History_Enable": "启用历史记录",
   "Settings_History_Search_Placeholder": "搜索历史记录...",
   "Settings_History_Clear_All": "清空全部记录",
   "Settings_SaveTip": "更改会在应用后保存到本地配置。",

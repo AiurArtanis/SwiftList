@@ -82,7 +82,7 @@ public static class MenuBuilder
                 });
             }
 
-            if (showHistory)
+            if (showHistory && Helper.GetHistoryPaths().Count > 0)
             {
                 if (items.Count > 0 && !items.Last().IsSeparator)
                 {
@@ -95,6 +95,11 @@ public static class MenuBuilder
                     SubMenuHandle = provider.AllocateHandle("foldercascader://history"),
                     HBitmapItem = Helper.HistoryHBitmap
                 });
+            }
+
+            while (items.Count > 0 && items.Last().IsSeparator)
+            {
+                items.RemoveAt(items.Count - 1);
             }
 
             return items;

@@ -23,6 +23,7 @@ public class UserSettings
     };
     public List<string> IgnoredPathRegexes { get; set; } = new();
     public List<string> BlacklistedProcesses { get; set; } = new();
+    public bool EnableHistory { get; set; } = true;
     public bool StartWithWindows { get; set; }
     public bool AutoElevateIfAdmin { get; set; }
     public bool AutoCheckUpdates { get; set; } = true;

@@ -9,6 +9,7 @@
   "Settings_About": "About",
   "Settings_History": "History",
   "Settings_History_Hint": "Manage and filter your search history and recently opened items in SwiftList, delete or clear them.",
+  "Settings_History_Enable": "Enable History",
   "Settings_History_Search_Placeholder": "Search history...",
   "Settings_History_Clear_All": "Clear All History",
   "Settings_SaveTip": "Changes will be saved to local configuration after applying.",

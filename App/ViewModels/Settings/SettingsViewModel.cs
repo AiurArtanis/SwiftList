@@ -29,7 +29,7 @@ public class SettingsViewModel : ViewModelBase
         Plugins = new PluginManagementViewModel(_userSettings);
         Hotkeys = new HotkeySettingsViewModel(_userSettings);
         Blacklist = new BlacklistSettingsViewModel(_userSettings);
-        History = new HistorySettingsViewModel();
+        History = new HistorySettingsViewModel(_userSettings);
         RefreshCommand = new RelayCommand(Refresh);
         ApplyCommand = new RelayCommand(Apply, () => CanApply);
 

@@ -11,7 +11,7 @@ public static class SearchHistoryStore
 
     public static void Record(string path)
     {
-        if (string.IsNullOrWhiteSpace(path) || path.StartsWith("__", StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(path) || path.StartsWith("__", StringComparison.Ordinal) || !UserSettings.Load().EnableHistory)
             return;
 
         var normalized = NormalizePath(path);

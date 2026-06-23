@@ -8,11 +8,13 @@ namespace SwiftList.App.ViewModels.Settings;
 
 public class HistorySettingsViewModel : ViewModelBase
 {
+    private readonly UserSettings _userSettings;
     private string _searchText = string.Empty;
     private readonly List<HistoryItemViewModel> _allItems = new();
 
-    public HistorySettingsViewModel()
+    public HistorySettingsViewModel(UserSettings userSettings)
     {
+        _userSettings = userSettings;
         var entries = SearchHistoryStore.GetEntries();
         foreach (var entry in entries)
         {
@@ -28,6 +30,19 @@ public class HistorySettingsViewModel : ViewModelBase
         FilteredItems = new ObservableCollection<HistoryItemViewModel>(_allItems);
         RemoveItemCommand = new RelayCommand<HistoryItemViewModel>(RemoveItem);
         ClearAllCommand = new RelayCommand(ClearAll);
+    }
+
+    public bool EnableHistory
+    {
+        get => _userSettings.EnableHistory;
+        set
+        {
+            if (_userSettings.EnableHistory != value)
+            {
+                _userSettings.EnableHistory = value;
+                OnPropertyChanged();
+            }
+        }
     }
 
     public ObservableCollection<HistoryItemViewModel> FilteredItems { get; }
