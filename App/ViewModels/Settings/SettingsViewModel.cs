@@ -29,6 +29,7 @@ public class SettingsViewModel : ViewModelBase
         Plugins = new PluginManagementViewModel(_userSettings);
         Hotkeys = new HotkeySettingsViewModel(_userSettings);
         Blacklist = new BlacklistSettingsViewModel(_userSettings);
+        History = new HistorySettingsViewModel();
         RefreshCommand = new RelayCommand(Refresh);
         ApplyCommand = new RelayCommand(Apply, () => CanApply);
 
@@ -53,6 +54,7 @@ public class SettingsViewModel : ViewModelBase
     public PluginManagementViewModel Plugins { get; }
     public HotkeySettingsViewModel Hotkeys { get; }
     public BlacklistSettingsViewModel Blacklist { get; }
+    public HistorySettingsViewModel History { get; }
     public ICommand RefreshCommand { get; }
     public ICommand ApplyCommand { get; }
 
@@ -162,6 +164,7 @@ public class SettingsViewModel : ViewModelBase
         Plugins.Save();
         Hotkeys.Apply();
         Blacklist.Save();
+        History.Save();
         _userSettings.Save();
         App.HookClient?.SendMessage(new IpcMessage { Id = IpcMessageId.ReloadSettings });
         PluginManager.Instance.RefreshDisabledComponents();

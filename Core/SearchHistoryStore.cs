@@ -68,6 +68,30 @@ public static class SearchHistoryStore
         }
     }
 
+    public static void SaveEntries(IEnumerable<string> entries)
+    {
+        lock (Gate)
+        {
+            _entriesCache = entries.Select(NormalizePath)
+                .Where(x => File.Exists(x) || Directory.Exists(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(MaxEntries)
+                .ToList();
+
+            try
+            {
+                Directory.CreateDirectory(Logger.UserDataDir);
+                File.WriteAllLines(HistoryPath, _entriesCache);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[SearchHistoryStore] Failed to write history: {ex.Message}", LogLevel.Error);
+            }
+
+            _priorityCache = BuildPriorityCache(_entriesCache);
+        }
+    }
+
     public static IReadOnlyDictionary<string, int> Snapshot()
     {
         lock (Gate)
