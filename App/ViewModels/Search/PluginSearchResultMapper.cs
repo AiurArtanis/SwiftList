@@ -74,7 +74,8 @@ public static class PluginSearchResultMapper
     {
         string? currentGroup = null;
         var added = false;
-        foreach (var match in PluginManager.Instance.SearchActionItems(query, isInlineWindow, contextDirectory))
+        var windowType = isInlineWindow ? PluginSdk.SearchWindowType.Inline : PluginSdk.SearchWindowType.Main;
+        foreach (var match in PluginManager.Instance.SearchActionItems(query, windowType, contextDirectory))
         {
             var action = match.Registration.Action;
             var group = string.IsNullOrWhiteSpace(action.GroupName) ? TranslationManager.Instance["Action_DefaultGroup"] : action.GroupName;

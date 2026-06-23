@@ -147,10 +147,10 @@ public class PluginManager : PluginRegistry
 
     // ── Search and execution ──────────────────────────────────────────────
 
-    public IEnumerable<PluginSearchActionMatch> SearchActionItems(string query, bool isInlineWindow, string? contextDirectory = null)
+    public IEnumerable<PluginSearchActionMatch> SearchActionItems(string query, PluginSdk.SearchWindowType windowType, string? contextDirectory = null)
     {
         if (string.IsNullOrWhiteSpace(query)) yield break;
-        if (isInlineWindow && InlineSearchManager.Instance.ExplorerTracker.IsActiveWindowDialog) yield break;
+        if (windowType == PluginSdk.SearchWindowType.Inline && InlineSearchManager.Instance.ExplorerTracker.IsActiveWindowDialog) yield break;
 
         var tempResult = new SimpleSearchResult
         {
@@ -162,7 +162,7 @@ public class PluginManager : PluginRegistry
         foreach (var action in _actions)
         {
             if (action.Action.Keywords.Count == 0) continue;
-            if (action.Action.InlineWindowOnly && !isInlineWindow) continue;
+            if (!action.Action.IsVisibleInSearch(tempResult, windowType)) continue;
             if (!_filter.IsEnabled(ComponentFilter.GetDllName(action.Plugin), PluginComponentType.Action, action.Action.Id)) continue;
             if (!action.Action.CanExecute(tempResult)) continue;
 

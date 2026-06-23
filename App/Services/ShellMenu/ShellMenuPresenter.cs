@@ -99,13 +99,11 @@ public class ShellMenuPresenter : IDisposable
         }
 
         var finalItems = ActionMenuBuilder.Build(
-
             _activeResult,
             hMenu,
-            IsInlineWindow(),
+            GetWindowType(),
             _commandToProviderMap,
             _subMenuToProviderMap
-
         );
         _view.LstActions.ItemsSource = finalItems;
         _view.UpdateActionsLayout();
@@ -267,7 +265,15 @@ public class ShellMenuPresenter : IDisposable
         }
     }
 
-    private bool IsInlineWindow() => _view.GetType().Name.Equals("InlineSearchWindow", StringComparison.Ordinal);
+    private SearchWindowType GetWindowType()
+    {
+        var typeName = _view.GetType().Name;
+        if (typeName.Equals("InlineSearchWindow", StringComparison.Ordinal))
+            return SearchWindowType.Inline;
+        if (typeName.Equals("QuickSearchWindow", StringComparison.Ordinal))
+            return SearchWindowType.Quick;
+        return SearchWindowType.Main;
+    }
 
-    private bool IsInlineFileDialog() => IsInlineWindow() && InlineSearchManager.Instance.ExplorerTracker.IsActiveWindowDialog;
+    private bool IsInlineFileDialog() => GetWindowType() == SearchWindowType.Inline && InlineSearchManager.Instance.ExplorerTracker.IsActiveWindowDialog;
 }

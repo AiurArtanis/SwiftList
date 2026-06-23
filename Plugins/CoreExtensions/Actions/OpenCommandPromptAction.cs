@@ -13,7 +13,9 @@ public class OpenCommandPromptAction : ISearchResultAction
 
     public IReadOnlyList<string> Keywords => new[] { "cmd" };
 
-    public bool InlineWindowOnly => true;
+    public bool IsVisibleInSearch(ISearchResult result, SearchWindowType windowType) => windowType == SearchWindowType.Inline;
+
+    public bool IsVisibleInMenu(ISearchResult result, SearchWindowType windowType) => result != null && result.IsDir;
 
     public ImageSource? Icon => VectorIconHelper.CreateVectorIcon(
         "M3 5h18v14H3V5zm2 2v10h14V7H5zm2 2 3 3-3 3V9zm5 6h5v-2h-5v2z",
@@ -32,7 +34,9 @@ public class OpenAdminCommandPromptAction : ISearchResultAction
 
     public IReadOnlyList<string> Keywords => new[] { "cmda" };
 
-    public bool InlineWindowOnly => true;
+    public bool IsVisibleInSearch(ISearchResult result, SearchWindowType windowType) => windowType == SearchWindowType.Inline;
+
+    public bool IsVisibleInMenu(ISearchResult result, SearchWindowType windowType) => result != null && result.IsDir;
 
     public ImageSource? Icon => VectorIconHelper.CreateVectorIcon(
         "M3 5h18v14H3V5zm2 2v10h14V7H5zm2 2 3 3-3 3V9zm5 6h5v-2h-5v2z",

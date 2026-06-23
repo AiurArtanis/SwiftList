@@ -2,6 +2,13 @@ using System.Windows.Media;
 
 namespace SwiftList.PluginSdk;
 
+public enum SearchWindowType
+{
+    Main,
+    Quick,
+    Inline
+}
+
 /// <summary>
 /// Represents an action that can be performed on a search result.
 /// </summary>
@@ -26,8 +33,11 @@ public interface ISearchResultAction
     /// <summary>Parameter names used for displaying the search-result form of this action.</summary>
     IReadOnlyList<string> Parameters => Array.Empty<string>();
 
-    /// <summary>True when the search-result form of this action is only available in the inline window.</summary>
-    bool InlineWindowOnly => false;
+    /// <summary>Determines whether this action is visible in the search result matching for the given window type.</summary>
+    bool IsVisibleInSearch(ISearchResult result, SearchWindowType windowType) => true;
+
+    /// <summary>Determines whether this action should be visible in the right-click / action menu.</summary>
+    bool IsVisibleInMenu(ISearchResult result, SearchWindowType windowType) => Keywords.Count == 0;
 
     /// <summary>The icon associated with this action.</summary>
     ImageSource? Icon { get; }

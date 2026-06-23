@@ -7,7 +7,7 @@ internal static class ActionMenuBuilder
     public static List<ActionMenuItem> Build(
         AppSearchResult activeResult,
         IntPtr hMenu,
-        bool isInlineWindow,
+        SearchWindowType windowType,
         Dictionary<uint, IDynamicActionProvider> commandToProviderMap,
         Dictionary<IntPtr, IDynamicActionProvider> subMenuToProviderMap)
     {
@@ -24,10 +24,7 @@ internal static class ActionMenuBuilder
             foreach (var registration in PluginManager.Instance.Actions)
             {
                 var action = registration.Action;
-                if (action.Keywords.Count > 0)
-                    continue;
-
-                if (action.InlineWindowOnly && !isInlineWindow)
+                if (!action.IsVisibleInMenu(activeResult, windowType))
                     continue;
 
                 if (action.CanExecute(activeResult))
@@ -68,7 +65,7 @@ internal static class ActionMenuBuilder
                 if (provider.Keywords.Count > 0)
                     continue;
 
-                if (provider.InlineWindowOnly && !isInlineWindow)
+                if (!provider.IsVisibleInMenu(activeResult, windowType))
                     continue;
 
                 if (provider.CanProvide(activeResult))
