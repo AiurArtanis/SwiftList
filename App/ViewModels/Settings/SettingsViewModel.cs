@@ -24,7 +24,7 @@ public class SettingsViewModel : ViewModelBase
         LocalDrive = new LocalDriveSettingsViewModel(_searchService, () => _refreshTimer?.Interval = TimeSpan.FromMilliseconds(100));
 
         NetworkDrive = new NetworkDriveSettingsViewModel(_searchService, _userSettings, () => _refreshTimer?.Interval = TimeSpan.FromMilliseconds(100));
-        Experience = new ExperienceSettingsViewModel(_userSettings);
+        General = new GeneralSettingsViewModel(_userSettings);
         Exclusions = new ExclusionSettingsViewModel(_userSettings);
         Plugins = new PluginManagementViewModel(_userSettings);
         Hotkeys = new HotkeySettingsViewModel(_userSettings);
@@ -49,7 +49,7 @@ public class SettingsViewModel : ViewModelBase
     public ServiceSettingsViewModel Service { get; }
     public LocalDriveSettingsViewModel LocalDrive { get; }
     public NetworkDriveSettingsViewModel NetworkDrive { get; }
-    public ExperienceSettingsViewModel Experience { get; }
+    public GeneralSettingsViewModel General { get; }
     public ExclusionSettingsViewModel Exclusions { get; }
     public PluginManagementViewModel Plugins { get; }
     public HotkeySettingsViewModel Hotkeys { get; }
@@ -160,7 +160,7 @@ public class SettingsViewModel : ViewModelBase
 
         }).ToList();
         Exclusions.Save();
-        Experience.Apply();
+        General.Apply();
         Plugins.Save();
         Hotkeys.Apply();
         Blacklist.Save();

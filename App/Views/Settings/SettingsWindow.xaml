@@ -89,7 +89,7 @@
                                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Exclusions]}"/>
                                 </StackPanel>
                             </ListBoxItem>
-                            <ListBoxItem Tag="Experience">
+                            <ListBoxItem Tag="General">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" Margin="0,0,12,0"/>
                                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_General]}"/>
@@ -133,7 +133,7 @@
                         <settings:LocalDriveSettingsPage x:Name="PageIndex"/>
                         <settings:NetworkDriveSettingsPage x:Name="PageNetwork" Visibility="Collapsed"/>
                         <settings:ExclusionSettingsPage x:Name="PageExclusions" Visibility="Collapsed"/>
-                        <settings:ExperienceSettingsPage x:Name="PageExperience" Visibility="Collapsed"/>
+                        <settings:GeneralSettingsPage x:Name="PageGeneral" Visibility="Collapsed"/>
                         <settings:HotkeySettingsPage x:Name="PageHotkeys" Visibility="Collapsed"
                                                       DataContext="{Binding Hotkeys}"/>
                         <settings:BlacklistSettingsPage x:Name="PageBlacklist" Visibility="Collapsed"

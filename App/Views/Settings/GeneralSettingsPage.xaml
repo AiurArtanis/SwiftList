@@ -1,4 +1,4 @@
-<UserControl x:Class="SwiftList.App.Views.Settings.ExperienceSettingsPage"
+<UserControl x:Class="SwiftList.App.Views.Settings.GeneralSettingsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -19,9 +19,9 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel>
             <TextBlock Style="{StaticResource SettingsSectionTitle}" 
-                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_Title]}"/>
+                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_Title]}"/>
             <TextBlock Style="{StaticResource SettingsHintText}" 
-                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_Hint]}"/>
+                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_Hint]}"/>
 
             <Border Style="{StaticResource SettingsCard}">
                 <StackPanel>
@@ -29,22 +29,22 @@
                                FontWeight="SemiBold" FontSize="13"  Margin="0,0,0,10"/>
                     
                     <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_Startup]}"
-                              IsChecked="{Binding Experience.StartWithWindows, Mode=TwoWay}"
-                              Margin="0,4"/>
+                               IsChecked="{Binding General.StartWithWindows, Mode=TwoWay}"
+                               Margin="0,4"/>
 
                     <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_AutoElevate]}"
-                              IsChecked="{Binding Experience.AutoElevateIfAdmin, Mode=TwoWay}"
-                              IsEnabled="{Binding Experience.IsUserAdmin}"
-                              Margin="0,4"/>
+                               IsChecked="{Binding General.AutoElevateIfAdmin, Mode=TwoWay}"
+                               IsEnabled="{Binding General.IsUserAdmin}"
+                               Margin="0,4"/>
 
                     <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_AutoCheckUpdates]}"
-                              IsChecked="{Binding Experience.AutoCheckUpdates, Mode=TwoWay}"
-                              Margin="0,4"/>
+                               IsChecked="{Binding General.AutoCheckUpdates, Mode=TwoWay}"
+                               Margin="0,4"/>
 
                     <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_AutoSilentUpdate]}"
-                              IsChecked="{Binding Experience.AutoSilentUpdate, Mode=TwoWay}"
-                              IsEnabled="{Binding Experience.IsAutoSilentUpdateEnabled}"
-                              Margin="0,4"/>
+                               IsChecked="{Binding General.AutoSilentUpdate, Mode=TwoWay}"
+                               IsEnabled="{Binding General.IsAutoSilentUpdateEnabled}"
+                               Margin="0,4"/>
                     
                     <Grid Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
@@ -54,9 +54,9 @@
                         <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LogLevel]}" VerticalAlignment="Center"/>
                         <ComboBox Grid.Column="1"
                                   Style="{StaticResource SettingsComboBox}"
-                                  ItemsSource="{Binding Experience.LogLevelOptions}"
+                                  ItemsSource="{Binding General.LogLevelOptions}"
                                   DisplayMemberPath="Label"
-                                  SelectedItem="{Binding Experience.SelectedLogLevel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                  SelectedItem="{Binding General.SelectedLogLevel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </Grid>
 
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LangTitle]}" 
@@ -70,10 +70,10 @@
                         <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LangSelect]}" VerticalAlignment="Center"/>
                         <ComboBox Grid.Column="1"
                                   Style="{StaticResource SettingsComboBox}"
-                                  ItemsSource="{Binding Experience.LanguageOptions}"
+                                  ItemsSource="{Binding General.LanguageOptions}"
                                   DisplayMemberPath="Label"
                                   SelectedValuePath="Value"
-                                  SelectedValue="{Binding Experience.PreferredLanguage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                  SelectedValue="{Binding General.PreferredLanguage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </Grid>
 
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ThemeTitle]}" 
@@ -87,9 +87,9 @@
                         <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ThemeSelect]}" VerticalAlignment="Center"/>
                         <ComboBox Grid.Column="1"
                                   Style="{StaticResource SettingsComboBox}"
-                                  ItemsSource="{Binding Experience.ThemeOptions}"
+                                  ItemsSource="{Binding General.ThemeOptions}"
                                   DisplayMemberPath="Label"
-                                  SelectedItem="{Binding Experience.SelectedTheme, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                  SelectedItem="{Binding General.SelectedTheme, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </Grid>
                 </StackPanel>
             </Border>

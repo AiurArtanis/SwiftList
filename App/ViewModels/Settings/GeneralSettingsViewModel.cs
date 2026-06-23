@@ -3,7 +3,7 @@ using SwiftList.Core;
 
 namespace SwiftList.App.ViewModels.Settings;
 
-public class ExperienceSettingsViewModel : ViewModelBase
+public class GeneralSettingsViewModel : ViewModelBase
 {
     private readonly UserSettings _userSettings;
     private LogLevelOption? _selectedLogLevel;
@@ -12,7 +12,7 @@ public class ExperienceSettingsViewModel : ViewModelBase
     private IReadOnlyList<LanguageOption>? _languageOptions;
     private IReadOnlyList<ThemeOption>? _themeOptions;
 
-    public ExperienceSettingsViewModel(UserSettings userSettings)
+    public GeneralSettingsViewModel(UserSettings userSettings)
     {
         _userSettings = userSettings;
         _userSettings.StartWithWindows = StartupManager.IsEnabled();

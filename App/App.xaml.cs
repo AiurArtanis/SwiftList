@@ -22,7 +22,7 @@ public partial class App : Application
 
         Logger.Initialize("app.log", overwrite: true);
         var settings = UserSettings.Load();
-        Logger.MinimumLevel = ExperienceSettingsViewModel.ParseLogLevel(settings.LogLevel);
+        Logger.MinimumLevel = GeneralSettingsViewModel.ParseLogLevel(settings.LogLevel);
         Logger.Log("=========================================");
         Logger.Log($"Application starting with arguments: {string.Join(" ", e.Args)}");
         Logger.Log($"[App] Running as Administrator: {ElevationManager.IsRunningAsAdmin()}");
