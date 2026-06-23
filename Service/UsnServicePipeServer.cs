@@ -35,38 +35,44 @@ internal sealed class UsnServicePipeServer : IDisposable
             var everyoneSid = new SecurityIdentifier(WellKnownSidType.WorldSid, null);
 
             pipeSecurity.AddAccessRule(new PipeAccessRule(
-
                 everyoneSid,
                 PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
                 AccessControlType.Allow
-
             ));
+
             var authenticatedUsersSid = new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null);
 
             pipeSecurity.AddAccessRule(new PipeAccessRule(
-
                 authenticatedUsersSid,
                 PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
                 AccessControlType.Allow
-
             ));
             Logger.Log("[PipeServer] PipeSecurity successfully configured.", LogLevel.Debug);
         }
-
         catch (Exception ex)
         {
             Logger.Log($"[PipeServer] Failed to create PipeSecurity: {ex.Message}", LogLevel.Error);
         }
 
+        // Pre-create 2 parallel listener loops to serve as a connection pool
+        var listeners = Enumerable.Range(0, 2)
+            .Select(_ => Task.Run(() => ListenLoopAsync(pipeSecurity, token), token))
+            .ToArray();
+
+        await Task.WhenAll(listeners).ConfigureAwait(false);
+        Logger.Log("[PipeServer] Pipe server loop stopped.");
+    }
+
+    private async Task ListenLoopAsync(PipeSecurity? pipeSecurity, CancellationToken token)
+    {
         while (!token.IsCancellationRequested)
         {
+            NamedPipeServerStream? pipeServer = null;
             try
             {
-                NamedPipeServerStream pipeServer;
                 if (pipeSecurity != null)
                 {
                     pipeServer = NamedPipeServerStreamAcl.Create(
-
                         "SwiftListPipe",
                         PipeDirection.InOut,
                         NamedPipeServerStream.MaxAllowedServerInstances,
@@ -74,36 +80,30 @@ internal sealed class UsnServicePipeServer : IDisposable
                         PipeOptions.Asynchronous,
                         65536, 65536,
                         pipeSecurity
-
                     );
                 }
-
                 else
                 {
                     pipeServer = new NamedPipeServerStream(
-
                         "SwiftListPipe",
                         PipeDirection.InOut,
                         NamedPipeServerStream.MaxAllowedServerInstances,
                         PipeTransmissionMode.Byte,
                         PipeOptions.Asynchronous,
                         65536, 65536
-
                     );
                 }
 
-                await pipeServer.WaitForConnectionAsync(token);
-                _ = Task.Run(() => HandleClientAsync(pipeServer, token), token);
+                await pipeServer.WaitForConnectionAsync(token).ConfigureAwait(false);
+                await HandleClientAsync(pipeServer, token).ConfigureAwait(false);
             }
-
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                pipeServer?.Dispose();
                 Logger.Log($"[PipeServer] Server connection failed: {ex.Message}", LogLevel.Error);
-                await Task.Delay(1000, token);
+                await Task.Delay(1000, token).ConfigureAwait(false);
             }
         }
-
-        Logger.Log("[PipeServer] Pipe server loop stopped.");
     }
 
     private async Task HandleClientAsync(NamedPipeServerStream pipe, CancellationToken token)
@@ -120,6 +120,7 @@ internal sealed class UsnServicePipeServer : IDisposable
                     var verboseLog = request.Id != SearchRequestId.Search && request.Id != SearchRequestId.SearchDir;
                     if (verboseLog)
                         Logger.Log($"[PipeServer] Request received: {request.Id}", LogLevel.Debug);
+
                     if (request.Id == SearchRequestId.Search || request.Id == SearchRequestId.SearchDir)
                     {
                         await SearchStreamPump.RunAsync(_engine, request, pipe, token);
@@ -128,25 +129,12 @@ internal sealed class UsnServicePipeServer : IDisposable
                         continue;
                     }
 
-                    using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-
-                    var responseTask = Task.Run(() => ProcessClientRequest(request, requestCts.Token), requestCts.Token);
-                    while (!responseTask.IsCompleted)
-                    {
-                        if (!pipe.IsConnected)
-                        {
-                            requestCts.Cancel();
-                            break;
-                        }
-
-                        await Task.WhenAny(responseTask, Task.Delay(25, token));
-                    }
-
-                    var response = await responseTask;
-                    if (requestCts.IsCancellationRequested || !pipe.IsConnected)
+                    if (!pipe.IsConnected)
                     {
                         break;
                     }
+
+                    var response = ProcessClientRequest(request, token);
 
                     if (verboseLog)
                         Logger.Log($"[PipeServer] Sending response: {response.Kind}...", LogLevel.Debug);
@@ -155,23 +143,19 @@ internal sealed class UsnServicePipeServer : IDisposable
                         Logger.Log("[PipeServer] Response sent.", LogLevel.Debug);
                 }
             }
-
             catch (Exception ex) when (IsClientDisconnect(ex))
             {
             }
-
             catch (Exception ex)
             {
                 Logger.Log($"[PipeServer] Client connection handler error: {ex.Message}", LogLevel.Error);
             }
-
             finally
             {
                 try
                 {
                     GC.Collect(1, GCCollectionMode.Optimized, blocking: false, compacting: false);
                 }
-
                 catch { }
             }
         }

@@ -9,7 +9,10 @@ internal static class SearchStreamPump
         using var queryCts = CancellationTokenSource.CreateLinkedTokenSource(token);
         var queryToken = queryCts.Token;
 
-        await SearchResponseBinarySerializer.WriteHeaderAsync(stream, queryToken).ConfigureAwait(false);
+        using var bufferedStream = new BufferedStream(stream, 8192);
+
+        await SearchResponseBinarySerializer.WriteHeaderAsync(bufferedStream, queryToken).ConfigureAwait(false);
+        await bufferedStream.FlushAsync(queryToken).ConfigureAwait(false);
 
         var channel = Channel.CreateUnbounded<(SearchResult Result, bool IsApp)>(
             new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
@@ -32,14 +35,22 @@ internal static class SearchStreamPump
 
         try
         {
+            var count = 0;
             await foreach (var item in channel.Reader.ReadAllAsync(queryToken).ConfigureAwait(false))
             {
                 if (item.IsApp)
-                    await SearchResponseBinarySerializer.WriteAppResultAsync(stream, item.Result, queryToken).ConfigureAwait(false);
+                    await SearchResponseBinarySerializer.WriteAppResultAsync(bufferedStream, item.Result, queryToken).ConfigureAwait(false);
                 else
-                    await SearchResponseBinarySerializer.WriteFileResultAsync(stream, item.Result, queryToken).ConfigureAwait(false);
+                    await SearchResponseBinarySerializer.WriteFileResultAsync(bufferedStream, item.Result, queryToken).ConfigureAwait(false);
+
+                count++;
+                if (count <= 10 || count % 50 == 0)
+                {
+                    await bufferedStream.FlushAsync(queryToken).ConfigureAwait(false);
+                }
             }
 
+            await bufferedStream.FlushAsync(queryToken).ConfigureAwait(false);
             await producer.ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -58,7 +69,8 @@ internal static class SearchStreamPump
         {
             try
             {
-                await SearchResponseBinarySerializer.WriteEndAsync(stream, token).ConfigureAwait(false);
+                await SearchResponseBinarySerializer.WriteEndAsync(bufferedStream, token).ConfigureAwait(false);
+                await bufferedStream.FlushAsync(token).ConfigureAwait(false);
             }
             catch (Exception ex) when (IsClientDisconnect(ex))
             {
