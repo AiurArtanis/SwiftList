@@ -59,6 +59,15 @@ public static class SearchHistoryStore
         }
     }
 
+    public static IReadOnlyList<string> GetEntries()
+    {
+        lock (Gate)
+        {
+            EnsureCacheNoLock();
+            return _entriesCache != null ? _entriesCache.ToList() : new List<string>();
+        }
+    }
+
     public static IReadOnlyDictionary<string, int> Snapshot()
     {
         lock (Gate)

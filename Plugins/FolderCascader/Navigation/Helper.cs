@@ -14,27 +14,7 @@ public static class Helper
     private static readonly object _iconLock = new();
     private static readonly Dictionary<string, IntPtr> _extensionIconCache = new(StringComparer.OrdinalIgnoreCase);
 
-    public static List<string> GetHistoryPaths()
-    {
-        var historyFile = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "SwiftList",
-            "search-history.txt");
-        if (!File.Exists(historyFile))
-            return new List<string>();
-        try
-        {
-            return File.ReadLines(historyFile)
-                .Select(line => line.Trim())
-                .Where(line => !string.IsNullOrWhiteSpace(line))
-                .Take(30)
-                .ToList();
-        }
-        catch
-        {
-            return new List<string>();
-        }
-    }
+    public static List<string> GetHistoryPaths() => HistoryService.GetHistoryPaths().Take(30).ToList();
 
     public static List<string> GetOpenedExplorerPaths()
     {
