@@ -43,9 +43,15 @@ internal static class InlineListSearchHelper
                 }
                 catch { }
 
-                var displayName = isFullPath
-                    ? Path.GetFileName(item.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-                    : item;
+                var displayName = item;
+                if (isFullPath)
+                {
+                    try
+                    {
+                        displayName = Path.GetFileName(item.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                    }
+                    catch { }
+                }
                 if (string.IsNullOrWhiteSpace(displayName))
                     displayName = item;
 
@@ -53,7 +59,7 @@ internal static class InlineListSearchHelper
                 if (!isMatch)
                 {
                     var highlights = new bool[displayName.Length];
-                    FuzzyHighlightMatcher.MarkFuzzyMatch(displayName, query, highlights);
+                    FuzzyHighlightMatcher.MarkFuzzyMatch(displayName, query, highlights, token);
                     isMatch = highlights.Any(h => h);
                 }
 
@@ -176,9 +182,15 @@ internal static class InlineListSearchHelper
             }
             catch { }
 
-            var displayName = isFullPath
-                ? Path.GetFileName(item.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-                : item;
+            var displayName = item;
+            if (isFullPath)
+            {
+                try
+                {
+                    displayName = Path.GetFileName(item.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                }
+                catch { }
+            }
             if (string.IsNullOrWhiteSpace(displayName))
                 displayName = item;
 
@@ -186,7 +198,7 @@ internal static class InlineListSearchHelper
             if (!isMatch)
             {
                 var highlights = new bool[displayName.Length];
-                FuzzyHighlightMatcher.MarkFuzzyMatch(displayName, query, highlights);
+                FuzzyHighlightMatcher.MarkFuzzyMatch(displayName, query, highlights, token);
                 isMatch = highlights.Any(h => h);
             }
 

@@ -4,10 +4,12 @@ namespace SwiftList.App.Converters;
 
 internal static class FuzzyHighlightMatcher
 {
-    public static void MarkFuzzyMatch(string text, string term, bool[] highlights)
+    public static void MarkFuzzyMatch(string text, string term, bool[] highlights, CancellationToken token = default)
     {
-        if (string.IsNullOrEmpty(term))
+        if (string.IsNullOrEmpty(term) || string.IsNullOrEmpty(text))
             return;
+
+        token.ThrowIfCancellationRequested();
 
         // Cache pinyin segments for text characters (each character can have multiple segments/pronunciations)
         var segments = new string[text.Length][];
@@ -22,7 +24,7 @@ internal static class FuzzyHighlightMatcher
             for (var j = 0; j <= term.Length; j++)
                 memo[i, j] = -1;
 
-        var maxScore = ComputeMaxScore(text, 0, term, 0, segments, memo);
+        var maxScore = ComputeMaxScore(text, 0, term, 0, segments, memo, token);
 
         if (maxScore > 0)
         {
@@ -30,6 +32,7 @@ internal static class FuzzyHighlightMatcher
             var termIdx = 0;
             while (textIdx < text.Length && termIdx < term.Length)
             {
+                token.ThrowIfCancellationRequested();
                 var currentScore = memo[textIdx, termIdx];
                 if (currentScore == -1)
                     break;
@@ -48,7 +51,7 @@ internal static class FuzzyHighlightMatcher
 
                     for (var l = commonLen; l >= 1; l--)
                     {
-                        var nextScore = ComputeMaxScore(text, textIdx + 1, term, termIdx + l, segments, memo);
+                        var nextScore = ComputeMaxScore(text, textIdx + 1, term, termIdx + l, segments, memo, token);
                         var bonus = GetMatchBonus(text, textIdx);
                         if (nextScore + bonus == currentScore)
                         {
@@ -66,7 +69,7 @@ internal static class FuzzyHighlightMatcher
                 // Choice 3: Match literal character
                 if (!choiceMade && text[textIdx] == term[termIdx])
                 {
-                    var nextScore = ComputeMaxScore(text, textIdx + 1, term, termIdx + 1, segments, memo);
+                    var nextScore = ComputeMaxScore(text, textIdx + 1, term, termIdx + 1, segments, memo, token);
                     var bonus = GetMatchBonus(text, textIdx);
                     if (nextScore + bonus == currentScore)
                     {
@@ -80,7 +83,7 @@ internal static class FuzzyHighlightMatcher
                 // Choice 0: Skip text[textIdx]
                 if (!choiceMade)
                 {
-                    var skipScore = ComputeMaxScore(text, textIdx + 1, term, termIdx, segments, memo);
+                    var skipScore = ComputeMaxScore(text, textIdx + 1, term, termIdx, segments, memo, token);
                     if (skipScore == currentScore)
                     {
                         textIdx++;
@@ -100,8 +103,11 @@ internal static class FuzzyHighlightMatcher
         string term,
         int termIdx,
         string[][] segments,
-        int[,] memo)
+        int[,] memo,
+        CancellationToken token)
     {
+        token.ThrowIfCancellationRequested();
+
         if (termIdx == term.Length)
             return 0;
 
@@ -112,7 +118,7 @@ internal static class FuzzyHighlightMatcher
             return memo[textIdx, termIdx];
 
         // Choice 0: Skip text[textIdx]
-        var bestScore = ComputeMaxScore(text, textIdx + 1, term, termIdx, segments, memo);
+        var bestScore = ComputeMaxScore(text, textIdx + 1, term, termIdx, segments, memo, token);
 
         var tc = text[textIdx];
         var matchBonus = GetMatchBonus(text, textIdx);
@@ -129,7 +135,7 @@ internal static class FuzzyHighlightMatcher
 
             for (var l = 1; l <= commonLen; l++)
             {
-                var score = ComputeMaxScore(text, textIdx + 1, term, termIdx + l, segments, memo) + matchBonus;
+                var score = ComputeMaxScore(text, textIdx + 1, term, termIdx + l, segments, memo, token) + matchBonus;
                 if (score >= bestScore)
                 {
                     bestScore = score;
@@ -140,7 +146,7 @@ internal static class FuzzyHighlightMatcher
         // Choice 3: Match literal character
         if (tc == term[termIdx])
         {
-            var score = ComputeMaxScore(text, textIdx + 1, term, termIdx + 1, segments, memo) + matchBonus;
+            var score = ComputeMaxScore(text, textIdx + 1, term, termIdx + 1, segments, memo, token) + matchBonus;
             if (score >= bestScore)
             {
                 bestScore = score;

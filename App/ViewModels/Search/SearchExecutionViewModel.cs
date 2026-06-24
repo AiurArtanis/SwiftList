@@ -221,7 +221,12 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
     private void OnServiceUnavailable()
     {
         _mainVm.Monitor.SetOfflineState();
-        ReplaceResults(Array.Empty<AppSearchResult>());
+        var results = new List<AppSearchResult>();
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            results.Add(SearchResultMapper.CreateNoResultsResult(SearchQuery));
+        }
+        ReplaceResults(results);
         ResultsPanelVisibility = Visibility.Visible;
         ResultsSeparatorVisibility = Visibility.Visible;
     }

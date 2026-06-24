@@ -52,6 +52,8 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
                 !SelectedResult.IsEmptyResult &&
                 !SelectedResult.IsSearchSectionHeader &&
                 !SelectedResult.IsListItem &&
+                !SelectedResult.IsPluginSearchAction &&
+                !SelectedResult.IsInstantResult &&
                 !string.IsNullOrEmpty(SelectedResult.FullPath))
             {
                 return Visibility.Visible;

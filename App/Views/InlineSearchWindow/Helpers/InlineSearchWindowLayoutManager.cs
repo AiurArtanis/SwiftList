@@ -206,6 +206,8 @@ public sealed class InlineSearchWindowLayoutManager
                                                                             !activeResult.IsEmptyResult &&
                                                                             !activeResult.IsSearchSectionHeader &&
                                                                             !activeResult.IsListItem &&
+                                                                            !activeResult.IsPluginSearchAction &&
+                                                                            !activeResult.IsInstantResult &&
                                                                             (!string.IsNullOrEmpty(activeResult.FullPath) || isShowMore);
 
                                                           var targetVisibility = shouldShow ? Visibility.Visible : Visibility.Collapsed;

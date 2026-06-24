@@ -15,15 +15,7 @@ internal static class ActionMenuBuilder
             return new List<ActionMenuItem>();
 
         var uiItems = new List<ActionMenuItem>();
-        var itemHeight = activeResult.ItemHeight;
-        if (windowType == SearchWindowType.Main)
-        {
-            itemHeight = UiMetrics.ListItemHeight;
-        }
-        else if (windowType == SearchWindowType.Inline)
-        {
-            itemHeight = activeResult.InlineItemHeight;
-        }
+        var itemHeight = UiMetrics.ListItemHeight;
 
         var headerHeight = Math.Round(itemHeight * (UiMetrics.SearchSectionHeaderHeight / UiMetrics.SearchResultItemHeight));
 

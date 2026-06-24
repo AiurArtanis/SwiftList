@@ -15,7 +15,7 @@ public class ActionMenuItem
     public bool IsDisabled { get; set; }
     public ImageSource? Icon { get; set; }
 
-    public double ItemHeight { get; set; } = Services.UiMetrics.SearchResultItemHeight;
+    public double ItemHeight { get; set; } = Services.UiMetrics.ListItemHeight;
 
     public bool IsNormalItem => !IsSeparator && !IsSectionHeader;
 
