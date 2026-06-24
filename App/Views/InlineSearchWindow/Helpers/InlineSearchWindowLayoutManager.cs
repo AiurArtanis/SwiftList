@@ -2,8 +2,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
-using SwiftList.App.Services;
-using SwiftList.Core;
 
 namespace SwiftList.App.Views.InlineSearchWindow.Helpers;
 
@@ -42,17 +40,22 @@ public sealed class InlineSearchWindowLayoutManager
                     }
                 }
             }
-            var heightChanged = !AreClose(_lastResultsHeight, resultsHeight);
+            var pathPreviewHeight = 0.0;
+            if (_window.PathPreviewBorder != null && 
+                _window.PathPreviewBorder.Visibility == Visibility.Visible)
+            {
+                _window.PathPreviewBorder.Measure(new System.Windows.Size(_window.ResultsPanelControl.ActualWidth > 0 ? _window.ResultsPanelControl.ActualWidth : 380, double.PositiveInfinity));
+                pathPreviewHeight = _window.PathPreviewBorder.DesiredSize.Height;
+            }
+
+            var totalResultsHeight = resultsHeight + pathPreviewHeight;
+            var heightChanged = !AreClose(_lastResultsHeight, totalResultsHeight);
             if (heightChanged)
             {
-                _lastResultsHeight = resultsHeight;
+                _lastResultsHeight = totalResultsHeight;
                 _window.LstResults.Height = resultsHeight;
                 _window.ResultsPanelControl.Height = resultsHeight;
             }
-
-            _window.TxtStatusInfo.Text = count > 0 && selectableCount > 0
-                ? string.Format(TranslationManager.Instance["Search_ResultsCount"], selectableCount)
-                : string.Empty;
 
             if (count == 0)
             {
@@ -69,6 +72,8 @@ public sealed class InlineSearchWindowLayoutManager
     {
         if (_window.ResultsPanelControl.ActionsGrid.Visibility == Visibility.Visible)
         {
+            _window.PathPreviewBorder?.Visibility = Visibility.Collapsed;
+
             if (_window.LstActions.ItemsSource is System.Collections.IList items)
             {
                 double totalHeight = 0;
@@ -77,14 +82,18 @@ public sealed class InlineSearchWindowLayoutManager
                 {
                     if (items[i] is ActionMenuItem item)
                     {
-                        if (item.IsSeparator) totalHeight += UiMetrics.ActionSeparatorHeight;
-                        else if (item.IsSectionHeader) totalHeight += UiMetrics.ActionSectionHeaderHeight;
-                        else totalHeight += UiMetrics.ActionItemHeight;
+                        totalHeight += item.ItemHeight;
                     }
                 }
 
+                double actionsHeaderHeight = 28;
+                if (_window.LstResults.SelectedItem is AppSearchResult selectedResult)
+                {
+                    actionsHeaderHeight = selectedResult.ActionsHeaderHeight;
+                }
+
                 _window.LstActions.Height = totalHeight;
-                _window.ResultsPanelControl.Height = totalHeight + UiMetrics.ActionsHeaderHeight;
+                _window.ResultsPanelControl.Height = totalHeight + actionsHeaderHeight;
             }
             else
             {
@@ -95,6 +104,7 @@ public sealed class InlineSearchWindowLayoutManager
         {
             _window.LstActions.Height = double.NaN;
             _lastResultsHeight = double.NaN;
+            UpdatePathPreviewVisibility();
             QueueResultsLayoutUpdate();
         }
 
@@ -104,78 +114,7 @@ public sealed class InlineSearchWindowLayoutManager
     public void UpdateShortcutHints()
     {
         var scrollViewer = GetScrollViewer(_window.LstResults);
-        var firstVisible = scrollViewer != null ? (int)Math.Round(scrollViewer.VerticalOffset) : 0;
-        var shortcutIndex = 1;
-
-        var selectMod = "Ctrl";
-        var quickSwitchHint = "Ctrl+G";
-        try
-        {
-            var settings = UserSettings.Load();
-            var mod = settings.SelectIndexModifier;
-            if (!string.IsNullOrEmpty(mod))
-            {
-                selectMod = string.Equals(mod, "Control", StringComparison.OrdinalIgnoreCase) ? "Ctrl" : mod;
-            }
-
-            var quickSwitch = settings.QuickSwitchHotkey;
-            if (quickSwitch != null)
-            {
-                if (string.Equals(quickSwitch.Type, "KeyCombo", StringComparison.OrdinalIgnoreCase))
-                {
-                    var qsMod = quickSwitch.Modifier;
-                    if (string.Equals(qsMod, "Control", StringComparison.OrdinalIgnoreCase)) qsMod = "Ctrl";
-
-                    var qsKey = quickSwitch.Key;
-                    if (string.Equals(qsKey, "Space", StringComparison.OrdinalIgnoreCase)) qsKey = "Space";
-                    else if (string.Equals(qsKey, "Enter", StringComparison.OrdinalIgnoreCase)) qsKey = "Enter";
-                    else if (string.Equals(qsKey, "Escape", StringComparison.OrdinalIgnoreCase)) qsKey = "Esc";
-                    else if (string.Equals(qsKey, "Tab", StringComparison.OrdinalIgnoreCase)) qsKey = "Tab";
-
-                    quickSwitchHint = string.Equals(qsMod, "None", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(qsMod)
-                        ? qsKey : $"{qsMod}+{qsKey}";
-                }
-                else // ModifierClick
-                {
-                    var qsClickMod = quickSwitch.ClickModifier;
-                    if (string.Equals(qsClickMod, "Control", StringComparison.OrdinalIgnoreCase)) qsClickMod = "Ctrl";
-                    quickSwitchHint = $"{qsClickMod} x{quickSwitch.ClickCount}";
-                }
-            }
-        }
-        catch { }
-
-        for (var i = 0; i < _window.LstResults.Items.Count; i++)
-        {
-            if (_window.LstResults.Items[i] is AppSearchResult item)
-            {
-                if (item.IsEmptyResult || item.IsSearchSectionHeader)
-                {
-                    item.ShortcutHint = string.Empty;
-                    item.ShortcutVisibility = Visibility.Collapsed;
-                    continue;
-                }
-
-                if (item.IsJumpToExplorerPath)
-                {
-                    item.ShortcutHint = quickSwitchHint;
-                    item.ShortcutVisibility = Visibility.Visible;
-                    continue;
-                }
-
-                if (i >= firstVisible && shortcutIndex <= 9)
-                {
-                    item.ShortcutHint = $"{selectMod}+{shortcutIndex}";
-                    item.ShortcutVisibility = Visibility.Visible;
-                    shortcutIndex++;
-                }
-                else
-                {
-                    item.ShortcutHint = string.Empty;
-                    item.ShortcutVisibility = Visibility.Collapsed;
-                }
-            }
-        }
+        InlineSearchShortcutHelper.UpdateShortcutHints(_window, scrollViewer);
     }
 
     public ScrollViewer? GetScrollViewer(DependencyObject depObj)
@@ -226,10 +165,88 @@ public sealed class InlineSearchWindowLayoutManager
         }
         return null;
     }
-    private double GetItemHeight(AppSearchResult item)
+    private double GetItemHeight(AppSearchResult item) => item.InlineItemHeight;
+
+    private AppSearchResult? _hoveredResult;
+
+    public void SetHoveredResult(AppSearchResult? result)
     {
-        if (item.IsSearchSectionHeader) return 31;
-        if (item.IsListItem) return 34;
-        return 51; // ponytail: match ResultItemStyle default height to prevent bottom clipping
+        if (_hoveredResult != result)
+        {
+            _hoveredResult = result;
+            UpdatePathPreviewVisibility();
+        }
+    }
+
+    public void UpdatePathPreviewVisibility() => _window.Dispatcher.BeginInvoke(new Action(() =>
+                                                      {
+                                                          var activeResult = _hoveredResult ?? (_window.LstResults.SelectedItem as AppSearchResult);
+                                                          if (activeResult == null)
+                                                          {
+                                                              if (_window.PathPreviewBorder != null && _window.PathPreviewBorder.Visibility != Visibility.Collapsed)
+                                                              {
+                                                                  _window.PathPreviewBorder.Visibility = Visibility.Collapsed;
+                                                                  QueueResultsLayoutUpdate();
+                                                              }
+                                                              return;
+                                                          }
+
+                                                          var isTruncated = CheckIfResultIsTruncated(activeResult);
+                                                          var vm = _window.ViewModel;
+                                                          
+                                                          var isShowMore = activeResult.FullPath == "__SHOW_MORE__";
+
+                                                          var shouldShow = _window.ResultsPanelControl.ActionsGrid.Visibility != Visibility.Visible &&
+                                                                            isTruncated &&
+                                                                            vm.IsInlineSearchContext &&
+                                                                            !activeResult.IsEmptyResult &&
+                                                                            !activeResult.IsSearchSectionHeader &&
+                                                                            !activeResult.IsListItem &&
+                                                                            (!string.IsNullOrEmpty(activeResult.FullPath) || isShowMore);
+
+                                                          var targetVisibility = shouldShow ? Visibility.Visible : Visibility.Collapsed;
+                                                          if (_window.PathPreviewBorder != null)
+                                                          {
+                                                              if (shouldShow)
+                                                              {
+                                                                  _window.PathPreviewTextBlock.Text = isShowMore ? activeResult.Name : activeResult.FullPath;
+                                                              }
+
+                                                              if (_window.PathPreviewBorder.Visibility != targetVisibility)
+                                                              {
+                                                                  _window.PathPreviewBorder.Visibility = targetVisibility;
+                                                                  QueueResultsLayoutUpdate();
+                                                              }
+                                                          }
+                                                      }), DispatcherPriority.Loaded);
+
+    private bool CheckIfResultIsTruncated(AppSearchResult result)
+    {
+        if (_window.LstResults.ItemContainerGenerator.ContainerFromItem(result) is not ListBoxItem container) return false;
+
+        var scrollViewers = new List<ScrollViewer>();
+        FindScrollViewers(container, scrollViewers);
+        foreach (var sv in scrollViewers)
+        {
+            if (sv.ScrollableWidth > 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void FindScrollViewers(DependencyObject depObj, List<ScrollViewer> list)
+    {
+        if (depObj == null) return;
+        if (depObj is ScrollViewer viewer)
+        {
+            list.Add(viewer);
+        }
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
+        {
+            var child = VisualTreeHelper.GetChild(depObj, i);
+            FindScrollViewers(child, list);
+        }
     }
 }

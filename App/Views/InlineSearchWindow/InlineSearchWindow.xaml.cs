@@ -141,7 +141,18 @@ public partial class InlineSearchWindow : Window, ISearchWindow
         // Wire scroll handler to update shortcut keys dynamically when scrolling
 
         LstResults.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((s, e) => _inputHandler.UpdateShortcutHints()));
-        LstResults.SelectionChanged += (s, e) => _inputHandler.SyncExplorerSelection();
+        LstResults.SelectionChanged += (s, e) =>
+        {
+            _inputHandler.SyncExplorerSelection();
+            _inputHandler.UpdatePathPreviewVisibility();
+        };
+        LstResults.MouseMove += (s, e) =>
+        {
+            var item = InlineSearchWindowInputHandler.FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
+            var result = item?.Content as AppSearchResult;
+            _inputHandler.SetHoveredResult(result);
+        };
+        LstResults.MouseLeave += (s, e) => _inputHandler.SetHoveredResult(null);
 
         // Mouse actions on results list: single click to execute search result
 
@@ -246,7 +257,6 @@ public partial class InlineSearchWindow : Window, ISearchWindow
     }
 
     public void UpdateActionsLayout() => _inputHandler.UpdateActionsLayout();
-
     public void FocusSearch()
     {
         SearchBox.SearchTextBox.Focus();
@@ -258,9 +268,7 @@ public partial class InlineSearchWindow : Window, ISearchWindow
     public void LocateInExplorerExternal(string path) => InlineSearchNavigator.LocateInExplorerExternal(this, path);
     public void ExecuteSearchResult(AppSearchResult result) => InlineSearchNavigator.ExecuteSearchResult(this, result);
     public void ExecuteSearchResultAsAdmin(AppSearchResult result) => InlineSearchNavigator.ExecuteSearchResult(this, result, asAdmin: true);
-
     public bool IsPointInsideWindowExternal(int x, int y) => InlineSearchWindowNativeMethods.IsPointInsideWindow(x, y);
-
     private void HandleActiveWindowMoved()
     {
         if (IsVisible)

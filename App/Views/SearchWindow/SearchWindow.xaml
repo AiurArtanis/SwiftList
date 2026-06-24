@@ -142,8 +142,8 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <!-- Header -->
-                            <Border Grid.Row="0" BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,0,0,1" Padding="14,10,14,10" Background="{DynamicResource ActionsHeaderBg}">
+                            <Border Grid.Row="0" BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,0,0,1" 
+                                    Height="{Binding SelectedItem.ActionsHeaderHeight, ElementName=ResultsPanelControl}" Padding="14,0,14,0" Background="{DynamicResource ActionsHeaderBg}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>

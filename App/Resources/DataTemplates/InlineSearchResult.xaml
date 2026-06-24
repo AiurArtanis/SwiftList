@@ -56,10 +56,10 @@
                     </Style>
                 </Image.Style>
             </Image>
-            <!-- Name -->
-            <StackPanel VerticalAlignment="Center">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <!-- Name & Path Container -->
+            <Grid VerticalAlignment="Center">
+                <Grid.Style>
+                    <Style TargetType="Grid">
                         <Setter Property="Grid.Column" Value="1"/>
                         <Setter Property="Grid.ColumnSpan" Value="1"/>
                         <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -78,35 +78,81 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
-                <!-- Standard text block (for normal search results) -->
-                <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False">
-                    <TextBlock 
-                               Foreground="{DynamicResource TextPrimary}"
-                               local:TextHighlighter.Text="{Binding Name}"
-                               local:TextHighlighter.HighlightText="{Binding SearchQuery}"
-                               local:TextHighlighter.HighlightBrush="{DynamicResource AccentBlue}"
-                               helpers:MarqueeBehavior.EnableMarquee="True">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="FontSize" Value="14"/>
-                                <Setter Property="TextAlignment" Value="Left"/>
-                                <Setter Property="HorizontalAlignment" Value="Left"/>
-                                <Setter Property="TextTrimming" Value="None"/>
+                </Grid.Style>
+                
+                <!-- Side-by-side name and path for standard results -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsListItem}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="7*"/>
+                        <ColumnDefinition Width="3*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False">
+                        <TextBlock 
+                                   Foreground="{DynamicResource TextPrimary}"
+                                   local:TextHighlighter.HighlightText="{Binding SearchQuery}"
+                                   local:TextHighlighter.HighlightBrush="{DynamicResource AccentBlue}"
+                                   helpers:MarqueeBehavior.EnableMarquee="True"
+                                   FontSize="14"
+                                   VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="local:TextHighlighter.Text" Value="{Binding Name}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsJumpToExplorerPath}" Value="True">
+                                            <Setter Property="local:TextHighlighter.Text" Value="{Binding ParentDir}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </ScrollViewer>
+
+                    <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="12,0,0,0">
+                        <ScrollViewer.Style>
+                            <Style TargetType="ScrollViewer">
+                                <Setter Property="Visibility" Value="Visible"/>
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
-                                        <Setter Property="FontSize" Value="18"/>
-                                        <Setter Property="TextAlignment" Value="Center"/>
-                                        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsListItem}" Value="True">
+                                    <DataTrigger Binding="{Binding ParentDir}" Value="">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                </ScrollViewer>
+                        </ScrollViewer.Style>
+                        <TextBlock 
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   VerticalAlignment="Center"
+                                   helpers:MarqueeBehavior.EnableMarquee="True"
+                                   local:TextHighlighter.HighlightText="{Binding SearchQuery}"
+                                   local:TextHighlighter.HighlightBrush="{DynamicResource AccentBlue}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="local:TextHighlighter.Text" Value="{Binding ParentDir}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsJumpToExplorerPath}" Value="True">
+                                            <Setter Property="local:TextHighlighter.Text" Value="{Binding Name}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </ScrollViewer>
+                </Grid>
+
                 <!-- Custom multi-column renderer (only for list items) -->
                 <ScrollViewer HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Disabled"
@@ -136,7 +182,6 @@
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Style.Triggers>
-                                                    <!-- If it is the first item, hide separator -->
                                                     <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
                                                     </DataTrigger>
@@ -157,30 +202,25 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
-                <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="0,2,0,0">
-                    <ScrollViewer.Style>
-                        <Style TargetType="ScrollViewer">
-                            <Setter Property="Visibility" Value="Visible"/>
+
+                <!-- Empty Result View -->
+                <TextBlock Text="{Binding Name}"
+                           Foreground="{DynamicResource TextPrimary}"
+                           FontSize="14"
+                           TextAlignment="Center"
+                           HorizontalAlignment="Stretch">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding ParentDir}" Value="">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
                                 <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Setter Property="Visibility" Value="Visible"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </ScrollViewer.Style>
-                    <TextBlock FontSize="11"
-                               
-                               Foreground="{DynamicResource TextSecondary}"
-                               HorizontalAlignment="Left"
-                               helpers:MarqueeBehavior.EnableMarquee="True"
-                               local:TextHighlighter.Text="{Binding ParentDir}"
-                               local:TextHighlighter.HighlightText="{Binding SearchQuery}"
-                               local:TextHighlighter.HighlightBrush="{DynamicResource AccentBlue}"/>
-                </ScrollViewer>
-            </StackPanel>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
             <!-- Keyboard shortcut hint -->
             <TextBlock Grid.Column="2"
                        Text="{Binding ShortcutHint}"

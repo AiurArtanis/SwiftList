@@ -8,18 +8,9 @@
 	<!-- ═══════════ Self-Drawn Action Context Menu Item Template ═══════════ -->
 	<DataTemplate x:Key="ActionMenuItemTemplate" DataType="{x:Type app:ActionMenuItem}">
 		<Grid>
-			<!-- Height Style -->
 			<Grid.Style>
 				<Style TargetType="Grid">
-					<Setter Property="Height" Value="51"/>
-					<Style.Triggers>
-						<DataTrigger Binding="{Binding IsSeparator}" Value="True">
-							<Setter Property="Height" Value="9"/>
-						</DataTrigger>
-						<DataTrigger Binding="{Binding IsSectionHeader}" Value="True">
-							<Setter Property="Height" Value="28"/>
-						</DataTrigger>
-					</Style.Triggers>
+					<Setter Property="Height" Value="{Binding ItemHeight}"/>
 				</Style>
 			</Grid.Style>
 

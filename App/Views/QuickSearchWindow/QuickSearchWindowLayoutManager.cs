@@ -29,14 +29,18 @@ internal sealed class QuickSearchWindowLayoutManager
                 {
                     if (items[i] is ActionMenuItem item)
                     {
-                        if (item.IsSeparator) totalHeight += UiMetrics.ActionSeparatorHeight;
-                        else if (item.IsSectionHeader) totalHeight += UiMetrics.ActionSectionHeaderHeight;
-                        else totalHeight += UiMetrics.ActionItemHeight;
+                        totalHeight += item.ItemHeight;
                     }
                 }
 
+                double actionsHeaderHeight = 28;
+                if (_window.LstResults.SelectedItem is AppSearchResult selectedResult)
+                {
+                    actionsHeaderHeight = selectedResult.ActionsHeaderHeight;
+                }
+
                 _window.LstActions.Height = totalHeight;
-                _window.ResultsPanelControl.Height = totalHeight + UiMetrics.ActionsHeaderHeight;
+                _window.ResultsPanelControl.Height = totalHeight + actionsHeaderHeight;
             }
             else
             {

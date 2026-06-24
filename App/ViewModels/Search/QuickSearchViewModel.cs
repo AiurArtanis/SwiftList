@@ -17,7 +17,14 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
         Monitor = new ServiceMonitorViewModel(this, _searchService);
 
         // Forward property changed notifications from sub-ViewModels
-        Search.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
+        Search.PropertyChanged += (s, e) =>
+        {
+            OnPropertyChanged(e.PropertyName);
+            if (e.PropertyName == nameof(SelectedResult))
+            {
+                OnPropertyChanged(nameof(PathPreviewVisibility));
+            }
+        };
         Monitor.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
     }
 
@@ -34,6 +41,23 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
     {
         get => Search.SelectedResult;
         set => Search.SelectedResult = value;
+    }
+
+    public Visibility PathPreviewVisibility
+    {
+        get
+        {
+            if (IsInlineSearchContext &&
+                SelectedResult != null &&
+                !SelectedResult.IsEmptyResult &&
+                !SelectedResult.IsSearchSectionHeader &&
+                !SelectedResult.IsListItem &&
+                !string.IsNullOrEmpty(SelectedResult.FullPath))
+            {
+                return Visibility.Visible;
+            }
+            return Visibility.Collapsed;
+        }
     }
 
     public string? SearchScope

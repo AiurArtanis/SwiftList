@@ -26,6 +26,7 @@ public class InlineSearchWindowPositioner
 
     private void PositionWindowCore()
     {
+        _window.UpdateLayout();
         var dpiScaleX = 1.0;
         var dpiScaleY = 1.0;
         var source = PresentationSource.FromVisual(_window);
@@ -60,9 +61,12 @@ public class InlineSearchWindowPositioner
         var isResultsVisible = _window.ResultsPanelControl.Visibility == Visibility.Visible;
 
         // Default layout: results on top, search box on bottom with rounded corners
-        Grid.SetRow(_window.ResultsPanelControl, 0);
+        Grid.SetRow(_window.ResultsContainerWrapper, 0);
         Grid.SetRow(_window.ResultsSeparator, 1);
         Grid.SetRow(_window.SearchBoxBorder, 2);
+        Grid.SetRow(_window.PathPreviewBorder, 0);
+        Grid.SetRow(_window.ResultsPanelControl, 1);
+        _window.PathPreviewBorder.BorderThickness = new Thickness(0, 0, 0, 1);
         _window.MainBorder.CornerRadius = new CornerRadius(8);
         _window.SearchBoxBorder.CornerRadius = isResultsVisible ? new CornerRadius(0, 0, 7, 7) : new CornerRadius(7);
 
@@ -96,7 +100,10 @@ public class InlineSearchWindowPositioner
                     // Swap layout: Search Box on top (Row 0), Results on bottom (Row 2)
                     Grid.SetRow(_window.SearchBoxBorder, 0);
                     Grid.SetRow(_window.ResultsSeparator, 1);
-                    Grid.SetRow(_window.ResultsPanelControl, 2);
+                    Grid.SetRow(_window.ResultsContainerWrapper, 2);
+                    Grid.SetRow(_window.PathPreviewBorder, 1);
+                    Grid.SetRow(_window.ResultsPanelControl, 0);
+                    _window.PathPreviewBorder.BorderThickness = new Thickness(0, 1, 0, 0);
                     _window.MainBorder.CornerRadius = new CornerRadius(0, 0, 8, 8);
                     _window.SearchBoxBorder.CornerRadius = isResultsVisible ? new CornerRadius(0) : new CornerRadius(0, 0, 7, 7);
 

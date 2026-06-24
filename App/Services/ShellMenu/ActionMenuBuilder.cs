@@ -11,7 +11,21 @@ internal static class ActionMenuBuilder
         Dictionary<uint, IDynamicActionProvider> commandToProviderMap,
         Dictionary<IntPtr, IDynamicActionProvider> subMenuToProviderMap)
     {
+        if (activeResult == null)
+            return new List<ActionMenuItem>();
+
         var uiItems = new List<ActionMenuItem>();
+        var itemHeight = activeResult.ItemHeight;
+        if (windowType == SearchWindowType.Main)
+        {
+            itemHeight = UiMetrics.ListItemHeight;
+        }
+        else if (windowType == SearchWindowType.Inline)
+        {
+            itemHeight = activeResult.InlineItemHeight;
+        }
+
+        var headerHeight = Math.Round(itemHeight * (UiMetrics.SearchSectionHeaderHeight / UiMetrics.SearchResultItemHeight));
 
         if (hMenu == IntPtr.Zero)
         {
@@ -44,7 +58,8 @@ internal static class ActionMenuBuilder
                 uiItems.Add(new ActionMenuItem
                 {
                     IsSectionHeader = true,
-                    SectionTitle = kvp.Key
+                    SectionTitle = kvp.Key,
+                    ItemHeight = headerHeight
                 });
 
                 foreach (var registration in kvp.Value)
@@ -54,7 +69,8 @@ internal static class ActionMenuBuilder
                     {
                         Text = action.DisplayName,
                         CommandId = registration.RuntimeActionId,
-                        Icon = action.Icon
+                        Icon = action.Icon,
+                        ItemHeight = itemHeight
                     });
                 }
             }
@@ -79,7 +95,8 @@ internal static class ActionMenuBuilder
                         uiItems.Add(new ActionMenuItem
                         {
                             IsSectionHeader = true,
-                            SectionTitle = group
+                            SectionTitle = group,
+                            ItemHeight = headerHeight
                         });
 
                         foreach (var item in dynamicItemsList)
@@ -94,7 +111,8 @@ internal static class ActionMenuBuilder
                                 HasSubMenu = item.HasSubMenu,
                                 SubMenuHandle = item.SubMenuHandle,
                                 IsDisabled = item.IsDisabled,
-                                Icon = iconSource
+                                Icon = iconSource,
+                                ItemHeight = item.IsSeparator ? Math.Round(itemHeight * 0.3) : itemHeight
                             });
 
                             if (!item.IsSeparator && item.CommandId != 0)
@@ -128,7 +146,8 @@ internal static class ActionMenuBuilder
                         HasSubMenu = item.HasSubMenu,
                         SubMenuHandle = item.SubMenuHandle,
                         IsDisabled = item.IsDisabled,
-                        Icon = iconSource
+                        Icon = iconSource,
+                        ItemHeight = item.IsSeparator ? Math.Round(itemHeight * 0.3) : itemHeight
                     });
 
                     if (!item.IsSeparator && item.CommandId != 0)

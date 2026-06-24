@@ -113,6 +113,10 @@ public class InlineSearchWindowInputHandler
 
     public void UpdateShortcutHints() => _layoutManager.UpdateShortcutHints();
 
+    public void UpdatePathPreviewVisibility() => _layoutManager.UpdatePathPreviewVisibility();
+
+    public void SetHoveredResult(AppSearchResult? result) => _layoutManager.SetHoveredResult(result);
+
     public void LaunchByShortcutIndex(int num)
     {
         if (num < 1 || num > 9) return;
