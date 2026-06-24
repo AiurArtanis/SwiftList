@@ -235,7 +235,6 @@
   "Search_StatsAppsAndFiles": "Found {0} applications, {1} files",
   "Search_StatsAppsOnly": "Found {0} applications",
   "Search_StatsFilesOnly": "Found {0} results",
-  "Search_JumpToExplorer": "Jump to last active {0} directory",
   "Search_DefaultFileManagerName": "file manager",
   "Search_KeywordOnly": "Keyword {0}",
   "Search_KeywordParams": "Keyword {0} · Args {1}",

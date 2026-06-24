@@ -150,8 +150,7 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
 
                 if (!string.IsNullOrEmpty(targetName))
                 {
-                    var format = TranslationManager.Instance["Search_JumpToExplorer"];
-                    var displayName = string.Format(format, targetName);
+                    var displayName = targetName;
 
                     ReplaceResults(new[]
                     {

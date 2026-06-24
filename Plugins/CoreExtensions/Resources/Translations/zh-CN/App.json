@@ -235,7 +235,6 @@
   "Search_StatsAppsAndFiles": "找到 {0} 个应用，{1} 个文件结果",
   "Search_StatsAppsOnly": "找到 {0} 个应用",
   "Search_StatsFilesOnly": "找到 {0} 个结果",
-  "Search_JumpToExplorer": "跳转到上次激活的 {0} 目录",
   "Search_DefaultFileManagerName": "文件管理器",
   "Search_KeywordOnly": "关键字 {0}",
   "Search_KeywordParams": "关键字 {0} · 参数 {1}",

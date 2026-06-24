@@ -236,6 +236,10 @@ public sealed class InlineSearchWindowLayoutManager
         {
             if (sv.ScrollableWidth > 0)
             {
+                if (result.IsJumpToExplorerPath && Grid.GetColumn(sv) == 1)
+                {
+                    continue;
+                }
                 return true;
             }
         }
