@@ -79,8 +79,7 @@ public sealed class InlineSearchWindowLayoutManager
             if (_window.LstActions.ItemsSource is System.Collections.IList items)
             {
                 double totalHeight = 0;
-                var limit = Math.Min(items.Count, 9);
-                for (var i = 0; i < limit; i++)
+                for (var i = 0; i < items.Count; i++)
                 {
                     if (items[i] is ActionMenuItem item)
                     {
@@ -94,7 +93,7 @@ public sealed class InlineSearchWindowLayoutManager
                     actionsHeaderHeight = selectedResult.ActionsHeaderHeight;
                 }
 
-                var maxAvailableHeight = 489.0;
+                var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7);
                 var actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight - actionsHeaderHeight));
                 _window.LstActions.Height = actualActionsHeight;
                 _window.ResultsPanelControl.Height = actualActionsHeight + actionsHeaderHeight;
