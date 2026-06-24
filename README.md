@@ -12,7 +12,7 @@ By directly parsing NTFS **USN Journal (Update Sequence Number)** logs and inter
 
 ### 1. ⚡ Millisecond-Level Search & Real-Time Sync
 * **NTFS USN Journal Indexing**: Interacts directly with NTFS via Win32 low-level APIs, bypassing the high I/O consumption and latency of recursive directory traversal. Indexing millions of files takes only a few seconds.
-* **Low-Resource Background Daemon**: A standalone Windows Service `SwiftListService` runs in the background, listening to real-time USN changes to perform silent incremental synchronization with minimal memory usage.
+* **Low-Resource Background Daemon**: A standalone Windows Service `SwiftListService` runs in the background, listening to real-time USN changes and streaming updates via a **zero-allocation binary IPC channel** to perform silent incremental synchronization with minimal memory usage.
 * **Enterprise-Grade Network Drive Scanner**: Includes a parallel Directory Walker optimized for NAS/shared network drives, incorporating a custom-built Glob compiler that translates Glob exclusion patterns into high-performance Regex matches on the fly (exclusions apply instantly without restart).
 
 ### 2. 🎯 FZF Fuzzy Matching & Pinyin Retrieval
@@ -26,29 +26,34 @@ By directly parsing NTFS **USN Journal (Update Sequence Number)** logs and inter
 * **3-Million Candidate Mask Filter**: Accelerates global contiguous name matching using AVX2 block scans and mask-reload alignment, achieving a **1.6x - 2.1x** speedup on directories containing over 3 million items.
 * For more architectural details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
-### 4. 🖥️ 3-in-1 Multidimensional Interaction
+### 4. 📂 Folder Cascader & Blank Space Shortcut Navigation
+* **Double/Middle Click Activation**: Double-clicking left mouse button or clicking middle mouse button on Windows Explorer empty space or desktop activates a fast cascading folder menu.
+* **Infinite Directory Traversal**: Supports zero-latency recursive directory browsing inside the cascade menu. Combined with Win32 Shell APIs, it enumerates virtual system folders (e.g. Quick Access, This PC, Recycle Bin).
+* **History & Favorites**: Deeply integrates favorites and recently visited paths, allowing users to configure custom navigation directories in the settings panel.
+
+### 5. 🖥️ 3-in-1 Multidimensional Interaction
 * **Quick Search Window (QuickSearchPanel)**: A classic, minimalist floating launcher panel. Supports global shortcuts (**Double-click the Ctrl key** to show/hide) and quick selection using `Ctrl+1` to `Ctrl+9` for blind operation.
 * **Inline Explorer-Docked Window (InlineSearchPanel)**: An innovative overlay panel that automatically docks above Windows Explorer, system file open/save dialogs, or custom list views. Trigger directory navigation and instant directory jumps.
-  * **Native Explorer Focus Adaption**: Optimizes keyboard hooks on Windows 10/11, adapting flawlessly to explorer views such as `DirectUIHWND` and `SHELLDLL_DefView`.
-* **Control Panel & Settings (SettingsWindow)**: Visually manages exclusions, network drives, and background service status.
+  * **Native Explorer & Directory Opus Support**: Optimizes keyboard hooks, adapting flawlessly to explorer views such as `DirectUIHWND` / `SHELLDLL_DefView` and **Directory Opus** professional dual-pane folder layout window. Supports Win11 dynamic sub-menus.
+* **Control Panel & Settings (SettingsWindow)**: Visually manages exclusions, network drives, background service status, collapsible grouped settings fields, and features a **History Editor dashboard (to search, filter, and purge recently searched/opened paths)**.
 
-### 5. 🔍 Multi-Column List Search Support
+### 6. 🔍 Multi-Column List Search Support
 * **`SysListView32` & `ListBox` Hooking**: Seamlessly intercepts native standard `SysListView32` and `ListBox` controls. When the inline panel attaches to these list components, users can filter list items interactively.
 * **Multi-Column Data Merging**: Automatically retrieves text from all available columns. Columns are joined backend-side using Tab (`\t`) delimiters, allowing the FZF algorithm to match queries across columns simultaneously (e.g. typing username or PID in Task Manager filters the row).
 * **Elegant Visual Separators**: Custom XAML template parses tab-delimited items via a `SplitColumnsConverter` and renders them with horizontal layout wrappers using premium visual dividers (`  │  `).
-* **Shift + Mouse Wheel Horizontal Scrolling**: Multi-column text fields display horizontal scrollbars if they exceed the width. Supports Shift + Mouse Wheel for smooth horizontal panning via an attached behavior (`ScrollViewerHelper`).
+* **Smart Overflow & Horizontal Scrolling**: Multi-column text fields support horizontal panning via `Shift + Mouse Wheel` in the main search window, while the inline search window automatically triggers a smooth marquee scrolling animation on hover/selection to display long column values without consuming vertical space with scrollbars.
 
-### 6. 👁️ Modular File QuickLook (File Preview)
+### 7. 👁️ Modular File QuickLook (File Preview)
 * **Instant File Preview**: Supports seamless quick file content previews for folders, images, text documents, and PE binaries without launching heavy external editors.
 * **Smart Selection Sync**: Selection change in both the Quick Search Window (`QuickSearchWindow`) and the Full Search Window (`SearchWindow`) automatically loads or closes the preview pane. Non-previewable items like applications or section headers automatically hide the preview.
 * **Custom Shortcuts**: Press `Function Key Modifier + Space` or `Function Key Modifier + P` to toggle the preview window. The modifier key can be customized by the user in settings.
 * **Smooth Text Panning**: The text previewer supports `Shift + Mouse Wheel` to horizontally pan wide logs or source code files.
 
-### 7. 🛡️ Target Focus & UAC Exclusion Guard
+### 8. 🛡️ Target Focus & UAC Exclusion Guard
 * **UAC Prompt Exclusion**: Prevents global hotkeys or inline overlays from intercepting keys when a system UAC elevation prompt dialog is in the foreground.
 * **Smart Input Focus Detection**: Automatically skips hook interception when a text input control (like native `Edit`, `RichEdit`, or custom `TextBox` controls) is focused, or when a blinking cursor caret is active, ensuring normal text typing is never interrupted.
 
-### 8. 🎨 Theme Customization & i18n localization
+### 9. 🎨 Theme Customization & i18n localization
 * **Dynamic Themes**: Supports visual theme injection via `IThemeProvider` (built-in themes include Nord, Sakura, Cyberpunk, Light, and Dark). Supports dynamic recoloring, path fill bindings, and active selection text foreground inheritance.
 * **Internationalization**: Leverages `ITranslationProvider` to support dynamic localization resource loading (e.g., English `en-US` and Simplified Chinese `zh-CN`).
 

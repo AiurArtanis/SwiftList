@@ -63,9 +63,10 @@ The WPF Desktop user interface executing in the interactive **Session 1**.
 
 ### 2.4 SwiftList.PluginSdk & Plugins
 A highly decoupled plugin ecosystem:
-* `PluginSdk`: Defines interfaces for Actions (`ISearchResultAction`), instant results (`IInstantResultProvider`), dynamic context menus (`IDynamicActionProvider`), inline search adapters (`IInlineSearchAdapter`), and file previews (`IFilePreviewProvider`).
+* `PluginSdk`: Defines interfaces for Actions (`ISearchResultAction`), instant results (`IInstantResultProvider`), dynamic context menus (`IDynamicActionProvider`), inline search adapters (`IInlineSearchAdapter`), file previews (`IFilePreviewProvider`), and decouples search history paths via `HistoryService`.
 * `Plugins/PinyinAlias`: Leverages `TinyPinyin` to generate Hanzi-to-Pinyin alias lookups.
 * `Plugins/ListSearch`: Intercepts native standard lists (`SysListView32` and `ListBox`), retrieves multi-column text records, concatenates them using `\t` delimiters, and feeds them into the inline search engine.
+* `Plugins/FolderCascader`: Implements cascading folder tree navigation, supporting customizable double/middle click configurations and history tracking.
 * `Plugins/CoreExtensions`: Standard plugins including a calculator (`CalculatorInstantProvider`), an environment variable path resolver (`EnvironmentVariableInstantProvider`), Explorer window hooks, and modular file preview providers (Folder, Image, Text, PE).
 
 ---
@@ -88,6 +89,16 @@ private readonly List<ulong> _charMasks;         // Bitwise character mask for r
 * **`CharMasks`**: Stores a 64-bit character presence bitmask of the filename. Letters `a-z`, digits `0-9`, and common symbols are mapped to bits.
   * *Alias Override*: If a record contains Chinese characters and has a Pinyin alias, its mask is set to `ulong.MaxValue` to ensure it always passes character filtering.
   * *Deletion Override*: Deleted files have their masks set to `0` to instantly filter them out.
+
+### 3.2 High-Performance IPC Pipeline (`SearchResponseBinarySerializer.cs`)
+* In high-frequency typing flows, JSON or string serialization introduces excessive GC pressure and CPU overhead.
+* SwiftList implements a custom, zero-allocation binary IPC protocol over Named Pipes (`SearchResponseBinarySerializer` / `SearchRequestBinarySerializer`). It uses direct bytes buffer streaming, connection pooling, and linked cancellation tokens.
+* Normal typing cancellations throw `OperationCanceledException` which is caught and logged at `LogLevel.Debug` level, preventing pipeline disruption and error log pollution.
+
+### 3.3 UI Task Throttling (`AppSearchResult.cs`)
+* To prevent rendering congestion on the UI thread when browsing search results:
+  * Concurrency of asynchronous operations (such as resolving file system icons and reading file modification dates) is strictly throttled using `SemaphoreSlim` (with concurrency limits of 4 and 8 respectively).
+  * This guarantees responsiveness of list UI virtualization even under rapid scroll events.
 
 ---
 
@@ -117,6 +128,11 @@ SwiftList's search pipeline is designed for massive datasets. When a query is ex
 * Includes fallback checks for non-AVX2 CPUs (`Avx2.IsSupported`).
 * **Result**: **`1.25x`** speedup.
 
+### 4.4 Concurrency Coordination & Thread Safety (`SearchCoordinator.cs`)
+* In high-frequency typing scenarios, multiple search requests can be dispatched concurrently via Named Pipes.
+* To prevent race conditions and payload length corruption in IPC data streams, all search pipeline operations on `RuntimeIndex` snapshots are coordinated via a global lock (`lockObj`) in `SearchCoordinator`.
+* Additionally, drive index serialization (`UsnIndexerCacheExtensions.SaveDrivesToCache`) is protected by `lock (indexer.LockObj)` to guarantee thread safety between real-time USN scans and cache persistence tasks.
+
 ---
 
 ## 5. UI Layout Helpers & Scroll Behaviors
@@ -130,6 +146,10 @@ For rendering complex multi-column list search results without overloading the U
 ### 5.2 ScrollViewerHelper.ShiftWheelScrollsHorizontally (`HighlightConverter.cs`)
 * WPF `ScrollViewer` controls do not natively route mouse wheel events horizontally when the `Shift` modifier key is pressed.
 * This attached behavior hooks the `PreviewMouseWheel` event. If `Keyboard.Modifiers == ModifierKeys.Shift`, it consumes the event, translates the delta, and calls `LineLeft()` or `LineRight()`.
+
+### 5.3 MarqueeBehavior (`MarqueeBehavior.cs`)
+* An attached behavior that automatically scrolls a `FrameworkElement` horizontally when the text overflows its parent container width and the containing `ListBoxItem` is selected or hovered.
+* Applied directly to `ItemsControl` inside `InlineSearchResultTemplate` to cycle-scroll long multi-column data in list search results, preventing standard ScrollBar height overhead in the height-constrained inline window.
 
 ---
 
