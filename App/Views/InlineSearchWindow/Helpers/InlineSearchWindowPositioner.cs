@@ -73,6 +73,7 @@ public class InlineSearchWindowPositioner
             Grid.SetRow(_window.PathPreviewBorder, 1);
             Grid.SetRow(_window.ResultsPanelControl, 0);
             _window.PathPreviewBorder.BorderThickness = new Thickness(0, 1, 0, 0);
+            _window.PathPreviewBorder.CornerRadius = new CornerRadius(0, 0, 7, 7);
             _window.MainBorder.CornerRadius = new CornerRadius(0, 0, 8, 8);
             _window.SearchBoxBorder.CornerRadius = isResultsVisible ? new CornerRadius(0) : new CornerRadius(0, 0, 7, 7);
         }
@@ -88,6 +89,7 @@ public class InlineSearchWindowPositioner
             Grid.SetRow(_window.PathPreviewBorder, 0);
             Grid.SetRow(_window.ResultsPanelControl, 1);
             _window.PathPreviewBorder.BorderThickness = new Thickness(0, 0, 0, 1);
+            _window.PathPreviewBorder.CornerRadius = new CornerRadius(7, 7, 0, 0);
             _window.MainBorder.CornerRadius = new CornerRadius(8);
             _window.SearchBoxBorder.CornerRadius = isResultsVisible ? new CornerRadius(0, 0, 7, 7) : new CornerRadius(7);
         }
