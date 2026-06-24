@@ -2,7 +2,6 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using SwiftList.PluginSdk;
 using MenuItem = System.Windows.Controls.MenuItem;
 using ContextMenu = System.Windows.Controls.ContextMenu;
 using StackPanel = System.Windows.Controls.StackPanel;
@@ -10,6 +9,7 @@ using Border = System.Windows.Controls.Border;
 using Separator = System.Windows.Controls.Separator;
 using Application = System.Windows.Application;
 using ItemsPanelTemplate = System.Windows.Controls.ItemsPanelTemplate;
+using KeyEventHandler = System.Windows.Input.KeyEventHandler;
 
 namespace SwiftList.App.Services;
 
@@ -36,6 +36,9 @@ public static class PluginContextMenuHelper
         template.VisualTree = factory;
         rightClickMenu.ItemsPanel = template;
 
+        var menuItems = new List<MenuItem>();
+        var highlightedIndex = -1;
+
         var addedTexts = new HashSet<string>();
         foreach (var provider in PluginManager.Instance.DynamicProviders)
         {
@@ -54,7 +57,8 @@ public static class PluginContextMenuHelper
                     {
                         if (addedTexts.Add(subItem.Text))
                         {
-                            var mItem = CreateActionMenuItem(subItem, dummyResult, provider, null, isFocusable: false);
+                            var mItem = PluginContextMenuBuilder.CreateActionMenuItem(subItem, dummyResult, provider, null, isFocusable: false);
+                            menuItems.Add(mItem);
                             
                             mItem.MouseEnter += (s, ev) =>
                             {
@@ -107,6 +111,29 @@ public static class PluginContextMenuHelper
                 Child = border
             };
 
+            var keyField = typeof(MenuItem).GetField("IsHighlightedPropertyKey", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            var isHighlightedKey = keyField?.GetValue(null) as DependencyPropertyKey;
+
+            Action<int> updateHighlight = (newIdx) =>
+            {
+                if (isHighlightedKey == null) return;
+                if (highlightedIndex >= 0 && highlightedIndex < menuItems.Count)
+                    menuItems[highlightedIndex].SetValue(isHighlightedKey, false);
+                highlightedIndex = newIdx;
+                if (highlightedIndex >= 0 && highlightedIndex < menuItems.Count)
+                {
+                    menuItems[highlightedIndex].SetValue(isHighlightedKey, true);
+                    menuItems[highlightedIndex].BringIntoView();
+                }
+            };
+
+            for (var i = 0; i < menuItems.Count; i++)
+            {
+                var idx = i;
+                menuItems[i].MouseEnter += (s, ev) => updateHighlight(idx);
+            }
+            rightClickMenu.MouseLeave += (s, ev) => updateHighlight(-1);
+
             MouseButtonEventHandler? mouseDownHandler = null;
             mouseDownHandler = (s, ev) =>
             {
@@ -125,10 +152,6 @@ public static class PluginContextMenuHelper
             contextMenu.AddHandler(UIElement.PreviewMouseDownEvent, mouseDownHandler, true);
 
             menuItem.Focus();
-
-            var keyField = typeof(MenuItem).GetField("IsHighlightedPropertyKey", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
-            var isHighlightedKey = keyField?.GetValue(null) as DependencyPropertyKey;
-            
             if (isHighlightedKey != null)
             {
                 menuItem.SetValue(isHighlightedKey, true);
@@ -158,6 +181,24 @@ public static class PluginContextMenuHelper
             };
             contextMenu.AddHandler(UIElement.PreviewMouseMoveEvent, mouseMoveHandler, true);
 
+            KeyEventHandler? keyHandler = (s, ev) =>
+            {
+                if (_currentRightClickPopup == null || !_currentRightClickPopup.IsOpen || menuItems.Count == 0) return;
+                var activeItem = (highlightedIndex >= 0 && highlightedIndex < menuItems.Count) ? menuItems[highlightedIndex] : null;
+                if (ev.Key == Key.Down) { ev.Handled = true; updateHighlight((highlightedIndex + 1) % menuItems.Count); }
+                else if (ev.Key == Key.Up) { ev.Handled = true; updateHighlight((highlightedIndex - 1 + menuItems.Count) % menuItems.Count); }
+                else if (ev.Key == Key.Right && activeItem != null && activeItem.HasItems) { ev.Handled = true; activeItem.IsSubmenuOpen = true; }
+                else if (ev.Key == Key.Left) { ev.Handled = true; if (activeItem != null && activeItem.IsSubmenuOpen) activeItem.IsSubmenuOpen = false; else _currentRightClickPopup.IsOpen = false; }
+                else if (ev.Key == Key.Escape) { ev.Handled = true; _currentRightClickPopup.IsOpen = false; }
+                else if ((ev.Key == Key.Enter || ev.Key == Key.Space) && activeItem != null)
+                {
+                    ev.Handled = true;
+                    if (activeItem.HasItems) activeItem.IsSubmenuOpen = true;
+                    else activeItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                }
+            };
+            contextMenu.AddHandler(UIElement.PreviewKeyDownEvent, keyHandler, true);
+
             rightClickMenu.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler((s, ev) =>
             {
                 _currentRightClickPopup?.IsOpen = false;
@@ -166,10 +207,7 @@ public static class PluginContextMenuHelper
             }));
 
             RoutedEventHandler? rootMenuClosedHandler = null;
-            rootMenuClosedHandler = (s, ev) =>
-            {
-                _currentRightClickPopup?.IsOpen = false;
-            };
+            rootMenuClosedHandler = (s, ev) => _currentRightClickPopup?.IsOpen = false;
             contextMenu.Closed += rootMenuClosedHandler;
 
             _currentRightClickPopup.Closed += (s, ev) =>
@@ -182,6 +220,8 @@ public static class PluginContextMenuHelper
                     menuItem.MouseLeave -= mouseLeaveHandler;
                 if (rootMenuClosedHandler != null)
                     contextMenu.Closed -= rootMenuClosedHandler;
+                if (keyHandler != null)
+                    contextMenu.RemoveHandler(UIElement.PreviewKeyDownEvent, keyHandler);
 
                 if (isHighlightedKey != null)
                 {
@@ -206,59 +246,5 @@ public static class PluginContextMenuHelper
         }
     }
 
-    private static MenuItem CreateActionMenuItem(DynamicMenuItem item, ISearchResult result, IDynamicActionProvider provider, ContextMenu? contextMenu, bool isFocusable = true)
-    {
-        var menuItem = new MenuItem { Header = item.Text.Replace("&", ""), IsEnabled = !item.IsDisabled, Focusable = isFocusable && !item.IsDisabled };
-
-        if (item.HBitmapItem != IntPtr.Zero)
-        {
-            try
-            {
-                menuItem.Icon = new System.Windows.Controls.Image
-                {
-                    Source = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                        item.HBitmapItem,
-                        IntPtr.Zero,
-                        Int32Rect.Empty,
-                        System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions())
-                };
-            }
-            catch { }
-        }
-
-        if (item.HasSubMenu && item.SubMenuHandle != IntPtr.Zero)
-        {
-            menuItem.Items.Add(new MenuItem { Header = "Loading...", IsEnabled = false });
-            RoutedEventHandler ensureLoaded = null!;
-            ensureLoaded = (s, e) =>
-            {
-                if (menuItem.Items.Count > 0 && (menuItem.Items[0] as MenuItem)?.Header?.ToString() == "Loading...")
-                {
-                    menuItem.Items.Clear();
-                    foreach (var subItem in provider.GetMenuItems(result, item.SubMenuHandle))
-                        menuItem.Items.Add(subItem.IsSeparator ? new Separator() : CreateActionMenuItem(subItem, result, provider, contextMenu, isFocusable));
-                }
-            };
-            menuItem.SubmenuOpened += ensureLoaded;
-        }
-        else
-        {
-            menuItem.Click += (s, e) =>
-            {
-                if (e.Source == menuItem)
-                {
-                    _currentRightClickPopup?.IsOpen = false;
-                    if (contextMenu != null)
-                    {
-                        contextMenu.IsOpen = false;
-                        (contextMenu.PlacementTarget as Window)?.Hide();
-                    }
-                    var hwnd = Application.Current.MainWindow != null ? new System.Windows.Interop.WindowInteropHelper(Application.Current.MainWindow).Handle : IntPtr.Zero;
-                    Application.Current.Dispatcher.BeginInvoke(new Action(() => provider.ExecuteCommand(result, item.CommandId, hwnd)), System.Windows.Threading.DispatcherPriority.Background);
-                }
-            };
-        }
-
-        return menuItem;
-    }
+    internal static void ClosePopup() => _currentRightClickPopup?.IsOpen = false;
 }
