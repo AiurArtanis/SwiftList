@@ -49,7 +49,8 @@ public class InlineSearchWindowPositioner
             }
         }
 
-        var windowHeight = _window.ActualHeight > 0 ? _window.ActualHeight : 60;
+        // Window height is fixed at 550 logical pixels to allow content to grow upwards/downwards internally
+        const double windowHeight = 550.0;
         var windowWidth = _window.Width;
 
         // MainBorder in XAML has Margin="12" to make room for drop shadow.
@@ -60,15 +61,36 @@ public class InlineSearchWindowPositioner
         var tracker = _window.Manager.ExplorerTracker;
         var isResultsVisible = _window.ResultsPanelControl.Visibility == Visibility.Visible;
 
-        // Default layout: results on top, search box on bottom with rounded corners
-        Grid.SetRow(_window.ResultsContainerWrapper, 0);
-        Grid.SetRow(_window.ResultsSeparator, 1);
-        Grid.SetRow(_window.SearchBoxBorder, 2);
-        Grid.SetRow(_window.PathPreviewBorder, 0);
-        Grid.SetRow(_window.ResultsPanelControl, 1);
-        _window.PathPreviewBorder.BorderThickness = new Thickness(0, 0, 0, 1);
-        _window.MainBorder.CornerRadius = new CornerRadius(8);
-        _window.SearchBoxBorder.CornerRadius = isResultsVisible ? new CornerRadius(0, 0, 7, 7) : new CornerRadius(7);
+        if (tracker.IsActiveWindowDialog)
+        {
+            // Dialog mode: search box on top (Row 0), results on bottom (Row 2), content aligns to top of transparent window
+            _window.RootGrid.VerticalAlignment = VerticalAlignment.Top;
+            _window.MainBorder.VerticalAlignment = VerticalAlignment.Top;
+
+            Grid.SetRow(_window.SearchBoxBorder, 0);
+            Grid.SetRow(_window.ResultsSeparator, 1);
+            Grid.SetRow(_window.ResultsContainerWrapper, 2);
+            Grid.SetRow(_window.PathPreviewBorder, 1);
+            Grid.SetRow(_window.ResultsPanelControl, 0);
+            _window.PathPreviewBorder.BorderThickness = new Thickness(0, 1, 0, 0);
+            _window.MainBorder.CornerRadius = new CornerRadius(0, 0, 8, 8);
+            _window.SearchBoxBorder.CornerRadius = isResultsVisible ? new CornerRadius(0) : new CornerRadius(0, 0, 7, 7);
+        }
+        else
+        {
+            // Standard mode: results on top, search box on bottom, content aligns to bottom of transparent window
+            _window.RootGrid.VerticalAlignment = VerticalAlignment.Bottom;
+            _window.MainBorder.VerticalAlignment = VerticalAlignment.Bottom;
+
+            Grid.SetRow(_window.ResultsContainerWrapper, 0);
+            Grid.SetRow(_window.ResultsSeparator, 1);
+            Grid.SetRow(_window.SearchBoxBorder, 2);
+            Grid.SetRow(_window.PathPreviewBorder, 0);
+            Grid.SetRow(_window.ResultsPanelControl, 1);
+            _window.PathPreviewBorder.BorderThickness = new Thickness(0, 0, 0, 1);
+            _window.MainBorder.CornerRadius = new CornerRadius(8);
+            _window.SearchBoxBorder.CornerRadius = isResultsVisible ? new CornerRadius(0, 0, 7, 7) : new CornerRadius(7);
+        }
 
         if (tracker.IsDesktop)
         {
@@ -97,16 +119,6 @@ public class InlineSearchWindowPositioner
 
                 if (tracker.IsActiveWindowDialog)
                 {
-                    // Swap layout: Search Box on top (Row 0), Results on bottom (Row 2)
-                    Grid.SetRow(_window.SearchBoxBorder, 0);
-                    Grid.SetRow(_window.ResultsSeparator, 1);
-                    Grid.SetRow(_window.ResultsContainerWrapper, 2);
-                    Grid.SetRow(_window.PathPreviewBorder, 1);
-                    Grid.SetRow(_window.ResultsPanelControl, 0);
-                    _window.PathPreviewBorder.BorderThickness = new Thickness(0, 1, 0, 0);
-                    _window.MainBorder.CornerRadius = new CornerRadius(0, 0, 8, 8);
-                    _window.SearchBoxBorder.CornerRadius = isResultsVisible ? new CornerRadius(0) : new CornerRadius(0, 0, 7, 7);
-
                     var winWidth = (rect.Right - rect.Left) * dpiScaleX;
                     targetLeft = winLeft + (winWidth - windowWidth) / 2;
                     // Align top of search window to bottom of dialog

@@ -48,13 +48,15 @@ public sealed class InlineSearchWindowLayoutManager
                 pathPreviewHeight = _window.PathPreviewBorder.DesiredSize.Height;
             }
 
-            var totalResultsHeight = resultsHeight + pathPreviewHeight;
+            var maxAvailableHeight = 489.0 - pathPreviewHeight;
+            var actualResultsHeight = Math.Max(0.0, Math.Min(resultsHeight, maxAvailableHeight));
+            var totalResultsHeight = actualResultsHeight + pathPreviewHeight;
             var heightChanged = !AreClose(_lastResultsHeight, totalResultsHeight);
             if (heightChanged)
             {
                 _lastResultsHeight = totalResultsHeight;
-                _window.LstResults.Height = resultsHeight;
-                _window.ResultsPanelControl.Height = resultsHeight;
+                _window.LstResults.Height = actualResultsHeight;
+                _window.ResultsPanelControl.Height = actualResultsHeight;
             }
 
             if (count == 0)
@@ -92,8 +94,10 @@ public sealed class InlineSearchWindowLayoutManager
                     actionsHeaderHeight = selectedResult.ActionsHeaderHeight;
                 }
 
-                _window.LstActions.Height = totalHeight;
-                _window.ResultsPanelControl.Height = totalHeight + actionsHeaderHeight;
+                var maxAvailableHeight = 489.0;
+                var actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight - actionsHeaderHeight));
+                _window.LstActions.Height = actualActionsHeight;
+                _window.ResultsPanelControl.Height = actualActionsHeight + actionsHeaderHeight;
             }
             else
             {
