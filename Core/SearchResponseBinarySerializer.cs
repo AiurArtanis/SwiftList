@@ -58,39 +58,53 @@ public static class SearchResponseBinarySerializer
 
     public static async Task ReadAsync(Stream stream, Action<SearchResult, bool> onResult, CancellationToken token = default)
     {
-        while (true)
+        try
         {
-            var magic = await ReadInt32Async(stream, token).ConfigureAwait(false);
-            if (magic != Magic)
-                throw new InvalidDataException($"Invalid search response magic: {magic:X}. Expected: {Magic:X}");
-
-            var frameType = await ReadByteAsync(stream, token).ConfigureAwait(false);
-            var length = await ReadInt32Async(stream, token).ConfigureAwait(false);
-            if (length < 0 || length > 10 * 1024 * 1024)
-                throw new InvalidDataException($"Invalid search response payload length: {length}");
-
-            var payload = await ReadExactlyAsync(stream, length, token).ConfigureAwait(false);
-            if (frameType == EndFrame)
-                return;
-
-            if (frameType == HeaderFrame)
+            while (true)
             {
-                if (payload.Length < 4)
-                    throw new InvalidDataException("Invalid header payload length.");
-                var version = BinaryPrimitives.ReadInt32LittleEndian(payload);
-                if (version != Version)
-                    throw new InvalidDataException($"Unsupported search response binary version: {version}. Expected: {Version}");
-                continue;
-            }
+                var magic = await ReadInt32Async(stream, token).ConfigureAwait(false);
+                if (magic != Magic)
+                {
+                    Logger.Log($"[Serializer ERROR] Invalid magic: {magic:X}. Expected: {Magic:X}", LogLevel.Error);
+                    throw new InvalidDataException($"Invalid search response magic: {magic:X}. Expected: {Magic:X}");
+                }
 
-            if (frameType == FileResultFrame || frameType == AppResultFrame)
-            {
-                var result = ReadResult(payload);
-                onResult(result, frameType == AppResultFrame);
-                continue;
-            }
+                var frameType = await ReadByteAsync(stream, token).ConfigureAwait(false);
+                var length = await ReadInt32Async(stream, token).ConfigureAwait(false);
+                if (length < 0 || length > 10 * 1024 * 1024)
+                {
+                    Logger.Log($"[Serializer ERROR] Invalid length: {length}. Magic={magic:X}, FrameType={frameType}", LogLevel.Error);
+                    throw new InvalidDataException($"Invalid search response payload length: {length}");
+                }
 
-            throw new InvalidDataException($"Unknown search response frame: {frameType}.");
+                var payload = await ReadExactlyAsync(stream, length, token).ConfigureAwait(false);
+                if (frameType == EndFrame)
+                    return;
+
+                if (frameType == HeaderFrame)
+                {
+                    if (payload.Length < 4)
+                        throw new InvalidDataException("Invalid header payload length.");
+                    var version = BinaryPrimitives.ReadInt32LittleEndian(payload);
+                    if (version != Version)
+                        throw new InvalidDataException($"Unsupported search response binary version: {version}. Expected: {Version}");
+                    continue;
+                }
+
+                if (frameType == FileResultFrame || frameType == AppResultFrame)
+                {
+                    var result = ReadResult(payload);
+                    onResult(result, frameType == AppResultFrame);
+                    continue;
+                }
+
+                throw new InvalidDataException($"Unknown search response frame: {frameType}.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[Serializer Exception] {ex.Message}", LogLevel.Error);
+            throw;
         }
     }
 

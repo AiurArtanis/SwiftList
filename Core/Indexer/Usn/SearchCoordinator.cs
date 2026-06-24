@@ -17,41 +17,42 @@ internal static class SearchCoordinator
         CancellationToken token,
         string? directoryFilter)
     {
-        RuntimeIndex[] snapshots;
         lock (lockObj)
-            snapshots = recordIndexes.Values.ToArray();
-
-        if (snapshots.Length == 0)
-            return;
-
-        if (snapshots.Length == 1)
         {
-            _recordSearcher.SearchStreaming(snapshots[0], query, limit, onResult, token, directoryFilter);
-            return;
-        }
+            var snapshots = recordIndexes.Values.ToArray();
 
-        var writeLock = new object();
-        Parallel.For(
-            0,
-            snapshots.Length,
-            new ParallelOptions
+            if (snapshots.Length == 0)
+                return;
+
+            if (snapshots.Length == 1)
             {
-                CancellationToken = token,
-                MaxDegreeOfParallelism = Math.Min(snapshots.Length, Math.Clamp(Environment.ProcessorCount, 2, 8))
-            },
-            i =>
-            {
-                token.ThrowIfCancellationRequested();
-                _recordSearcher.SearchStreaming(snapshots[i], query, limit, result =>
+                _recordSearcher.SearchStreaming(snapshots[0], query, limit, onResult, token, directoryFilter);
+                return;
+            }
+
+            var writeLock = new object();
+            Parallel.For(
+                0,
+                snapshots.Length,
+                new ParallelOptions
+                {
+                    CancellationToken = token,
+                    MaxDegreeOfParallelism = Math.Min(snapshots.Length, Math.Clamp(Environment.ProcessorCount, 2, 8))
+                },
+                i =>
                 {
                     token.ThrowIfCancellationRequested();
-                    lock (writeLock)
+                    _recordSearcher.SearchStreaming(snapshots[i], query, limit, result =>
                     {
                         token.ThrowIfCancellationRequested();
-                        onResult(result);
-                    }
-                }, token, directoryFilter);
-            });
+                        lock (writeLock)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            onResult(result);
+                        }
+                    }, token, directoryFilter);
+                });
+        }
     }
 
     public static void ClearCaches() => _recordSearcher.ClearCaches();

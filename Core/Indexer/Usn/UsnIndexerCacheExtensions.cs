@@ -7,7 +7,13 @@ public static class UsnIndexerCacheExtensions
     public static void SaveDrivesToCache(
         this UsnIndexer indexer,
         string cacheDir,
-        List<(string Drive, ulong JournalId, long NextUsn)> driveMetadata) => IndexCacheManager.SaveDrivesToCache(cacheDir, driveMetadata, indexer._recordIndexes, indexer._driveMetadata);
+        List<(string Drive, ulong JournalId, long NextUsn)> driveMetadata)
+    {
+        lock (indexer.LockObj)
+        {
+            IndexCacheManager.SaveDrivesToCache(cacheDir, driveMetadata, indexer._recordIndexes, indexer._driveMetadata);
+        }
+    }
 
     public static List<(string Drive, ulong JournalId, long NextUsn)> LoadDrivesFromCache(
         this UsnIndexer indexer,
