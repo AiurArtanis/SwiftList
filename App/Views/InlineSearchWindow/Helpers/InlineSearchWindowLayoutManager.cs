@@ -44,7 +44,7 @@ public sealed class InlineSearchWindowLayoutManager
             if (_window.PathPreviewBorder != null && 
                 _window.PathPreviewBorder.Visibility == Visibility.Visible)
             {
-                _window.PathPreviewBorder.Measure(new System.Windows.Size(_window.ResultsPanelControl.ActualWidth > 0 ? _window.ResultsPanelControl.ActualWidth : 380, double.PositiveInfinity));
+                _window.PathPreviewBorder.Measure(new System.Windows.Size(_window.ResultsPanelControl.ActualWidth > 0 ? _window.ResultsPanelControl.ActualWidth : 437, double.PositiveInfinity));
                 pathPreviewHeight = _window.PathPreviewBorder.DesiredSize.Height;
             }
 
