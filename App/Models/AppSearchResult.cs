@@ -25,7 +25,7 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     public bool IsInstantResult => ResultKind == "InstantResult";
     public bool IsListItem => ResultKind == "ListItem";
     public double ItemHeight => IsSearchSectionHeader ? UiMetrics.SearchSectionHeaderHeight : (IsListItem ? UiMetrics.ListItemHeight : UiMetrics.SearchResultItemHeight);
-    public double InlineItemHeight => Math.Round(ItemHeight * 0.7);
+    public double InlineItemHeight => IsListItem ? ItemHeight : Math.Round(ItemHeight * 0.7);
     public double ActionsHeaderHeight => Math.Round(ItemHeight * 0.7);
     public string ResultTypeText => IsInstantResult ? TranslationManager.Instance["Model_TypePlugin"] : (IsApplication ? TranslationManager.Instance["Model_TypeApp"] : (IsDir ? TranslationManager.Instance["Model_TypeFolder"] : TranslationManager.Instance["Model_TypeFile"]));
     public string DisplayPath => IsApplication ? ParentDir : FullPath;

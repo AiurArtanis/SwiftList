@@ -154,10 +154,9 @@
                 </Grid>
 
                 <!-- Custom multi-column renderer (only for list items) -->
-                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                <ScrollViewer HorizontalScrollBarVisibility="Hidden"
                               VerticalScrollBarVisibility="Disabled"
-                              Focusable="False"
-                              local:ScrollViewerHelper.ShiftWheelScrollsHorizontally="True">
+                              Focusable="False">
                     <ScrollViewer.Style>
                         <Style TargetType="ScrollViewer">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -168,7 +167,8 @@
                             </Style.Triggers>
                         </Style>
                     </ScrollViewer.Style>
-                    <ItemsControl ItemsSource="{Binding Name, Converter={StaticResource SplitColumnsConverter}}">
+                    <ItemsControl ItemsSource="{Binding Name, Converter={StaticResource SplitColumnsConverter}}"
+                                  helpers:MarqueeBehavior.EnableMarquee="True">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel Orientation="Horizontal"/>

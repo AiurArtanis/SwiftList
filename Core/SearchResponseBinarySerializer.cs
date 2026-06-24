@@ -101,6 +101,11 @@ public static class SearchResponseBinarySerializer
                 throw new InvalidDataException($"Unknown search response frame: {frameType}.");
             }
         }
+        catch (OperationCanceledException ex)
+        {
+            Logger.Log($"[Serializer Cancelled] {ex.Message}", LogLevel.Debug);
+            throw;
+        }
         catch (Exception ex)
         {
             Logger.Log($"[Serializer Exception] {ex.Message}", LogLevel.Error);

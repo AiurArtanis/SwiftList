@@ -80,7 +80,6 @@
                        Grid.Column="1"
                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[QuickSearch_Placeholder]}"
                        FontSize="{Binding FontSize, ElementName=root}"
-                       
                        Foreground="{DynamicResource TextSecondary}"
                        VerticalAlignment="Center"
                        IsHitTestVisible="False">
