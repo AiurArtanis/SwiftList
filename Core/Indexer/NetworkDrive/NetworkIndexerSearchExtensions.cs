@@ -25,14 +25,21 @@ public static class NetworkIndexerSearchExtensions
         var parsed = SearchQueryParser.Parse(query);
         var directoryFilterLower = IndexerHelper.NormalizeFilter(directoryFilter);
 
-        Parallel.ForEach(snapshots, new ParallelOptions { CancellationToken = token }, index =>
-        {
-            token.ThrowIfCancellationRequested();
-            if (!IsDriveAllowed(index.Drive, parsed, directoryFilterLower))
-                return;
+        Parallel.ForEach(
+            snapshots,
+            new ParallelOptions
+            {
+                CancellationToken = token,
+                MaxDegreeOfParallelism = 2
+            },
+            index =>
+            {
+                token.ThrowIfCancellationRequested();
+                if (!IsDriveAllowed(index.Drive, parsed, directoryFilterLower))
+                    return;
 
-            index.SearchStreaming(parsed, query, directoryFilterLower, limit, onResult, token);
-        });
+                index.SearchStreaming(parsed, query, directoryFilterLower, limit, onResult, token);
+            });
     }
 
     private static bool IsDriveAllowed(string indexDrive, ParsedSearchQuery parsed, string? directoryFilterLower)

@@ -8,6 +8,8 @@ public sealed class Searcher
 
     internal CacheManager CacheManager => _cacheManager;
 
+    public int MaxDegreeOfParallelism { get; set; } = -1;
+
 
     public void SearchStreaming(RuntimeIndex index, string query, int limit, Action<SearchResult> onResult, CancellationToken token, string? directoryFilter = null)
     {

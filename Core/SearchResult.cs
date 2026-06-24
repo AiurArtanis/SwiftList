@@ -17,10 +17,17 @@ public class SearchResult
 
 public sealed class SearchResultRankComparer : IComparer<SearchResult>
 {
-    public static readonly SearchResultRankComparer Instance = new();
+    public static readonly SearchResultRankComparer Instance = new(new Dictionary<string, int>());
 
-    private SearchResultRankComparer()
+    private readonly IReadOnlyDictionary<string, int> _historySnapshot;
+
+    public SearchResultRankComparer(IReadOnlyDictionary<string, int> historySnapshot) => _historySnapshot = historySnapshot;
+
+    private static string NormalizeForLookup(string path)
     {
+        if (path.Length > 3 && path[^1] == '\\')
+            return path.TrimEnd('\\');
+        return path;
     }
 
     public int Compare(SearchResult? left, SearchResult? right)
@@ -32,8 +39,12 @@ public sealed class SearchResultRankComparer : IComparer<SearchResult>
         if (right == null)
             return -1;
 
-        var leftHistoryPriority = SearchHistoryStore.GetPriority(left.Path);
-        var rightHistoryPriority = SearchHistoryStore.GetPriority(right.Path);
+        var leftPath = NormalizeForLookup(left.Path);
+        var rightPath = NormalizeForLookup(right.Path);
+
+        var leftHistoryPriority = _historySnapshot.TryGetValue(leftPath, out var lp) ? lp : int.MaxValue;
+        var rightHistoryPriority = _historySnapshot.TryGetValue(rightPath, out var rp) ? rp : int.MaxValue;
+
         var compare = leftHistoryPriority.CompareTo(rightHistoryPriority);
         if (compare != 0)
             return compare;

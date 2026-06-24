@@ -9,7 +9,12 @@ internal sealed class NetworkIndex
     private readonly RuntimeIndex _runtime = new();
     private readonly Searcher _searcher = new();
 
-    public NetworkIndex(string drive) => Drive = drive;
+    public NetworkIndex(string drive)
+    {
+        Drive = drive;
+        // ponytail: restrict background search thread usage inside UI process to prevent stutter
+        _searcher.MaxDegreeOfParallelism = 2;
+    }
 
     public string Drive { get; }
     public DateTime LastUpdated { get; set; } = DateTime.Now;

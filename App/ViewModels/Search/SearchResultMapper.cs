@@ -51,8 +51,10 @@ public static class SearchResultMapper
             }
         }
 
-        appResults?.Sort(SearchResultRankComparer.Instance);
-        fileResults?.Sort(SearchResultRankComparer.Instance);
+        var historySnapshot = SearchHistoryStore.Snapshot();
+        var comparer = new SearchResultRankComparer(historySnapshot);
+        appResults?.Sort(comparer);
+        fileResults?.Sort(comparer);
         appResults ??= new List<SearchResult>();
 
         var appLimit = Math.Min(appResults.Count, 5);
@@ -62,7 +64,7 @@ public static class SearchResultMapper
             AddSectionHeader(uiResults, TranslationManager.Instance["Search_SectionHeader"], query);
         }
 
-        AddHistoryPriorityResults(uiResults, appResults, fileResults, query, scope);
+        AddHistoryPriorityResults(uiResults, appResults, fileResults, query, scope, historySnapshot);
 
         appLimit = Math.Min(appResults.Count, Math.Max(0, 5 - uiResults.Count));
         for (var i = 0; i < appLimit; i++)
@@ -124,7 +126,8 @@ public static class SearchResultMapper
         List<SearchResult> appResults,
         List<SearchResult>? fileResults,
         string query,
-        string? scope)
+        string? scope,
+        IReadOnlyDictionary<string, int> historySnapshot)
     {
         var availableSlots = Math.Max(0, 9 - uiResults.Count);
         if (availableSlots == 0)
@@ -133,8 +136,8 @@ public static class SearchResultMapper
         var candidates = new List<(SearchResult Result, bool IsApplication, int Priority)>();
         foreach (var result in appResults)
         {
-            var priority = SearchHistoryStore.GetPriority(result.Path);
-            if (priority != int.MaxValue)
+            var lookupPath = result.Path.Length > 3 && result.Path[^1] == '\\' ? result.Path.TrimEnd('\\') : result.Path;
+            if (historySnapshot.TryGetValue(lookupPath, out var priority))
                 candidates.Add((result, true, priority));
         }
 
@@ -142,8 +145,8 @@ public static class SearchResultMapper
         {
             foreach (var result in fileResults)
             {
-                var priority = SearchHistoryStore.GetPriority(result.Path);
-                if (priority != int.MaxValue)
+                var lookupPath = result.Path.Length > 3 && result.Path[^1] == '\\' ? result.Path.TrimEnd('\\') : result.Path;
+                if (historySnapshot.TryGetValue(lookupPath, out var priority))
                     candidates.Add((result, false, priority));
             }
         }
