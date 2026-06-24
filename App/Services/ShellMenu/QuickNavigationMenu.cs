@@ -163,27 +163,7 @@ public static class QuickNavigationMenu
             }), System.Windows.Threading.DispatcherPriority.Background);
         };
 
-        Action triggerRightClickAction = () =>
-        {
-            if (canNavigate)
-            {
-                IsShowingShellMenu = true;
-                try
-                {
-                    var hwnd = contextMenu.PlacementTarget is Window win ? new WindowInteropHelper(win).Handle : IntPtr.Zero;
-                    ShellContextMenuHelper.Show(itemPath!, hwnd);
-                }
-                finally
-                {
-                    IsShowingShellMenu = false;
-                    if (contextMenu.PlacementTarget is Window win && contextMenu.IsOpen)
-                    {
-                        win.Activate();
-                        contextMenu.Focus();
-                    }
-                }
-            }
-        };
+        Action triggerRightClickAction = () => PluginContextMenuHelper.Show(canNavigate, itemPath, item.HasSubMenu, menuItem, contextMenu);
 
         menuItem.AddHandler(UIElement.PreviewMouseRightButtonUpEvent, new MouseButtonEventHandler((s, e) =>
         {
@@ -272,7 +252,7 @@ public static class QuickNavigationMenu
         return menuItem;
     }
 
-    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject {
+    public static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject {
         while (child != null) {
             if (child is T p) return p;
             child = child is FrameworkContentElement fce ? fce.Parent : System.Windows.Media.VisualTreeHelper.GetParent(child);
