@@ -84,17 +84,43 @@ internal sealed class SearchExecutionEngine : IDisposable
                 var adapter = tracker.ActiveInlineAdapter;
                 if (isInlineSearchContext && adapter != null && tracker.ActiveHwnd != IntPtr.Zero)
                 {
-                    var listItems = adapter.GetListItems(tracker.ActiveHwnd).ToList();
-                    if (listItems.Count > 0)
+                    var contextDirectory = !string.IsNullOrWhiteSpace(searchScope) ? searchScope : (tracker.ActivePath ?? tracker.LastActiveExplorerPath);
+                    if (tracker.IsActiveWindowExplorer)
                     {
-                        var contextDirectory = !string.IsNullOrWhiteSpace(searchScope) ? searchScope : (tracker.ActivePath ?? tracker.LastActiveExplorerPath);
-                        if (tracker.IsActiveWindowExplorer)
+                        var localMatches = new List<AppSearchResult>();
+                        if (!string.IsNullOrEmpty(contextDirectory))
                         {
-                            var localMatches = InlineListSearchHelper.GetLocalMatches(query, listItems, contextDirectory, token);
-                            await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, fileLimit, appLimit, resultMapper, searchVersion, onResultsUpdated, onServiceUnavailable, token, localMatches);
-                            return;
+                            await _searchService.SearchStreamingAsync(query, fileLimit, appLimit, contextDirectory, (result, isApp) =>
+                            {
+                                if (!isApp)
+                                {
+                                    localMatches.Add(SearchResultMapper.CreateUiResult(result, query, localMatches.Count, isApplication: false, contextDirectory));
+                                }
+                            }, token);
+
+                            var normalizedDir = contextDirectory.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+                            localMatches = localMatches
+                                .OrderBy(x =>
+                                {
+                                    var parent = System.IO.Path.GetDirectoryName(x.FullPath);
+                                    var normalizedParent = parent?.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+                                    return string.Equals(normalizedParent, normalizedDir, StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+                                })
+                                .ThenBy(x => x.FullPath.Length)
+                                .ToList();
+
+                            for (var idx = 0; idx < localMatches.Count; idx++)
+                            {
+                                localMatches[idx].Index = idx;
+                            }
                         }
-                        else
+                        await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, fileLimit, appLimit, resultMapper, searchVersion, onResultsUpdated, onServiceUnavailable, token, localMatches);
+                        return;
+                    }
+                    else
+                    {
+                        var listItems = adapter.GetListItems(tracker.ActiveHwnd).ToList();
+                        if (listItems.Count > 0)
                         {
                             InlineListSearchHelper.PerformInlineListProviderSearch(query, adapter, tracker.ActiveHwnd, listItems, contextDirectory, searchVersion, () => Volatile.Read(ref _searchVersion), onResultsUpdated, token);
                             return;

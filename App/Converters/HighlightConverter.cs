@@ -249,4 +249,38 @@ public static class ScrollViewerHelper
             e.Handled = true;
         }
     }
+
+    public static readonly DependencyProperty BubbleMouseWheelProperty =
+        DependencyProperty.RegisterAttached("BubbleMouseWheel", typeof(bool), typeof(ScrollViewerHelper),
+            new PropertyMetadata(false, OnBubbleMouseWheelChanged));
+
+    public static bool GetBubbleMouseWheel(DependencyObject obj) => (bool)obj.GetValue(BubbleMouseWheelProperty);
+    public static void SetBubbleMouseWheel(DependencyObject obj, bool value) => obj.SetValue(BubbleMouseWheelProperty, value);
+
+    private static void OnBubbleMouseWheelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not UIElement element) return;
+
+        element.PreviewMouseWheel -= OnElementPreviewMouseWheel;
+        if ((bool)e.NewValue)
+        {
+            element.PreviewMouseWheel += OnElementPreviewMouseWheel;
+        }
+    }
+
+    private static void OnElementPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (sender is not UIElement element) return;
+
+        if (VisualTreeHelper.GetParent(element) is UIElement parent)
+        {
+            e.Handled = true;
+            var eventArg = new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+            {
+                RoutedEvent = UIElement.MouseWheelEvent,
+                Source = sender
+            };
+            parent.RaiseEvent(eventArg);
+        }
+    }
 }

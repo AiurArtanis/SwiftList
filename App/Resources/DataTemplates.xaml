@@ -84,7 +84,8 @@
                         </Style.Triggers>
                     </Style>
                 </StackPanel.Style>
-                <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False">
+                <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False"
+                              local:ScrollViewerHelper.BubbleMouseWheel="True">
                     <TextBlock 
                                Foreground="{DynamicResource TextPrimary}"
                                local:TextHighlighter.Text="{Binding Name}"
@@ -108,7 +109,8 @@
                         </TextBlock.Style>
                     </TextBlock>
                 </ScrollViewer>
-                <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="0,2,0,0">
+                <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="0,2,0,0"
+                              local:ScrollViewerHelper.BubbleMouseWheel="True">
                     <ScrollViewer.Style>
                         <Style TargetType="ScrollViewer">
                             <Setter Property="Visibility" Value="Visible"/>
