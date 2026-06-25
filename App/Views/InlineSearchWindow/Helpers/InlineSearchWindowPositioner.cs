@@ -61,7 +61,27 @@ public class InlineSearchWindowPositioner
         var tracker = _window.Manager.ExplorerTracker;
         var isResultsVisible = _window.ResultsPanelControl.Visibility == Visibility.Visible;
 
-        if (tracker.IsActiveWindowDialog)
+        var useDialogMode = false;
+        var hasValidRect = false;
+        var rect = new Core.Hook.ExplorerTracker.RECT();
+
+        if (tracker.ActiveHwnd != IntPtr.Zero && !tracker.IsDesktop)
+        {
+            hasValidRect = tracker.TryGetActiveWindowRect(out rect) && (rect.Right - rect.Left > 100 && rect.Bottom - rect.Top > 100);
+            if (hasValidRect && tracker.IsActiveWindowDialog)
+            {
+                var screen = Screen.FromHandle(tracker.ActiveHwnd);
+                var workingArea = screen.WorkingArea;
+                var winBottom = rect.Bottom * dpiScaleY;
+                var spaceBelow = (workingArea.Bottom * dpiScaleY) - winBottom;
+                if (spaceBelow >= 150)
+                {
+                    useDialogMode = true;
+                }
+            }
+        }
+
+        if (useDialogMode)
         {
             // Dialog mode: search box on top (Row 0), results on bottom (Row 2), content aligns to top of transparent window
             _window.RootGrid.VerticalAlignment = VerticalAlignment.Top;
@@ -106,9 +126,6 @@ public class InlineSearchWindowPositioner
         }
         else if (tracker.ActiveHwnd != IntPtr.Zero)
         {
-            // Check if TryGetActiveWindowRect succeeds AND returns a valid non-empty window size (width and height > 100)
-            var hasValidRect = tracker.TryGetActiveWindowRect(out var rect) && (rect.Right - rect.Left > 100 && rect.Bottom - rect.Top > 100);
-
             if (hasValidRect)
             {
                 var winLeft = rect.Left * dpiScaleX;
@@ -119,12 +136,19 @@ public class InlineSearchWindowPositioner
                 double targetLeft = 0;
                 double targetTop = 0;
 
-                if (tracker.IsActiveWindowDialog)
+                if (useDialogMode)
                 {
                     var winWidth = (rect.Right - rect.Left) * dpiScaleX;
                     targetLeft = winLeft + (winWidth - windowWidth) / 2;
                     // Align top of search window to bottom of dialog
                     targetTop = winBottom - xamlMargin + visibleMargin;
+                }
+                else if (tracker.IsActiveWindowDialog)
+                {
+                    // Center horizontally, but align bottom of search window to bottom of dialog
+                    var winWidth = (rect.Right - rect.Left) * dpiScaleX;
+                    targetLeft = winLeft + (winWidth - windowWidth) / 2;
+                    targetTop = winBottom - windowHeight + xamlMargin - visibleMargin;
                 }
                 else
                 {
