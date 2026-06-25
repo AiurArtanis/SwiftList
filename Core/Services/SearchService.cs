@@ -36,13 +36,16 @@ public class SearchService : IDisposable
             Query = query
         };
 
+        var parsed = SearchQueryParser.Parse(query);
+        var queryExemptRoot = parsed.IsPathMode ? parsed.ExactPathLower : null;
+
         var localTask = Task.Run(async () =>
         {
             try
             {
                 await SendSearchPipeCommandAsync(msg, (result, isApp) =>
                 {
-                    if (isApp || !exclusionRules.IsExcluded(result))
+                    if (isApp || !exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
                         onResult(result, isApp);
                 }, token).ConfigureAwait(false);
                 return true;
@@ -155,11 +158,13 @@ public class SearchService : IDisposable
     {
         try
         {
+            var parsed = SearchQueryParser.Parse(query);
+            var queryExemptRoot = parsed.IsPathMode ? parsed.ExactPathLower : null;
             var found = 0;
             UserNetworkDriveSearch.SearchStreaming(query, maxResults, result =>
             {
                 token.ThrowIfCancellationRequested();
-                if (!exclusionRules.IsExcluded(result))
+                if (!exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
                 {
                     Interlocked.Increment(ref found);
                     onResult(result, false);

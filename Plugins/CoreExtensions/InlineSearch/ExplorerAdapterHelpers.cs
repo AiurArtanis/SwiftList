@@ -47,6 +47,22 @@ internal static class ExplorerAdapterHelpers
         var shellWindowsType = Type.GetTypeFromCLSID(new Guid("9BA05972-F6A8-11CF-A442-00A0C90A8F39"));
         if (shellWindowsType == null) return null;
 
+        // 1. Find the active tab HWND in Z-order
+        var activeTabHwnd = IntPtr.Zero;
+        EnumChildWindows(explorerHwnd, (childHwnd, lParam) =>
+        {
+            var sbChildClass = new StringBuilder(256);
+            GetClassName(childHwnd, sbChildClass, sbChildClass.Capacity);
+            var childClass = sbChildClass.ToString();
+
+            if (childClass.Equals("ShellTabWindowClass", StringComparison.OrdinalIgnoreCase))
+            {
+                activeTabHwnd = childHwnd;
+                return false; // Stop enumeration immediately
+            }
+            return true;
+        }, IntPtr.Zero);
+
         dynamic shellWindows = Activator.CreateInstance(shellWindowsType)!;
         int count = shellWindows.Count;
 
@@ -59,6 +75,28 @@ internal static class ExplorerAdapterHelpers
 
                 if ((IntPtr)window.HWND == explorerHwnd)
                 {
+                    // 2. Verify if this COM window matches the active tab HWND
+                    if (activeTabHwnd != IntPtr.Zero)
+                    {
+                        if (window is IComServiceProvider serviceProvider)
+                        {
+                            var serviceId = new Guid("4C96BE40-915C-11CF-99D3-00AA004AE837"); // SID_STopLevelBrowser
+                            var interfaceId = new Guid("000214E2-0000-0000-C000-000000000046"); // IID_IShellBrowser
+
+                            var hr = serviceProvider.QueryService(ref serviceId, ref interfaceId, out var shellBrowserPtr);
+                            if (hr == 0 && shellBrowserPtr != IntPtr.Zero)
+                            {
+                                var shellBrowser = (IShellBrowser)Marshal.GetObjectForIUnknown(shellBrowserPtr);
+                                shellBrowser.GetWindow(out var tabHwnd);
+                                Marshal.Release(shellBrowserPtr);
+
+                                if (tabHwnd != activeTabHwnd)
+                                {
+                                    continue; // Skip inactive tab
+                                }
+                            }
+                        }
+                    }
                     return window;
                 }
             }
@@ -89,4 +127,30 @@ internal static class ExplorerAdapterHelpers
         }
         catch { }
     }
+
+    #region COM Interfaces for Tab Resolution
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("6D5140C1-7436-11CE-8034-00AA006009FA")]
+    private interface IComServiceProvider
+    {
+        [PreserveSig]
+        int QueryService(ref Guid guidService, ref Guid riid, out IntPtr ppvObject);
+    }
+
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("000214E2-0000-0000-C000-000000000046")]
+    private interface IShellBrowser
+    {
+        [PreserveSig]
+        int GetWindow(out IntPtr phwnd);
+    }
+
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumChildWindows(IntPtr hwndParent, EnumWindowsProc lpEnumFunc, IntPtr lParam);
+    #endregion
 }

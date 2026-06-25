@@ -49,18 +49,22 @@ public sealed class ExclusionRuleSet
         }
     }
 
-    public bool IsExcluded(SearchResult result) => IsExcludedPath(result.Path, result.IsDir);
+    public bool IsExcluded(SearchResult result, string? exemptRoot = null) => IsExcludedPath(result.Path, result.IsDir, exemptRoot);
 
-    public bool IsExcludedPath(string path, bool isDirectory)
+    public bool IsExcludedPath(string path, bool isDirectory, string? exemptRoot = null)
     {
         if (string.IsNullOrWhiteSpace(path))
             return false;
 
         var normalized = NormalizePath(path, isDirectory);
+        var normalizedExempt = !string.IsNullOrEmpty(exemptRoot) ? NormalizePath(exemptRoot, isDirectory: true) : null;
 
         // 1. Check excluded roots on the full normalized path
         foreach (var excludedRoot in _excludedRoots)
         {
+            if (normalizedExempt != null && normalizedExempt.StartsWith(excludedRoot, StringComparison.OrdinalIgnoreCase))
+                continue; // Exempt the excluded root if it is a parent of the active search scope
+
             if (normalized.StartsWith(excludedRoot, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
