@@ -147,7 +147,7 @@ public class InlineSearchManager : IDisposable
 
         var viewModel = new QuickSearchViewModel();
         var scope = _explorerTracker.ActivePath;
-        if (_explorerTracker.ActiveInlineAdapter != null && _explorerTracker.ActiveHwnd != IntPtr.Zero)
+        if (string.IsNullOrEmpty(scope) && _explorerTracker.ActiveInlineAdapter != null && _explorerTracker.ActiveHwnd != IntPtr.Zero)
         {
             scope = _explorerTracker.ActiveInlineAdapter.GetSearchScope(_explorerTracker.ActiveHwnd);
         }

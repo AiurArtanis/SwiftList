@@ -88,33 +88,13 @@ internal sealed class SearchExecutionEngine : IDisposable
                     if (tracker.IsActiveWindowExplorer)
                     {
                         var localMatches = new List<AppSearchResult>();
+                        Task? localSearchTask = null;
                         if (!string.IsNullOrEmpty(contextDirectory))
                         {
-                            await _searchService.SearchStreamingAsync(query, fileLimit, appLimit, contextDirectory, (result, isApp) =>
-                            {
-                                if (!isApp)
-                                {
-                                    localMatches.Add(SearchResultMapper.CreateUiResult(result, query, localMatches.Count, isApplication: false, contextDirectory));
-                                }
-                            }, token);
-
-                            var normalizedDir = contextDirectory.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
-                            localMatches = localMatches
-                                .OrderBy(x =>
-                                {
-                                    var parent = System.IO.Path.GetDirectoryName(x.FullPath);
-                                    var normalizedParent = parent?.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
-                                    return string.Equals(normalizedParent, normalizedDir, StringComparison.OrdinalIgnoreCase) ? 0 : 1;
-                                })
-                                .ThenBy(x => x.FullPath.Length)
-                                .ToList();
-
-                            for (var idx = 0; idx < localMatches.Count; idx++)
-                            {
-                                localMatches[idx].Index = idx;
-                            }
+                            localSearchTask = ExplorerSearchHelper.SearchLocalMatchesAsync(
+                                _searchService, query, fileLimit, appLimit, contextDirectory, localMatches, token);
                         }
-                        await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, fileLimit, appLimit, resultMapper, searchVersion, onResultsUpdated, onServiceUnavailable, token, localMatches);
+                        await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, fileLimit, appLimit, resultMapper, searchVersion, onResultsUpdated, onServiceUnavailable, token, localMatches, localSearchTask);
                         return;
                     }
                     else
@@ -164,7 +144,8 @@ internal sealed class SearchExecutionEngine : IDisposable
         Action<List<AppSearchResult>, string, bool> onResultsUpdated,
         Action onServiceUnavailable,
         CancellationToken token,
-        List<AppSearchResult>? localMatches = null)
+        List<AppSearchResult>? localMatches = null,
+        Task? localSearchTask = null)
     {
         var streamedResponse = new SearchResponse();
         object responseLock = new();
@@ -191,9 +172,21 @@ internal sealed class SearchExecutionEngine : IDisposable
 
                 var uiResults = resultMapper(snapshot, contextDirectory);
 
-                if (localMatches != null && localMatches.Count > 0)
+                List<AppSearchResult>? localMatchesCopy = null;
+                if (localMatches != null)
                 {
-                    uiResults = InlineListSearchHelper.MergeLocalMatches(uiResults, localMatches, query);
+                    lock (localMatches)
+                    {
+                        if (localMatches.Count > 0)
+                        {
+                            localMatchesCopy = new List<AppSearchResult>(localMatches);
+                        }
+                    }
+                }
+
+                if (localMatchesCopy != null)
+                {
+                    uiResults = InlineListSearchHelper.MergeLocalMatches(uiResults, localMatchesCopy, query);
                 }
 
 
@@ -263,6 +256,14 @@ internal sealed class SearchExecutionEngine : IDisposable
         }
 
         token.ThrowIfCancellationRequested();
+        if (localSearchTask != null)
+        {
+            try
+            {
+                await localSearchTask;
+            }
+            catch { }
+        }
         Interlocked.Exchange(ref renderState, 2);
         RenderSnapshot(final: true);
     }

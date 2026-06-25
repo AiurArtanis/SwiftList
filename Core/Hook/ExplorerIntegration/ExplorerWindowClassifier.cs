@@ -72,18 +72,7 @@ internal sealed class ExplorerWindowClassifier
                 activeClassName = sbActiveCls.ToString();
             }
 
-            // Get process name of root window
-            var processName = "Unknown";
-            try
-            {
-                ExplorerNativeHooks.GetWindowThreadProcessId(rootHwnd, out var pid);
-                if (pid != 0)
-                {
-                    using var proc = System.Diagnostics.Process.GetProcessById((int)pid);
-                    processName = proc.ProcessName;
-                }
-            }
-            catch { }
+            var processName = _tracker.GetProcessName(rootHwnd);
 
             // Delegate active path collection to registered plugins
             var collectors = ActivePathCollectorRegistry.GetCollectors();
@@ -96,34 +85,37 @@ internal sealed class ExplorerWindowClassifier
                     if (collector.CanHandle(windowClassName))
                     {
                         var activePath = collector.TryGetPath(focusedHwnd, activeClassName, rootHwnd, windowClassName, processName);
+                        handledByPlugin = true;
+                        _tracker.IsExplorerOrDesktopActive = true;
+                        _tracker.IsDesktop = isDesktop;
+                        _tracker.IsActiveWindowDialog = false;
+                        _tracker.IsActiveWindowExplorer = !isDesktop && windowClassName.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase);
+                        _tracker.LastActiveExplorerClassName = windowClassName;
+                        _tracker.ActiveHwnd = rootHwnd;
+
+                        if (rootHwnd != _tracker.LastActiveHwnd)
+                        {
+                            _tracker.LastActiveHwnd = rootHwnd;
+                            var windowTitle = new StringBuilder(256);
+                            ExplorerNativeHooks.GetWindowText(rootHwnd, windowTitle, windowTitle.Capacity);
+                            _tracker.RaiseExplorerActivated(rootHwnd, windowTitle.ToString(), windowClassName, isDesktop);
+                        }
+
                         if (!string.IsNullOrEmpty(activePath))
                         {
-                            handledByPlugin = true;
-                            _tracker.IsExplorerOrDesktopActive = true;
-                            _tracker.IsDesktop = isDesktop;
-                            _tracker.IsActiveWindowDialog = false;
-                            _tracker.IsActiveWindowExplorer = !isDesktop && windowClassName.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase);
-                            _tracker.LastActiveExplorerClassName = windowClassName;
-                            _tracker.ActiveHwnd = rootHwnd;
-
-                            if (rootHwnd != _tracker.LastActiveHwnd)
-                            {
-                                _tracker.LastActiveHwnd = rootHwnd;
-                                var windowTitle = new StringBuilder(256);
-                                ExplorerNativeHooks.GetWindowText(rootHwnd, windowTitle, windowTitle.Capacity);
-                                _tracker.RaiseExplorerActivated(rootHwnd, windowTitle.ToString(), windowClassName, isDesktop);
-                            }
-
                             if (_dialogTracker.LastActiveExplorerPath != activePath)
                                 _dialogTracker.SetLastActiveExplorerPath(activePath);
 
                             if (activePath != _tracker.LastPath)
                             {
-                                _tracker.LastPath = activePath;
-                                _tracker.RaisePathCaptured(activePath, isDesktop);
+                                _tracker.UpdatePath(activePath, isDesktop);
                             }
-                            break;
                         }
+                        else if (!string.IsNullOrEmpty(_tracker.LastPath))
+                        {
+                            _tracker.UpdatePath(string.Empty, isDesktop);
+                        }
+                        break;
                     }
                 }
                 catch (Exception ex)

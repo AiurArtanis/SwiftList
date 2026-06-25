@@ -69,7 +69,7 @@ public class ExplorerTracker : IDisposable
     public event Action<string, bool>? OnPathCaptured;
     public event Action? OnActiveWindowMoved;
     public event Action<string>? OnError;
-    private string GetProcessName(IntPtr hwnd)
+    internal string GetProcessName(IntPtr hwnd)
     {
         try
         {
@@ -92,6 +92,7 @@ public class ExplorerTracker : IDisposable
     public void UpdatePath(string path, bool isDesktop)
     {
         LastPath = path;
+        Logger.Log($"[ExplorerTracker] UpdatePath captured path: {path} (isDesktop={isDesktop})", LogLevel.Debug);
         if (!IsActiveWindowDialog) _dialogTracker.SetLastActiveExplorerPath(path);
         RaisePathCaptured(path, isDesktop);
     }
@@ -209,8 +210,7 @@ public class ExplorerTracker : IDisposable
             var activePath = ActiveAdapter.GetCurrentPath(ActiveHwnd);
             if (!string.IsNullOrEmpty(activePath) && activePath != LastPath)
             {
-                LastPath = activePath;
-                OnPathCaptured?.Invoke(activePath, false);
+                UpdatePath(activePath, false);
             }
         }
 
@@ -246,11 +246,16 @@ public class ExplorerTracker : IDisposable
                     if (focused == IntPtr.Zero) focused = ActiveHwnd;
 
                     var activePath = collector.TryGetPath(focused, activeClassName, ActiveHwnd, activeClass, GetProcessName(ActiveHwnd));
-                    if (!string.IsNullOrEmpty(activePath) && activePath != LastPath)
+                    if (!string.IsNullOrEmpty(activePath))
                     {
-                        LastPath = activePath;
-                        if (!IsActiveWindowDialog) _dialogTracker.SetLastActiveExplorerPath(activePath);
-                        OnPathCaptured?.Invoke(activePath, false);
+                        if (activePath != LastPath)
+                        {
+                            UpdatePath(activePath, false);
+                        }
+                    }
+                    else if (!string.IsNullOrEmpty(LastPath))
+                    {
+                        UpdatePath(string.Empty, false);
                     }
                     break;
                 }
@@ -260,23 +265,24 @@ public class ExplorerTracker : IDisposable
         if (!polledByCollector && ActiveInlineAdapter != null && ActiveHwnd != IntPtr.Zero)
         {
             var activePath = ActiveInlineAdapter.GetSearchScope(ActiveHwnd);
-            if (!string.IsNullOrEmpty(activePath) && activePath != LastPath)
+            if (!string.IsNullOrEmpty(activePath))
             {
-                LastPath = activePath;
-                if (!IsActiveWindowDialog) _dialogTracker.SetLastActiveExplorerPath(activePath);
-                OnPathCaptured?.Invoke(activePath, false);
+                if (activePath != LastPath)
+                {
+                    UpdatePath(activePath, false);
+                }
+            }
+            else if (!string.IsNullOrEmpty(LastPath))
+            {
+                UpdatePath(string.Empty, false);
             }
         }
     }
     internal void Deactivate()
     {
         var wasActive = IsExplorerOrDesktopActive;
-        IsExplorerOrDesktopActive = false;
-        IsDesktop = false;
-        IsActiveWindowDialog = false;
-        IsActiveWindowExplorer = false;
-        ActiveHwnd = IntPtr.Zero;
-        LastActiveHwnd = IntPtr.Zero;
+        IsExplorerOrDesktopActive = IsDesktop = IsActiveWindowDialog = IsActiveWindowExplorer = false;
+        ActiveHwnd = LastActiveHwnd = IntPtr.Zero;
         LastPath = null;
         if (wasActive) OnExplorerDeactivated?.Invoke();
     }
