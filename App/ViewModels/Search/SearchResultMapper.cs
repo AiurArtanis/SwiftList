@@ -10,6 +10,7 @@ public static class SearchResultMapper
     {
         var uiResults = new List<AppSearchResult>();
         PluginSearchResultMapper.AddInstantResults(uiResults, query, isInlineWindow);
+        SearchableItemMapper.AddSearchableItemResults(uiResults, query, isInlineWindow);
         var hasPluginSearchActions = PluginSearchResultMapper.AddPluginSearchActionResults(uiResults, query, contextDirectory, isInlineWindow);
 
         var appResults = response.AppResults;

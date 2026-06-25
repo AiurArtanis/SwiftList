@@ -70,6 +70,13 @@ internal static class PluginLoader
                     Logger.Log($"[PluginManager] Loaded instant result provider: '{type.Name}' from {fileName}");
                 }
 
+                if (typeof(PluginSdk.ISearchableItemProvider).IsAssignableFrom(type))
+                {
+                    var provider = (PluginSdk.ISearchableItemProvider)Activator.CreateInstance(type)!;
+                    registry.AddSearchableItemProvider(provider);
+                    Logger.Log($"[PluginManager] Loaded searchable item provider: '{type.Name}' from {fileName}");
+                }
+
                 if (typeof(PluginSdk.ISidebarFilterProvider).IsAssignableFrom(type))
                 {
                     var provider = (PluginSdk.ISidebarFilterProvider)Activator.CreateInstance(type)!;

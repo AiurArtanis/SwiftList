@@ -23,6 +23,7 @@ public class PluginManager : PluginRegistry
     private readonly List<PluginActionRegistration> _actions = new();
     private readonly List<PluginSdk.IDynamicActionProvider> _dynamicProviders = new();
     private readonly List<PluginSdk.IInstantResultProvider> _instantResultProviders = new();
+    private readonly List<PluginSdk.ISearchableItemProvider> _searchableItemProviders = new();
     private readonly List<PluginSdk.ISidebarFilterProvider> _sidebarFilterProviders = new();
     private readonly List<PluginSdk.IResultColumnProvider> _resultColumnProviders = new();
     private readonly List<PluginSdk.ITranslationProvider> _translationProviders = new();
@@ -70,6 +71,7 @@ public class PluginManager : PluginRegistry
     void PluginRegistry.RegisterPlugin(PluginSdk.IActionPlugin plugin) => RegisterPlugin(plugin);
 
     void PluginRegistry.AddInstantResultProvider(PluginSdk.IInstantResultProvider p) => _instantResultProviders.Add(p);
+    void PluginRegistry.AddSearchableItemProvider(PluginSdk.ISearchableItemProvider p) => _searchableItemProviders.Add(p);
     void PluginRegistry.AddSidebarFilterProvider(PluginSdk.ISidebarFilterProvider p) => _sidebarFilterProviders.Add(p);
     void PluginRegistry.AddResultColumnProvider(PluginSdk.IResultColumnProvider p) => _resultColumnProviders.Add(p);
     void PluginRegistry.AddTranslationProvider(PluginSdk.ITranslationProvider p) => _translationProviders.Add(p);
@@ -118,6 +120,9 @@ public class PluginManager : PluginRegistry
     public IEnumerable<PluginSdk.IInstantResultProvider> InstantResultProviders
         => _instantResultProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.InstantProvider, p.Id));
 
+    public IEnumerable<PluginSdk.ISearchableItemProvider> SearchableItemProviders
+        => _searchableItemProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.SearchableItemProvider, p.Id));
+
     public IEnumerable<PluginSdk.ISidebarFilterProvider> SidebarFilterProviders
     {
         get
@@ -151,6 +156,7 @@ public class PluginManager : PluginRegistry
     public IEnumerable<PluginActionRegistration> AllActions => _actions;
     public IEnumerable<PluginSdk.IDynamicActionProvider> AllDynamicProviders => _dynamicProviders;
     public IEnumerable<PluginSdk.IInstantResultProvider> AllInstantResultProviders => _instantResultProviders;
+    public IEnumerable<PluginSdk.ISearchableItemProvider> AllSearchableItemProviders => _searchableItemProviders;
     public IEnumerable<PluginSdk.ISidebarFilterProvider> AllSidebarFilterProviders => _sidebarFilterProviders;
     public IEnumerable<PluginSdk.IResultColumnProvider> AllResultColumnProviders => _resultColumnProviders;
     public IEnumerable<PluginSdk.ITranslationProvider> AllTranslationProviders => _translationProviders;
@@ -190,7 +196,11 @@ public class PluginManager : PluginRegistry
         {
             try
             {
-                if (result.InstantResultActionType == "Copy")
+                if (result.InstantResultOnExecute != null)
+                {
+                    result.InstantResultOnExecute();
+                }
+                else if (result.InstantResultActionType == "Copy")
                     System.Windows.Clipboard.SetText(result.InstantResultActionArgument);
                 else if (result.InstantResultActionType == "Execute")
                 {

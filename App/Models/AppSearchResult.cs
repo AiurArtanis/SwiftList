@@ -34,6 +34,7 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     public System.Windows.Media.ImageSource? IconOverride { get; set; }
     public string InstantResultActionType { get; set; } = "Copy";
     public string InstantResultActionArgument { get; set; } = string.Empty;
+    public Action? InstantResultOnExecute { get; set; }
     public string? TabCompletion { get; set; }
     public object? SourceProvider { get; set; }
 

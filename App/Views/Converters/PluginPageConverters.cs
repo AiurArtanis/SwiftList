@@ -56,6 +56,7 @@ public class ComponentTypeToBadgeBrushConverter : IValueConverter
             PluginComponentType.Action => new SolidColorBrush(WpfColor.FromRgb(0x3B, 0x82, 0xF6)),
             PluginComponentType.DynamicProvider => new SolidColorBrush(WpfColor.FromRgb(0x8B, 0x5C, 0xF6)),
             PluginComponentType.InstantProvider => new SolidColorBrush(WpfColor.FromRgb(0x10, 0xB9, 0x81)),
+            PluginComponentType.SearchableItemProvider => new SolidColorBrush(WpfColor.FromRgb(0xD9, 0x46, 0xEF)),
             PluginComponentType.FilterProvider => new SolidColorBrush(WpfColor.FromRgb(0xF5, 0x9E, 0x0B)),
             PluginComponentType.ColumnProvider => new SolidColorBrush(WpfColor.FromRgb(0x63, 0x66, 0xF1)),
             PluginComponentType.AliasProvider => new SolidColorBrush(WpfColor.FromRgb(0xEC, 0x48, 0x99)),

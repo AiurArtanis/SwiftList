@@ -269,6 +269,7 @@
   "Plugins_TypeAction": "动作",
   "Plugins_TypeDynamicProvider": "动态菜单",
   "Plugins_TypeInstantProvider": "即时结果",
+  "Plugins_TypeSearchableItemProvider": "可搜索内容",
   "Plugins_TypeFilterProvider": "侧边栏筛选",
   "Plugins_TypeColumnProvider": "列扩展",
   "Plugins_TypeAliasProvider": "别名扩充",

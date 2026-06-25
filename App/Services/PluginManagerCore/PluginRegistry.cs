@@ -10,6 +10,7 @@ internal interface PluginRegistry
 {
     void RegisterPlugin(IActionPlugin plugin);
     void AddInstantResultProvider(IInstantResultProvider provider);
+    void AddSearchableItemProvider(ISearchableItemProvider provider);
     void AddSidebarFilterProvider(ISidebarFilterProvider provider);
     void AddResultColumnProvider(IResultColumnProvider provider);
     void AddTranslationProvider(ITranslationProvider provider);

@@ -269,6 +269,7 @@
   "Plugins_TypeAction": "Action",
   "Plugins_TypeDynamicProvider": "Dynamic Menu",
   "Plugins_TypeInstantProvider": "Instant Result",
+  "Plugins_TypeSearchableItemProvider": "Searchable Items",
   "Plugins_TypeFilterProvider": "Sidebar Filter",
   "Plugins_TypeColumnProvider": "Column Provider",
   "Plugins_TypeAliasProvider": "Alias Provider",

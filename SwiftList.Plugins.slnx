@@ -7,4 +7,5 @@
   <Project Path="Plugins/WebSearch/WebSearch.csproj" />
   <Project Path="Plugins/AnimeThemes/AnimeThemes.csproj" />
   <Project Path="Plugins/FolderCascader/FolderCascader.csproj" />
+  <Project Path="Plugins/SystemSettings/SystemSettings.csproj" />
 </Solution>
