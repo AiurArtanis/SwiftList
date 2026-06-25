@@ -50,8 +50,15 @@ public class InlineSearchWindowPositioner
         }
 
         // Window height is fixed at 550 logical pixels to allow content to grow upwards/downwards internally
-        const double windowHeight = 550.0;
+        var windowHeight = double.IsNaN(_window.Height) || _window.Height <= 0 
+            ? (_window.ActualHeight > 0 ? _window.ActualHeight : 550.0) 
+            : _window.Height;
         var windowWidth = _window.Width;
+
+        // Get actual visible content height (MainBorder)
+        var visibleHeight = _window.MainBorder.ActualHeight > 0 
+            ? _window.MainBorder.ActualHeight 
+            : windowHeight;
 
         // MainBorder in XAML has Margin="12" to make room for drop shadow.
         // We want the visible border to be exactly aligned to the screen/window corner.
@@ -74,7 +81,7 @@ public class InlineSearchWindowPositioner
                 var workingArea = screen.WorkingArea;
                 var winBottom = rect.Bottom * dpiScaleY;
                 var spaceBelow = (workingArea.Bottom * dpiScaleY) - winBottom;
-                if (spaceBelow >= 150)
+                if (spaceBelow >= (visibleHeight - xamlMargin))
                 {
                     useDialogMode = true;
                 }
@@ -145,10 +152,13 @@ public class InlineSearchWindowPositioner
                 }
                 else if (tracker.IsActiveWindowDialog)
                 {
-                    // Center horizontally, but align bottom of search window to bottom of dialog
+                    // Standard (upward) mode: searchbox (Row 2 = bottom of card) should align to dialog bottom.
+                    // card.Bottom = window.Top + windowHeight, and we want card.Bottom ≈ winBottom,
+                    // but the card's bottom Row is the searchbox. Offset by one searchbox height to keep it visible.
                     var winWidth = (rect.Right - rect.Left) * dpiScaleX;
                     targetLeft = winLeft + (winWidth - windowWidth) / 2;
-                    targetTop = winBottom - windowHeight + xamlMargin - visibleMargin;
+                    var searchBoxHeight = _window.SearchBoxBorder.ActualHeight > 0 ? _window.SearchBoxBorder.ActualHeight : 48.0;
+                    targetTop = winBottom - windowHeight + xamlMargin + searchBoxHeight;
                 }
                 else
                 {
@@ -165,9 +175,27 @@ public class InlineSearchWindowPositioner
                 var maxTop = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;
 
                 if (targetLeft < minLeft) targetLeft = minLeft;
-                if (targetTop < minTop) targetTop = minTop;
                 if (targetLeft > maxLeft) targetLeft = maxLeft;
-                if (targetTop > maxTop) targetTop = maxTop;
+
+                if (useDialogMode)
+                {
+                    // In dialog mode, keep the visible card bottom within the screen
+                    var maxDialogModeTop = workingArea.Bottom * dpiScaleY - visibleHeight;
+                    if (targetTop > maxDialogModeTop) targetTop = maxDialogModeTop;
+                    if (targetTop < minTop) targetTop = minTop;
+                }
+                else if (tracker.IsActiveWindowDialog)
+                {
+                    // In standard mode on dialog, keep the visible card top within the screen
+                    var minDialogModeTop = workingArea.Top * dpiScaleY - windowHeight + visibleHeight;
+                    if (targetTop < minDialogModeTop) targetTop = minDialogModeTop;
+                    if (targetTop > maxTop) targetTop = maxTop;
+                }
+                else
+                {
+                    if (targetTop < minTop) targetTop = minTop;
+                    if (targetTop > maxTop) targetTop = maxTop;
+                }
 
                 if (Math.Abs(_window.Left - targetLeft) > 0.5) _window.Left = targetLeft;
                 if (Math.Abs(_window.Top - targetTop) > 0.5) _window.Top = targetTop;
