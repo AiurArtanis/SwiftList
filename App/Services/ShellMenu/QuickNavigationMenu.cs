@@ -125,7 +125,7 @@ public static class QuickNavigationMenu
             itemPath = QuickNavigationPathResolver.TryResolveCommandPath(provider, item.CommandId);
         }
 
-        if (item.HBitmapItem == IntPtr.Zero && !string.IsNullOrEmpty(itemPath))
+        if (item.HBitmapItem == IntPtr.Zero && !string.IsNullOrEmpty(itemPath) && item.OnExecute == null)
         {
             var isDir = item.HasSubMenu;
             var cached = ShellIconHelper.GetIconFromCacheOnly(itemPath, isDir, out var needsLoad);
@@ -157,8 +157,13 @@ public static class QuickNavigationMenu
                 }
                 else
                 {
-                    if (!string.IsNullOrEmpty(itemPath)) QuickNavigationNavigator.NavigateOrOpen(itemPath);
-                    else provider.ExecuteCommand(result, item.CommandId, IntPtr.Zero);
+                    // Plugin-owned action: call OnExecute directly if set.
+                    if (item.OnExecute != null)
+                        item.OnExecute();
+                    else if (!string.IsNullOrEmpty(itemPath))
+                        QuickNavigationNavigator.NavigateOrOpen(itemPath);
+                    else
+                        provider.ExecuteCommand(result, item.CommandId, IntPtr.Zero);
                 }
             }), System.Windows.Threading.DispatcherPriority.Background);
         };

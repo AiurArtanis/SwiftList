@@ -34,8 +34,25 @@ public static class ShellPathHelper
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern bool SHGetPathFromIDListW(IntPtr pidl, [Out] StringBuilder pszPath);
 
+    // Gets the PIDL from any Shell COM object (FolderItem, IShellItem, etc.).
+    [DllImport("shell32.dll")]
+    private static extern int SHGetIDListFromObject([MarshalAs(UnmanagedType.IUnknown)] object punk, out IntPtr ppidl);
+
+    // GDI/User32 for HICON → HBITMAP conversion
+    [DllImport("user32.dll")] private static extern IntPtr GetDC(IntPtr hWnd);
+    [DllImport("user32.dll")] private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+    [DllImport("gdi32.dll")] private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
+    [DllImport("gdi32.dll")] private static extern IntPtr CreateCompatibleBitmap(IntPtr hdc, int w, int h);
+    [DllImport("gdi32.dll")] private static extern IntPtr SelectObject(IntPtr hdc, IntPtr h);
+    [DllImport("gdi32.dll")] private static extern bool DeleteDC(IntPtr hdc);
+    [DllImport("gdi32.dll")] private static extern bool DeleteObject(IntPtr h);
+    [DllImport("user32.dll")] private static extern bool DrawIconEx(IntPtr hdc, int x, int y, IntPtr hIcon, int cx, int cy, uint step, IntPtr hbr, uint flags);
+    [DllImport("user32.dll")] private static extern bool DestroyIcon(IntPtr hIcon);
+
     private const uint SHGFI_DISPLAYNAME = 0x000000200;
-    private const uint SHGFI_PIDL = 0x000000008;
+    private const uint SHGFI_PIDL        = 0x000000008;
+    private const uint SHGFI_ICON        = 0x000000100;
+    private const uint SHGFI_LARGEICON   = 0x000000000;
 
     private static readonly Environment.SpecialFolder[] _trackedSpecialFolders = new[]
     {
@@ -183,5 +200,55 @@ public static class ShellPathHelper
             }
         }
         return fallback;
+    }
+
+    /// <summary>
+    /// Gets an icon HBITMAP for a Shell.Application FolderItem COM object via its PIDL.
+    /// Works for virtual Shell namespace items (e.g. GodMode, Control Panel applets) whose
+    /// path strings cannot be parsed by SHParseDisplayName.
+    /// Caller must free the returned HBITMAP with DeleteObject when no longer needed.
+    /// Returns IntPtr.Zero if the icon cannot be retrieved.
+    /// </summary>
+    public static IntPtr TryGetIconHBitmapForShellItem(object comObj, int size = 32)
+    {
+        if (comObj == null) return IntPtr.Zero;
+        var pidl   = IntPtr.Zero;
+        var hIcon  = IntPtr.Zero;
+        var hdc    = IntPtr.Zero;
+        var hMemDC = IntPtr.Zero;
+        var hBmp   = IntPtr.Zero;
+        try
+        {
+            if (SHGetIDListFromObject(comObj, out pidl) != 0 || pidl == IntPtr.Zero) return IntPtr.Zero;
+
+            var shfi  = new SHFILEINFO();
+            var flags = SHGFI_ICON | SHGFI_LARGEICON | SHGFI_PIDL;
+            if (SHGetFileInfoPidl(pidl, 0, ref shfi, (uint)Marshal.SizeOf(shfi), flags) == IntPtr.Zero
+                || shfi.hIcon == IntPtr.Zero)
+                return IntPtr.Zero;
+            hIcon = shfi.hIcon;
+
+            // Convert HICON → HBITMAP.  Use the screen DC for CreateCompatibleBitmap so
+            // we get a colour bitmap (CreateCompatibleDC(NULL) alone gives monochrome).
+            hdc    = GetDC(IntPtr.Zero);
+            hMemDC = CreateCompatibleDC(hdc);
+            hBmp   = CreateCompatibleBitmap(hdc, size, size);
+            var hOld = SelectObject(hMemDC, hBmp);
+            DrawIconEx(hMemDC, 0, 0, hIcon, size, size, 0, IntPtr.Zero, 0x0003 /* DI_NORMAL */);
+            SelectObject(hMemDC, hOld);
+            return hBmp;
+        }
+        catch
+        {
+            if (hBmp != IntPtr.Zero) DeleteObject(hBmp);
+            return IntPtr.Zero;
+        }
+        finally
+        {
+            if (hIcon  != IntPtr.Zero) DestroyIcon(hIcon);
+            if (pidl   != IntPtr.Zero) Marshal.FreeCoTaskMem(pidl);
+            if (hMemDC != IntPtr.Zero) DeleteDC(hMemDC);
+            if (hdc    != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdc);
+        }
     }
 }
