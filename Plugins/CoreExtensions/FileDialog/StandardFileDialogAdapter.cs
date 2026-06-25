@@ -225,35 +225,45 @@ public class StandardFileDialogAdapter : IFileDialogAdapter
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT { public int Left, Top, Right, Bottom; }
 
+    private delegate bool EnumChildProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumChildWindows(IntPtr hwndParent, EnumChildProc lpEnumFunc, IntPtr lParam);
+
     private static IntPtr FindBreadcrumbParent(IntPtr parent)
     {
-        var child = FindWindowEx(parent, IntPtr.Zero, null, null);
-        while (child != IntPtr.Zero)
+        if (parent == IntPtr.Zero) return IntPtr.Zero;
+        var result = IntPtr.Zero;
+        EnumChildWindows(parent, (childHwnd, lParam) =>
         {
             var classNameSb = new StringBuilder(256);
-            GetClassName(child, classNameSb, classNameSb.Capacity);
+            GetClassName(childHwnd, classNameSb, classNameSb.Capacity);
             if (classNameSb.ToString().Equals("Breadcrumb Parent", StringComparison.OrdinalIgnoreCase))
-                return child;
-            var subParent = FindBreadcrumbParent(child);
-            if (subParent != IntPtr.Zero) return subParent;
-            child = FindWindowEx(parent, child, null, null);
-        }
-        return IntPtr.Zero;
+            {
+                result = childHwnd;
+                return false;
+            }
+            return true;
+        }, IntPtr.Zero);
+        return result;
     }
 
     private static IntPtr FindSubEditBox(IntPtr parent)
     {
-        var edit = FindWindowEx(parent, IntPtr.Zero, "Edit", null);
-        if (edit != IntPtr.Zero) return edit;
-
-        var child = FindWindowEx(parent, IntPtr.Zero, null, null);
-        while (child != IntPtr.Zero)
+        if (parent == IntPtr.Zero) return IntPtr.Zero;
+        var result = IntPtr.Zero;
+        EnumChildWindows(parent, (childHwnd, lParam) =>
         {
-            var subEdit = FindSubEditBox(child);
-            if (subEdit != IntPtr.Zero) return subEdit;
-            child = FindWindowEx(parent, child, null, null);
-        }
-        return IntPtr.Zero;
+            var classNameSb = new StringBuilder(256);
+            GetClassName(childHwnd, classNameSb, classNameSb.Capacity);
+            if (classNameSb.ToString().Equals("Edit", StringComparison.OrdinalIgnoreCase))
+            {
+                result = childHwnd;
+                return false;
+            }
+            return true;
+        }, IntPtr.Zero);
+        return result;
     }
     #endregion
 }

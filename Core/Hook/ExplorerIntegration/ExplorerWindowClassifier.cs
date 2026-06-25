@@ -179,18 +179,20 @@ internal sealed class ExplorerWindowClassifier
     {
         var sbClass = new StringBuilder(256);
         ExplorerNativeHooks.GetClassName(hwnd, sbClass, sbClass.Capacity);
-        if (sbClass.ToString().Contains("InputSwitch", StringComparison.OrdinalIgnoreCase)) return true;
+        var className = sbClass.ToString();
+        if (className.Contains("InputSwitch", StringComparison.OrdinalIgnoreCase)) return true;
         ExplorerNativeHooks.GetWindowThreadProcessId(hwnd, out var activePid);
-        if (activePid == Environment.ProcessId || (activePid != 0 && activePid == _tracker.AppProcessId)) return true;
+        if (activePid == Environment.ProcessId || (activePid != 0 && activePid == _tracker.AppProcessId))
+        {
+            if (className.Equals("#32770", StringComparison.OrdinalIgnoreCase)) return false;
+            return true;
+        }
         if (_tracker.ActiveHwnd != IntPtr.Zero)
         {
             var rootHwnd = ExplorerNativeHooks.GetAncestor(hwnd, ExplorerNativeHooks.GA_ROOTOWNER);
             if (rootHwnd == IntPtr.Zero) rootHwnd = hwnd;
             if (rootHwnd == _tracker.ActiveHwnd)
             {
-                var sbClass2 = new StringBuilder(256);
-                ExplorerNativeHooks.GetClassName(rootHwnd, sbClass2, sbClass2.Capacity);
-                if (sbClass2.ToString().Equals("dopus.lister", StringComparison.OrdinalIgnoreCase)) return false;
                 return true;
             }
         }
