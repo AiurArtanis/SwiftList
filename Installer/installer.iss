@@ -8,7 +8,6 @@
 #define AppExeName "SwiftList.App.exe"
 #define ServiceExeName "SwiftList.Service.exe"
 #define ServiceName "SwiftListService"
-#define TutorialExeName "SwiftList.Tutorial.exe"
 
 [Setup]
 AppId={{D37D0B75-B5E3-40D9-92EE-429C7D4D7F2A}
@@ -103,7 +102,6 @@ begin
   // 1. Force stop and delete service before installing new files
   Exec('sc.exe', 'stop ' + '{#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('taskkill.exe', '/F /IM ' + '{#ServiceExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Exec('taskkill.exe', '/F /IM ' + '{#TutorialExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('sc.exe', 'delete ' + '{#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
   // 2. Check and Download .NET 10.0 Desktop Runtime if missing
@@ -141,7 +139,6 @@ begin
   begin
     // Force stop app and service on uninstallation
     Exec('taskkill.exe', '/F /IM ' + '{#AppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-    Exec('taskkill.exe', '/F /IM ' + '{#TutorialExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Exec('sc.exe', 'stop ' + '{#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Exec('taskkill.exe', '/F /IM ' + '{#ServiceExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Exec('sc.exe', 'delete ' + '{#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);

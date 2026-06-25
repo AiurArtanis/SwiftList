@@ -9,9 +9,6 @@ echo Stopping frontend App...
 taskkill /f /im SwiftList.App.exe >nul 2>&1
 powershell -Command "Start-Process taskkill -ArgumentList '/f /im SwiftList.App.exe' -Verb RunAs -WindowStyle Hidden -Wait"
 
-echo Stopping Tutorial...
-taskkill /f /im SwiftList.Tutorial.exe >nul 2>&1
-powershell -Command "Start-Process taskkill -ArgumentList '/f /im SwiftList.Tutorial.exe' -Verb RunAs -WindowStyle Hidden -Wait"
 
 echo Requesting Administrator privileges to stop SwiftListService...
 powershell -Command "Start-Process net -ArgumentList 'stop SwiftListService' -Verb RunAs -WindowStyle Hidden -Wait"

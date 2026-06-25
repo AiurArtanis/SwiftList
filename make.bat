@@ -72,17 +72,6 @@ if not "%PLUGINS_EXIT%"=="0" (
     exit /b %PLUGINS_EXIT%
 )
 
-:: 5.5. Publish Tutorial in Release mode
-echo.
-echo Publishing Tutorial in Release mode...
-pushd "%ROOT%Tutorial"
-dotnet publish ".\Tutorial.csproj" -c Release -o "%OUT%" -v quiet
-set "TUTORIAL_EXIT=%errorlevel%"
-popd
-if not "%TUTORIAL_EXIT%"=="0" (
-    echo [Error] Tutorial publish failed.
-    exit /b %TUTORIAL_EXIT%
-)
 
 :: 6. Copy portable updater and clean PDB files
 echo.

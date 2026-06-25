@@ -106,31 +106,6 @@
                 </StackPanel>
             </Border>
 
-            <!-- Tutorial Section -->
-            <TextBlock Style="{StaticResource SettingsSectionTitle}" 
-                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_TutorialTitle]}"
-                       Margin="0,20,0,0"/>
-            <Border Style="{StaticResource SettingsCard}">
-                <StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_TutorialHint]}" 
-                                   VerticalAlignment="Center" 
-                                   Foreground="{DynamicResource TextSecondary2}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,0,16,0"/>
-                        
-                        <Button x:Name="BtnStartTutorial" Grid.Column="1" 
-                                Style="{StaticResource PrimarySettingsButton}" 
-                                Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_TutorialBtn]}" 
-                                Click="BtnStartTutorial_Click" MinWidth="120"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

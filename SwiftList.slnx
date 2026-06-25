@@ -3,5 +3,5 @@
   <Project Path="Service/Service.csproj" />
   <Project Path="App/App.csproj" />
   <Project Path="PluginSdk/PluginSdk.csproj" />
-  <Project Path="Tutorial/Tutorial.csproj" />
+
 </Solution>
