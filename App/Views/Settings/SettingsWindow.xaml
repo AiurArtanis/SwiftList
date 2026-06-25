@@ -113,6 +113,12 @@
                                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Plugins]}"/>
                                 </StackPanel>
                             </ListBoxItem>
+                            <ListBoxItem Tag="Favorites">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE728;" FontFamily="Segoe MDL2 Assets" Margin="0,0,12,0"/>
+                                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Favorites]}"/>
+                                </StackPanel>
+                            </ListBoxItem>
                             <ListBoxItem Tag="History">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets" Margin="0,0,12,0"/>
@@ -142,6 +148,8 @@
                                                               DataContext="{Binding Plugins}"/>
                         <settings:HistorySettingsPage x:Name="PageHistory" Visibility="Collapsed"
                                                       DataContext="{Binding History}"/>
+                        <settings:FavoritesSettingsPage x:Name="PageFavorites" Visibility="Collapsed"
+                                                        DataContext="{Binding Favorites}"/>
                         <settings:AboutSettingsPage x:Name="PageAbout" Visibility="Collapsed"/>
                     </Grid>
                 </Grid>

@@ -52,20 +52,21 @@ public static class MenuBuilder
                 }
             }
 
+            var showFavorites = PluginSettingsService.GetSetting(
+                "SwiftList.Plugins.FolderCascader",
+                "ShowFavorites",
+                true);
+
             var showHistory = PluginSettingsService.GetSetting(
                 "SwiftList.Plugins.FolderCascader",
                 "ShowHistory",
                 true);
 
-            var favoritesList = PluginSettingsService.GetSetting(
-                "SwiftList.Plugins.FolderCascader",
-                "Favorites",
-                new List<string>())
-                .Select(p => p.Trim())
-                .Where(p => !string.IsNullOrEmpty(p))
-                .ToList();
+            var favoritesList = FavoritesService.GetFavorites()
+                 .Where(p => !string.IsNullOrEmpty(p.Path))
+                 .ToList();
 
-            if (favoritesList.Count > 0)
+            if (showFavorites && favoritesList.Count > 0)
             {
                 if (items.Count > 0 && !items.Last().IsSeparator)
                 {
@@ -106,12 +107,8 @@ public static class MenuBuilder
         if (provider.TryGetPath(hMenu, out var path) && path != null)
         {
             var items = new List<DynamicMenuItem>();
-            var favoritesList = PluginSettingsService.GetSetting(
-                "SwiftList.Plugins.FolderCascader",
-                "Favorites",
-                new List<string>())
-                .Select(p => p.Trim())
-                .Where(p => !string.IsNullOrEmpty(p))
+            var favoritesList = FavoritesService.GetFavorites()
+                .Where(p => !string.IsNullOrEmpty(p.Path))
                 .ToList();
 
             if (path == "foldercascader://history")
@@ -145,13 +142,15 @@ public static class MenuBuilder
             }
             else if (path == "foldercascader://favorites")
             {
-                foreach (var favPath in favoritesList)
+                foreach (var favItem in favoritesList)
                 {
-                    if (Directory.Exists(favPath))
+                    var favPath = favItem.Path;
+                    var isVirtual = favPath.StartsWith("::") || favPath.StartsWith("shell:");
+                    if (isVirtual || Directory.Exists(favPath))
                     {
                         items.Add(new DynamicMenuItem
                         {
-                            Text = GetDisplayName(favPath, ""),
+                            Text = GetDisplayName(favPath, favItem.Name),
                             HasSubMenu = true,
                             SubMenuHandle = provider.AllocateHandle(favPath),
                             HBitmapItem = IntPtr.Zero
@@ -161,7 +160,7 @@ public static class MenuBuilder
                     {
                         items.Add(new DynamicMenuItem
                         {
-                            Text = Path.GetFileName(favPath) + $" ({Path.GetDirectoryName(favPath)})",
+                            Text = string.IsNullOrWhiteSpace(favItem.Name) ? Path.GetFileName(favPath) : favItem.Name,
                             CommandId = provider.AllocateCommand(favPath),
                             HBitmapItem = IntPtr.Zero
                         });

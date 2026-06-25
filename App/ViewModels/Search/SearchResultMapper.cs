@@ -10,8 +10,6 @@ public static class SearchResultMapper
     {
         var uiResults = new List<AppSearchResult>();
         PluginSearchResultMapper.AddInstantResults(uiResults, query, isInlineWindow);
-        SearchableItemMapper.AddSearchableItemResults(uiResults, query, isInlineWindow);
-        var hasPluginSearchActions = PluginSearchResultMapper.AddPluginSearchActionResults(uiResults, query, contextDirectory, isInlineWindow);
 
         var appResults = response.AppResults;
         var fileResults = response.FileResults;
@@ -58,16 +56,14 @@ public static class SearchResultMapper
         fileResults?.Sort(comparer);
         appResults ??= new List<SearchResult>();
 
-        var appLimit = Math.Min(appResults.Count, 5);
-        var hasSearchResults = appLimit > 0 || (fileResults != null && fileResults.Count > 0);
-        if (hasPluginSearchActions && hasSearchResults)
-        {
-            AddSectionHeader(uiResults, TranslationManager.Instance["Search_SectionHeader"], query);
-        }
-
+        // Add history/favorites first (Highest priority result group)
         AddHistoryPriorityResults(uiResults, appResults, fileResults, query, scope, historySnapshot);
 
-        appLimit = Math.Min(appResults.Count, Math.Max(0, 5 - uiResults.Count));
+        // Add other searchable items and action results
+        SearchableItemMapper.AddSearchableItemResults(uiResults, query, isInlineWindow);
+        var hasPluginSearchActions = PluginSearchResultMapper.AddPluginSearchActionResults(uiResults, query, contextDirectory, isInlineWindow);
+
+        var appLimit = Math.Min(appResults.Count, Math.Max(0, 5 - uiResults.Count));
         for (var i = 0; i < appLimit; i++)
         {
             uiResults.Add(CreateUiResult(appResults[i], query, uiResults.Count, isApplication: true, scope));
@@ -122,6 +118,15 @@ public static class SearchResultMapper
         return uiResults;
     }
 
+    private class PriorityCandidate
+    {
+        public SearchResult? Result { get; set; }
+        public FavoriteItemSetting? Favorite { get; set; }
+        public bool IsApplication { get; set; }
+        public int Priority { get; set; }
+        public string NormalizedPath { get; set; } = string.Empty;
+    }
+
     public static void AddHistoryPriorityResults(
         List<AppSearchResult> uiResults,
         List<SearchResult> appResults,
@@ -134,12 +139,42 @@ public static class SearchResultMapper
         if (availableSlots == 0)
             return;
 
-        var candidates = new List<(SearchResult Result, bool IsApplication, int Priority)>();
+        var candidates = new List<PriorityCandidate>();
+
+        var favorites = UserSettings.Load().Favorites;
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            for (var i = 0; i < favorites.Count; i++)
+            {
+                var fav = favorites[i];
+                if (FavoriteSearchHelper.IsFavoriteMatch(fav, query))
+                {
+                    var lookupPath = fav.Path.Length > 3 && fav.Path[^1] == '\\' ? fav.Path.TrimEnd('\\') : fav.Path;
+                    var priority = historySnapshot.TryGetValue(lookupPath, out var hp) ? hp : 0;
+
+                    candidates.Add(new PriorityCandidate
+                    {
+                        Favorite = fav,
+                        Priority = priority,
+                        NormalizedPath = NormalizePath(fav.Path)
+                    });
+                }
+            }
+        }
+
         foreach (var result in appResults)
         {
             var lookupPath = result.Path.Length > 3 && result.Path[^1] == '\\' ? result.Path.TrimEnd('\\') : result.Path;
             if (historySnapshot.TryGetValue(lookupPath, out var priority))
-                candidates.Add((result, true, priority));
+            {
+                candidates.Add(new PriorityCandidate
+                {
+                    Result = result,
+                    IsApplication = true,
+                    Priority = priority,
+                    NormalizedPath = NormalizePath(result.Path)
+                });
+            }
         }
 
         if (fileResults != null)
@@ -148,7 +183,15 @@ public static class SearchResultMapper
             {
                 var lookupPath = result.Path.Length > 3 && result.Path[^1] == '\\' ? result.Path.TrimEnd('\\') : result.Path;
                 if (historySnapshot.TryGetValue(lookupPath, out var priority))
-                    candidates.Add((result, false, priority));
+                {
+                    candidates.Add(new PriorityCandidate
+                    {
+                        Result = result,
+                        IsApplication = false,
+                        Priority = priority,
+                        NormalizedPath = NormalizePath(result.Path)
+                    });
+                }
             }
         }
 
@@ -158,20 +201,36 @@ public static class SearchResultMapper
         var usedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var candidate in candidates
                      .OrderBy(x => x.Priority)
-                     .ThenBy(x => x.Result.Path.Length)
-                     .ThenBy(x => x.Result.Path, StringComparer.OrdinalIgnoreCase))
+                     .ThenBy(x => x.NormalizedPath.Length)
+                     .ThenBy(x => x.NormalizedPath, StringComparer.OrdinalIgnoreCase))
         {
             if (uiResults.Count >= 9)
                 break;
 
-            if (!usedPaths.Add(candidate.Result.Path))
+            if (!usedPaths.Add(candidate.NormalizedPath))
                 continue;
 
-            uiResults.Add(CreateUiResult(candidate.Result, query, uiResults.Count, candidate.IsApplication, scope));
-            if (candidate.IsApplication)
-                appResults.Remove(candidate.Result);
-            else
-                fileResults?.Remove(candidate.Result);
+            if (candidate.Favorite != null)
+            {
+                uiResults.Add(FavoriteSearchHelper.CreateFavoriteUiResult(candidate.Favorite, query, uiResults.Count));
+            }
+            else if (candidate.Result != null)
+            {
+                uiResults.Add(CreateUiResult(candidate.Result, query, uiResults.Count, candidate.IsApplication, scope));
+            }
+
+            // Remove any duplicates from appResults and fileResults
+            var matchedApp = appResults.FirstOrDefault(r => NormalizePath(r.Path).Equals(candidate.NormalizedPath, StringComparison.OrdinalIgnoreCase));
+            if (matchedApp != null)
+            {
+                appResults.Remove(matchedApp);
+            }
+
+            var matchedFile = fileResults?.FirstOrDefault(r => NormalizePath(r.Path).Equals(candidate.NormalizedPath, StringComparison.OrdinalIgnoreCase));
+            if (matchedFile != null && fileResults != null)
+            {
+                fileResults.Remove(matchedFile);
+            }
         }
     }
 

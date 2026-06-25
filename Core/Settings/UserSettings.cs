@@ -5,6 +5,7 @@ namespace SwiftList.Core;
 public class UserSettings
 {
     public List<NetworkDriveSetting> NetworkDrives { get; set; } = new();
+    public List<FavoriteItemSetting> Favorites { get; set; } = new();
     public List<string> ExcludedPaths { get; set; } = new()
     {
         "%SystemDrive%\\Windows.old",
@@ -239,3 +240,10 @@ public class HotkeySetting
     // For ModifierClick: number of clicks
     public int ClickCount { get; set; } = 2;
 }
+
+public class FavoriteItemSetting
+{
+    public string Name { get; set; } = string.Empty;
+    public string Path { get; set; } = string.Empty;
+}
+

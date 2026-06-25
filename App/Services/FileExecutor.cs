@@ -25,9 +25,10 @@ public static class FileExecutor
 
         try
         {
-            if (File.Exists(path) || Directory.Exists(path))
+            var isVirtual = path.StartsWith("::") || path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase);
+            if (isVirtual || File.Exists(path) || Directory.Exists(path))
             {
-                var isFile = File.Exists(path);
+                var isFile = !isVirtual && File.Exists(path);
                 ProcessStartInfo startInfo;
 
                 if (asAdmin)

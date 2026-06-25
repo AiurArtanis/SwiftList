@@ -57,6 +57,7 @@ public partial class SettingsWindow : Window
         PageHotkeys.Visibility = tag == "Hotkeys" ? Visibility.Visible : Visibility.Collapsed;
         PagePlugins.Visibility = tag == "Plugins" ? Visibility.Visible : Visibility.Collapsed;
         PageHistory.Visibility = tag == "History" ? Visibility.Visible : Visibility.Collapsed;
+        PageFavorites.Visibility = tag == "Favorites" ? Visibility.Visible : Visibility.Collapsed;
         PageAbout.Visibility = tag == "About" ? Visibility.Visible : Visibility.Collapsed;
         PageBlacklist?.Visibility = tag == "Blacklist" ? Visibility.Visible : Visibility.Collapsed;
     }

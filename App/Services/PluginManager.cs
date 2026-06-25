@@ -63,6 +63,10 @@ public class PluginManager : PluginRegistry
         PluginSdk.HistoryService.GetHistoryPathsFunc = () =>
             SearchHistoryStore.GetEntries();
 
+        // Wire up the favorites service delegate for plugins using Core UserSettings
+        PluginSdk.FavoritesService.GetFavoritesFunc = () =>
+            UserSettings.Load().Favorites.Select(f => new PluginSdk.FavoriteItem { Name = f.Name, Path = f.Path });
+
         PluginLoader.Load(this);
     }
 

@@ -29,20 +29,22 @@ public class FolderCascaderPlugin : IActionPlugin, IConfigurablePlugin
                 {
                     new PluginConfigField
                     {
+                        Key = "ShowFavorites",
+                        LabelKey = "FolderCascader_Config_ShowFavorites",
+                        DescriptionKey = "FolderCascader_Config_ShowFavoritesDesc",
+                        FieldType = ConfigFieldType.Boolean,
+                        DefaultValue = true
+                    },
+
+                    new PluginConfigField
+                    {
                         Key = "ShowHistory",
                         LabelKey = "FolderCascader_Config_ShowHistory",
                         DescriptionKey = "FolderCascader_Config_ShowHistoryDesc",
                         FieldType = ConfigFieldType.Boolean,
                         DefaultValue = true
                     },
-                    new PluginConfigField
-                    {
-                        Key = "Favorites",
-                        LabelKey = "FolderCascader_Config_Favorites",
-                        DescriptionKey = "FolderCascader_Config_FavoritesDesc",
-                        FieldType = ConfigFieldType.StringList,
-                        DefaultValue = new List<string>()
-                    },
+
                     new PluginConfigField
                     {
                         Key = "Folders",
