@@ -13,6 +13,7 @@ public class SearchEngine : IDisposable
 
     // Search cancellation
     private CancellationTokenSource? _searchCts;
+    private CancellationTokenSource? _searchDirCts;
     private readonly object _searchLock = new();
     private static readonly string IndexCacheDir = Path.Combine(Logger.SharedDataDir, "indexes");
 
@@ -154,9 +155,18 @@ public class SearchEngine : IDisposable
         CancellationTokenSource searchCts;
         lock (_searchLock)
         {
-            _searchCts?.Cancel();
-            _searchCts = new CancellationTokenSource();
-            searchCts = _searchCts;
+            if (string.IsNullOrEmpty(directoryFilter))
+            {
+                _searchCts?.Cancel();
+                _searchCts = new CancellationTokenSource();
+                searchCts = _searchCts;
+            }
+            else
+            {
+                _searchDirCts?.Cancel();
+                _searchDirCts = new CancellationTokenSource();
+                searchCts = _searchDirCts;
+            }
         }
 
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(searchCts.Token, requestToken);
@@ -225,6 +235,8 @@ public class SearchEngine : IDisposable
         {
             _searchCts?.Cancel();
             _searchCts?.Dispose();
+            _searchDirCts?.Cancel();
+            _searchDirCts?.Dispose();
         }
         GC.SuppressFinalize(this);
     }
