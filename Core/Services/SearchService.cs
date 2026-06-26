@@ -265,9 +265,13 @@ public class SearchService : IDisposable
                 var letter = dir.Substring(0, 1);
                 return !UserSettings.Load().NetworkDrives.Any(d => d.Enabled && string.Equals(d.Drive, letter, StringComparison.OrdinalIgnoreCase));
             }
-            return !string.Equals(driveInfo.DriveFormat, "NTFS", StringComparison.OrdinalIgnoreCase) ||
-                   exclusionRules.IsExcludedPath(dir, true) ||
-                   exclusionRules.IsExcludedPath(Path.Combine(dir, "_live_search_dummy.txt"), false);
+            // Both NTFS and ReFS are indexed by the USN journal indexer.
+            var fs = driveInfo.DriveFormat;
+            var isIndexed = string.Equals(fs, "NTFS", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(fs, "ReFS", StringComparison.OrdinalIgnoreCase);
+            return !isIndexed
+                || exclusionRules.IsExcludedPath(dir, true)
+                || exclusionRules.IsExcludedPath(Path.Combine(dir, "_live_search_dummy.txt"), false);
         }
         catch { return true; }
     }
