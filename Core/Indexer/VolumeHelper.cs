@@ -120,9 +120,7 @@ public static class VolumeHelper
         return success ? fileSystemName.ToString() : "NTFS";
     }
 
-    // Probe whether a ReFS volume uses v3.x on-disk format (128-bit FRNs).
-    // v3.x: formatted on Win10 1803+ / Server 2019+ → FSCTL_ENUM_USN_DATA V1 succeeds.
-    // v1.x: older format → FSCTL returns ERROR_INVALID_FUNCTION or ERROR_NOT_SUPPORTED.
+    // Returns the ReFS on-disk format version string (e.g. "v3.14").
     public static string GetReFsVersion(string driveLetter)
     {
         var volumePath = $"\\\\.\\{driveLetter}:";
@@ -131,13 +129,16 @@ public static class VolumeHelper
             IntPtr.Zero, Win32Api.OPEN_EXISTING, 0, IntPtr.Zero);
         if (handle.IsInvalid) return "v?";
 
-        var input = new Win32Api.MFT_ENUM_DATA_V1 { HighUsn = long.MaxValue, MinMajorVersion = 3, MaxMajorVersion = 3 };
-        var outBuf = new byte[8];
-        var ok = Win32Api.DeviceIoControl(handle, Win32Api.FSCTL_ENUM_USN_DATA,
-            ref input, (uint)Marshal.SizeOf<Win32Api.MFT_ENUM_DATA_V1>(),
-            outBuf, (uint)outBuf.Length, out _, IntPtr.Zero);
-        var err = Marshal.GetLastWin32Error();
-        // ERROR_HANDLE_EOF = probe accepted, no records; any other success = records returned.
-        return (ok || err == Win32Api.ERROR_HANDLE_EOF) ? "v3" : "v1";
+        // REFS_VOLUME_DATA_BUFFER layout: [0] ByteCount(4), [4] MajorVersion(4), [8] MinorVersion(4), ...
+        var refsBuf = new byte[512];
+        if (Win32Api.DeviceIoControl(handle, Win32Api.FSCTL_GET_REFS_VOLUME_DATA,
+            IntPtr.Zero, 0, refsBuf, (uint)refsBuf.Length, out _, IntPtr.Zero))
+        {
+            var major = BitConverter.ToUInt32(refsBuf, 4);
+            var minor = BitConverter.ToUInt32(refsBuf, 8);
+            return $"v{major}.{minor}";
+        }
+
+        return "v?";
     }
 }

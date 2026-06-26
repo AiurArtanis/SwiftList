@@ -163,6 +163,9 @@ public static class Win32Api
         IntPtr lpOverlapped
     );
 
+    // For IOCTLs with no input buffer (e.g. FSCTL_GET_REFS_VOLUME_DATA).
+    public const uint FSCTL_GET_REFS_VOLUME_DATA = 0x902D8;
+
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern bool DeviceIoControl(
         SafeFileHandle hDevice,
