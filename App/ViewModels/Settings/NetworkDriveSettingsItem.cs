@@ -17,6 +17,7 @@ public class NetworkDriveSettingsItem : ViewModelBase
 
     public string Drive { get; set; } = string.Empty;
     public ICommand RowActionCommand { get; set; } = null!;
+    public bool AppliedEnabled { get; set; }
 
     public string State { get => _state; set => SetProperty(ref _state, value); }
     public string ItemCount { get => _itemCount; set => SetProperty(ref _itemCount, value); }

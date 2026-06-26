@@ -138,6 +138,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
                     Drive = letter,
                     IsPresent = drive != null,
                     IsEnabled = drive != null && (saved?.Enabled ?? false),
+                    AppliedEnabled = drive != null && (saved?.Enabled ?? false),
                     State = drive == null ? TranslationManager.Instance["Network_StatusUnavailable"] : GetStateText(drive, indexStatus),
                     ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-",
                     RefreshMode = NormalizeRefreshMode(saved?.RefreshMode)
@@ -154,7 +155,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
         IsNetworkDrivesEmpty = NetworkDrives.Count == 0;
         DrivesPlaceholderText = TranslationManager.Instance["Network_Placeholder"];
 
-        var hasEnabled = NetworkDrives.Any(d => d.IsEnabled);
+        var hasEnabled = NetworkDrives.Any(d => d.AppliedEnabled);
         var isBusy = isGlobalBusy || _pendingRowRebuilds.Count > 0 || indexStatuses?.Any(s => s.State == "indexing" || s.State == "pending") == true;
         _isBusy = isBusy;
         CanRebuild = hasEnabled && !isBusy;
@@ -172,7 +173,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
         }
         else
         {
-            var enabledCount = NetworkDrives.Count(d => d.IsEnabled);
+            var enabledCount = NetworkDrives.Count(d => d.AppliedEnabled);
             var totalItems = (indexStatuses ?? Array.Empty<NetworkIndexStatus>()).Sum(s => s.Items);
             var state = isBusy ? TranslationManager.Instance["Network_StatusIndexing"] : TranslationManager.Instance["Status_Ready"];
             IndexSummary = string.Format(TranslationManager.Instance["Network_SummaryTemplate"], state, enabledCount, totalItems);
@@ -244,11 +245,9 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
         if (e.PropertyName is nameof(NetworkDriveSettingsItem.IsEnabled) or nameof(NetworkDriveSettingsItem.RefreshMode))
         {
             HasPendingEdits = true;
-            if (sender is NetworkDriveSettingsItem item)
-                UpdateRowAction(item);
         }
     }
-    private void UpdateRowAction(NetworkDriveSettingsItem item) => item.RowAction = item.IsEnabled
+    private void UpdateRowAction(NetworkDriveSettingsItem item) => item.RowAction = item.AppliedEnabled
             ? NetworkDriveRowAction.Rebuild
             : _searchService.HasNetworkDriveCache(item.Drive) ? NetworkDriveRowAction.Delete : NetworkDriveRowAction.None;
 
