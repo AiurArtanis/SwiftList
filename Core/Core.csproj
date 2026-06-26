@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>SwiftList.Core</AssemblyName>
     <RootNamespace>SwiftList.Core</RootNamespace>
-    <Version>1.1.7</Version>
+    <Version>1.1.8</Version>
     <GenerateDependencyFile>false</GenerateDependencyFile>
   </PropertyGroup>
 
