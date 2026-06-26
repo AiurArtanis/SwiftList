@@ -6,7 +6,7 @@ public class JournalReader
 {
     public (UInt128 RootFrn,
             Dictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)> SearchItems,
-            long NextUsn, ulong JournalId)? IndexDrive(string drive)
+            long NextUsn, ulong JournalId)? IndexDrive(string drive, Action<int, int>? onProgress = null)
     {
         Logger.Log($"[JournalReader] Indexing drive {drive}...");
         var volumePath = $"\\\\.\\{drive}:";
@@ -17,8 +17,7 @@ public class JournalReader
             IntPtr.Zero,
             Win32Api.OPEN_EXISTING,
             0,
-            IntPtr.Zero
-        );
+            IntPtr.Zero);
         if (handle.IsInvalid)
         {
             Logger.Log($"[JournalReader] Failed to open drive {drive} handle.", LogLevel.Error);
@@ -38,9 +37,7 @@ public class JournalReader
             IntPtr.Zero, 0,
             queryBuf, (uint)queryBuf.Length,
             out var bytesReturned,
-            IntPtr.Zero
-        );
-
+            IntPtr.Zero);
         if (!success)
         {
             var err = Marshal.GetLastWin32Error();
@@ -61,8 +58,7 @@ public class JournalReader
                     ref createData, (uint)Marshal.SizeOf<Win32Api.CREATE_USN_JOURNAL_DATA>(),
                     IntPtr.Zero, 0,
                     out var bytesReturnedCreate,
-                    IntPtr.Zero
-                );
+                    IntPtr.Zero);
 
                 if (createSuccess)
                 {
@@ -73,8 +69,7 @@ public class JournalReader
                         IntPtr.Zero, 0,
                         queryBuf, (uint)queryBuf.Length,
                         out bytesReturned,
-                        IntPtr.Zero
-                    );
+                        IntPtr.Zero);
                 }
                 else
                 {
@@ -89,20 +84,19 @@ public class JournalReader
             Logger.Log($"[JournalReader] Failed to query USN journal on {drive}.", LogLevel.Error);
             return null;
         }
-
         var journalId = BitConverter.ToUInt64(queryBuf, 0);
         var nextUsn = BitConverter.ToInt64(queryBuf, 16);
 
         if (fsType.Equals("ReFS", StringComparison.OrdinalIgnoreCase))
         {
-            return ReFsScanner.ScanDrive(drive, handle, rootFrn.Value, journalId, nextUsn);
+            return ReFsScanner.ScanDrive(drive, handle, rootFrn.Value, journalId, nextUsn, onProgress);
         }
 
         var bufSize = 1024 * 1024;
         var outBuf = new byte[bufSize];
         ulong nextFrn = 0;
-
         var driveSearchItems = new Dictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)>();
+        var progress = new EnumerationProgress(onProgress);
 
         while (true)
         {
@@ -157,7 +151,14 @@ public class JournalReader
                 {
                     var record = UsnRecordParser.ParseRecord(recordSpan);
 
-                    driveSearchItems[record.FileReferenceNumber] = (record.FileName, record.ParentFileReferenceNumber, record.IsDirectory);
+                    if (driveSearchItems.TryAdd(record.FileReferenceNumber, (record.FileName, record.ParentFileReferenceNumber, record.IsDirectory)))
+                    {
+                        progress.Add(record.IsDirectory, driveSearchItems.Count);
+                    }
+                    else
+                    {
+                        driveSearchItems[record.FileReferenceNumber] = (record.FileName, record.ParentFileReferenceNumber, record.IsDirectory);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -169,6 +170,7 @@ public class JournalReader
         }
 
         Logger.Log($"[JournalReader] Drive {drive} enum complete: {driveSearchItems.Count} items.");
+        progress.Report();
         return (rootFrn.Value, driveSearchItems, nextUsn, journalId);
     }
 

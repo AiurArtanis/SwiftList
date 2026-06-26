@@ -7,7 +7,7 @@ public static class UsnIndexerBuildExtensions
     public static List<(string Drive, ulong JournalId, long NextUsn)> BuildIndex(this UsnIndexer indexer)
     {
         Logger.Log("[UsnIndexer] BuildIndex started");
-        var drives = VolumeHelper.DetectSupportedDrives();
+        var drives = VolumeHelper.DetectIndexableLocalDrives();
         Logger.Log($"[UsnIndexer] Detected NTFS/ReFS drives: {string.Join(", ", drives)}");
         return indexer.BuildDrives(drives, clearExisting: true);
     }
@@ -50,6 +50,22 @@ public static class UsnIndexerBuildExtensions
             indexer._reader,
             drives,
             indexer.SetDriveState,
+            indexer.UpdateDriveProgress,
+            (drive, onProgress) => FolderDriveScanner.Build(drive, onProgress, CancellationToken.None),
+            (drive, store, progress, index) =>
+            {
+                lock (indexer.LockObj)
+                {
+                    var runtime = new RuntimeIndex();
+                    runtime.Load(store);
+                    indexer._driveMetadata[drive] = UsnIndexer.CreateMetadata(store);
+                    indexer._recordIndexes[drive] = runtime;
+                    indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
+                    indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
+                    indexer.Status.Progress = progress;
+                    indexer.UpdateDriveCounts(drive);
+                }
+            },
             (drive, rootFrn, searchItems, nextUsn, journalId, progress, index) =>
             {
                 lock (indexer.LockObj)

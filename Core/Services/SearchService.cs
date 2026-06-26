@@ -167,6 +167,7 @@ public class SearchService : IDisposable
     }
 
     public void RefreshNetworkIndexes() => UserNetworkDriveSearch.Refresh();
+    public bool RefreshNetworkDriveIndex(string drive) => UserNetworkDriveSearch.RefreshDrive(drive);
     public IReadOnlyList<NetworkIndexStatus> GetNetworkIndexStatuses() => UserNetworkDriveSearch.GetStatuses();
     public bool HasNetworkDriveCache(string drive) => UserNetworkDriveSearch.HasCache(drive);
     public IReadOnlyList<string> GetCachedNetworkDrives() => UserNetworkDriveSearch.GetCachedDrives();

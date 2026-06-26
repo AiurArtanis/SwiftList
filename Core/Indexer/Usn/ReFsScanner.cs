@@ -15,7 +15,8 @@ public static class ReFsScanner
         SafeFileHandle volumeHandle,
         UInt128 rootFrn,
         ulong journalId,
-        long nextUsn)
+        long nextUsn,
+        Action<int, int>? onProgress = null)
     {
         var stopwatch = Stopwatch.StartNew();
         Logger.Log($"[ReFsScanner] Starting ReFS initial scan for drive {drive}...");
@@ -23,7 +24,7 @@ public static class ReFsScanner
         // Slow path: parallel BFS via OpenFileById + GetFileInformationByHandleEx.
         // ponytail: O(N) I/O-bound scan; upgrade path = a documented ReFS full-enum API.
         Logger.Log($"[ReFsScanner] Drive {drive}: using ReFS directory-id BFS.");
-        var items = ScanParallel(volumeHandle, rootFrn);
+        var items = ScanParallel(volumeHandle, rootFrn, onProgress);
         if (items == null)
             return null;
 
@@ -36,12 +37,14 @@ public static class ReFsScanner
     // Slow path: parallel BFS using Channel<UInt128> as the work queue.
     // Workers await new items (no spin); termination via channel.Writer.TryComplete() when inFlight hits 0.
     private static Dictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)>? ScanParallel(
-        SafeFileHandle volumeHandle, UInt128 rootFrn)
+        SafeFileHandle volumeHandle, UInt128 rootFrn, Action<int, int>? onProgress)
     {
         var items = new ConcurrentDictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)>(8, 32768);
         var channel = Channel.CreateUnbounded<UInt128>(new UnboundedChannelOptions { SingleReader = false });
         channel.Writer.TryWrite(rootFrn);
         var inFlight = 1;
+        var files = 0;
+        var dirs = 0;
 
         try
         {
@@ -50,7 +53,7 @@ public static class ReFsScanner
             {
                 await foreach (var dirId in channel.Reader.ReadAllAsync())
                 {
-                    ProcessDir(volumeHandle, dirId, items, subId =>
+                    ProcessDir(volumeHandle, dirId, items, onProgress, ref files, ref dirs, subId =>
                     {
                         Interlocked.Increment(ref inFlight);
                         channel.Writer.TryWrite(subId);
@@ -78,6 +81,9 @@ public static class ReFsScanner
         SafeFileHandle volumeHandle,
         UInt128 dirId,
         ConcurrentDictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)> items,
+        Action<int, int>? onProgress,
+        ref int files,
+        ref int dirs,
         Action<UInt128> onSubdir)
     {
         var desc = new Win32Api.FILE_ID_DESCRIPTOR
@@ -112,8 +118,21 @@ public static class ReFsScanner
                     if (name != "." && name != "..")
                     {
                         var isDir = (attrs & 0x10) != 0;
-                        items[fileId] = (name!, dirId, isDir);
-                        if (isDir) onSubdir(fileId);
+                        if (items.TryAdd(fileId, (name!, dirId, isDir)))
+                        {
+                            if (isDir)
+                            {
+                                Interlocked.Increment(ref dirs);
+                                onSubdir(fileId);
+                            }
+                            else
+                            {
+                                Interlocked.Increment(ref files);
+                            }
+
+                            if ((items.Count & 4095) == 0)
+                                onProgress?.Invoke(Volatile.Read(ref files), Volatile.Read(ref dirs));
+                        }
                     }
                     if (nextOff == 0) break;
                     cur += (int)nextOff;

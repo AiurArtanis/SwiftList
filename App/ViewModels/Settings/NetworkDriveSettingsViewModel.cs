@@ -5,21 +5,21 @@ using SwiftList.App.Helpers;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.NetworkDrive;
 using SwiftList.App.Services;
-
 namespace SwiftList.App.ViewModels.Settings;
-
 public class NetworkDriveSettingsViewModel : ViewModelBase
 {
     private readonly SearchService _searchService;
     private readonly UserSettings _userSettings;
     private readonly Action _onTriggerFastRefresh;
+    private readonly HashSet<string> _pendingRowRebuilds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _observedRowRebuilds = new(StringComparer.OrdinalIgnoreCase);
     private string _indexSummary = TranslationManager.Instance["Network_SummaryBusy"];
     private bool _canRebuild;
     private bool _isNetworkDrivesEmpty;
     private string _drivesPlaceholderText = string.Empty;
     private bool _hasPendingEdits;
     private bool _canEditRefreshModes = true;
-
+    private bool _isBusy;
     public NetworkDriveSettingsViewModel(SearchService searchService, UserSettings userSettings, Action onTriggerFastRefresh)
     {
         _searchService = searchService;
@@ -27,7 +27,6 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
         _onTriggerFastRefresh = onTriggerFastRefresh;
         RebuildCommand = new RelayCommand(Rebuild, () => CanRebuild);
 
-        // Dynamically refresh properties and child items when the language changes
         TranslationManager.Instance.PropertyChanged += (s, e) =>
         {
             OnPropertyChanged(nameof(RefreshModeOptions));
@@ -39,7 +38,6 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
     }
 
     public ObservableCollection<NetworkDriveSettingsItem> NetworkDrives { get; } = new();
-
     public bool HasPendingEdits
     {
         get => _hasPendingEdits;
@@ -61,7 +59,6 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
     };
 
     public ICommand RebuildCommand { get; }
-
     public string IndexSummary
     {
         get => _indexSummary;
@@ -90,7 +87,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
         set => SetProperty(ref _drivesPlaceholderText, value);
     }
 
-    public void RefreshNetworkDrives(UserSettings userSettings, IReadOnlyList<NetworkIndexStatus>? indexStatuses = null)
+    public void RefreshNetworkDrives(UserSettings userSettings, IReadOnlyList<NetworkIndexStatus>? indexStatuses = null, bool isGlobalBusy = false)
     {
         var configured = userSettings.NetworkDrives.ToDictionary(d => d.Drive, StringComparer.OrdinalIgnoreCase);
         var statuses = (indexStatuses ?? Array.Empty<NetworkIndexStatus>())
@@ -117,6 +114,8 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
                 item.IsPresent = drive != null;
                 if (!item.IsPresent)
                     item.IsEnabled = false;
+                TrackPendingRebuild(letter, indexStatus?.State);
+
                 item.State = drive == null ? TranslationManager.Instance["Network_StatusUnavailable"] : GetStateText(drive, indexStatus);
                 item.ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-";
                 UpdateRowAction(item);
@@ -144,6 +143,8 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
                     RefreshMode = NormalizeRefreshMode(saved?.RefreshMode)
                 };
                 item.RowActionCommand = new RelayCommand(() => RunDriveAction(item), () => item.CanRunRowAction);
+                TrackPendingRebuild(letter, indexStatus?.State);
+
                 UpdateRowAction(item);
                 item.PropertyChanged += OnNetworkDriveItemChanged;
                 NetworkDrives.Add(item);
@@ -154,14 +155,15 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
         DrivesPlaceholderText = TranslationManager.Instance["Network_Placeholder"];
 
         var hasEnabled = NetworkDrives.Any(d => d.IsEnabled);
-        var isBusy = indexStatuses?.Any(s => s.State == "indexing" || s.State == "pending") == true;
+        var isBusy = isGlobalBusy || _pendingRowRebuilds.Count > 0 || indexStatuses?.Any(s => s.State == "indexing" || s.State == "pending") == true;
+        _isBusy = isBusy;
         CanRebuild = hasEnabled && !isBusy;
         CanEditRefreshModes = !isBusy;
         foreach (var drive in NetworkDrives)
         {
             drive.CanEditEnabled = drive.IsPresent && !isBusy;
             drive.CanEditRefreshMode = drive.IsPresent && !isBusy;
-            drive.CanRunRowAction = drive.RowAction == NetworkDriveRowAction.Delete || CanRebuild && drive.RowAction == NetworkDriveRowAction.Rebuild;
+            drive.CanRunRowAction = !isBusy && (drive.RowAction == NetworkDriveRowAction.Delete || CanRebuild && drive.RowAction == NetworkDriveRowAction.Rebuild);
         }
 
         if (IsNetworkDrivesEmpty)
@@ -181,6 +183,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
     {
         if (!CanRebuild)
             return;
+        _isBusy = true;
 
         _userSettings.NetworkDrives = NetworkDrives.Select(d => new NetworkDriveSetting
         {
@@ -199,12 +202,13 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
 
     private void RunDriveAction(NetworkDriveSettingsItem item)
     {
-        if (!item.CanRunRowAction)
+        if (_isBusy || !item.CanRunRowAction)
             return;
 
         item.CanRunRowAction = false;
         if (item.RowAction == NetworkDriveRowAction.Rebuild)
         {
+            _isBusy = true;
             _userSettings.NetworkDrives = NetworkDrives.Select(d => new NetworkDriveSetting
             {
                 Drive = d.Drive,
@@ -216,7 +220,12 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
             item.State = TranslationManager.Instance["Network_StatusIndexing"];
             item.ItemCount = "-";
             IndexSummary = TranslationManager.Instance["Network_Rebuilding"];
-            _searchService.RefreshNetworkIndexes();
+            _pendingRowRebuilds.Add(item.Drive);
+            if (!_searchService.RefreshNetworkDriveIndex(item.Drive))
+            {
+                _pendingRowRebuilds.Remove(item.Drive);
+                _observedRowRebuilds.Remove(item.Drive);
+            }
         }
         else if (item.RowAction == NetworkDriveRowAction.Delete)
         {
@@ -225,7 +234,6 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
             item.State = TranslationManager.Instance["Network_StatusConnected"];
             item.ItemCount = "-";
         }
-
         _onTriggerFastRefresh?.Invoke();
     }
 
@@ -240,7 +248,6 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
                 UpdateRowAction(item);
         }
     }
-
     private void UpdateRowAction(NetworkDriveSettingsItem item) => item.RowAction = item.IsEnabled
             ? NetworkDriveRowAction.Rebuild
             : _searchService.HasNetworkDriveCache(item.Drive) ? NetworkDriveRowAction.Delete : NetworkDriveRowAction.None;
@@ -269,6 +276,21 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
         _ => "Manual"
     };
 
+    private void TrackPendingRebuild(string drive, string? state)
+    {
+        if (!_pendingRowRebuilds.Contains(drive))
+            return;
+
+        if (state == "indexing")
+        {
+            _observedRowRebuilds.Add(drive);
+        }
+        else if (_observedRowRebuilds.Contains(drive))
+        {
+            _pendingRowRebuilds.Remove(drive);
+            _observedRowRebuilds.Remove(drive);
+        }
+    }
 }
 
 public sealed record RefreshModeOption(string Value, string Label)

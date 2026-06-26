@@ -9,12 +9,20 @@ internal static class DriveRecovery
         string cacheDir,
         string drive,
         CancellationToken token,
-        Action<string>? onReindexRequired)
+        Action<string>? onReindexRequired,
+        Action<IDisposable> addMonitor)
     {
         Logger.Log($"[SearchEngine] Restoring newly available drive {drive} from cache if possible.");
         var cached = indexer.TryLoadDriveFromCache(cacheDir, drive);
         if (cached.HasValue)
         {
+            if (!SupportsJournal(drive))
+            {
+                StartFolderMonitor(drive, onReindexRequired, addMonitor, token);
+                Logger.Log($"[SearchEngine] Restored folder-scan drive {drive} from cache.");
+                return;
+            }
+
             var nextUsn = indexer.CatchUpDrive(drive, cached.Value.JournalId, cached.Value.NextUsn);
             if (nextUsn >= 0)
             {
@@ -38,6 +46,24 @@ internal static class DriveRecovery
 
         indexer.SaveDrivesToCache(cacheDir, metadata);
         foreach (var (builtDrive, journalId, nextUsn) in metadata)
-            new UsnMonitor(builtDrive, journalId, nextUsn, indexer, token, onReindexRequired).Start();
+        {
+            if (SupportsJournal(builtDrive))
+                new UsnMonitor(builtDrive, journalId, nextUsn, indexer, token, onReindexRequired).Start();
+            else
+                StartFolderMonitor(builtDrive, onReindexRequired, addMonitor, token);
+        }
+    }
+
+    private static bool SupportsJournal(string drive)
+    {
+        var fs = VolumeHelper.GetFileSystemType(drive);
+        return fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void StartFolderMonitor(string drive, Action<string>? onReindexRequired, Action<IDisposable> addMonitor, CancellationToken token)
+    {
+        var monitor = new FolderDriveMonitor(drive, onReindexRequired ?? (_ => { }), token);
+        monitor.Start();
+        addMonitor(monitor);
     }
 }

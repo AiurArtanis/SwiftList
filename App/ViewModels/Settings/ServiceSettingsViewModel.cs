@@ -69,7 +69,7 @@ public class ServiceSettingsViewModel : ViewModelBase
             LoadingTitle = TranslationManager.Instance["Service_ErrorTitle"];
             LoadingStats = TranslationManager.Instance["Service_ErrorStats"];
         }
-        else if (status.State is "indexing" or "loading-cache" or "pending")
+        else if (status.IsMaintenanceBusy || status.State is "indexing" or "loading-cache" or "pending")
         {
             ProgressBarVisibility = Visibility.Visible;
             ErrorIconVisibility = Visibility.Collapsed;

@@ -76,6 +76,13 @@ public static class VolumeHelper
         return detected;
     }
 
+    public static List<string> DetectIndexableLocalDrives() => DriveInfo.GetDrives()
+        .Where(d => d.IsReady && d.DriveType != DriveType.Network && d.Name.Length >= 2)
+        .Select(d => d.Name.Split(':')[0].ToUpperInvariant())
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(d => d, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
     public static List<string> DetectFolderIndexDrives()
     {
         var detected = new List<string>();

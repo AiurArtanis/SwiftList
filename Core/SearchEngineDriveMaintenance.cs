@@ -9,25 +9,29 @@ internal sealed class SearchEngineDriveMaintenance
     private readonly Func<MachineSettings> _settings;
     private readonly Func<CancellationToken> _token;
     private readonly Func<bool> _isRebuilding;
+    private readonly Action<IDisposable> _addMonitor;
     private readonly HashSet<string> _pendingDriveRebuilds = new(StringComparer.OrdinalIgnoreCase);
+    public bool HasPendingRebuilds { get { lock (_pendingDriveRebuilds) return _pendingDriveRebuilds.Count > 0; } }
 
     public SearchEngineDriveMaintenance(
         UsnIndexer indexer,
         Func<MachineSettings> settings,
         Func<CancellationToken> token,
-        Func<bool> isRebuilding)
+        Func<bool> isRebuilding,
+        Action<IDisposable> addMonitor)
     {
         _indexer = indexer;
         _settings = settings;
         _token = token;
         _isRebuilding = isRebuilding;
+        _addMonitor = addMonitor;
     }
 
     public void RefreshDrivesInStatus()
     {
         try
         {
-            var detected = VolumeHelper.DetectSupportedDrives();
+            var detected = VolumeHelper.DetectIndexableLocalDrives();
             var detectedSet = new HashSet<string>(detected, StringComparer.OrdinalIgnoreCase);
             var cached = FileRecordStoreSerializer.ListSourceKeys(IndexCacheDir)
                 .Where(key => key.Length == 1 && char.IsLetter(key[0]));
@@ -65,8 +69,7 @@ internal sealed class SearchEngineDriveMaintenance
         if (enabledDrives.Count > 0 && !enabledDrives.Contains(drive, StringComparer.OrdinalIgnoreCase))
             return false;
 
-        QueueDriveRebuild(drive, forceRebuild: true);
-        return true;
+        return QueueDriveRebuild(drive, forceRebuild: true);
     }
 
     public bool DeleteDriveIndex(string drive)
@@ -93,14 +96,31 @@ internal sealed class SearchEngineDriveMaintenance
 
     public void QueueDriveRebuild(string drive) => QueueDriveRebuild(drive, forceRebuild: false);
 
-    private void QueueDriveRebuild(string drive, bool forceRebuild)
+    private bool QueueDriveRebuild(string drive, bool forceRebuild)
     {
         lock (_pendingDriveRebuilds)
         {
-            if (_isRebuilding() || !_pendingDriveRebuilds.Add(drive))
-                return;
+            if (_isRebuilding())
+            {
+                Logger.Log($"[SearchEngine] Ignored drive {drive} rebuild request because a full rebuild is running.");
+                return false;
+            }
+
+            if (forceRebuild && _pendingDriveRebuilds.Count > 0)
+            {
+                Logger.Log($"[SearchEngine] Ignored drive {drive} rebuild request because another drive rebuild is running.");
+                return false;
+            }
+
+            if (!_pendingDriveRebuilds.Add(drive))
+            {
+                Logger.Log($"[SearchEngine] Ignored duplicate rebuild request for drive {drive}.");
+                return false;
+            }
         }
+        _indexer.SetDriveState(drive, "indexing", resetCounts: true);
         Task.Run(() => RebuildDrive(drive, forceRebuild));
+        return true;
     }
 
     private UsnIndexer.DriveIndexStatus UpdateStatus(
@@ -142,7 +162,7 @@ internal sealed class SearchEngineDriveMaintenance
             if (forceRebuild)
                 ForceRebuildDrive(drive);
             else
-                DriveRecovery.RestoreOrRebuild(_indexer, IndexCacheDir, drive, _token(), QueueDriveRebuild);
+                DriveRecovery.RestoreOrRebuild(_indexer, IndexCacheDir, drive, _token(), QueueDriveRebuild, _addMonitor);
         }
         catch (Exception ex)
         {

@@ -7,6 +7,7 @@ public static class UserNetworkDriveSearch
     private static readonly NetworkIndexer NetworkIndexer = new();
 
     public static void Refresh() => NetworkIndexer.Configure(UserSettings.Load().NetworkDrives, forceRefresh: true);
+    public static bool RefreshDrive(string drive) => NetworkIndexer.RefreshDrive(drive);
 
     public static IReadOnlyList<NetworkIndexStatus> GetStatuses() => NetworkIndexer.GetStatuses();
     public static bool HasCache(string drive) => IndexerHelper.HasCache(drive);

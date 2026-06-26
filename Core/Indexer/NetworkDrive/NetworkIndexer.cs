@@ -124,6 +124,26 @@ public sealed class NetworkIndexer : IDisposable
         _scheduler?.StartRefresh(enabledDrives, refreshModes, forceRefresh ? null : cachedDrives, forceRefresh ? null : lastUpdatedTimes);
     }
 
+    public bool RefreshDrive(string drive)
+    {
+        EnsureConfigured();
+        drive = IndexerHelper.NormalizeDrive(drive);
+        if (drive.Length == 0)
+            return false;
+
+        lock (_gate)
+        {
+            if (!_refreshModes.ContainsKey(drive))
+                return false;
+            if (_statuses.Values.Any(s => s.State is "indexing" or "pending"))
+                return false;
+        }
+
+        SetStatus(drive, "indexing", 0, null);
+        _scheduler?.QueueRefreshDrive(drive, "manual");
+        return true;
+    }
+
     public IReadOnlyList<NetworkIndexStatus> GetStatuses()
     {
         EnsureConfigured();

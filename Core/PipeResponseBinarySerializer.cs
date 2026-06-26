@@ -2,7 +2,6 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Text;
 using SwiftList.Core.Indexer.Usn;
-
 namespace SwiftList.Core;
 
 public enum PipeResponseKind : byte
@@ -12,7 +11,6 @@ public enum PipeResponseKind : byte
     Status = 3,
     MachineSettings = 4
 }
-
 public readonly struct PipeResponse
 {
     public PipeResponseKind Kind { get; init; }
@@ -21,24 +19,19 @@ public readonly struct PipeResponse
     public MachineSettings? MachineSettings { get; init; }
     public bool IsOk => Kind != PipeResponseKind.Error;
 }
-
 public static class PipeResponseBinarySerializer
 {
     private const int Magic = 0x52504C53; // SLPR
-    private const int Version = 2;
+    private const int Version = 3;
 
     public static Task WriteOkAsync(Stream stream, CancellationToken token = default)
         => WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.Ok }, token);
-
     public static Task WriteErrorAsync(Stream stream, string message, CancellationToken token = default)
         => WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.Error, Message = message }, token);
-
     public static Task WriteStatusAsync(Stream stream, UsnIndexer.IndexerStatus status, CancellationToken token = default)
         => WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.Status, Status = status }, token);
-
     public static Task WriteMachineSettingsAsync(Stream stream, MachineSettings settings, CancellationToken token = default)
         => WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.MachineSettings, MachineSettings = settings }, token);
-
     public static async Task<PipeResponse> ReadAsync(Stream stream, CancellationToken token = default)
     {
         var magic = await ReadInt32Async(stream, token).ConfigureAwait(false);
@@ -52,7 +45,6 @@ public static class PipeResponseBinarySerializer
         var length = await ReadInt32Async(stream, token).ConfigureAwait(false);
         if (length < 0 || length > 10 * 1024 * 1024)
             throw new InvalidDataException($"Invalid response payload length: {length}");
-
         var payload = await ReadExactlyAsync(stream, length, token).ConfigureAwait(false);
 
         var offset = 0;
@@ -83,7 +75,6 @@ public static class PipeResponseBinarySerializer
                 payloadSize += CalculateSettingsSize(response.MachineSettings ?? new MachineSettings());
                 break;
         }
-
         var totalSize = 12 + payloadSize; // Magic(4) + Version(4) + Length(4) + Payload
         var buffer = ArrayPool<byte>.Shared.Rent(totalSize);
         try
@@ -124,7 +115,7 @@ public static class PipeResponseBinarySerializer
     private static int CalculateStatusSize(UsnIndexer.IndexerStatus status)
     {
         var size = GetStringByteCount(status.State) + 5;
-        size += 20; // Progress(4) + TotalFiles(4) + TotalDirs(4) + ElapsedTime(8)
+        size += 21; // Progress(4) + TotalFiles(4) + TotalDirs(4) + ElapsedTime(8) + IsMaintenanceBusy(1)
         size += 4;  // ActiveDrives count
         foreach (var drive in status.ActiveDrives)
             size += GetStringByteCount(drive) + 5;
@@ -141,7 +132,6 @@ public static class PipeResponseBinarySerializer
         }
         return size;
     }
-
     private static int CalculateSettingsSize(MachineSettings settings)
     {
         var size = 4; // Count
@@ -149,7 +139,6 @@ public static class PipeResponseBinarySerializer
             size += GetStringByteCount(drive) + 5;
         return size;
     }
-
     private static void WriteString(Span<byte> buffer, ref int offset, string? str)
     {
         var s = str ?? string.Empty;
@@ -158,7 +147,6 @@ public static class PipeResponseBinarySerializer
         Encoding.UTF8.GetBytes(s, buffer.Slice(offset));
         offset += len;
     }
-
     private static void WriteStatus(Span<byte> span, ref int offset, UsnIndexer.IndexerStatus status)
     {
         WriteString(span, ref offset, status.State);
@@ -170,7 +158,7 @@ public static class PipeResponseBinarySerializer
         offset += 4;
         BinaryPrimitives.WriteDoubleLittleEndian(span.Slice(offset), status.ElapsedTime);
         offset += 8;
-
+        span[offset++] = (byte)(status.IsMaintenanceBusy ? 1 : 0);
         BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), status.ActiveDrives.Count);
         offset += 4;
         foreach (var drive in status.ActiveDrives)
@@ -191,7 +179,6 @@ public static class PipeResponseBinarySerializer
             WriteString(span, ref offset, drive.CachePath);
         }
     }
-
     private static void WriteMachineSettings(Span<byte> span, ref int offset, MachineSettings settings)
     {
         BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), settings.EnabledLocalDrives.Count);
@@ -199,7 +186,6 @@ public static class PipeResponseBinarySerializer
         foreach (var drive in settings.EnabledLocalDrives)
             WriteString(span, ref offset, drive);
     }
-
     private static UsnIndexer.IndexerStatus ReadStatus(byte[] payload, ref int offset)
     {
         var status = new UsnIndexer.IndexerStatus
@@ -208,9 +194,10 @@ public static class PipeResponseBinarySerializer
             Progress = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset)),
             TotalFiles = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset + 4)),
             TotalDirs = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset + 8)),
-            ElapsedTime = BinaryPrimitives.ReadDoubleLittleEndian(payload.AsSpan(offset + 12))
+            ElapsedTime = BinaryPrimitives.ReadDoubleLittleEndian(payload.AsSpan(offset + 12)),
+            IsMaintenanceBusy = payload[offset + 20] != 0
         };
-        offset += 20;
+        offset += 21;
 
         var activeCount = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
         offset += 4;

@@ -113,13 +113,15 @@ public class SettingsViewModel : ViewModelBase
                                       {
                                           // Update sub-viewmodels
 
+                                          var isServiceReady = status.State != "error";
+                                          var isLocalDriveBusy = status.Drives.Any(d => d.State is "indexing" or "pending");
+                                          var isNetworkBusy = networkStatuses.Any(s => s.State is "indexing" or "pending");
+                                          var isServiceLifecycleBusy = status.State is "indexing" or "loading-cache" or "pending" || status.IsMaintenanceBusy && !isLocalDriveBusy;
+                                          var isBusy = isServiceLifecycleBusy || isLocalDriveBusy || isNetworkBusy;
                                           Service.UpdateStatus(status);
                                           LocalDrive.UpdateStatus(status, settings);
                                           NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses);
-                                          var isServiceReady = status.State != "error";
                                           IsServiceReady = isServiceReady;
-                                          var isNetworkBusy = networkStatuses.Any(s => s.State is "indexing" or "pending");
-                                          var isBusy = status.State is "indexing" or "loading-cache" or "pending" || isNetworkBusy;
                                           IsBusy = isBusy;
                                           CanApply = isServiceReady && !isBusy;
                                           _refreshTimer?.Interval = isBusy ? TimeSpan.FromMilliseconds(500) : TimeSpan.FromSeconds(5);

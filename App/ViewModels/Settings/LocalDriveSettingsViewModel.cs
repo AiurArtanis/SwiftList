@@ -12,10 +12,13 @@ public class LocalDriveSettingsViewModel : ViewModelBase
 {
     private readonly SearchService _searchService;
     private readonly Action _onTriggerFastRefresh;
+    private readonly HashSet<string> _pendingRowRebuilds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _observedRowRebuilds = new(StringComparer.OrdinalIgnoreCase);
     private string _indexSummary = TranslationManager.Instance["Local_LoadingInfo"];
     private bool _canRebuild;
     private bool _isLocalDrivesEmpty = false;
     private string _drivesPlaceholderText = "";
+    private bool _isBusy;
 
     public LocalDriveSettingsViewModel(SearchService searchService, Action onTriggerFastRefresh)
     {
@@ -91,14 +94,16 @@ public class LocalDriveSettingsViewModel : ViewModelBase
             }
 
             var hasCache = FileRecordStoreSerializer.ExistsBasePath(FileRecordStoreSerializer.GetBasePath(Path.GetDirectoryName(drive.CachePath) ?? string.Empty, drive.Drive));
+            TrackPendingRebuild(drive);
+
             item.RowAction = isEnabled ? LocalDriveRowAction.Rebuild : hasCache ? LocalDriveRowAction.Delete : LocalDriveRowAction.None;
-            item.CanRunRowAction = item.RowAction == LocalDriveRowAction.Delete || CanRebuild && item.RowAction == LocalDriveRowAction.Rebuild;
+            item.CanRunRowAction = _pendingRowRebuilds.Count == 0 && (item.RowAction == LocalDriveRowAction.Delete || CanRebuild && item.RowAction == LocalDriveRowAction.Rebuild);
             item.CanEditEnabled = isPresent && IsDriveCheckboxEnabled;
             item.CachePath = drive.CachePath;
             item.Kind = drive.Kind == "LocalNtfs" ? TranslationManager.Instance["Local_KindLocalNtfs"] : drive.Kind;
             item.Strategy = isEnabled ? TranslationManager.Instance["Local_StrategyMftUsn"] : TranslationManager.Instance["Local_StrategyDisabled"];
             item.State = TranslateState(drive.State);
-            item.ItemCount = isEnabled ? $"{drive.Files + drive.Dirs:N0}" : "-";
+            item.ItemCount = isEnabled && drive.Files + drive.Dirs > 0 ? $"{drive.Files + drive.Dirs:N0}" : "-";
         }
 
         for (var i = LocalDrives.Count - 1; i >= 0; i--)
@@ -112,12 +117,15 @@ public class LocalDriveSettingsViewModel : ViewModelBase
 
         IsLocalDrivesEmpty = LocalDrives.Count == 0;
         var isServiceReady = status.State != "error";
-        var isBusy = status.State is "indexing" or "loading-cache" or "pending";
-        CanRebuild = IsUserAdmin && isServiceReady && (status.State is "ready" or "idle");
+        var hasPendingRebuild = _pendingRowRebuilds.Count > 0;
+        var hasBusyDrive = status.Drives.Any(d => d.State is "indexing" or "pending");
+        var isBusy = status.IsMaintenanceBusy || status.State is "indexing" or "loading-cache" or "pending" || hasPendingRebuild || hasBusyDrive;
+        _isBusy = isBusy;
+        CanRebuild = IsUserAdmin && isServiceReady && (status.State is "ready" or "idle") && !status.IsMaintenanceBusy && !hasPendingRebuild && !hasBusyDrive;
         IsDriveCheckboxEnabled = IsUserAdmin && isServiceReady && !isBusy;
         foreach (var drive in LocalDrives)
         {
-            drive.CanRunRowAction = drive.RowAction == LocalDriveRowAction.Delete || CanRebuild && drive.RowAction == LocalDriveRowAction.Rebuild;
+            drive.CanRunRowAction = !isBusy && (drive.RowAction == LocalDriveRowAction.Delete || CanRebuild && drive.RowAction == LocalDriveRowAction.Rebuild);
             drive.CanEditEnabled = drive.State != TranslationManager.Instance["Local_DriveUnavailable"] && IsDriveCheckboxEnabled;
         }
         if (!isServiceReady)
@@ -132,17 +140,17 @@ public class LocalDriveSettingsViewModel : ViewModelBase
             DrivesPlaceholderText = TranslationManager.Instance["Local_LoadingPlaceholder"];
         }
 
+        else if (isBusy)
+            IndexSummary = TranslationManager.Instance["Local_Rebuilding"];
         else
-        {
             IndexSummary = string.Format(TranslationManager.Instance["Local_SummaryTemplate"], TranslateState(status.State), LocalDrives.Count(d => d.IsEnabled), status.TotalFiles + status.TotalDirs);
-        }
     }
 
     private async void Rebuild()
     {
         if (!CanRebuild)
             return;
-        CanRebuild = false;
+        SetBusy(true);
         IsLocalDrivesEmpty = false;
         IndexSummary = TranslationManager.Instance["Local_Rebuilding"];
         await _searchService.InitializeOrLoadIndexAsync(true);
@@ -157,22 +165,27 @@ public class LocalDriveSettingsViewModel : ViewModelBase
         var basePath = FileRecordStoreSerializer.GetBasePath(Path.GetDirectoryName(item.CachePath) ?? string.Empty, item.Drive);
         var hasCache = FileRecordStoreSerializer.ExistsBasePath(basePath);
         item.RowAction = item.IsEnabled ? LocalDriveRowAction.Rebuild : hasCache ? LocalDriveRowAction.Delete : LocalDriveRowAction.None;
-        item.CanRunRowAction = item.RowAction == LocalDriveRowAction.Delete || CanRebuild && item.RowAction == LocalDriveRowAction.Rebuild;
+        item.CanRunRowAction = !_isBusy && (item.RowAction == LocalDriveRowAction.Delete || CanRebuild && item.RowAction == LocalDriveRowAction.Rebuild);
     }
 
     private async void RunDriveAction(LocalDriveSettingsItem item)
     {
-        if (!item.CanRunRowAction)
+        if (_isBusy || !item.CanRunRowAction)
             return;
 
-        item.CanRunRowAction = false;
         if (item.RowAction == LocalDriveRowAction.Rebuild)
         {
+            SetBusy(true);
             item.State = TranslationManager.Instance["Local_StateIndexing"];
             item.ItemCount = "-";
             IndexSummary = TranslationManager.Instance["Local_Rebuilding"];
+            _pendingRowRebuilds.Add(item.Drive);
             _onTriggerFastRefresh?.Invoke();
-            await _searchService.RebuildDriveIndexAsync(item.Drive);
+            if (!await _searchService.RebuildDriveIndexAsync(item.Drive))
+            {
+                _pendingRowRebuilds.Remove(item.Drive);
+                _observedRowRebuilds.Remove(item.Drive);
+            }
         }
         else if (item.RowAction == LocalDriveRowAction.Delete)
         {
@@ -183,6 +196,15 @@ public class LocalDriveSettingsViewModel : ViewModelBase
         }
 
         _onTriggerFastRefresh?.Invoke();
+    }
+
+    private void SetBusy(bool isBusy)
+    {
+        _isBusy = isBusy;
+        CanRebuild = !isBusy && CanRebuild;
+        IsDriveCheckboxEnabled = !isBusy && IsDriveCheckboxEnabled;
+        foreach (var drive in LocalDrives)
+            (drive.CanRunRowAction, drive.CanEditEnabled) = (!isBusy && drive.CanRunRowAction, !isBusy && drive.CanEditEnabled);
     }
 
     private static string TranslateState(string state) => state switch
@@ -199,6 +221,22 @@ public class LocalDriveSettingsViewModel : ViewModelBase
         _ => state
 
     };
+
+    private void TrackPendingRebuild(UsnIndexer.DriveIndexStatus drive)
+    {
+        if (!_pendingRowRebuilds.Contains(drive.Drive))
+            return;
+
+        if (drive.State == "indexing")
+        {
+            _observedRowRebuilds.Add(drive.Drive);
+        }
+        else if (_observedRowRebuilds.Contains(drive.Drive))
+        {
+            _pendingRowRebuilds.Remove(drive.Drive);
+            _observedRowRebuilds.Remove(drive.Drive);
+        }
+    }
 }
 
 public class LocalDriveSettingsItem : ViewModelBase
@@ -236,11 +274,10 @@ public class LocalDriveSettingsItem : ViewModelBase
         get => _rowAction;
         set
         {
-            if (SetProperty(ref _rowAction, value))
-            {
-                OnPropertyChanged(nameof(IsRowActionVisible));
-                OnPropertyChanged(nameof(RowActionText));
-            }
+            if (!SetProperty(ref _rowAction, value))
+                return;
+            OnPropertyChanged(nameof(IsRowActionVisible));
+            OnPropertyChanged(nameof(RowActionText));
         }
     }
     public bool IsRowActionVisible => RowAction != LocalDriveRowAction.None;

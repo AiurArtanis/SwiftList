@@ -8,17 +8,20 @@ internal class SearchEngineInitializer
     private readonly StartMenuAppIndex _appIndex;
     private readonly string _indexCacheDir;
     private readonly Action<string>? _onReindexRequired;
+    private readonly Action<IDisposable>? _addMonitor;
 
     public SearchEngineInitializer(
         UsnIndexer indexer,
         StartMenuAppIndex appIndex,
         string indexCacheDir,
-        Action<string>? onReindexRequired = null)
+        Action<string>? onReindexRequired = null,
+        Action<IDisposable>? addMonitor = null)
     {
         _indexer = indexer;
         _appIndex = appIndex;
         _indexCacheDir = indexCacheDir;
         _onReindexRequired = onReindexRequired;
+        _addMonitor = addMonitor;
     }
 
     public void EnsureDriveStatuses(IReadOnlyList<string> detectedDrives, IReadOnlyList<string> enabledDrives)
@@ -43,7 +46,7 @@ internal class SearchEngineInitializer
             _appIndex.Refresh();
 
             var machineSettings = MachineSettings.Load();
-            var detectedDrives = VolumeHelper.DetectSupportedDrives();
+            var detectedDrives = VolumeHelper.DetectIndexableLocalDrives();
             var enabledSet = new HashSet<string>(machineSettings.EnabledLocalDrives, StringComparer.OrdinalIgnoreCase);
             var supportedDrives = enabledSet.Count == 0
                 ? detectedDrives
@@ -94,6 +97,12 @@ internal class SearchEngineInitializer
                 for (var i = 0; i < cachedMetadata.Count; i++)
                 {
                     var meta = cachedMetadata[i];
+                    if (!SupportsJournal(meta.Drive))
+                    {
+                        updatedMetadata.Add(meta);
+                        continue;
+                    }
+
                     var newUsn = _indexer.CatchUpDrive(meta.Drive, meta.JournalId, meta.NextUsn);
 
                     if (newUsn < 0)
@@ -155,11 +164,10 @@ internal class SearchEngineInitializer
 
             foreach (var (drive, journalId, nextUsn) in monitorsToStart)
             {
-                var monitor = new UsnMonitor(drive, journalId, nextUsn, _indexer, cts.Token, _onReindexRequired);
-                monitor.Start();
+                StartMonitor(drive, journalId, nextUsn, cts.Token);
             }
 
-            Logger.Log($"[SearchEngineInitializer] Started real-time USN monitors for {monitorsToStart.Count} drives.");
+            Logger.Log($"[SearchEngineInitializer] Started real-time USN monitors for {monitorsToStart.Count(m => SupportsJournal(m.Drive))} drives.");
         }
         catch (Exception ex)
         {
@@ -169,5 +177,24 @@ internal class SearchEngineInitializer
         {
             onComplete(false);
         }
+    }
+
+    private static bool SupportsJournal(string drive)
+    {
+        var fs = VolumeHelper.GetFileSystemType(drive);
+        return fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void StartMonitor(string drive, ulong journalId, long nextUsn, CancellationToken token)
+    {
+        if (SupportsJournal(drive))
+        {
+            new UsnMonitor(drive, journalId, nextUsn, _indexer, token, _onReindexRequired).Start();
+            return;
+        }
+
+        var monitor = new FolderDriveMonitor(drive, _onReindexRequired ?? (_ => { }), token);
+        monitor.Start();
+        _addMonitor?.Invoke(monitor);
     }
 }

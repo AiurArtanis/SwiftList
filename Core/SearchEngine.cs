@@ -23,6 +23,7 @@ public class SearchEngine : IDisposable
     private long _lastDriveDetectTime = 0;
     private readonly object _trimLock = new();
     private readonly Timer? _idleTimer;
+    private readonly List<IDisposable> _folderMonitors = new();
 
     public SearchEngine()
     {
@@ -30,7 +31,8 @@ public class SearchEngine : IDisposable
             _indexer,
             () => _machineSettings,
             () => _cts?.Token ?? CancellationToken.None,
-            () => _isRebuilding);
+            () => _isRebuilding,
+            AddFolderMonitor);
         _appIndex.Refresh();
         _idleTimer = new Timer(OnIdleTimerTick, null, 3000, 3000);
     }
@@ -71,6 +73,7 @@ public class SearchEngine : IDisposable
 
     public UsnIndexer.IndexerStatus GetStatus()
     {
+        _indexer.Status.IsMaintenanceBusy = _isRebuilding || _drives.HasPendingRebuilds;
         var now = Environment.TickCount64;
         if (now - _lastDriveDetectTime > 5000 && (_indexer.Status.State is "ready" or "idle"))
         {
@@ -179,9 +182,10 @@ public class SearchEngine : IDisposable
             // Cancel any active monitors
             _cts?.Cancel();
             _cts?.Dispose();
+            DisposeFolderMonitors();
             _cts = new CancellationTokenSource();
 
-            var initializer = new SearchEngineInitializer(_indexer, _appIndex, IndexCacheDir, _drives.QueueDriveRebuild);
+            var initializer = new SearchEngineInitializer(_indexer, _appIndex, IndexCacheDir, _drives.QueueDriveRebuild, AddFolderMonitor);
             initializer.Run(forceRebuild, _cts, isRebuilding =>
             {
                 lock (_startLock)
@@ -197,6 +201,7 @@ public class SearchEngine : IDisposable
         _idleTimer?.Dispose();
         _cts?.Cancel();
         _cts?.Dispose();
+        DisposeFolderMonitors();
         lock (_searchLock)
         {
             _searchCts?.Cancel();
@@ -205,5 +210,21 @@ public class SearchEngine : IDisposable
             _searchDirCts?.Dispose();
         }
         GC.SuppressFinalize(this);
+    }
+
+    private void AddFolderMonitor(IDisposable monitor)
+    {
+        lock (_folderMonitors)
+            _folderMonitors.Add(monitor);
+    }
+
+    private void DisposeFolderMonitors()
+    {
+        lock (_folderMonitors)
+        {
+            foreach (var monitor in _folderMonitors)
+                monitor.Dispose();
+            _folderMonitors.Clear();
+        }
     }
 }

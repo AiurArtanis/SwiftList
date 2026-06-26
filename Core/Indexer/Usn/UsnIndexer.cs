@@ -11,6 +11,7 @@ public class UsnIndexer : IDisposable
         public int TotalFiles { get; set; } = 0;
         public int TotalDirs { get; set; } = 0;
         public double ElapsedTime { get; set; } = 0.0;
+        public bool IsMaintenanceBusy { get; set; }
         public List<string> ActiveDrives { get; set; } = new();
         public List<DriveIndexStatus> Drives { get; set; } = new();
     }
@@ -56,12 +57,37 @@ public class UsnIndexer : IDisposable
         }
     }
 
-    public void SetDriveState(string drive, string state)
+    public void SetDriveState(string drive, string state) => SetDriveState(drive, state, false);
+
+    public void SetDriveState(string drive, string state, bool resetCounts)
     {
         lock (LockObj)
         {
             var item = Status.Drives.FirstOrDefault(d => d.Drive.Equals(drive, StringComparison.OrdinalIgnoreCase));
-            item?.State = state;
+            if (item == null)
+                return;
+
+            item.State = state;
+            if (resetCounts)
+            {
+                item.Files = 0;
+                item.Dirs = 0;
+            }
+        }
+    }
+
+    public void UpdateDriveProgress(string drive, int files, int dirs)
+    {
+        lock (LockObj)
+        {
+            var item = Status.Drives.FirstOrDefault(d => d.Drive.Equals(drive, StringComparison.OrdinalIgnoreCase));
+            if (item == null)
+                return;
+
+            item.State = "indexing";
+            item.Files = files;
+            item.Dirs = dirs;
+            Status.Progress = Math.Min(99, Math.Max(Status.Progress, 1));
         }
     }
 
