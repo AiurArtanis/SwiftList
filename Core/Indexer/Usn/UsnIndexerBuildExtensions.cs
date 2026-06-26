@@ -19,8 +19,11 @@ public static class UsnIndexerBuildExtensions
     {
         lock (indexer.LockObj)
         {
-            indexer.Status.State = "indexing";
-            indexer.Status.Progress = 0;
+            if (clearExisting)
+            {
+                indexer.Status.State = "indexing";
+                indexer.Status.Progress = 0;
+            }
             if (clearExisting)
             {
                 indexer.Status.TotalFiles = 0;
@@ -38,6 +41,7 @@ public static class UsnIndexerBuildExtensions
                 {
                     if (!indexer.Status.ActiveDrives.Contains(drive))
                         indexer.Status.ActiveDrives.Add(drive);
+                    indexer.SetDriveState(drive, "indexing");
                 }
             }
         }
@@ -56,8 +60,8 @@ public static class UsnIndexerBuildExtensions
                     runtime.Load(store);
                     indexer._driveMetadata[drive] = UsnIndexer.CreateMetadata(store);
                     indexer._recordIndexes[drive] = runtime;
-                    indexer.Status.TotalFiles += runtime.TotalFiles;
-                    indexer.Status.TotalDirs += runtime.TotalDirs;
+                    indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
+                    indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
 
                     indexer.Status.Progress = progress;
                     indexer.UpdateDriveCounts(drive);

@@ -71,8 +71,8 @@ public static class ReFsScanner
                 if (err == Win32Api.ERROR_HANDLE_EOF)
                     break; // enumeration complete
 
-                // ERROR_INVALID_FUNCTION (1) or ERROR_NOT_SUPPORTED (50) = not available on this volume
-                Logger.Log($"[ReFsScanner] FSCTL_ENUM_USN_DATA V1 not supported (err={err})", LogLevel.Debug);
+                // ERROR_INVALID_FUNCTION (1) or ERROR_NOT_SUPPORTED (50) = not available on this volume.
+                Logger.Log($"[ReFsScanner] FSCTL_ENUM_USN_DATA V1 unavailable (err={err}); falling back to parallel BFS.");
                 return null;
             }
 

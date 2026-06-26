@@ -9,6 +9,7 @@ public class SearchEngine : IDisposable
     private CancellationTokenSource? _cts;
     private readonly object _startLock = new();
     private bool _isRebuilding = false;
+    private readonly HashSet<string> _pendingDriveRebuilds = new(StringComparer.OrdinalIgnoreCase);
     private MachineSettings _machineSettings = MachineSettings.Load();
 
     // Search cancellation
@@ -86,6 +87,7 @@ public class SearchEngine : IDisposable
                 : detectedDrives.Where(enabledSet.Contains).ToList();
 
             var enabled = new HashSet<string>(supportedDrives, StringComparer.OrdinalIgnoreCase);
+            var drivesToBuild = new List<string>();
 
             lock (_indexer.LockObj)
             {
@@ -94,9 +96,11 @@ public class SearchEngine : IDisposable
 
                 foreach (var d in detectedDrives)
                 {
+                    var isEnabled = enabled.Contains(d);
                     if (currentDrives.TryGetValue(d, out var existing))
                     {
-                        existing.Enabled = enabled.Contains(d);
+                        existing.Enabled = isEnabled;
+                        existing.Kind = VolumeHelper.GetDisplayFileSystemType(d);
                         newDrivesList.Add(existing);
                     }
                     else
@@ -104,20 +108,67 @@ public class SearchEngine : IDisposable
                         newDrivesList.Add(new UsnIndexer.DriveIndexStatus
                         {
                             Drive = d,
-                            Enabled = enabled.Contains(d),
-                            Kind = VolumeHelper.GetFileSystemType(d),
-                            State = enabled.Contains(d) ? "pending" : "disabled",
+                            Enabled = isEnabled,
+                            Kind = VolumeHelper.GetDisplayFileSystemType(d),
+                            State = isEnabled ? "pending" : "disabled",
                             CachePath = Path.Combine(IndexCacheDir, d + ".meta")
                         });
+
+                        if (isEnabled)
+                            drivesToBuild.Add(d);
                     }
                 }
 
                 _indexer.Status.Drives = newDrivesList;
             }
+
+            foreach (var drive in drivesToBuild)
+                QueueDriveRebuild(drive);
         }
         catch (Exception ex)
         {
             Logger.Log($"[SearchEngine] Failed to refresh drive statuses: {ex.Message}", LogLevel.Error);
+        }
+    }
+
+    private void QueueDriveRebuild(string drive)
+    {
+        lock (_startLock)
+        {
+            if (_isRebuilding || !_pendingDriveRebuilds.Add(drive))
+                return;
+        }
+
+        Task.Run(() => RebuildDrive(drive));
+    }
+
+    private void RebuildDrive(string drive)
+    {
+        try
+        {
+            Logger.Log($"[SearchEngine] Building newly available drive {drive} only.");
+            var metadata = _indexer.BuildDrives(new[] { drive }, clearExisting: false);
+            if (metadata.Count == 0)
+            {
+                _indexer.SetDriveState(drive, "failed");
+                return;
+            }
+
+            _indexer.SaveDrivesToCache(IndexCacheDir, metadata);
+            foreach (var (builtDrive, journalId, nextUsn) in metadata)
+                new UsnMonitor(builtDrive, journalId, nextUsn, _indexer, _cts?.Token ?? CancellationToken.None).Start();
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[SearchEngine] Failed to build drive {drive}: {ex.Message}", LogLevel.Error);
+            _indexer.SetDriveState(drive, "failed");
+        }
+        finally
+        {
+            lock (_startLock)
+            {
+                _pendingDriveRebuilds.Remove(drive);
+            }
         }
     }
 

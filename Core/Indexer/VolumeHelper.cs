@@ -120,6 +120,39 @@ public static class VolumeHelper
         return success ? fileSystemName.ToString() : "NTFS";
     }
 
+    public static string GetDisplayFileSystemType(string driveLetter)
+    {
+        var fsType = GetFileSystemType(driveLetter);
+        return fsType switch
+        {
+            "NTFS" => $"NTFS {GetNtfsVersion(driveLetter)}",
+            "ReFS" => $"ReFS {GetReFsVersion(driveLetter)}",
+            _ => fsType
+        };
+    }
+
+    public static string GetNtfsVersion(string driveLetter)
+    {
+        var volumePath = $"\\\\.\\{driveLetter}:";
+        using var handle = Win32Api.CreateFileW(volumePath, Win32Api.GENERIC_READ,
+            Win32Api.FILE_SHARE_READ | Win32Api.FILE_SHARE_WRITE,
+            IntPtr.Zero, Win32Api.OPEN_EXISTING, 0, IntPtr.Zero);
+        if (handle.IsInvalid) return "v?";
+
+        // NTFS_VOLUME_DATA_BUFFER (96 bytes) + NTFS_EXTENDED_VOLUME_DATA.
+        var ntfsBuf = new byte[128];
+        if (Win32Api.DeviceIoControl(handle, Win32Api.FSCTL_GET_NTFS_VOLUME_DATA,
+            IntPtr.Zero, 0, ntfsBuf, (uint)ntfsBuf.Length, out var returned, IntPtr.Zero)
+            && returned >= 104)
+        {
+            var major = BitConverter.ToUInt16(ntfsBuf, 100);
+            var minor = BitConverter.ToUInt16(ntfsBuf, 102);
+            return $"v{major}.{minor}";
+        }
+
+        return "v?";
+    }
+
     // Returns the ReFS on-disk format version string (e.g. "v3.14").
     public static string GetReFsVersion(string driveLetter)
     {

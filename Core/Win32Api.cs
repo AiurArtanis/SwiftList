@@ -21,6 +21,7 @@ public static class Win32Api
     public const uint FSCTL_ENUM_USN_DATA = 0x000900b3;
     public const uint FSCTL_READ_USN_JOURNAL = 0x000900bb;
     public const uint FSCTL_CREATE_USN_JOURNAL = 0x000900e7;
+    public const uint FSCTL_GET_NTFS_VOLUME_DATA = 0x00090064;
     public const uint ERROR_HANDLE_EOF = 38;
 
     public const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;

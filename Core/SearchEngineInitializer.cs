@@ -18,18 +18,13 @@ internal class SearchEngineInitializer
     public void EnsureDriveStatuses(IReadOnlyList<string> detectedDrives, IReadOnlyList<string> enabledDrives)
     {
         var enabled = new HashSet<string>(enabledDrives, StringComparer.OrdinalIgnoreCase);
-        var statuses = detectedDrives.Select(d =>
+        var statuses = detectedDrives.Select(d => new UsnIndexer.DriveIndexStatus
         {
-            var fsType = VolumeHelper.GetFileSystemType(d);
-            var kind = fsType == "ReFS" ? $"ReFS {VolumeHelper.GetReFsVersion(d)}" : fsType;
-            return new UsnIndexer.DriveIndexStatus
-            {
-                Drive = d,
-                Enabled = enabled.Contains(d),
-                Kind = kind,
-                State = enabled.Contains(d) ? "pending" : "disabled",
-                CachePath = FileRecordStoreSerializer.GetBasePath(_indexCacheDir, d) + ".meta"
-            };
+            Drive = d,
+            Enabled = enabled.Contains(d),
+            Kind = VolumeHelper.GetDisplayFileSystemType(d),
+            State = enabled.Contains(d) ? "pending" : "disabled",
+            CachePath = FileRecordStoreSerializer.GetBasePath(_indexCacheDir, d) + ".meta"
         }).ToList();
 
         _indexer.SetDriveStatuses(statuses);
