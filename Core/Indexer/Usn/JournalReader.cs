@@ -210,10 +210,17 @@ public class JournalReader
 
         var currentJournalId = BitConverter.ToUInt64(queryBuf, 0);
         var currentNextUsn = BitConverter.ToInt64(queryBuf, 16);
+        var lowestValidUsn = BitConverter.ToInt64(queryBuf, 24);
 
         if (currentJournalId != journalId)
         {
             Logger.Log($"[JournalReader] Journal ID mismatch on {drive} (expected {journalId}, got {currentJournalId}). Need full re-index.", LogLevel.Warn);
+            return -1;
+        }
+
+        if (startUsn < lowestValidUsn || startUsn > currentNextUsn)
+        {
+            Logger.Log($"[JournalReader] Cached USN {startUsn} on {drive} is outside journal range {lowestValidUsn}..{currentNextUsn}. Need full re-index.", LogLevel.Warn);
             return -1;
         }
 

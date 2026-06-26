@@ -146,17 +146,12 @@ public class SearchEngine : IDisposable
     {
         try
         {
-            Logger.Log($"[SearchEngine] Building newly available drive {drive} only.");
-            var metadata = _indexer.BuildDrives(new[] { drive }, clearExisting: false);
-            if (metadata.Count == 0)
-            {
-                _indexer.SetDriveState(drive, "failed");
-                return;
-            }
-
-            _indexer.SaveDrivesToCache(IndexCacheDir, metadata);
-            foreach (var (builtDrive, journalId, nextUsn) in metadata)
-                new UsnMonitor(builtDrive, journalId, nextUsn, _indexer, _cts?.Token ?? CancellationToken.None).Start();
+            DriveRecovery.RestoreOrRebuild(
+                _indexer,
+                IndexCacheDir,
+                drive,
+                _cts?.Token ?? CancellationToken.None,
+                QueueDriveRebuild);
         }
         catch (Exception ex)
         {
@@ -266,7 +261,7 @@ public class SearchEngine : IDisposable
             _cts?.Dispose();
             _cts = new CancellationTokenSource();
 
-            var initializer = new SearchEngineInitializer(_indexer, _appIndex, IndexCacheDir);
+            var initializer = new SearchEngineInitializer(_indexer, _appIndex, IndexCacheDir, QueueDriveRebuild);
             initializer.Run(forceRebuild, _cts, isRebuilding =>
             {
                 lock (_startLock)

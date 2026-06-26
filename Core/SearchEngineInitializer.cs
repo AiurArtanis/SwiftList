@@ -7,12 +7,18 @@ internal class SearchEngineInitializer
     private readonly UsnIndexer _indexer;
     private readonly StartMenuAppIndex _appIndex;
     private readonly string _indexCacheDir;
+    private readonly Action<string>? _onReindexRequired;
 
-    public SearchEngineInitializer(UsnIndexer indexer, StartMenuAppIndex appIndex, string indexCacheDir)
+    public SearchEngineInitializer(
+        UsnIndexer indexer,
+        StartMenuAppIndex appIndex,
+        string indexCacheDir,
+        Action<string>? onReindexRequired = null)
     {
         _indexer = indexer;
         _appIndex = appIndex;
         _indexCacheDir = indexCacheDir;
+        _onReindexRequired = onReindexRequired;
     }
 
     public void EnsureDriveStatuses(IReadOnlyList<string> detectedDrives, IReadOnlyList<string> enabledDrives)
@@ -149,7 +155,7 @@ internal class SearchEngineInitializer
 
             foreach (var (drive, journalId, nextUsn) in monitorsToStart)
             {
-                var monitor = new UsnMonitor(drive, journalId, nextUsn, _indexer, cts.Token);
+                var monitor = new UsnMonitor(drive, journalId, nextUsn, _indexer, cts.Token, _onReindexRequired);
                 monitor.Start();
             }
 

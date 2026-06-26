@@ -56,4 +56,44 @@ public static class UsnIndexerCacheExtensions
             return metadata;
         }
     }
+
+    public static (ulong JournalId, long NextUsn)? TryLoadDriveFromCache(
+        this UsnIndexer indexer,
+        string cacheDir,
+        string drive)
+    {
+        lock (indexer.LockObj)
+        {
+            var store = FileRecordStoreSerializer.Load(cacheDir, drive);
+            if (store == null)
+                return null;
+
+            var runtime = new RuntimeIndex();
+            runtime.Load(store);
+            indexer._driveMetadata[drive] = UsnIndexer.CreateMetadata(store);
+            indexer._recordIndexes[drive] = runtime;
+
+            if (!indexer.Status.ActiveDrives.Contains(drive, StringComparer.OrdinalIgnoreCase))
+                indexer.Status.ActiveDrives.Add(drive);
+
+            indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
+            indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
+            indexer.Status.State = "ready";
+            indexer.Status.Progress = 100;
+            indexer.UpdateDriveCounts(drive);
+            return (store.JournalId, store.NextUsn);
+        }
+    }
+
+    public static void DropDriveFromRuntime(this UsnIndexer indexer, string drive)
+    {
+        lock (indexer.LockObj)
+        {
+            indexer._driveMetadata.Remove(drive);
+            indexer._recordIndexes.Remove(drive);
+            indexer.Status.ActiveDrives.RemoveAll(d => d.Equals(drive, StringComparison.OrdinalIgnoreCase));
+            indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
+            indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
+        }
+    }
 }

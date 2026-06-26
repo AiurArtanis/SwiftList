@@ -31,6 +31,9 @@ public static class ExplorerSearchHelper
             }, token);
             Logger.Log($"[ExplorerSearchHelper] Local search completed. Matches count: {matchCount}", LogLevel.Debug);
         }
+        catch (OperationCanceledException)
+        {
+        }
         catch (Exception ex)
         {
             Logger.Log($"[ExplorerSearchHelper] Local search failed: {ex.Message}", LogLevel.Error);

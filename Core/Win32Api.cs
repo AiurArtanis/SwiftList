@@ -23,6 +23,9 @@ public static class Win32Api
     public const uint FSCTL_CREATE_USN_JOURNAL = 0x000900e7;
     public const uint FSCTL_GET_NTFS_VOLUME_DATA = 0x00090064;
     public const uint ERROR_HANDLE_EOF = 38;
+    public const int ERROR_INVALID_HANDLE = 6;
+    public const int ERROR_NOT_READY = 21;
+    public const int ERROR_DEVICE_NOT_CONNECTED = 1167;
 
     public const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
     public const uint FSCTL_READ_FILE_USN_DATA = 0x000900eb;
