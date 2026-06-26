@@ -34,11 +34,9 @@ When interacting with this repository, performing code modification, compilation
    * **Blind compilation of the entire solution (e.g., `dotnet build *.sln` or `*.slnx`) is strictly prohibited**. You must compile only the specific subproject/csproj to which the modified files belong (for example: `dotnet build Src/MySubProject.csproj`).
    * This maximizes compilation efficiency, reduces resource usage, and avoids file lock conflicts in large workspaces.
 
-2. **MANDATORY: Stop Service and Terminate Running Process Before Compilation**
-   * **You MUST ALWAYS stop the background service (`SwiftList.Service` / `SwiftList.Service.exe`) first, and then terminate any running instance of the SwiftList application (`SwiftList.App.exe`) BEFORE starting any compilation/build** to release binary and DLL locks.
-   * Since the service and application may run with elevated privileges (e.g., Administrator), commands should be executed with administrator rights if needed.
-   * **Do NOT automatically restart the service or launch the application after the compilation is complete** unless explicitly requested by the user.
-   * **Recommended command sequence to execute before building**:
+2. **Do Not Terminate App and Service**
+   * **Do NOT proactively terminate the app and background service processes. Only perform testing and compilation. The build process does not conflict with the running app and service.**
+   * Only when a binary/DLL lock conflict occurs during compilation leading to a build failure, and with explicit user authorization or instruction, you may release the locks using the following sequence:
      ```powershell
      # Stop the SwiftList Windows Service (requires Admin privileges)
      powershell -Command "Start-Process net -ArgumentList 'stop SwiftList.Service' -Verb RunAs -WindowStyle Hidden"

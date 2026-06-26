@@ -59,7 +59,7 @@ public static class ExplorerSearchHelper
                 .ToList();
 
             localMatches.Clear();
-            localMatches.AddRange(sorted);
+            localMatches.AddRange(sorted.Take(50));
             for (var idx = 0; idx < localMatches.Count; idx++)
             {
                 localMatches[idx].Index = idx;

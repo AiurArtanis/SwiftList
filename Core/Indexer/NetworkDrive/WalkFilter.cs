@@ -66,17 +66,18 @@ internal sealed class WalkFilter
             return false;
 
         var relativePath = GetRelativePath(fullPath, isDirectory);
-        var fullPathNormalized = fullPath.Replace('\\', '/');
+        var trimmedPath = fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var fullPathNormalized = trimmedPath.Replace('\\', '/');
 
         foreach (var glob in _ignoredGlobs)
         {
-            if (glob.IsMatch(relativePath) || glob.IsMatch(fullPathNormalized) || glob.IsMatch(fullPath))
+            if (glob.IsMatch(relativePath) || glob.IsMatch(fullPathNormalized) || glob.IsMatch(trimmedPath))
                 return true;
         }
 
         foreach (var regex in _ignoredRegexes)
         {
-            if (regex.IsMatch(name) || regex.IsMatch(relativePath) || regex.IsMatch(fullPathNormalized) || regex.IsMatch(fullPath))
+            if (regex.IsMatch(name) || regex.IsMatch(relativePath) || regex.IsMatch(fullPathNormalized) || regex.IsMatch(trimmedPath))
                 return true;
         }
 

@@ -62,8 +62,10 @@ public sealed class ExclusionRuleSet
         // 1. Check excluded roots on the full normalized path
         foreach (var excludedRoot in _excludedRoots)
         {
-            if (normalizedExempt != null && normalizedExempt.StartsWith(excludedRoot, StringComparison.OrdinalIgnoreCase))
-                continue; // Exempt the excluded root if it is a parent of the active search scope
+            if (normalizedExempt != null &&
+                (normalizedExempt.StartsWith(excludedRoot, StringComparison.OrdinalIgnoreCase) ||
+                 (excludedRoot.StartsWith(normalizedExempt, StringComparison.OrdinalIgnoreCase) && string.Equals(normalized, excludedRoot, StringComparison.OrdinalIgnoreCase))))
+                continue;
 
             if (normalized.StartsWith(excludedRoot, StringComparison.OrdinalIgnoreCase))
                 return true;
