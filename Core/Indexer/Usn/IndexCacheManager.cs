@@ -19,6 +19,12 @@ internal static class IndexCacheManager
             JournalId = journalId,
             NextUsn = nextUsn
         };
+        var identity = VolumeHelper.GetVolumeIdentity(drive);
+        if (identity.HasValue)
+        {
+            store.FileSystemType = identity.Value.FileSystemType;
+            store.VolumeSerialNumber = identity.Value.SerialNumber;
+        }
         var namePool = new FileRecordNamePool();
 
         store.RootId = rootFrn;
@@ -57,6 +63,8 @@ internal static class IndexCacheManager
                 var store = runtime.ToStore(
                     metadata.SourceKind,
                     metadata.IdKind,
+                    metadata.FileSystemType,
+                    metadata.VolumeSerialNumber,
                     metadata.RootId,
                     metadata.JournalId,
                     metadata.NextUsn);

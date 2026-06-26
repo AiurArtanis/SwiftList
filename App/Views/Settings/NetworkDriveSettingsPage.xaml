@@ -25,8 +25,10 @@
                             <ColumnDefinition Width="1.2*"/>
                             <ColumnDefinition Width="1.1*"/>
                             <ColumnDefinition Width="1.4*"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanEditEnabled}"
                                   VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1" Text="{Binding Drive, StringFormat={}{0}:}" FontSize="13" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="2" Text="{Binding State}" VerticalAlignment="Center"/>
@@ -40,7 +42,16 @@
                                   DisplayMemberPath="Label"
                                   SelectedValuePath="Value"
                                   SelectedValue="{Binding RefreshMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                  IsEnabled="{Binding DataContext.NetworkDrive.CanEditRefreshModes, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                  IsEnabled="{Binding CanEditRefreshMode}"/>
+                        <Button Grid.Column="5"
+                                Style="{StaticResource SettingsButton}"
+                                MinWidth="72"
+                                Height="28"
+                                Padding="10,0"
+                                Content="{Binding RowActionText}"
+                                Command="{Binding RowActionCommand}"
+                                IsEnabled="{Binding CanRunRowAction}"
+                                Visibility="{Binding IsRowActionVisible, Converter={StaticResource BoolToVis}}"/>
                     </Grid>
                 </Border>
             </DataTemplate>
@@ -84,6 +95,7 @@
                             <ColumnDefinition Width="1.2*"/>
                             <ColumnDefinition Width="1.1*"/>
                             <ColumnDefinition Width="1.4*"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="1" 
                                    Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderDrive]}" 

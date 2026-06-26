@@ -105,6 +105,8 @@ internal sealed class NetworkIndex
             var store = _runtime.ToStore(
                 FileRecordSourceKind.NetworkMappedDrive,
                 FileRecordIdKind.SourceLocalId64,
+                fileSystemType: string.Empty,
+                volumeSerialNumber: 0,
                 RootId,
                 journalId: 0,
                 nextUsn: 0);

@@ -37,6 +37,9 @@ internal static class IndexerHelper
     };
 
     public static string GetCachePath(string drive) => FileRecordStoreSerializer.GetBasePath(Path.Combine(Logger.UserDataDir, "indexes"), drive) + ".meta";
+    public static bool HasCache(string drive) => FileRecordStoreSerializer.Exists(Path.Combine(Logger.UserDataDir, "indexes"), drive);
+    public static IReadOnlyList<string> GetCachedDrives() => FileRecordStoreSerializer.ListSourceKeys(Path.Combine(Logger.UserDataDir, "indexes"));
+    public static void DeleteCache(string drive) => FileRecordStoreSerializer.Delete(Path.Combine(Logger.UserDataDir, "indexes"), drive);
 
     public static bool TryLoad(string drive, out NetworkIndex index)
     {

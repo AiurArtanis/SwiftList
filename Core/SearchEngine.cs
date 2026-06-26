@@ -9,8 +9,8 @@ public class SearchEngine : IDisposable
     private CancellationTokenSource? _cts;
     private readonly object _startLock = new();
     private bool _isRebuilding = false;
-    private readonly HashSet<string> _pendingDriveRebuilds = new(StringComparer.OrdinalIgnoreCase);
     private MachineSettings _machineSettings = MachineSettings.Load();
+    private readonly SearchEngineDriveMaintenance _drives;
 
     // Search cancellation
     private CancellationTokenSource? _searchCts;
@@ -26,6 +26,11 @@ public class SearchEngine : IDisposable
 
     public SearchEngine()
     {
+        _drives = new SearchEngineDriveMaintenance(
+            _indexer,
+            () => _machineSettings,
+            () => _cts?.Token ?? CancellationToken.None,
+            () => _isRebuilding);
         _appIndex.Refresh();
         _idleTimer = new Timer(OnIdleTimerTick, null, 3000, 3000);
     }
@@ -76,96 +81,11 @@ public class SearchEngine : IDisposable
     }
 
     private void RefreshDrivesInStatus()
-    {
-        try
-        {
-            var detectedDrives = VolumeHelper.DetectSupportedDrives();
-            var machineSettings = MachineSettings.Load();
-            var enabledSet = new HashSet<string>(machineSettings.EnabledLocalDrives, StringComparer.OrdinalIgnoreCase);
-            var supportedDrives = enabledSet.Count == 0
-                ? detectedDrives
-                : detectedDrives.Where(enabledSet.Contains).ToList();
+        => _drives.RefreshDrivesInStatus();
 
-            var enabled = new HashSet<string>(supportedDrives, StringComparer.OrdinalIgnoreCase);
-            var drivesToBuild = new List<string>();
+    public bool RebuildDriveIndex(string drive) => _drives.RebuildDriveIndex(drive);
 
-            lock (_indexer.LockObj)
-            {
-                var currentDrives = _indexer.Status.Drives.ToDictionary(d => d.Drive, StringComparer.OrdinalIgnoreCase);
-                var newDrivesList = new List<UsnIndexer.DriveIndexStatus>();
-
-                foreach (var d in detectedDrives)
-                {
-                    var isEnabled = enabled.Contains(d);
-                    if (currentDrives.TryGetValue(d, out var existing))
-                    {
-                        existing.Enabled = isEnabled;
-                        existing.Kind = VolumeHelper.GetDisplayFileSystemType(d);
-                        newDrivesList.Add(existing);
-                    }
-                    else
-                    {
-                        newDrivesList.Add(new UsnIndexer.DriveIndexStatus
-                        {
-                            Drive = d,
-                            Enabled = isEnabled,
-                            Kind = VolumeHelper.GetDisplayFileSystemType(d),
-                            State = isEnabled ? "pending" : "disabled",
-                            CachePath = Path.Combine(IndexCacheDir, d + ".meta")
-                        });
-
-                        if (isEnabled)
-                            drivesToBuild.Add(d);
-                    }
-                }
-
-                _indexer.Status.Drives = newDrivesList;
-            }
-
-            foreach (var drive in drivesToBuild)
-                QueueDriveRebuild(drive);
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[SearchEngine] Failed to refresh drive statuses: {ex.Message}", LogLevel.Error);
-        }
-    }
-
-    private void QueueDriveRebuild(string drive)
-    {
-        lock (_startLock)
-        {
-            if (_isRebuilding || !_pendingDriveRebuilds.Add(drive))
-                return;
-        }
-
-        Task.Run(() => RebuildDrive(drive));
-    }
-
-    private void RebuildDrive(string drive)
-    {
-        try
-        {
-            DriveRecovery.RestoreOrRebuild(
-                _indexer,
-                IndexCacheDir,
-                drive,
-                _cts?.Token ?? CancellationToken.None,
-                QueueDriveRebuild);
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[SearchEngine] Failed to build drive {drive}: {ex.Message}", LogLevel.Error);
-            _indexer.SetDriveState(drive, "failed");
-        }
-        finally
-        {
-            lock (_startLock)
-            {
-                _pendingDriveRebuilds.Remove(drive);
-            }
-        }
-    }
+    public bool DeleteDriveIndex(string drive) => _drives.DeleteDriveIndex(drive);
 
     public MachineSettings GetMachineSettings() => _machineSettings;
 
@@ -261,7 +181,7 @@ public class SearchEngine : IDisposable
             _cts?.Dispose();
             _cts = new CancellationTokenSource();
 
-            var initializer = new SearchEngineInitializer(_indexer, _appIndex, IndexCacheDir, QueueDriveRebuild);
+            var initializer = new SearchEngineInitializer(_indexer, _appIndex, IndexCacheDir, _drives.QueueDriveRebuild);
             initializer.Run(forceRebuild, _cts, isRebuilding =>
             {
                 lock (_startLock)

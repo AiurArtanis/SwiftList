@@ -168,10 +168,25 @@ public class SearchService : IDisposable
 
     public void RefreshNetworkIndexes() => UserNetworkDriveSearch.Refresh();
     public IReadOnlyList<NetworkIndexStatus> GetNetworkIndexStatuses() => UserNetworkDriveSearch.GetStatuses();
+    public bool HasNetworkDriveCache(string drive) => UserNetworkDriveSearch.HasCache(drive);
+    public IReadOnlyList<string> GetCachedNetworkDrives() => UserNetworkDriveSearch.GetCachedDrives();
+    public void DeleteNetworkDriveCache(string drive) => UserNetworkDriveSearch.DeleteCache(drive);
 
     public async Task InitializeOrLoadIndexAsync(bool forceRebuild = false, CancellationToken token = default)
     {
         if (forceRebuild) await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.Rebuild }, token).ConfigureAwait(false);
+    }
+
+    public async Task<bool> RebuildDriveIndexAsync(string drive, CancellationToken token = default)
+    {
+        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.RebuildDrive, Drive = drive }, token).ConfigureAwait(false);
+        return resp.Kind == PipeResponseKind.Ok;
+    }
+
+    public async Task<bool> DeleteDriveIndexAsync(string drive, CancellationToken token = default)
+    {
+        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.DeleteDriveIndex, Drive = drive }, token).ConfigureAwait(false);
+        return resp.Kind == PipeResponseKind.Ok;
     }
 
     public async Task<MachineSettings> GetMachineSettingsAsync(CancellationToken token = default)

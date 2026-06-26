@@ -184,6 +184,20 @@ internal sealed class UsnServicePipeServer : IDisposable
                     _engine?.InitializeOrLoadIndex(true);
                     return new PipeResponse { Kind = PipeResponseKind.Ok };
 
+                case SearchRequestId.RebuildDrive:
+                    var drive = msg.Drive ?? string.Empty;
+                    Logger.Log($"[UsnService] Received REBUILD_DRIVE request from client: {drive}");
+                    return _engine?.RebuildDriveIndex(drive) == true
+                        ? new PipeResponse { Kind = PipeResponseKind.Ok }
+                        : new PipeResponse { Kind = PipeResponseKind.Error, Message = "Invalid or disabled drive" };
+
+                case SearchRequestId.DeleteDriveIndex:
+                    var deleteDrive = msg.Drive ?? string.Empty;
+                    Logger.Log($"[UsnService] Received DELETE_DRIVE_INDEX request from client: {deleteDrive}");
+                    return _engine?.DeleteDriveIndex(deleteDrive) == true
+                        ? new PipeResponse { Kind = PipeResponseKind.Ok }
+                        : new PipeResponse { Kind = PipeResponseKind.Error, Message = "Invalid drive" };
+
                 case SearchRequestId.GetMachineSettings:
                     return new PipeResponse
                     {

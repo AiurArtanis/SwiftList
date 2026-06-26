@@ -131,6 +131,20 @@ public sealed class NetworkIndexer : IDisposable
             return _statuses.Values.Select(s => s.Clone()).OrderBy(s => s.Drive).ToList();
     }
 
+    public void DeleteCache(string drive)
+    {
+        drive = IndexerHelper.NormalizeDrive(drive);
+        if (drive.Length == 0)
+            return;
+
+        IndexerHelper.DeleteCache(drive);
+        lock (_gate)
+        {
+            _indexes.Remove(drive);
+            _statuses.Remove(drive);
+        }
+    }
+
 
 
     private void SetStatus(string drive, string state, int? items, string? error)

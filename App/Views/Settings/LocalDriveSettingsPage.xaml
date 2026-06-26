@@ -20,13 +20,22 @@
                 <Border Style="{StaticResource SettingsRow}">
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40"/><ColumnDefinition Width="80"/><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="1.1*"/>
+                            <ColumnDefinition Width="40"/><ColumnDefinition Width="70"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1*"/><ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}" IsEnabled="{Binding DataContext.LocalDrive.IsDriveCheckboxEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}" VerticalAlignment="Center"/>
+                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}" IsEnabled="{Binding CanEditEnabled}" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="2" Text="{Binding Kind}" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="3" Text="{Binding State}" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="4" Text="{Binding ItemCount}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="5"
+                                Style="{StaticResource SettingsButton}"
+                                MinWidth="72"
+                                Height="28"
+                                Padding="10,0"
+                                Content="{Binding RowActionText}"
+                                Command="{Binding RowActionCommand}"
+                                IsEnabled="{Binding CanRunRowAction}"
+                                Visibility="{Binding IsRowActionVisible, Converter={StaticResource BoolToVis}}"/>
                     </Grid>
                 </Border>
             </DataTemplate>
@@ -64,7 +73,7 @@
                 <StackPanel>
                     <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40"/><ColumnDefinition Width="80"/><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="1.2*"/><ColumnDefinition Width="1.1*"/>
+                            <ColumnDefinition Width="40"/><ColumnDefinition Width="70"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1*"/><ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="1" 
                                    Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Local_HeaderDrive]}" 

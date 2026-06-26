@@ -179,6 +179,8 @@ public sealed class RuntimeIndex
     public FileRecordStore ToStore(
         FileRecordSourceKind sourceKind,
         FileRecordIdKind idKind,
+        string fileSystemType,
+        uint volumeSerialNumber,
         UInt128 rootId,
         ulong journalId,
         long nextUsn)
@@ -188,6 +190,8 @@ public sealed class RuntimeIndex
             SourceKey = SourceKey,
             SourceKind = sourceKind,
             IdKind = idKind,
+            FileSystemType = fileSystemType,
+            VolumeSerialNumber = volumeSerialNumber,
             RootId = rootId,
             JournalId = journalId,
             NextUsn = nextUsn

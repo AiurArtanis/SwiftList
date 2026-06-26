@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading.Channels;
 using Microsoft.Win32.SafeHandles;
@@ -16,91 +17,20 @@ public static class ReFsScanner
         ulong journalId,
         long nextUsn)
     {
+        var stopwatch = Stopwatch.StartNew();
         Logger.Log($"[ReFsScanner] Starting ReFS initial scan for drive {drive}...");
 
-        // Fast path: FSCTL_ENUM_USN_DATA V1 requesting USN_RECORD_V3 (128-bit FRNs).
-        // Supported on Win10 1809+ / Server 2019+. Falls back to BFS on older systems.
-        var items = TryFastEnum(volumeHandle, nextUsn);
-        if (items != null)
-        {
-            Logger.Log($"[ReFsScanner] Drive {drive}: fast enum complete ({items.Count} items).");
-            return (rootFrn, items, nextUsn, journalId);
-        }
-
         // Slow path: parallel BFS via OpenFileById + GetFileInformationByHandleEx.
-        // ponytail: O(N) I/O-bound scan; upgrade path = fast enum on future ReFS/Windows versions.
-        Logger.Log($"[ReFsScanner] Drive {drive}: fast enum unavailable, using parallel BFS.");
-        items = ScanParallel(volumeHandle, rootFrn);
+        // ponytail: O(N) I/O-bound scan; upgrade path = a documented ReFS full-enum API.
+        Logger.Log($"[ReFsScanner] Drive {drive}: using ReFS directory-id BFS.");
+        var items = ScanParallel(volumeHandle, rootFrn);
         if (items == null)
             return null;
 
-        Logger.Log($"[ReFsScanner] Drive {drive}: parallel BFS complete ({items.Count} items).");
+        stopwatch.Stop();
+        var rate = stopwatch.Elapsed.TotalSeconds > 0 ? items.Count / stopwatch.Elapsed.TotalSeconds : items.Count;
+        Logger.Log($"[ReFsScanner] Drive {drive}: directory-id BFS complete ({items.Count} items, {stopwatch.Elapsed.TotalSeconds:F2}s, {rate:F0} items/s).");
         return (rootFrn, items, nextUsn, journalId);
-    }
-
-    // Fast path: enumerate all file records via FSCTL_ENUM_USN_DATA V1.
-    // Returns null if not supported by this volume/OS (caller falls back to BFS).
-    private static Dictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)>? TryFastEnum(
-        SafeFileHandle volumeHandle, long nextUsn)
-    {
-        const int bufSize = 1024 * 1024;
-        var outBuf = new byte[bufSize];
-        var items = new Dictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)>(32768);
-        ulong nextFrn = 0;
-
-        while (true)
-        {
-            var input = new Win32Api.MFT_ENUM_DATA_V1
-            {
-                StartFileReferenceNumber = nextFrn,
-                LowUsn = 0,
-                HighUsn = nextUsn,
-                MinMajorVersion = 3, // request USN_RECORD_V3 (128-bit FRNs)
-                MaxMajorVersion = 3
-            };
-
-            var ok = Win32Api.DeviceIoControl(
-                volumeHandle, Win32Api.FSCTL_ENUM_USN_DATA,
-                ref input, (uint)Marshal.SizeOf<Win32Api.MFT_ENUM_DATA_V1>(),
-                outBuf, (uint)outBuf.Length,
-                out var returned, IntPtr.Zero);
-
-            if (!ok)
-            {
-                var err = Marshal.GetLastWin32Error();
-                if (err == Win32Api.ERROR_HANDLE_EOF)
-                    break; // enumeration complete
-
-                // ERROR_INVALID_FUNCTION (1) or ERROR_NOT_SUPPORTED (50) = not available on this volume.
-                Logger.Log($"[ReFsScanner] FSCTL_ENUM_USN_DATA V1 unavailable (err={err}); falling back to parallel BFS.");
-                return null;
-            }
-
-            if (returned <= 8) break;
-
-            var next = BitConverter.ToUInt64(outBuf, 0); // next StartFileReferenceNumber
-            if (next == nextFrn) break;
-            nextFrn = next;
-
-            var offset = 8;
-            var end = (int)returned;
-            while (offset < end)
-            {
-                if (offset + 4 > end) break;
-                var recLen = BitConverter.ToUInt32(outBuf, offset);
-                if (recLen == 0 || offset + recLen > end) break;
-                try
-                {
-                    var rec = UsnRecordParser.ParseRecord(new ReadOnlySpan<byte>(outBuf, offset, (int)recLen));
-                    if (!string.IsNullOrEmpty(rec.FileName))
-                        items[rec.FileReferenceNumber] = (rec.FileName, rec.ParentFileReferenceNumber, rec.IsDirectory);
-                }
-                catch { }
-                offset += (int)recLen;
-            }
-        }
-
-        return items;
     }
 
     // Slow path: parallel BFS using Channel<UInt128> as the work queue.

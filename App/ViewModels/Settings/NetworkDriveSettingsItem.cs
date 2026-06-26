@@ -1,0 +1,90 @@
+using System.Windows.Input;
+using SwiftList.App.Services;
+
+namespace SwiftList.App.ViewModels.Settings;
+
+public class NetworkDriveSettingsItem : ViewModelBase
+{
+    private bool _isEnabled;
+    private string _refreshMode = "Manual";
+    private string _state = string.Empty;
+    private string _itemCount = string.Empty;
+    private bool _canRunRowAction;
+    private bool _canEditEnabled;
+    private bool _canEditRefreshMode;
+    private bool _isPresent = true;
+    private NetworkDriveRowAction _rowAction;
+
+    public string Drive { get; set; } = string.Empty;
+    public ICommand RowActionCommand { get; set; } = null!;
+
+    public string State { get => _state; set => SetProperty(ref _state, value); }
+    public string ItemCount { get => _itemCount; set => SetProperty(ref _itemCount, value); }
+    public bool IsEnabled { get => _isEnabled; set => SetProperty(ref _isEnabled, value); }
+    public bool IsPresent { get => _isPresent; set => SetProperty(ref _isPresent, value); }
+    public bool CanEditEnabled { get => _canEditEnabled; set => SetProperty(ref _canEditEnabled, value); }
+    public bool CanEditRefreshMode { get => _canEditRefreshMode; set => SetProperty(ref _canEditRefreshMode, value); }
+
+    public string RefreshMode
+    {
+        get => _refreshMode;
+        set
+        {
+            if (SetProperty(ref _refreshMode, value))
+                OnPropertyChanged(nameof(RefreshModeText));
+        }
+    }
+
+    public string RefreshModeText => RefreshMode switch
+    {
+        "Manual" => TranslationManager.Instance["Network_ModeManual"],
+        "15Minutes" => TranslationManager.Instance["Network_Mode15M"],
+        "Hourly" => TranslationManager.Instance["Network_ModeHourly"],
+        "Daily" => TranslationManager.Instance["Network_ModeDaily"],
+        _ => RefreshMode
+    };
+
+    public bool CanRunRowAction
+    {
+        get => _canRunRowAction;
+        set
+        {
+            if (SetProperty(ref _canRunRowAction, value))
+                CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
+    public NetworkDriveRowAction RowAction
+    {
+        get => _rowAction;
+        set
+        {
+            if (SetProperty(ref _rowAction, value))
+            {
+                OnPropertyChanged(nameof(IsRowActionVisible));
+                OnPropertyChanged(nameof(RowActionText));
+            }
+        }
+    }
+
+    public bool IsRowActionVisible => RowAction != NetworkDriveRowAction.None;
+    public string RowActionText => RowAction switch
+    {
+        NetworkDriveRowAction.Rebuild => TranslationManager.Instance["Network_RowRebuildBtn"],
+        NetworkDriveRowAction.Delete => TranslationManager.Instance["Network_RowDeleteBtn"],
+        _ => string.Empty
+    };
+
+    public void NotifyLanguageChanged()
+    {
+        OnPropertyChanged(nameof(RefreshModeText));
+        OnPropertyChanged(nameof(RowActionText));
+    }
+}
+
+public enum NetworkDriveRowAction
+{
+    None,
+    Rebuild,
+    Delete
+}

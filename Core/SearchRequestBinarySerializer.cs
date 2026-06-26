@@ -7,7 +7,7 @@ namespace SwiftList.Core;
 public static class SearchRequestBinarySerializer
 {
     private const int Magic = 0x51504C53; // SLPQ
-    private const int VersionSearchRequest = 3;
+    private const int VersionSearchRequest = 4;
 
     public static async Task WriteSearchRequestAsync(Stream stream, SearchRequestMessage msg, CancellationToken token = default)
     {
@@ -16,6 +16,10 @@ public static class SearchRequestBinarySerializer
         {
             case SearchRequestId.SetMachineSettings:
                 payloadSize += CalculateSettingsSize(msg.MachineSettings ?? new MachineSettings());
+                break;
+            case SearchRequestId.RebuildDrive:
+            case SearchRequestId.DeleteDriveIndex:
+                payloadSize += GetStringByteCount(msg.Drive) + 5;
                 break;
             case SearchRequestId.Search:
                 payloadSize += 8 + GetStringByteCount(msg.Query) + 5;
@@ -37,6 +41,10 @@ public static class SearchRequestBinarySerializer
             {
                 case SearchRequestId.SetMachineSettings:
                     WriteMachineSettings(span, ref offset, msg.MachineSettings ?? new MachineSettings());
+                    break;
+                case SearchRequestId.RebuildDrive:
+                case SearchRequestId.DeleteDriveIndex:
+                    WriteString(span, ref offset, msg.Drive);
                     break;
                 case SearchRequestId.Search:
                     BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), msg.Limit);
@@ -93,6 +101,10 @@ public static class SearchRequestBinarySerializer
         {
             case SearchRequestId.SetMachineSettings:
                 msg.MachineSettings = ReadMachineSettings(payload, ref offset);
+                break;
+            case SearchRequestId.RebuildDrive:
+            case SearchRequestId.DeleteDriveIndex:
+                msg.Drive = ReadString(payload, ref offset);
                 break;
             case SearchRequestId.Search:
                 msg.Limit = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));

@@ -32,7 +32,7 @@ public static class UsnIndexerCacheExtensions
             foreach (var drive in drives)
             {
                 var store = FileRecordStoreSerializer.Load(cacheDir, drive);
-                if (store != null)
+                if (store != null && IsCurrentVolumeCache(drive, store))
                 {
                     var runtime = new RuntimeIndex();
                     runtime.Load(store);
@@ -65,7 +65,7 @@ public static class UsnIndexerCacheExtensions
         lock (indexer.LockObj)
         {
             var store = FileRecordStoreSerializer.Load(cacheDir, drive);
-            if (store == null)
+            if (store == null || !IsCurrentVolumeCache(drive, store))
                 return null;
 
             var runtime = new RuntimeIndex();
@@ -95,5 +95,28 @@ public static class UsnIndexerCacheExtensions
             indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
             indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
         }
+    }
+
+    private static bool IsCurrentVolumeCache(string drive, FileRecordStore store)
+    {
+        if (store.SourceKind != FileRecordSourceKind.LocalMft)
+            return true;
+
+        var identity = VolumeHelper.GetVolumeIdentity(drive);
+        if (!identity.HasValue)
+        {
+            Logger.Log($"[UsnIndexer] Ignoring cached index for drive {drive}: volume identity unavailable.", LogLevel.Warn);
+            return false;
+        }
+
+        var current = identity.Value;
+        var matches = store.VolumeSerialNumber == current.SerialNumber &&
+            store.FileSystemType.Equals(current.FileSystemType, StringComparison.OrdinalIgnoreCase);
+        if (!matches)
+        {
+            Logger.Log($"[UsnIndexer] Ignoring cached index for drive {drive}: volume identity changed.", LogLevel.Warn);
+        }
+
+        return matches;
     }
 }

@@ -5,6 +5,8 @@ namespace SwiftList.Core;
 
 public static class VolumeHelper
 {
+    public readonly record struct VolumeIdentity(string FileSystemType, uint SerialNumber);
+
     public static UInt128? GetRootFrn(string driveLetter)
     {
         var path = $"{driveLetter}:\\";
@@ -106,18 +108,23 @@ public static class VolumeHelper
 
     public static string GetFileSystemType(string driveLetter)
     {
+        var identity = GetVolumeIdentity(driveLetter);
+        return identity?.FileSystemType ?? "NTFS";
+    }
+
+    public static VolumeIdentity? GetVolumeIdentity(string driveLetter)
+    {
         var rootPath = $"{driveLetter}:\\";
         var volumeName = new StringBuilder(260);
         var fileSystemName = new StringBuilder(260);
-
         var success = Win32Api.GetVolumeInformationW(
             rootPath,
             volumeName, (uint)volumeName.Capacity,
-            out _, out _, out _,
+            out var serial, out _, out _,
             fileSystemName, (uint)fileSystemName.Capacity
         );
 
-        return success ? fileSystemName.ToString() : "NTFS";
+        return success ? new VolumeIdentity(fileSystemName.ToString(), serial) : null;
     }
 
     public static string GetDisplayFileSystemType(string driveLetter)

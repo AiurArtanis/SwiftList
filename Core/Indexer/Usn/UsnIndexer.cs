@@ -38,6 +38,8 @@ public class UsnIndexer : IDisposable
     {
         public FileRecordSourceKind SourceKind { get; init; }
         public FileRecordIdKind IdKind { get; init; }
+        public string FileSystemType { get; init; } = string.Empty;
+        public uint VolumeSerialNumber { get; init; }
         public UInt128 RootId { get; init; }
         public ulong JournalId { get; set; }
         public long NextUsn { get; set; }
@@ -126,6 +128,8 @@ public class UsnIndexer : IDisposable
     {
         SourceKind = store.SourceKind,
         IdKind = store.IdKind,
+        FileSystemType = store.FileSystemType,
+        VolumeSerialNumber = store.VolumeSerialNumber,
         RootId = store.RootId,
         JournalId = store.JournalId,
         NextUsn = store.NextUsn

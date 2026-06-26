@@ -97,18 +97,6 @@ public static class Win32Api
         public long HighUsn;
     }
 
-    // V1 allows specifying MinMajorVersion/MaxMajorVersion to request USN_RECORD_V3
-    // (128-bit FRNs) — used for ReFS enumeration on Win10 1809+ / Server 2019+.
-    [StructLayout(LayoutKind.Sequential)]
-    public struct MFT_ENUM_DATA_V1
-    {
-        public ulong StartFileReferenceNumber;
-        public long LowUsn;
-        public long HighUsn;
-        public ushort MinMajorVersion;
-        public ushort MaxMajorVersion;
-    }
-
     [StructLayout(LayoutKind.Sequential)]
     public struct READ_USN_JOURNAL_DATA_V0
     {
@@ -148,18 +136,6 @@ public static class Win32Api
         SafeFileHandle hDevice,
         uint dwIoControlCode,
         ref MFT_ENUM_DATA_V0 lpInBuffer,
-        uint nInBufferSize,
-        byte[] lpOutBuffer,
-        uint nOutBufferSize,
-        out uint lpBytesReturned,
-        IntPtr lpOverlapped
-    );
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool DeviceIoControl(
-        SafeFileHandle hDevice,
-        uint dwIoControlCode,
-        ref MFT_ENUM_DATA_V1 lpInBuffer,
         uint nInBufferSize,
         byte[] lpOutBuffer,
         uint nOutBufferSize,

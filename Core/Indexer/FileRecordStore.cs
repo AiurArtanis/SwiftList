@@ -50,6 +50,8 @@ public sealed class FileRecordStore
     public string SourceKey { get; set; } = string.Empty;
     public FileRecordSourceKind SourceKind { get; set; }
     public FileRecordIdKind IdKind { get; set; }
+    public string FileSystemType { get; set; } = string.Empty;
+    public uint VolumeSerialNumber { get; set; }
     public UInt128 RootId { get; set; }
     public ulong JournalId { get; set; }
     public long NextUsn { get; set; }
@@ -83,17 +85,44 @@ public static class FileRecordStoreSerializer
     private const string MetaMagic = "SLRCMETA";
     private const string RecordsMagic = "SLRCREC";
     private const string NamesMagic = "SLRCNAME";
-    private const int Version = 6;
+    private const int Version = 7;
 
     public static string GetBasePath(string cacheDir, string sourceKey) => Path.Combine(cacheDir, $"source-{sourceKey.ToLowerInvariant()}");
 
     public static bool Exists(string cacheDir, string sourceKey)
     {
         var basePath = GetBasePath(cacheDir, sourceKey);
-        return File.Exists(basePath + ".meta") &&
-               File.Exists(basePath + ".records") &&
-               File.Exists(basePath + ".names");
+        return ExistsBasePath(basePath);
     }
+
+    public static bool ExistsBasePath(string basePath) => File.Exists(basePath + ".meta") &&
+                                                          File.Exists(basePath + ".records") &&
+                                                          File.Exists(basePath + ".names");
+
+    public static List<string> ListSourceKeys(string cacheDir)
+    {
+        if (!Directory.Exists(cacheDir))
+            return new List<string>();
+
+        return Directory.EnumerateFiles(cacheDir, "source-*.meta")
+            .Select(Path.GetFileNameWithoutExtension)
+            .Where(name => name?.StartsWith("source-", StringComparison.OrdinalIgnoreCase) == true)
+            .Select(name => name!["source-".Length..].ToUpperInvariant())
+            .Where(key => Exists(cacheDir, key))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    public static void Delete(string cacheDir, string sourceKey) => DeleteBasePath(GetBasePath(cacheDir, sourceKey));
+
+    public static void DeleteBasePath(string basePath)
+    {
+        TryDelete(basePath + ".meta");
+        TryDelete(basePath + ".records");
+        TryDelete(basePath + ".names");
+    }
+
 
     public static void Save(string cacheDir, FileRecordStore store)
     {
@@ -133,6 +162,8 @@ public static class FileRecordStoreSerializer
             writer.Write(store.SourceKey);
             writer.Write((byte)store.SourceKind);
             writer.Write((byte)store.IdKind);
+            writer.Write(store.FileSystemType);
+            writer.Write(store.VolumeSerialNumber);
             writer.Write((ulong)store.RootId);
             writer.Write((ulong)(store.RootId >> 64));
             writer.Write(store.JournalId);
@@ -165,6 +196,8 @@ public static class FileRecordStoreSerializer
                 store.SourceKey = reader.ReadString();
                 store.SourceKind = (FileRecordSourceKind)reader.ReadByte();
                 store.IdKind = (FileRecordIdKind)reader.ReadByte();
+                store.FileSystemType = reader.ReadString();
+                store.VolumeSerialNumber = reader.ReadUInt32();
                 var rootLow = reader.ReadUInt64();
                 var rootHigh = reader.ReadUInt64();
                 store.RootId = new UInt128(rootHigh, rootLow);
