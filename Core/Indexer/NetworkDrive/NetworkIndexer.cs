@@ -176,6 +176,9 @@ public sealed class NetworkIndexer : IDisposable
                 LastUpdated = index.LastUpdated
             };
         }
+
+        // Re-establish watcher in case it was evicted due to a prior error.
+        _watcherManager?.EnsureWatcher(drive);
     }
 
     private void PublishIncrementalUpdate(string drive, NetworkIndex index)

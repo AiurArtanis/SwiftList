@@ -6,6 +6,7 @@ internal class WatcherManager : IDisposable
     private readonly Action<string, string> _queueRefresh;
     private readonly Func<string, NetworkIndex?> _getIndex;
     private readonly Action<string, NetworkIndex> _onIncrementalUpdate;
+    private volatile bool _disposed;
 
     public WatcherManager(
         Action<string, string> queueRefresh,
@@ -49,7 +50,31 @@ internal class WatcherManager : IDisposable
                 ErrorEventHandler onError = (_, e) =>
                 {
                     Logger.Log($"[WatcherManager] Watcher error on {drive}: {e.GetException().Message}", LogLevel.Error);
-                    _queueRefresh(drive, "watcher error");
+                    RemoveWatcher(drive);
+
+                    if (_getIndex(drive) != null)
+                    {
+                        // Existing index is still valid; keep retrying until the watcher comes back up.
+                        // ponytail: fixed 10 s back-off; upgrade to exponential if flapping becomes an issue.
+                        _ = Task.Run(async () =>
+                        {
+                            while (!_disposed)
+                            {
+                                await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+                                if (_disposed) break;
+                                EnsureWatcher(drive);
+                                lock (_watchers)
+                                {
+                                    if (_watchers.ContainsKey(drive)) break; // successfully re-watched
+                                }
+                            }
+                        });
+                    }
+                    else
+                    {
+                        // No cached index — full rebuild needed.
+                        _queueRefresh(drive, "watcher error");
+                    }
                 };
 
                 watcher.Created += onChanged;
@@ -164,6 +189,7 @@ internal class WatcherManager : IDisposable
 
     public void Dispose()
     {
+        _disposed = true;
         lock (_watchers)
         {
             foreach (var watcher in _watchers.Values)
