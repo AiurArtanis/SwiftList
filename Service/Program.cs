@@ -180,7 +180,7 @@ static class Program
 
 
         // Load plugins to register path collectors in the hook process
-        ServicePluginLoader.LoadPlugins();
+        ServicePluginLoader.LoadForHook();
 
         Logger.Log($"[HookMode] Starting hook process (elevated={Core.Services.ElevationManager.IsRunningAsAdmin()}).");
 

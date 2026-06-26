@@ -7,14 +7,18 @@ namespace SwiftList.Service;
 
 public static class ServicePluginLoader
 {
-    public static void LoadPlugins()
+    public static void LoadForService() => LoadPlugins(loadHookPlugins: false);
+
+    public static void LoadForHook() => LoadPlugins(loadHookPlugins: true);
+
+    private static void LoadPlugins(bool loadHookPlugins)
     {
         try
         {
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             var pluginsDir = Path.Combine(baseDir, "Plugins");
 
-            Logger.Log($"[ServicePluginLoader] Scanning for alias plugins in: {pluginsDir}");
+            Logger.Log($"[ServicePluginLoader] Scanning plugins in: {pluginsDir}");
 
             if (!Directory.Exists(pluginsDir))
             {
@@ -36,34 +40,39 @@ public static class ServicePluginLoader
                         if (type.IsInterface || type.IsAbstract)
                             continue;
 
+                        var isAliasProvider = typeof(IAliasProvider).IsAssignableFrom(type);
+                        if (!loadHookPlugins && !isAliasProvider)
+                            continue;
+
                         if (typeof(IAliasProvider).IsAssignableFrom(type))
                         {
                             var provider = (IAliasProvider)Activator.CreateInstance(type)!;
                             aliasProviders.Add(provider);
                         }
 
-                        if (typeof(ITranslationProvider).IsAssignableFrom(type))
+                        if ((loadHookPlugins || isAliasProvider) && typeof(ITranslationProvider).IsAssignableFrom(type))
                         {
                             var provider = (ITranslationProvider)Activator.CreateInstance(type)!;
                             translationProviders.Add(provider);
-                            Logger.Log($"[ServicePluginLoader] Loaded translation provider: '{type.Name}' from {Path.GetFileName(dllFile)}");
+                            if (loadHookPlugins)
+                                Logger.Log($"[ServicePluginLoader] Loaded translation provider: '{type.Name}' from {Path.GetFileName(dllFile)}");
                         }
 
-                        if (typeof(IActivePathCollector).IsAssignableFrom(type))
+                        if (loadHookPlugins && typeof(IActivePathCollector).IsAssignableFrom(type))
                         {
                             var provider = (IActivePathCollector)Activator.CreateInstance(type)!;
                             ActivePathCollectorRegistry.Register(provider);
                             Logger.Log($"[ServicePluginLoader] Loaded active path collector: '{type.Name}' from {Path.GetFileName(dllFile)}");
                         }
 
-                        if (typeof(IFileDialogAdapter).IsAssignableFrom(type))
+                        if (loadHookPlugins && typeof(IFileDialogAdapter).IsAssignableFrom(type))
                         {
                             var provider = (IFileDialogAdapter)Activator.CreateInstance(type)!;
                             FileDialogAdapterRegistry.Register(provider);
                             Logger.Log($"[ServicePluginLoader] Loaded file dialog adapter: '{type.Name}' from {Path.GetFileName(dllFile)}");
                         }
 
-                        if (typeof(IInlineSearchAdapter).IsAssignableFrom(type))
+                        if (loadHookPlugins && typeof(IInlineSearchAdapter).IsAssignableFrom(type))
                         {
                             var provider = (IInlineSearchAdapter)Activator.CreateInstance(type)!;
                             InlineSearchAdapterRegistry.Register(provider);
@@ -101,31 +110,34 @@ public static class ServicePluginLoader
 
             TranslationService.LookupFunc = key => translations.TryGetValue(key, out var val) ? val : $"[{key}]";
 
-            // Wire up FilterFuncs so the hook process respects enabled/disabled state.
-            // The lambda reads UserSettings.Load() (cached) on every call, so after a
-            // ReloadSettings command triggers UserSettings.ForceReload() the next adapter
-            // lookup will automatically reflect the new disabled-components list.
-            static bool IsAdapterEnabled(object obj)
+            if (loadHookPlugins)
             {
-                try
+                // Wire up FilterFuncs so the hook process respects enabled/disabled state.
+                // The lambda reads UserSettings.Load() (cached) on every call, so after a
+                // ReloadSettings command triggers UserSettings.ForceReload() the next adapter
+                // lookup will automatically reflect the new disabled-components list.
+                static bool IsAdapterEnabled(object obj)
                 {
-                    var dllName = Path.GetFileName(obj.GetType().Assembly.Location);
-                    var typeName = obj.GetType().Name;
-                    var settings = UserSettings.Load();
-                    // Match the same ID format used by App's ComponentFilter
-                    var idInlineSearch = $"{dllName}::InlineSearchAdapter::{typeName}";
-                    var idFileDialog = $"{dllName}::FileDialogAdapter::{typeName}";
-                    var idPathCollect = $"{dllName}::ActivePathCollector::{typeName}";
-                    return !settings.DisabledPluginComponents.Contains(idInlineSearch, StringComparer.OrdinalIgnoreCase)
-                        && !settings.DisabledPluginComponents.Contains(idFileDialog, StringComparer.OrdinalIgnoreCase)
-                        && !settings.DisabledPluginComponents.Contains(idPathCollect, StringComparer.OrdinalIgnoreCase);
+                    try
+                    {
+                        var dllName = Path.GetFileName(obj.GetType().Assembly.Location);
+                        var typeName = obj.GetType().Name;
+                        var settings = UserSettings.Load();
+                        // Match the same ID format used by App's ComponentFilter
+                        var idInlineSearch = $"{dllName}::InlineSearchAdapter::{typeName}";
+                        var idFileDialog = $"{dllName}::FileDialogAdapter::{typeName}";
+                        var idPathCollect = $"{dllName}::ActivePathCollector::{typeName}";
+                        return !settings.DisabledPluginComponents.Contains(idInlineSearch, StringComparer.OrdinalIgnoreCase)
+                            && !settings.DisabledPluginComponents.Contains(idFileDialog, StringComparer.OrdinalIgnoreCase)
+                            && !settings.DisabledPluginComponents.Contains(idPathCollect, StringComparer.OrdinalIgnoreCase);
+                    }
+                    catch { return true; }
                 }
-                catch { return true; }
-            }
 
-            InlineSearchAdapterRegistry.FilterFunc = a => IsAdapterEnabled(a);
-            FileDialogAdapterRegistry.FilterFunc = a => IsAdapterEnabled(a);
-            ActivePathCollectorRegistry.FilterFunc = a => IsAdapterEnabled(a);
+                InlineSearchAdapterRegistry.FilterFunc = a => IsAdapterEnabled(a);
+                FileDialogAdapterRegistry.FilterFunc = a => IsAdapterEnabled(a);
+                ActivePathCollectorRegistry.FilterFunc = a => IsAdapterEnabled(a);
+            }
 
             // Now register alias providers (this will trigger provider.Name evaluation)
             foreach (var provider in aliasProviders)

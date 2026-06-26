@@ -20,7 +20,7 @@ public class UsnService : ServiceBase
         Logger.Log("[UsnService] Service Starting...");
         try
         {
-            ServicePluginLoader.LoadPlugins();
+            ServicePluginLoader.LoadForService();
             _engine = new SearchEngine();
             _engine.InitializeOrLoadIndex(false);
 
