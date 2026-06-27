@@ -4,8 +4,6 @@ internal sealed record WalkOptions(
     IReadOnlyList<string> ExcludedPaths,
     IReadOnlyList<string> IgnoredPathGlobs,
     IReadOnlyList<string> IgnoredPathRegexes,
-    bool IncludeHiddenItems,
-    bool IncludeSystemItems,
     int MaxDepth,
     int WorkerCount,
     bool UseIgnoreFiles);

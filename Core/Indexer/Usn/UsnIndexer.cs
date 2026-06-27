@@ -1,3 +1,5 @@
+using SwiftList.Core.Indexer.NetworkDrive;
+using SwiftList.Core.Indexer.Shared;
 using SwiftList.Core.SearchIndex.RecordIndex;
 
 namespace SwiftList.Core.Indexer.Usn;
@@ -135,7 +137,52 @@ public class UsnIndexer : IDisposable
 
             UpdateTotalsFromRuntime();
             UpdateDriveCounts(drive);
+            SearchCoordinator.ClearCaches();
         }
+    }
+
+    public void ApplyFolderChange(string drive, WatcherChangeTypes changeType, string path, string? oldPath = null)
+    {
+        lock (LockObj)
+        {
+            if (!_recordIndexes.TryGetValue(drive, out var runtime))
+                return;
+
+            var exclusionRules = ExclusionRuleSet.From(UserSettings.Load());
+            var root = $"{drive}:\\";
+            var normalizedPath = PathHelpers.NormalizePath(path, Directory.Exists(path));
+            var changed = false;
+
+            changed = changeType switch
+            {
+                WatcherChangeTypes.Deleted => PathDeltaApplier.ApplyDeleted(runtime, normalizedPath),
+                WatcherChangeTypes.Renamed when !string.IsNullOrWhiteSpace(oldPath) => PathDeltaApplier.ApplyRenamed(runtime, (UInt128)1, root, oldPath, normalizedPath, exclusionRules),
+                _ => PathDeltaApplier.ApplyCreatedOrChanged(runtime, (UInt128)1, root, normalizedPath, exclusionRules),
+            };
+            if (!changed)
+                return;
+
+            UpdateTotalsFromRuntime();
+            UpdateDriveCounts(drive);
+            SearchCoordinator.ClearCaches();
+            SaveDriveSnapshot(drive, runtime);
+        }
+    }
+
+    private void SaveDriveSnapshot(string drive, RuntimeIndex runtime)
+    {
+        if (!_driveMetadata.TryGetValue(drive, out var metadata))
+            return;
+
+        var store = runtime.ToStore(
+            metadata.SourceKind,
+            metadata.IdKind,
+            metadata.FileSystemType,
+            metadata.VolumeSerialNumber,
+            metadata.RootId,
+            metadata.JournalId,
+            metadata.NextUsn);
+        FileRecordStoreSerializer.Save(Path.Combine(Logger.UserDataDir, "indexes"), store);
     }
 
     public void CompactMemory()

@@ -37,9 +37,6 @@ public static class LiveDirectorySearcher
                 token.ThrowIfCancellationRequested();
                 FileAttributes attrs;
                 try { attrs = entry.Attributes; } catch { continue; }
-                if (attrs.HasFlag(FileAttributes.Hidden) || attrs.HasFlag(FileAttributes.System))
-                    continue;
-
                 processedCount++;
                 if (processedCount >= maxProcessed)
                     break;

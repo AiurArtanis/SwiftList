@@ -18,7 +18,7 @@ internal static class DriveRecovery
         {
             if (!SupportsJournal(drive))
             {
-                StartFolderMonitor(drive, onReindexRequired, addMonitor, token);
+                StartFolderMonitor(indexer, drive, onReindexRequired, addMonitor, token);
                 Logger.Log($"[SearchEngine] Restored folder-scan drive {drive} from cache.");
                 return;
             }
@@ -50,7 +50,7 @@ internal static class DriveRecovery
             if (SupportsJournal(builtDrive))
                 new UsnMonitor(builtDrive, journalId, nextUsn, indexer, token, onReindexRequired).Start();
             else
-                StartFolderMonitor(builtDrive, onReindexRequired, addMonitor, token);
+                StartFolderMonitor(indexer, builtDrive, onReindexRequired, addMonitor, token);
         }
     }
 
@@ -60,9 +60,9 @@ internal static class DriveRecovery
         return fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void StartFolderMonitor(string drive, Action<string>? onReindexRequired, Action<IDisposable> addMonitor, CancellationToken token)
+    private static void StartFolderMonitor(UsnIndexer indexer, string drive, Action<string>? onReindexRequired, Action<IDisposable> addMonitor, CancellationToken token)
     {
-        var monitor = new FolderDriveMonitor(drive, onReindexRequired ?? (_ => { }), token);
+        var monitor = new FolderDriveMonitor(drive, (changeType, path, oldPath) => indexer.ApplyFolderChange(drive, changeType, path, oldPath), token);
         monitor.Start();
         addMonitor(monitor);
     }

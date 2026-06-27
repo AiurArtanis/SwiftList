@@ -61,16 +61,6 @@ public sealed class NetworkIndexer : IDisposable
         var enabledDrives = enabledSettings.Select(d => d.Drive).ToList();
         var refreshModes = enabledSettings.ToDictionary(d => d.Drive, d => d.RefreshMode, StringComparer.OrdinalIgnoreCase);
 
-        var localFolderDrives = VolumeHelper.DetectFolderIndexDrives();
-        foreach (var drive in localFolderDrives)
-        {
-            if (!enabledDrives.Contains(drive, StringComparer.OrdinalIgnoreCase))
-            {
-                enabledDrives.Add(drive);
-                refreshModes[drive] = "startup";
-            }
-        }
-
         var cachedDrives = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var lastUpdatedTimes = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 

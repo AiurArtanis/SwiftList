@@ -47,6 +47,9 @@ public class SearchService : IDisposable
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var uniqueOnResult = new Action<SearchResult, bool>((result, isApp) =>
         {
+            if (!isApp && FileSystemItemFilter.IsHiddenOrSystem(result.Path))
+                return;
+
             lock (seenPaths)
             {
                 if (!seenPaths.Add(result.Path))
@@ -62,19 +65,7 @@ public class SearchService : IDisposable
                 await SendSearchPipeCommandAsync(msg, (result, isApp) =>
                 {
                     if (isApp || !exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
-                    {
-                        if (!isApp && !string.IsNullOrEmpty(result.Path))
-                        {
-                            try
-                            {
-                                var attrs = File.GetAttributes(result.Path);
-                                if ((attrs & (FileAttributes.Hidden | FileAttributes.System)) != 0)
-                                    return;
-                            }
-                            catch { }
-                        }
                         uniqueOnResult(result, isApp);
-                    }
                 }, token).ConfigureAwait(false);
                 return true;
             }

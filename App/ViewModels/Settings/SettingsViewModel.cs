@@ -145,16 +145,16 @@ public class SettingsViewModel : ViewModelBase
             })
 
             .ToList();
-        var previousExcludedPaths = _userSettings.ExcludedPaths.ToList();
-        var previousIgnoredGlobs = _userSettings.IgnoredPathGlobs.ToList();
-        var previousIgnoredRegexes = _userSettings.IgnoredPathRegexes.ToList();
+        var previousLocalDrives = (await _searchService.GetMachineSettingsAsync()).EnabledLocalDrives.ToList();
+        var previousExclusions = SettingsChangeSnapshot.CaptureExclusions(_userSettings);
 
         var machineSettings = new MachineSettings
         {
             EnabledLocalDrives = LocalDrive.LocalDrives.Where(d => d.IsEnabled).Select(d => d.Drive).ToList()
 
         };
-        await _searchService.SaveMachineSettingsAsync(machineSettings);
+        if (SettingsChangeSnapshot.StringListChanged(previousLocalDrives, machineSettings.EnabledLocalDrives))
+            await _searchService.SaveMachineSettingsAsync(machineSettings);
 
         _userSettings.NetworkDrives = NetworkDrive.NetworkDrives.Select(d => new NetworkDriveSetting
         {
@@ -174,17 +174,40 @@ public class SettingsViewModel : ViewModelBase
         App.HookClient?.SendMessage(new IpcMessage { Id = IpcMessageId.ReloadSettings });
         PluginManager.Instance.RefreshDisabledComponents();
         NetworkDrive.ResetPendingEdits();
-        if (NetworkSettingsChanged(previousNetworkDrives, _userSettings.NetworkDrives) ||
-            StringListChanged(previousExcludedPaths, _userSettings.ExcludedPaths) ||
-
-            StringListChanged(previousIgnoredGlobs, _userSettings.IgnoredPathGlobs) ||
-
-            StringListChanged(previousIgnoredRegexes, _userSettings.IgnoredPathRegexes))
-        {
+        var exclusionsChanged = SettingsChangeSnapshot.ExclusionsChanged(previousExclusions, SettingsChangeSnapshot.CaptureExclusions(_userSettings));
+        if (exclusionsChanged)
             _searchService.RefreshNetworkIndexes();
-        }
+        else if (NetworkSettingsChanged(previousNetworkDrives, _userSettings.NetworkDrives))
+            await NetworkDriveApplyHelper.ApplyChangesAsync(_searchService, previousNetworkDrives, _userSettings.NetworkDrives);
+
+        if (exclusionsChanged)
+            await RebuildScanBasedLocalDrivesAsync(machineSettings.EnabledLocalDrives);
 
         Refresh();
+    }
+
+    private async Task RebuildScanBasedLocalDrivesAsync(IReadOnlyList<string> enabledLocalDrives)
+    {
+        var enabled = enabledLocalDrives.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var drive in LocalDrive.LocalDrives.Where(d => d.IsEnabled && (enabled.Count == 0 || enabled.Contains(d.Drive))))
+        {
+            var fs = VolumeHelper.GetFileSystemType(drive.Drive);
+            if (!fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) &&
+                await _searchService.RebuildDriveIndexAsync(drive.Drive))
+                await WaitForLocalDriveRebuildAsync(drive.Drive);
+        }
+    }
+
+    private async Task WaitForLocalDriveRebuildAsync(string drive)
+    {
+        for (var i = 0; i < 120; i++)
+        {
+            await Task.Delay(500);
+            var status = await _searchService.GetStatusAsync();
+            var item = status.Drives.FirstOrDefault(d => d.Drive.Equals(drive, StringComparison.OrdinalIgnoreCase));
+            if (item?.State is not ("pending" or "indexing"))
+                return;
+        }
     }
 
     private static bool NetworkSettingsChanged(IReadOnlyList<NetworkDriveSetting> oldSettings, IReadOnlyList<NetworkDriveSetting> newSettings)
@@ -202,23 +225,4 @@ public class SettingsViewModel : ViewModelBase
             .Select(d => $"{d.Drive}|{d.Enabled}|{d.RefreshMode}");
         return !oldOrdered.SequenceEqual(newOrdered, StringComparer.OrdinalIgnoreCase);
     }
-
-    private static bool StringListChanged(IReadOnlyList<string> oldValues, IReadOnlyList<string> newValues) => !oldValues
-
-            .Where(v => !string.IsNullOrWhiteSpace(v))
-
-            .Select(v => v.Trim())
-
-            .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
-
-            .SequenceEqual(
-
-                newValues
-
-                    .Where(v => !string.IsNullOrWhiteSpace(v))
-
-                    .Select(v => v.Trim())
-
-                    .OrderBy(v => v, StringComparer.OrdinalIgnoreCase),
-                StringComparer.OrdinalIgnoreCase);
 }

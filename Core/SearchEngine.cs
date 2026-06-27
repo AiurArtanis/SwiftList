@@ -104,7 +104,7 @@ public class SearchEngine : IDisposable
 
         if (drivesChanged)
         {
-            InitializeOrLoadIndex(forceRebuild: false);
+            RefreshDrivesInStatus();
         }
     }
 

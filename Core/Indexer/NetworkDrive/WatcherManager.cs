@@ -2,7 +2,7 @@ namespace SwiftList.Core.Indexer.NetworkDrive;
 
 internal class WatcherManager : IDisposable
 {
-    private readonly Dictionary<string, FileSystemWatcher> _watchers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DriveWatcherHost> _watchers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Action<string, string> _queueRefresh;
     private readonly Func<string, NetworkIndex?> _getIndex;
     private readonly Action<string, NetworkIndex> _onIncrementalUpdate;
@@ -25,71 +25,14 @@ internal class WatcherManager : IDisposable
             if (_watchers.ContainsKey(drive))
                 return;
 
-            var root = drive + @":\";
-            var physicalRoot = root;
-
-            try
-            {
-                if (!Directory.Exists(physicalRoot))
-                    return;
-
-                var watcher = new FileSystemWatcher(physicalRoot)
-                {
-                    IncludeSubdirectories = true,
-                    InternalBufferSize = 64 * 1024,
-                    NotifyFilter = NotifyFilters.FileName |
-                                   NotifyFilters.DirectoryName |
-                                   NotifyFilters.LastWrite |
-                                   NotifyFilters.Size |
-                                   NotifyFilters.Attributes |
-                                   NotifyFilters.CreationTime
-                };
-
-                FileSystemEventHandler onChanged = (_, e) => OnWatcherChanged(drive, e.ChangeType, e.FullPath);
-                RenamedEventHandler onRenamed = (_, e) => OnWatcherRenamed(drive, e.OldFullPath, e.FullPath);
-                ErrorEventHandler onError = (_, e) =>
-                {
-                    Logger.Log($"[WatcherManager] Watcher error on {drive}: {e.GetException().Message}", LogLevel.Error);
-                    RemoveWatcher(drive);
-
-                    if (_getIndex(drive) != null)
-                    {
-                        // Existing index is still valid; keep retrying until the watcher comes back up.
-                        // ponytail: fixed 10 s back-off; upgrade to exponential if flapping becomes an issue.
-                        _ = Task.Run(async () =>
-                        {
-                            while (!_disposed)
-                            {
-                                await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
-                                if (_disposed) break;
-                                EnsureWatcher(drive);
-                                lock (_watchers)
-                                {
-                                    if (_watchers.ContainsKey(drive)) break; // successfully re-watched
-                                }
-                            }
-                        });
-                    }
-                    else
-                    {
-                        // No cached index — full rebuild needed.
-                        _queueRefresh(drive, "watcher error");
-                    }
-                };
-
-                watcher.Created += onChanged;
-                watcher.Changed += onChanged;
-                watcher.Deleted += onChanged;
-                watcher.Renamed += onRenamed;
-                watcher.Error += onError;
-                watcher.EnableRaisingEvents = true;
-                _watchers[drive] = watcher;
-                Logger.Log($"[WatcherManager] Watching network drive {drive}: {physicalRoot}");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"[WatcherManager] Failed to watch network drive {drive}: {ex.Message}", LogLevel.Error);
-            }
+            var host = new DriveWatcherHost(
+                nameof(WatcherManager),
+                drive,
+                Directory.Exists,
+                ConfigureWatcher,
+                message => Logger.Log(message, LogLevel.Error));
+            _watchers[drive] = host;
+            host.Start();
         }
     }
 
@@ -101,7 +44,6 @@ internal class WatcherManager : IDisposable
             {
                 try
                 {
-                    watcher.EnableRaisingEvents = false;
                     watcher.Dispose();
                 }
                 catch
@@ -109,6 +51,56 @@ internal class WatcherManager : IDisposable
                 }
             }
         }
+    }
+
+    private bool ConfigureWatcher(FileSystemWatcher watcher, string drive, Action restart, Action retry, Action<string> logError)
+    {
+        watcher.IncludeSubdirectories = true;
+        watcher.InternalBufferSize = 64 * 1024;
+        watcher.NotifyFilter = NotifyFilters.FileName |
+                               NotifyFilters.DirectoryName |
+                               NotifyFilters.LastWrite |
+                               NotifyFilters.Size |
+                               NotifyFilters.Attributes |
+                               NotifyFilters.CreationTime;
+        FileSystemEventHandler onChanged = (_, e) => OnWatcherChanged(drive, e.ChangeType, e.FullPath);
+        RenamedEventHandler onRenamed = (_, e) => OnWatcherRenamed(drive, e.OldFullPath, e.FullPath);
+        watcher.Created += onChanged;
+        watcher.Changed += onChanged;
+        watcher.Deleted += onChanged;
+        watcher.Renamed += onRenamed;
+        watcher.Error += (_, e) =>
+        {
+            var ex = e.GetException();
+            logError($"Watcher error on {drive}: {ex?.Message ?? "unknown"}");
+            RemoveWatcher(drive);
+
+            if (_getIndex(drive) != null)
+            {
+                // Existing index is still valid; keep retrying until the watcher comes back up.
+                // ponytail: fixed 10 s back-off; upgrade to exponential if flapping becomes an issue.
+                _ = Task.Run(async () =>
+                {
+                    while (!_disposed)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+                        if (_disposed)
+                            break;
+                        EnsureWatcher(drive);
+                        lock (_watchers)
+                        {
+                            if (_watchers.ContainsKey(drive))
+                                break;
+                        }
+                    }
+                });
+            }
+            else
+            {
+                _queueRefresh(drive, "watcher error");
+            }
+        };
+        return true;
     }
 
     private string TranslateToLogical(string drive, string path) => path;
@@ -196,7 +188,6 @@ internal class WatcherManager : IDisposable
             {
                 try
                 {
-                    watcher.EnableRaisingEvents = false;
                     watcher.Dispose();
                 }
                 catch

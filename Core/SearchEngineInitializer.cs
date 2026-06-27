@@ -193,7 +193,7 @@ internal class SearchEngineInitializer
             return;
         }
 
-        var monitor = new FolderDriveMonitor(drive, _onReindexRequired ?? (_ => { }), token);
+        var monitor = new FolderDriveMonitor(drive, (changeType, path, oldPath) => _indexer.ApplyFolderChange(drive, changeType, path, oldPath), token);
         monitor.Start();
         _addMonitor?.Invoke(monitor);
     }

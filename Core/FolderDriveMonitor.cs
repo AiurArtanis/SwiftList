@@ -2,54 +2,89 @@ namespace SwiftList.Core;
 
 internal sealed class FolderDriveMonitor : IDisposable
 {
+    private readonly record struct PendingChange(WatcherChangeTypes ChangeType, string Path, string? OldPath);
+
     private readonly string _drive;
-    private readonly Action<string> _queueRebuild;
+    private readonly Action<WatcherChangeTypes, string, string?> _onChange;
     private readonly CancellationToken _token;
-    private FileSystemWatcher? _watcher;
+    private readonly object _gate = new();
+    private readonly DriveWatcherHost _host;
+    private readonly List<PendingChange> _pending = new();
     private Timer? _debounce;
 
-    public FolderDriveMonitor(string drive, Action<string> queueRebuild, CancellationToken token)
+    public FolderDriveMonitor(string drive, Action<WatcherChangeTypes, string, string?> onChange, CancellationToken token)
     {
         _drive = drive;
-        _queueRebuild = queueRebuild;
+        _onChange = onChange;
         _token = token;
+        _host = new DriveWatcherHost(
+            nameof(FolderDriveMonitor),
+            drive,
+            Directory.Exists,
+            ConfigureWatcher,
+            message => Logger.Log(message, LogLevel.Warn));
     }
 
-    public void Start()
+    public void Start() => _host.Start();
+
+    private bool ConfigureWatcher(FileSystemWatcher watcher, string drive, Action restart, Action retry, Action<string> logError)
     {
-        var root = $"{_drive}:\\";
-        if (!Directory.Exists(root))
-            return;
-
-        _watcher = new FileSystemWatcher(root)
+        watcher.IncludeSubdirectories = true;
+        watcher.InternalBufferSize = 64 * 1024;
+        watcher.NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size;
+        FileSystemEventHandler changed = (_, e) => Schedule(e.ChangeType, e.FullPath, null);
+        RenamedEventHandler renamed = (_, e) => Schedule(WatcherChangeTypes.Renamed, e.FullPath, e.OldFullPath);
+        watcher.Created += changed;
+        watcher.Changed += changed;
+        watcher.Deleted += changed;
+        watcher.Renamed += renamed;
+        watcher.Error += (_, e) =>
         {
-            IncludeSubdirectories = true,
-            InternalBufferSize = 64 * 1024,
-            NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size
+            var ex = e.GetException();
+            logError($"Watcher error on {drive}: {ex?.Message ?? "unknown"}");
+            restart();
         };
-        FileSystemEventHandler changed = (_, _) => Schedule();
-        RenamedEventHandler renamed = (_, _) => Schedule();
-        _watcher.Created += changed;
-        _watcher.Changed += changed;
-        _watcher.Deleted += changed;
-        _watcher.Renamed += renamed;
-        _watcher.Error += (_, e) => { Logger.Log($"[FolderDriveMonitor] Watcher error on {_drive}: {e.GetException().Message}", LogLevel.Warn); Schedule(); };
-        _watcher.EnableRaisingEvents = true;
-        Logger.Log($"[FolderDriveMonitor] Started monitoring {_drive}: via FileSystemWatcher.");
+        return true;
     }
 
-    private void Schedule()
+    private void Schedule(WatcherChangeTypes changeType, string path, string? oldPath = null)
     {
         if (_token.IsCancellationRequested)
             return;
 
-        _debounce?.Dispose();
-        _debounce = new Timer(_ => _queueRebuild(_drive), null, TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+        lock (_gate)
+        {
+            _pending.Add(new PendingChange(changeType, path, oldPath));
+            _debounce?.Dispose();
+            _debounce = new Timer(_ => FlushPending(), null, TimeSpan.FromMilliseconds(250), Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    private void FlushPending()
+    {
+        PendingChange[] batch;
+        lock (_gate)
+        {
+            if (_pending.Count == 0)
+                return;
+
+            batch = _pending.ToArray();
+            _pending.Clear();
+            _debounce?.Dispose();
+            _debounce = null;
+        }
+
+        foreach (var item in batch)
+        {
+            if (_token.IsCancellationRequested)
+                return;
+            _onChange(item.ChangeType, item.Path, item.OldPath);
+        }
     }
 
     public void Dispose()
     {
         _debounce?.Dispose();
-        _watcher?.Dispose();
+        _host.Dispose();
     }
 }

@@ -1,5 +1,6 @@
 using SwiftList.Core.SearchIndex.RecordIndex;
 using SwiftList.Core.SearchIndex.RecordSearch;
+using SwiftList.Core.Indexer.Shared;
 
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
@@ -126,28 +127,26 @@ internal sealed class NetworkIndex
     {
         lock (_gate)
         {
-            var changed = UpsertPath(root, path, includeChildren: Directory.Exists(path), exclusionRules);
+            var changed = PathDeltaApplier.ApplyCreatedOrChanged(_runtime, RootId, root, path, exclusionRules);
             if (changed)
+            {
                 LastUpdated = DateTime.Now;
+                _searcher.ClearCaches();
+            }
             return changed;
         }
     }
 
     public bool ApplyDeleted(string path)
     {
-        var normalized = PathHelpers.NormalizePath(path, isDirectory: false);
-        var fileId = PathHelpers.HashPath64(normalized);
-        var directoryNormalized = PathHelpers.NormalizePath(path, isDirectory: true);
-        var directoryId = PathHelpers.HashPath64(directoryNormalized);
-
         lock (_gate)
         {
-            var removed = RemoveSubtree(fileId);
-            if (directoryId != fileId)
-                removed |= RemoveSubtree(directoryId);
-
+            var removed = PathDeltaApplier.ApplyDeleted(_runtime, path);
             if (removed)
+            {
                 LastUpdated = DateTime.Now;
+                _searcher.ClearCaches();
+            }
             return removed;
         }
     }
@@ -156,93 +155,13 @@ internal sealed class NetworkIndex
     {
         lock (_gate)
         {
-            var changed = ApplyDeleted(oldPath);
-            changed |= UpsertPath(root, newPath, includeChildren: Directory.Exists(newPath), exclusionRules);
+            var changed = PathDeltaApplier.ApplyRenamed(_runtime, RootId, root, oldPath, newPath, exclusionRules);
             if (changed)
+            {
                 LastUpdated = DateTime.Now;
+                _searcher.ClearCaches();
+            }
             return changed;
         }
-    }
-
-    private bool UpsertPath(string root, string path, bool includeChildren, ExclusionRuleSet? exclusionRules)
-    {
-        FileAttributes attributes;
-        try
-        {
-            attributes = File.GetAttributes(path);
-        }
-        catch
-        {
-            return false;
-        }
-
-        if ((attributes & FileAttributes.ReparsePoint) != 0)
-            return false;
-
-        var isDirectory = (attributes & FileAttributes.Directory) != 0;
-        if (exclusionRules?.IsExcludedPath(path, isDirectory) == true)
-            return ApplyDeleted(path);
-
-        var normalized = PathHelpers.NormalizePath(path, isDirectory);
-        var normalizedRoot = PathHelpers.NormalizePath(root, isDirectory: true);
-        if (normalized.Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase))
-            return false;
-
-        var name = Path.GetFileName(normalized.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-        if (string.IsNullOrWhiteSpace(name))
-            return false;
-
-        var parentPath = Path.GetDirectoryName(normalized.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-        var parentId = string.IsNullOrWhiteSpace(parentPath) || PathHelpers.NormalizePath(parentPath, true).Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase)
-            ? RootId
-            : (UInt128)PathHelpers.HashPath64(PathHelpers.NormalizePath(parentPath, true));
-
-        UInt128 id = PathHelpers.HashPath64(normalized);
-        _runtime.Upsert(new FileRecord(
-            id,
-            parentId,
-            name,
-            isDirectory ? FileRecordFlags.Directory : FileRecordFlags.None));
-
-        if (includeChildren && isDirectory)
-            UpsertDirectoryChildren(root, normalized, exclusionRules);
-
-        return true;
-    }
-
-    private void UpsertDirectoryChildren(string root, string directory, ExclusionRuleSet? exclusionRules)
-    {
-        IEnumerable<string> children;
-        try
-        {
-            children = Directory.EnumerateFileSystemEntries(directory);
-        }
-        catch
-        {
-            return;
-        }
-
-        foreach (var child in children)
-            UpsertPath(root, child, includeChildren: true, exclusionRules);
-    }
-
-    private bool RemoveSubtree(UInt128 id)
-    {
-        var toRemove = new List<UInt128>();
-        CollectSubtree(id, toRemove);
-        if (toRemove.Count == 0)
-            return false;
-
-        for (var i = toRemove.Count - 1; i >= 0; i--)
-            _runtime.Remove(toRemove[i]);
-        return true;
-    }
-
-    private void CollectSubtree(UInt128 id, List<UInt128> ids)
-    {
-        foreach (var childIndex in _runtime.EnumerateChildren(id))
-            CollectSubtree(_runtime.GetId(childIndex), ids);
-
-        ids.Add(id);
     }
 }

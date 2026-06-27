@@ -229,6 +229,11 @@ public class LocalDriveSettingsViewModel : ViewModelBase
         {
             _observedRowRebuilds.Add(drive.Drive);
         }
+        else if (drive.State is "ready" or "failed" or "disabled" or "unavailable")
+        {
+            _pendingRowRebuilds.Remove(drive.Drive);
+            _observedRowRebuilds.Remove(drive.Drive);
+        }
         else if (_observedRowRebuilds.Contains(drive.Drive))
         {
             _pendingRowRebuilds.Remove(drive.Drive);

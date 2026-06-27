@@ -24,8 +24,6 @@ internal static class FolderDriveScanner
             settings.ExcludedPaths,
             settings.IgnoredPathGlobs,
             settings.IgnoredPathRegexes,
-            false,
-            false,
             0,
             0,
             true));

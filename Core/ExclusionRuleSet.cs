@@ -8,12 +8,14 @@ public sealed class ExclusionRuleSet
     private readonly string[] _excludedRoots;
     private readonly NetworkGlobPattern[] _ignoredGlobs;
     private readonly Regex[] _ignoredRegexes;
+    private readonly string? _root;
 
-    private ExclusionRuleSet(string[] excludedRoots, NetworkGlobPattern[] ignoredGlobs, Regex[] ignoredRegexes)
+    private ExclusionRuleSet(string[] excludedRoots, NetworkGlobPattern[] ignoredGlobs, Regex[] ignoredRegexes, string? root = null)
     {
         _excludedRoots = excludedRoots;
         _ignoredGlobs = ignoredGlobs;
         _ignoredRegexes = ignoredRegexes;
+        _root = root;
     }
 
     public static ExclusionRuleSet Empty { get; } = new(Array.Empty<string>(), Array.Empty<NetworkGlobPattern>(), Array.Empty<Regex>());
@@ -49,6 +51,12 @@ public sealed class ExclusionRuleSet
         }
     }
 
+    public static ExclusionRuleSet From(UserSettings settings, string root) => new(
+        BuildExcludedRoots(settings.ExcludedPaths, NormalizePath(root, isDirectory: true)),
+        BuildIgnoredGlobs(settings.IgnoredPathGlobs),
+        BuildIgnoredRegexes(settings.IgnoredPathRegexes),
+        NormalizePath(root, isDirectory: true));
+
     public bool IsExcluded(SearchResult result, string? exemptRoot = null) => IsExcludedPath(result.Path, result.IsDir, exemptRoot);
 
     public bool IsExcludedPath(string path, bool isDirectory, string? exemptRoot = null)
@@ -83,16 +91,18 @@ public sealed class ExclusionRuleSet
                 break;
 
             var name = Path.GetFileName(pathForGlob);
+            var relativePath = GetRelativePath(current);
+            var slashPath = pathForGlob.Replace('\\', '/');
 
             foreach (var glob in _ignoredGlobs)
             {
-                if (glob.IsMatch(pathForGlob))
+                if (glob.IsMatch(pathForGlob) || glob.IsMatch(slashPath) || glob.IsMatch(relativePath))
                     return true;
             }
 
             foreach (var regex in _ignoredRegexes)
             {
-                if (regex.IsMatch(name) || regex.IsMatch(pathForGlob))
+                if (regex.IsMatch(name) || regex.IsMatch(pathForGlob) || regex.IsMatch(slashPath) || regex.IsMatch(relativePath))
                     return true;
             }
 
@@ -108,6 +118,9 @@ public sealed class ExclusionRuleSet
     }
 
     private static string[] BuildExcludedRoots(IReadOnlyList<string> paths)
+        => BuildExcludedRoots(paths, root: null);
+
+    private static string[] BuildExcludedRoots(IReadOnlyList<string> paths, string? root)
     {
         if (paths.Count == 0)
             return Array.Empty<string>();
@@ -115,6 +128,7 @@ public sealed class ExclusionRuleSet
         return paths
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .Select(path => NormalizePath(Environment.ExpandEnvironmentVariables(path), isDirectory: true))
+            .Where(path => root == null || path.StartsWith(root, StringComparison.OrdinalIgnoreCase))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -175,5 +189,13 @@ public sealed class ExclusionRuleSet
         return isDirectory
             ? normalized.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar
             : normalized;
+    }
+
+    private string GetRelativePath(string normalizedPath)
+    {
+        if (_root == null || !normalizedPath.StartsWith(_root, StringComparison.OrdinalIgnoreCase))
+            return normalizedPath.TrimEnd(Path.DirectorySeparatorChar);
+
+        return normalizedPath[_root.Length..].TrimEnd(Path.DirectorySeparatorChar);
     }
 }

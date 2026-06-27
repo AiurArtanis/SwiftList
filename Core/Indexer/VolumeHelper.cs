@@ -135,15 +135,7 @@ public static class VolumeHelper
     }
 
     public static string GetDisplayFileSystemType(string driveLetter)
-    {
-        var fsType = GetFileSystemType(driveLetter);
-        return fsType switch
-        {
-            "NTFS" => $"NTFS {GetNtfsVersion(driveLetter)}",
-            "ReFS" => $"ReFS {GetReFsVersion(driveLetter)}",
-            _ => fsType
-        };
-    }
+        => GetFileSystemType(driveLetter);
 
     public static string GetNtfsVersion(string driveLetter)
     {

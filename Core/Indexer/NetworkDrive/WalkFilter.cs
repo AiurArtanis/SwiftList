@@ -1,49 +1,32 @@
-using System.Text.RegularExpressions;
-
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
 internal sealed class WalkFilter
 {
-    private readonly string _root;
-    private readonly string[] _excludedRoots;
-    private readonly NetworkGlobPattern[] _ignoredGlobs;
-    private readonly Regex[] _ignoredRegexes;
-    private readonly bool _includeHiddenItems;
-    private readonly bool _includeSystemItems;
+    private readonly ExclusionRuleSet _globalRules;
     private readonly int _maxDepth;
     private readonly bool _useIgnoreFiles;
 
     public int WorkerCount { get; }
 
     private WalkFilter(
-        string root,
-        string[] excludedRoots,
-        NetworkGlobPattern[] ignoredGlobs,
-        Regex[] ignoredRegexes,
-        bool includeHiddenItems,
-        bool includeSystemItems,
+        ExclusionRuleSet globalRules,
         int maxDepth,
         int workerCount,
         bool useIgnoreFiles)
     {
-        _root = root;
-        _excludedRoots = excludedRoots;
-        _ignoredGlobs = ignoredGlobs;
-        _ignoredRegexes = ignoredRegexes;
-        _includeHiddenItems = includeHiddenItems;
-        _includeSystemItems = includeSystemItems;
+        _globalRules = globalRules;
         _maxDepth = Math.Max(0, maxDepth);
         _useIgnoreFiles = useIgnoreFiles;
         WorkerCount = Math.Max(0, workerCount);
     }
 
     public static WalkFilter Create(string root, WalkOptions options) => new WalkFilter(
-            root,
-            BuildExcludedRoots(root, options.ExcludedPaths),
-            BuildIgnoredGlobs(options.IgnoredPathGlobs),
-            BuildIgnoredRegexes(options.IgnoredPathRegexes),
-            options.IncludeHiddenItems,
-            options.IncludeSystemItems,
+            ExclusionRuleSet.From(new UserSettings
+            {
+                ExcludedPaths = options.ExcludedPaths.ToList(),
+                IgnoredPathGlobs = options.IgnoredPathGlobs.ToList(),
+                IgnoredPathRegexes = options.IgnoredPathRegexes.ToList()
+            }, root),
             options.MaxDepth,
             options.WorkerCount,
             options.UseIgnoreFiles);
@@ -60,45 +43,12 @@ internal sealed class WalkFilter
         return current;
     }
 
-    private bool IsIgnoredByGlobalFilters(string fullPath, string name, bool isDirectory)
-    {
-        if (_ignoredGlobs.Length == 0 && _ignoredRegexes.Length == 0)
-            return false;
-
-        var relativePath = GetRelativePath(fullPath, isDirectory);
-        var trimmedPath = fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var fullPathNormalized = trimmedPath.Replace('\\', '/');
-
-        foreach (var glob in _ignoredGlobs)
-        {
-            if (glob.IsMatch(relativePath) || glob.IsMatch(fullPathNormalized) || glob.IsMatch(trimmedPath))
-                return true;
-        }
-
-        foreach (var regex in _ignoredRegexes)
-        {
-            if (regex.IsMatch(name) || regex.IsMatch(relativePath) || regex.IsMatch(fullPathNormalized) || regex.IsMatch(trimmedPath))
-                return true;
-        }
-
-        return false;
-    }
-
     public bool ShouldIndex(string fullPath, string name, bool isDirectory, FileAttributes attributes, NetworkIgnoreRuleSet ignoreRules)
     {
-        if (!_includeHiddenItems && (attributes & FileAttributes.Hidden) != 0)
-            return false;
-
-        if (!_includeSystemItems && (attributes & FileAttributes.System) != 0)
-            return false;
-
-        if (IsExcluded(fullPath))
+        if (_globalRules.IsExcludedPath(fullPath, isDirectory))
             return false;
 
         if (ignoreRules.IsIgnored(fullPath, name, isDirectory))
-            return false;
-
-        if (IsIgnoredByGlobalFilters(fullPath, name, isDirectory))
             return false;
 
         return true;
@@ -109,20 +59,11 @@ internal sealed class WalkFilter
         if (_maxDepth > 0 && depth > _maxDepth)
             return false;
 
-        if (!_includeHiddenItems && (attributes & FileAttributes.Hidden) != 0)
-            return false;
-
-        if (!_includeSystemItems && (attributes & FileAttributes.System) != 0)
-            return false;
-
-        if (IsExcluded(fullPath))
+        if (_globalRules.IsExcludedPath(fullPath, isDirectory: true))
             return false;
 
         var name = Path.GetFileName(fullPath.TrimEnd(Path.DirectorySeparatorChar));
         if (ignoreRules.IsIgnored(fullPath, name, isDirectory: true))
-            return false;
-
-        if (IsIgnoredByGlobalFilters(fullPath, name, isDirectory: true))
             return false;
 
         return true;
@@ -152,85 +93,4 @@ internal sealed class WalkFilter
         }
     }
 
-    private bool IsExcluded(string fullPath)
-    {
-        if (_excludedRoots.Length == 0)
-            return false;
-
-        var normalized = PathHelpers.NormalizePath(fullPath, isDirectory: true);
-        foreach (var excluded in _excludedRoots)
-        {
-            if (normalized.StartsWith(excluded, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        return false;
-    }
-
-    private string GetRelativePath(string fullPath, bool isDirectory)
-    {
-        var normalized = PathHelpers.NormalizePath(fullPath, isDirectory);
-        if (normalized.StartsWith(_root, StringComparison.OrdinalIgnoreCase))
-            return normalized.Substring(_root.Length).TrimEnd(Path.DirectorySeparatorChar);
-
-        return normalized;
-    }
-
-    private static string[] BuildExcludedRoots(string root, IReadOnlyList<string> excludedPaths)
-    {
-        if (excludedPaths.Count == 0)
-            return Array.Empty<string>();
-
-        var roots = new List<string>();
-        foreach (var path in excludedPaths)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                continue;
-
-            var normalized = PathHelpers.NormalizePath(Environment.ExpandEnvironmentVariables(path), true);
-            if (normalized.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-                roots.Add(normalized);
-        }
-
-        return roots.ToArray();
-    }
-
-    private static NetworkGlobPattern[] BuildIgnoredGlobs(IReadOnlyList<string> ignoredGlobs)
-    {
-        if (ignoredGlobs.Count == 0)
-            return Array.Empty<NetworkGlobPattern>();
-
-        return ignoredGlobs
-            .Where(pattern => !string.IsNullOrWhiteSpace(pattern))
-            .Select(pattern => GlobMatcher.Compile(pattern.Trim()))
-            .Where(pattern => !pattern.IsEmpty)
-            .ToArray();
-    }
-
-    private static Regex[] BuildIgnoredRegexes(IReadOnlyList<string> ignoredRegexes)
-    {
-        if (ignoredRegexes.Count == 0)
-            return Array.Empty<Regex>();
-
-        var compiled = new List<Regex>();
-        foreach (var pattern in ignoredRegexes)
-        {
-            if (string.IsNullOrWhiteSpace(pattern))
-                continue;
-
-            try
-            {
-                compiled.Add(new Regex(
-                    pattern.Trim(),
-                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled,
-                    TimeSpan.FromMilliseconds(50)));
-            }
-            catch (ArgumentException ex)
-            {
-                Logger.Log($"[WalkFilter] Invalid exclude regex '{pattern}': {ex.Message}", LogLevel.Warn);
-            }
-        }
-
-        return compiled.ToArray();
-    }
 }

@@ -36,7 +36,7 @@ internal sealed class SearchEngineDriveMaintenance
             var cached = FileRecordStoreSerializer.ListSourceKeys(IndexCacheDir)
                 .Where(key => key.Length == 1 && char.IsLetter(key[0]));
             var visible = detected.Concat(cached).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(d => d).ToList();
-            var enabledSet = new HashSet<string>(MachineSettings.Load().EnabledLocalDrives, StringComparer.OrdinalIgnoreCase);
+            var enabledSet = new HashSet<string>(_settings().EnabledLocalDrives, StringComparer.OrdinalIgnoreCase);
             var supported = enabledSet.Count == 0 ? detected : detected.Where(enabledSet.Contains).ToList();
             var enabled = new HashSet<string>(supported, StringComparer.OrdinalIgnoreCase);
             var drivesToBuild = new List<string>();
@@ -132,6 +132,8 @@ internal sealed class SearchEngineDriveMaintenance
     {
         if (current.TryGetValue(drive, out var existing))
         {
+            var wasEnabled = existing.Enabled;
+            var hasCache = FileRecordStoreSerializer.Exists(IndexCacheDir, drive);
             existing.Enabled = isPresent && isEnabled;
             existing.Kind = isPresent ? VolumeHelper.GetDisplayFileSystemType(drive) : "-";
             existing.State = isPresent ? existing.State : "unavailable";
@@ -140,17 +142,23 @@ internal sealed class SearchEngineDriveMaintenance
                 existing.Files = 0;
                 existing.Dirs = 0;
             }
+            else if (!wasEnabled && isEnabled && !hasCache && existing.State is not "indexing" and not "pending")
+            {
+                existing.State = "pending";
+                drivesToBuild.Add(drive);
+            }
             return existing;
         }
 
-        if (isPresent && isEnabled)
+        var shouldBuild = isPresent && isEnabled && !FileRecordStoreSerializer.Exists(IndexCacheDir, drive);
+        if (shouldBuild)
             drivesToBuild.Add(drive);
         return new UsnIndexer.DriveIndexStatus
         {
             Drive = drive,
             Enabled = isPresent && isEnabled,
             Kind = isPresent ? VolumeHelper.GetDisplayFileSystemType(drive) : "-",
-            State = isPresent && isEnabled ? "pending" : isPresent ? "disabled" : "unavailable",
+            State = shouldBuild ? "pending" : isPresent && isEnabled ? "ready" : isPresent ? "disabled" : "unavailable",
             CachePath = FileRecordStoreSerializer.GetBasePath(IndexCacheDir, drive) + ".meta"
         };
     }
@@ -182,9 +190,27 @@ internal sealed class SearchEngineDriveMaintenance
         _indexer.SetDriveState(drive, "indexing");
         var metadata = _indexer.BuildDrives(new[] { drive }, clearExisting: false);
         if (metadata.Count == 0)
+        {
             _indexer.SetDriveState(drive, "failed");
-        else
-            _indexer.SaveDrivesToCache(IndexCacheDir, metadata);
+            return;
+        }
+
+        _indexer.SaveDrivesToCache(IndexCacheDir, metadata);
+        EnsureDriveMonitor(drive, metadata[0].JournalId, metadata[0].NextUsn);
+    }
+
+    private void EnsureDriveMonitor(string drive, ulong journalId, long nextUsn)
+    {
+        var fs = VolumeHelper.GetFileSystemType(drive);
+        if (fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase))
+        {
+            new UsnMonitor(drive, journalId, nextUsn, _indexer, _token(), QueueDriveRebuild).Start();
+            return;
+        }
+
+        var monitor = new FolderDriveMonitor(drive, (changeType, path, oldPath) => _indexer.ApplyFolderChange(drive, changeType, path, oldPath), _token());
+        monitor.Start();
+        _addMonitor(monitor);
     }
 
     private static string NormalizeDrive(string drive) => string.IsNullOrWhiteSpace(drive)

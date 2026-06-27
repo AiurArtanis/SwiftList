@@ -35,7 +35,8 @@ internal static class IndexBuilder
 
         for (var i = 0; i < drives.Count; i++)
         {
-            var (drive, res) = indexResults[i];
+            var drive = drives[i];
+            var res = indexResults[i].Result;
             if (res.HasValue)
             {
                 var data = res.Value;
