@@ -6,6 +6,7 @@ namespace SwiftList.Plugins.ListSearch;
 
 public class ListSearchInlineSearchAdapter : IInlineSearchAdapter
 {
+    private const string UniversalListScope = "__UniversalList__";
     public string Name => TranslationService.Get("Plugins_ListSearchTargetName");
 
     private readonly HashSet<int> _originallySelectedIndices = new HashSet<int>();
@@ -54,10 +55,13 @@ public class ListSearchInlineSearchAdapter : IInlineSearchAdapter
                ListSearchIndexEncoder.IsListBoxClass(className);
     }
 
-    public string? GetSearchScope(IntPtr hwnd) => "__UniversalList__";
+    public string? GetSearchScope(IntPtr hwnd) => UniversalListScope;
 
     public bool ExecuteItem(IntPtr hwnd, string path, string searchInput)
     {
+        if (string.IsNullOrWhiteSpace(path) || string.Equals(path, UniversalListScope, StringComparison.Ordinal))
+            return false;
+
         var (targetHwnd, className) = ResolveTargetControl(hwnd);
         if (targetHwnd == IntPtr.Zero) return false;
 
@@ -158,6 +162,9 @@ public class ListSearchInlineSearchAdapter : IInlineSearchAdapter
 
     public void OnSelectionChanged(IntPtr hwnd, string path)
     {
+        if (string.IsNullOrWhiteSpace(path) || string.Equals(path, UniversalListScope, StringComparison.Ordinal))
+            return;
+
         var (targetHwnd, className) = ResolveTargetControl(hwnd);
         if (targetHwnd == IntPtr.Zero) return;
 

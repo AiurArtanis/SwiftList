@@ -121,6 +121,7 @@ public class QuickSearchWindowController
 
         InlineSearchManager.Instance.KeyboardHook.IsQuickSearchWindowVisible = true;
         InlineSearchManager.Instance.KeyboardHook.Stop();
+        _window.ViewModel.EnsureServiceMonitoringActive();
 
         _window.ViewModel.SearchQuery = initialQuery ?? string.Empty;
         _window.UpdateLayout();
@@ -130,7 +131,6 @@ public class QuickSearchWindowController
         _window.WindowState = WindowState.Normal;
         PositionWindow();
 
-        _window.ViewModel.TriggerIndexBuild();
         StartForegroundHook();
 
         _window.Dispatcher.BeginInvoke(new Action(() =>
@@ -156,6 +156,8 @@ public class QuickSearchWindowController
         {
             _window.MenuPresenter.ExitActionsMode();
         }
+
+        _window.ViewModel.Monitor.StopStatusTimer();
 
         _window.ViewModel.SearchQuery = string.Empty;
         try

@@ -61,7 +61,7 @@ public class ServiceMonitorViewModel : ViewModelBase, IDisposable
 
             },
 
-            onServiceInstallCompleted: () => TriggerIndexBuild(),
+            onServiceInstallCompleted: StartConnectionHandlerAfterInstall,
 
             onServiceInstallError: ex => MessageBox.Show(string.Format(TranslationManager.Instance["Service_InstallFailedPrompt"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error),
 
@@ -71,12 +71,15 @@ public class ServiceMonitorViewModel : ViewModelBase, IDisposable
 
                 Application.Current.Dispatcher.Invoke(() => Application.Current.MainWindow?.Hide());
                 App.ShowSettingsWindow("Service");
-            }
+            },
+            onServiceReachable: () => { }
 
         );
         _statusHandler = new ServiceMonitorStatusHandler(this, _mainVm, _connectionHandler);
         InstallServiceCommand = new RelayCommand(_connectionHandler.ExecuteInstallService);
     }
+
+    private void StartConnectionHandlerAfterInstall() => _connectionHandler.Start(requireDetailedStatus: true);
 
     public ICommand InstallServiceCommand { get; }
 
@@ -196,6 +199,8 @@ public class ServiceMonitorViewModel : ViewModelBase, IDisposable
     }
 
     public void StopStatusTimer() => _connectionHandler.Stop();
+
+    public void EnsureServiceMonitoringActive() => _connectionHandler.Start();
 
     public void ShowServiceReconnectState(string title, string stats)
     {

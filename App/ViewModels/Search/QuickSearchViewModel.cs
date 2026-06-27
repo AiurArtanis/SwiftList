@@ -129,6 +129,7 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
     // ==========================================
 
     public void TriggerIndexBuild(bool forceRebuild = false) => Monitor.TriggerIndexBuild(forceRebuild);
+    public void EnsureServiceMonitoringActive() => Monitor.EnsureServiceMonitoringActive();
 
     public void Dispose()
     {

@@ -70,7 +70,8 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
                         appLimit: 51,
                         resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, value, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
                         state => IsSearching = state,
-                        (results, status, final) => ApplySearchResults(value, results, status, final)
+                        (results, status, final) => ApplySearchResults(value, results, status, final),
+                        HandleLocalServiceUnavailable
                     );
                 }
             }
@@ -195,9 +196,12 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
             appLimit: 51,
             resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, query, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
             state => IsSearching = state,
-            (results, status, final) => ApplySearchResults(query, results, status, final)
+            (results, status, final) => ApplySearchResults(query, results, status, final),
+            HandleLocalServiceUnavailable
         );
     }
+
+    private void HandleLocalServiceUnavailable() => _mainVm.TriggerIndexBuild();
 
     private void ApplySearchResults(string query, List<AppSearchResult> uiResults, string statusText, bool final)
     {

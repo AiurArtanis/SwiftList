@@ -32,7 +32,7 @@ internal static class SearchIndexBuildCoordinator
                                                    }
 
                                                    onPendingStatus(status);
-                                                   connectionHandler.Start();
+                                                   connectionHandler.Start(requireDetailedStatus: true);
                                                }));
                                            });
 }

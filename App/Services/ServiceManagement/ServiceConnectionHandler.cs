@@ -2,33 +2,44 @@ using System.Windows.Threading;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
 using Application = System.Windows.Application;
+
 namespace SwiftList.App.Services;
 
 public class ServiceConnectionHandler : IDisposable
 {
     private static readonly TimeSpan ServiceReconnectGracePeriod = TimeSpan.FromSeconds(15);
+    private static readonly object GlobalMonitorLock = new();
+    private static readonly List<ServiceConnectionHandler> ActiveSubscribers = new();
+    private static DispatcherTimer? _sharedStatusTimer;
+    private static SearchService? _sharedSearchService;
+    private static int _isStatusCheckInFlight;
+    private static bool _globalAutoInstallingService;
+    private static bool _globalAutoInstallAttempted;
+    private static DateTime _globalReconnectUntilUtc = DateTime.MinValue;
+
     private readonly SearchService _searchService;
-    private readonly DispatcherTimer _statusTimer;
     private readonly Action<UsnIndexer.IndexerStatus> _onStatusUpdated;
     private readonly Action _onServiceInstallStarted;
     private readonly Action _onServiceInstallCompleted;
     private readonly Action<Exception> _onServiceInstallError;
     private readonly Action _onServiceFailedToStart;
-    private bool _hasAttemptedAutoInstall;
-    private bool _isAutoInstallingService;
-    private DateTime _serviceReconnectUntilUtc = DateTime.MinValue;
-    private int _isStatusCheckInFlight;
-    public bool IsAutoInstallingService => _isAutoInstallingService;
-    public bool HasAttemptedAutoInstall => _hasAttemptedAutoInstall;
+    private readonly Action _onServiceReachable;
+    private readonly int _pollIntervalMs;
+    private bool _isMonitoringActive;
+    private bool _needsDetailedStatus;
+    private bool _reachableCallbackIssued;
+
+    public bool IsAutoInstallingService => _globalAutoInstallingService;
+    public bool HasAttemptedAutoInstall => _globalAutoInstallAttempted;
 
     public ServiceConnectionHandler(
-
         SearchService searchService,
         Action<UsnIndexer.IndexerStatus> onStatusUpdated,
         Action onServiceInstallStarted,
         Action onServiceInstallCompleted,
         Action<Exception> onServiceInstallError,
         Action onServiceFailedToStart,
+        Action onServiceReachable,
         int pollIntervalMs = 400)
     {
         _searchService = searchService ?? throw new ArgumentNullException(nameof(searchService));
@@ -37,51 +48,190 @@ public class ServiceConnectionHandler : IDisposable
         _onServiceInstallCompleted = onServiceInstallCompleted ?? throw new ArgumentNullException(nameof(onServiceInstallCompleted));
         _onServiceInstallError = onServiceInstallError ?? throw new ArgumentNullException(nameof(onServiceInstallError));
         _onServiceFailedToStart = onServiceFailedToStart ?? throw new ArgumentNullException(nameof(onServiceFailedToStart));
-        _statusTimer = new DispatcherTimer();
-        _statusTimer.Interval = TimeSpan.FromMilliseconds(pollIntervalMs);
-        _statusTimer.Tick += (s, e) => PollStatusTick();
+        _onServiceReachable = onServiceReachable ?? throw new ArgumentNullException(nameof(onServiceReachable));
+        _pollIntervalMs = pollIntervalMs;
     }
 
-    public void Start() => _statusTimer.Start();
+    public void Start(bool requireDetailedStatus = false)
+    {
+        lock (GlobalMonitorLock)
+        {
+            if (_isMonitoringActive)
+            {
+                _needsDetailedStatus |= requireDetailedStatus;
+                EnsureSharedTimer_NoLock();
+                return;
+            }
 
-    public void Stop() => _statusTimer.Stop();
+            _isMonitoringActive = true;
+            _needsDetailedStatus = requireDetailedStatus;
+            _reachableCallbackIssued = false;
+            if (!ActiveSubscribers.Contains(this))
+                ActiveSubscribers.Add(this);
 
-    public void BeginServiceReconnectGracePeriod() => _serviceReconnectUntilUtc = DateTime.UtcNow.Add(ServiceReconnectGracePeriod);
+            EnsureSharedTimer_NoLock();
+        }
+    }
 
-    public bool ShouldWaitForServiceReconnect() => _isAutoInstallingService || DateTime.UtcNow < _serviceReconnectUntilUtc;
+    public void Stop()
+    {
+        lock (GlobalMonitorLock)
+        {
+            if (!_isMonitoringActive)
+                return;
+
+            _isMonitoringActive = false;
+            _needsDetailedStatus = false;
+            _reachableCallbackIssued = false;
+            ActiveSubscribers.Remove(this);
+            if (ActiveSubscribers.Count == 0)
+                StopSharedTimer_NoLock();
+        }
+    }
+
+    public void BeginServiceReconnectGracePeriod() => _globalReconnectUntilUtc = DateTime.UtcNow.Add(ServiceReconnectGracePeriod);
+
+    public bool ShouldWaitForServiceReconnect() => _globalAutoInstallingService || DateTime.UtcNow < _globalReconnectUntilUtc;
 
     public void ClearServiceReconnectState()
     {
-        _hasAttemptedAutoInstall = false;
-        _isAutoInstallingService = false;
-        _serviceReconnectUntilUtc = DateTime.MinValue;
+        _globalAutoInstallAttempted = false;
+        _globalAutoInstallingService = false;
+        _globalReconnectUntilUtc = DateTime.MinValue;
     }
 
-    public void ResetAutoInstallFlag() => _hasAttemptedAutoInstall = false;
+    public void ResetAutoInstallFlag() => _globalAutoInstallAttempted = false;
 
-    public void PollStatusTick()
+    public void AttemptSilentInstall()
+    {
+        if (_globalAutoInstallingService)
+            return;
+
+        _globalAutoInstallingService = true;
+        BeginServiceReconnectGracePeriod();
+        NotifySubscribers(subscriber => subscriber._onServiceInstallStarted());
+
+        var started = ServiceInstallManager.SilentInstall(() => Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _globalAutoInstallingService = false;
+            BeginServiceReconnectGracePeriod();
+            NotifySubscribers(subscriber => subscriber._onServiceInstallCompleted());
+        })));
+
+        if (!started)
+        {
+            Logger.Log("[ServiceConnectionHandler] Silent service install already running; waiting for reconnect.", LogLevel.Debug);
+            BeginServiceReconnectGracePeriod();
+        }
+    }
+
+    public void ExecuteInstallService() => ServiceInstallManager.InstallService(
+        onCompleted: () => Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _globalAutoInstallAttempted = true;
+            _globalAutoInstallingService = false;
+            BeginServiceReconnectGracePeriod();
+            NotifySubscribers(subscriber => subscriber._onServiceInstallCompleted());
+        })),
+        onError: ex => Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            NotifySubscribers(subscriber => subscriber._onServiceInstallError(ex))))
+    );
+
+    public void Dispose() => Stop();
+
+    private static void EnsureSharedTimer_NoLock()
+    {
+        if (_sharedStatusTimer == null)
+        {
+            _sharedStatusTimer = new DispatcherTimer();
+            _sharedStatusTimer.Tick += (_, _) => PollStatusTick();
+        }
+
+        if (_sharedSearchService == null && ActiveSubscribers.Count > 0)
+            _sharedSearchService = ActiveSubscribers[0]._searchService;
+
+        var interval = ActiveSubscribers.Count > 0
+            ? ActiveSubscribers.Min(s => s._pollIntervalMs)
+            : 400;
+        _sharedStatusTimer.Interval = TimeSpan.FromMilliseconds(interval);
+        _sharedStatusTimer.Start();
+    }
+
+    private static void StopSharedTimer_NoLock()
+    {
+        _sharedStatusTimer?.Stop();
+        _sharedSearchService = null;
+    }
+
+    private static void PollStatusTick()
     {
         if (Interlocked.Exchange(ref _isStatusCheckInFlight, 1) == 1)
             return;
 
+        var searchService = _sharedSearchService;
+        if (searchService == null)
+        {
+            Interlocked.Exchange(ref _isStatusCheckInFlight, 0);
+            return;
+        }
+
         Task.Run(async () =>
         {
-            var status = await _searchService.GetStatusAsync();
-
-            _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            try
             {
-                try
+                if (RequiresDetailedStatus())
                 {
-                    ProcessStatus(status);
+                    var status = await searchService.GetStatusAsync().ConfigureAwait(false);
+                    _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        try
+                        {
+                            NotifySubscribers(subscriber => subscriber.ProcessStatus(status));
+                        }
+                        finally
+                        {
+                            Interlocked.Exchange(ref _isStatusCheckInFlight, 0);
+                        }
+                    }));
+                    return;
                 }
 
-                finally
+                var isReachable = await searchService.PingAsync().ConfigureAwait(false);
+                _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    Interlocked.Exchange(ref _isStatusCheckInFlight, 0);
-                }
-
-            }));
+                    try
+                    {
+                        NotifySubscribers(subscriber => subscriber.ProcessPingResult(isReachable));
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _isStatusCheckInFlight, 0);
+                    }
+                }));
+            }
+            catch
+            {
+                _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    try
+                    {
+                        NotifySubscribers(subscriber => subscriber.ProcessPingResult(false));
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _isStatusCheckInFlight, 0);
+                    }
+                }));
+            }
         });
+    }
+
+    private static bool RequiresDetailedStatus()
+    {
+        lock (GlobalMonitorLock)
+        {
+            return ActiveSubscribers.Any(subscriber => subscriber._needsDetailedStatus);
+        }
     }
 
     private void ProcessStatus(UsnIndexer.IndexerStatus status)
@@ -90,51 +240,65 @@ public class ServiceConnectionHandler : IDisposable
         {
             if (ShouldWaitForServiceReconnect())
             {
-                _onStatusUpdated?.Invoke(new UsnIndexer.IndexerStatus { State = "reconnecting" });
+                _onStatusUpdated(new UsnIndexer.IndexerStatus { State = "reconnecting" });
                 return;
             }
 
-            _statusTimer.Stop();
-            if (!_hasAttemptedAutoInstall)
+            if (!_globalAutoInstallAttempted)
             {
-                _hasAttemptedAutoInstall = true;
+                _globalAutoInstallAttempted = true;
                 AttemptSilentInstall();
+                _onStatusUpdated(new UsnIndexer.IndexerStatus { State = "reconnecting" });
                 return;
             }
 
-            _onServiceFailedToStart?.Invoke();
+            Stop();
+            _onServiceFailedToStart();
             return;
         }
 
-        _onStatusUpdated?.Invoke(status);
+        _onStatusUpdated(status);
     }
 
-    public void AttemptSilentInstall()
+    private void ProcessPingResult(bool isReachable)
     {
-        _isAutoInstallingService = true;
-        BeginServiceReconnectGracePeriod();
-        _onServiceInstallStarted?.Invoke();
+        if (!isReachable)
+        {
+            if (ShouldWaitForServiceReconnect())
+            {
+                _onStatusUpdated(new UsnIndexer.IndexerStatus { State = "reconnecting" });
+                return;
+            }
 
-        Task.Run(() => ServiceInstallManager.SilentInstall(() => Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    _isAutoInstallingService = false;
-                    BeginServiceReconnectGracePeriod();
-                    _onServiceInstallCompleted?.Invoke();
-                }))));
+            if (!_globalAutoInstallAttempted)
+            {
+                _globalAutoInstallAttempted = true;
+                AttemptSilentInstall();
+                _onStatusUpdated(new UsnIndexer.IndexerStatus { State = "reconnecting" });
+                return;
+            }
+
+            Stop();
+            _onServiceFailedToStart();
+            return;
+        }
+
+        if (_needsDetailedStatus || _reachableCallbackIssued)
+            return;
+
+        _reachableCallbackIssued = true;
+        _onServiceReachable();
     }
 
-    public void ExecuteInstallService() => ServiceInstallManager.InstallService(
+    private static void NotifySubscribers(Action<ServiceConnectionHandler> action)
+    {
+        ServiceConnectionHandler[] subscribers;
+        lock (GlobalMonitorLock)
+        {
+            subscribers = ActiveSubscribers.ToArray();
+        }
 
-            onCompleted: () => Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    _hasAttemptedAutoInstall = true;
-                    _isAutoInstallingService = false;
-                    BeginServiceReconnectGracePeriod();
-                    _onServiceInstallCompleted?.Invoke();
-                })),
-
-            onError: ex => Application.Current.Dispatcher.BeginInvoke(new Action(() => _onServiceInstallError?.Invoke(ex)))
-        );
-
-    public void Dispose() => _statusTimer.Stop();
+        foreach (var subscriber in subscribers)
+            action(subscriber);
+    }
 }

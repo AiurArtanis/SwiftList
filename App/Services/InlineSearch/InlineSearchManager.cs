@@ -160,6 +160,7 @@ public class InlineSearchManager : IDisposable
         _mouseHook.Start();
 
         _window.Show();
+        _window.ViewModel.EnsureServiceMonitoringActive();
 
         var fgHwnd = ExplorerNativeHooks.GetForegroundWindow();
         var isTextInputFocused = fgHwnd != IntPtr.Zero && InputFocusEvaluator.IsForegroundTextInputFocused(fgHwnd);
@@ -236,6 +237,7 @@ public class InlineSearchManager : IDisposable
         var win = _window;
         _window = null;
         _currentHostHwnd = IntPtr.Zero;
+        win.ViewModel.Monitor.StopStatusTimer();
         win.Hide();
         win.Close();
 

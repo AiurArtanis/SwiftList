@@ -184,9 +184,6 @@ public partial class InlineSearchWindow : Window, ISearchWindow
 
         LstActions.PreviewMouseLeftButtonUp += _menuPresenter.HandleActionsPreviewMouseLeftButtonUp;
 
-        // Trigger connection/build in view model
-
-        _viewModel.TriggerIndexBuild();
     }
 
     // ==========================================
@@ -205,6 +202,7 @@ public partial class InlineSearchWindow : Window, ISearchWindow
 
     public bool ActivateAndFocusSearchBox()
     {
+        _viewModel.EnsureServiceMonitoringActive();
         var foreground = InlineSearchWindowNativeMethods.GetForegroundWindow();
         var currentThread = InlineSearchWindowNativeMethods.GetCurrentThreadId();
 

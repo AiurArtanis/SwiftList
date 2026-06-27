@@ -6,6 +6,8 @@ namespace SwiftList.App.Services;
 
 public static class ServiceInstallManager
 {
+    private static int _silentInstallInFlight;
+
     public static string GetServiceExePath()
     {
         var serviceExePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SwiftList.Service.exe");
@@ -42,8 +44,14 @@ public static class ServiceInstallManager
         }
     }
 
-    public static void SilentInstall(Action onCompleted)
+    public static bool SilentInstall(Action onCompleted)
     {
+        if (Interlocked.CompareExchange(ref _silentInstallInFlight, 1, 0) != 0)
+        {
+            Logger.Log("[ServiceInstallManager] Silent service installation already in progress.", LogLevel.Debug);
+            return false;
+        }
+
         try
         {
             var serviceExePath = GetServiceExePath();
@@ -66,7 +74,10 @@ public static class ServiceInstallManager
         }
         finally
         {
+            Interlocked.Exchange(ref _silentInstallInFlight, 0);
             onCompleted?.Invoke();
         }
+
+        return true;
     }
 }

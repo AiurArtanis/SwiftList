@@ -115,6 +115,14 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
         _mainVm.PerformSearch(_mainVm.AdvancedQuery);
     }
 
+    private void OnServiceReachable()
+    {
+        if (!_isRecovering)
+            return;
+
+        CheckServiceStatusOnStartup();
+    }
+
     private void OnServiceInstallStarted()
     {
         _isRecovering = true;
@@ -162,13 +170,13 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
             onServiceInstallStarted: OnServiceInstallStarted,
             onServiceInstallCompleted: CheckServiceStatusOnStartup,
             onServiceInstallError: ex => MessageBox.Show(string.Format(TranslationManager.Instance["Service_InstallFailedPrompt"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error),
-            onServiceFailedToStart: OnServiceFailedToStart
+            onServiceFailedToStart: OnServiceFailedToStart,
+            onServiceReachable: OnServiceReachable
         );
 
         InstallServiceCommand = new RelayCommand(_connectionHandler.ExecuteInstallService);
 
         IsSearchBoxEnabled = true;
-        _connectionHandler.Start();
     }
 
     public void Dispose() => _connectionHandler.Dispose();
