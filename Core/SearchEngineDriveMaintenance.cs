@@ -33,11 +33,12 @@ internal sealed class SearchEngineDriveMaintenance
         {
             var detected = VolumeHelper.DetectIndexableLocalDrives();
             var detectedSet = new HashSet<string>(detected, StringComparer.OrdinalIgnoreCase);
-            var cached = FileRecordStoreSerializer.ListSourceKeys(IndexCacheDir)
-                .Where(key => key.Length == 1 && char.IsLetter(key[0]));
+            var cached = LocalDriveCacheLocator.ListCachedDrives(IndexCacheDir);
             var visible = detected.Concat(cached).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(d => d).ToList();
-            var enabledSet = new HashSet<string>(_settings().EnabledLocalDrives, StringComparer.OrdinalIgnoreCase);
-            var supported = enabledSet.Count == 0 ? detected : detected.Where(enabledSet.Contains).ToList();
+            var enabledIds = new HashSet<string>(_settings().LocalDrives, StringComparer.OrdinalIgnoreCase);
+            var supported = enabledIds.Count == 0
+                ? detected
+                : detected.Where(d => enabledIds.Contains(VolumeHelper.GetVolumeId(d) ?? string.Empty)).ToList();
             var enabled = new HashSet<string>(supported, StringComparer.OrdinalIgnoreCase);
             var drivesToBuild = new List<string>();
 
@@ -65,8 +66,9 @@ internal sealed class SearchEngineDriveMaintenance
         if (drive.Length == 0)
             return false;
 
-        var enabledDrives = _settings().EnabledLocalDrives;
-        if (enabledDrives.Count > 0 && !enabledDrives.Contains(drive, StringComparer.OrdinalIgnoreCase))
+        var enabledIds = _settings().LocalDrives;
+        var driveId = VolumeHelper.GetVolumeId(drive) ?? string.Empty;
+        if (enabledIds.Count > 0 && !enabledIds.Contains(driveId, StringComparer.OrdinalIgnoreCase))
             return false;
 
         return QueueDriveRebuild(drive, forceRebuild: true);
@@ -78,14 +80,21 @@ internal sealed class SearchEngineDriveMaintenance
         if (drive.Length == 0)
             return false;
 
-        FileRecordStoreSerializer.Delete(IndexCacheDir, drive);
+        LocalDriveCacheLocator.Delete(IndexCacheDir, drive);
         _indexer.DropDriveFromRuntime(drive);
+        var detected = VolumeHelper.DetectIndexableLocalDrives();
+        var detectedSet = new HashSet<string>(detected, StringComparer.OrdinalIgnoreCase);
+        var enabledIds = new HashSet<string>(_settings().LocalDrives, StringComparer.OrdinalIgnoreCase);
+        var isPresent = detectedSet.Contains(drive);
+        var isEnabled = enabledIds.Count == 0 ? isPresent : isPresent && enabledIds.Contains(VolumeHelper.GetVolumeId(drive) ?? string.Empty);
         lock (_indexer.LockObj)
         {
             var status = _indexer.Status.Drives.FirstOrDefault(d => d.Drive.Equals(drive, StringComparison.OrdinalIgnoreCase));
             if (status != null)
             {
-                status.State = "disabled";
+                status.Enabled = isEnabled;
+                status.Kind = isPresent ? VolumeHelper.GetDisplayFileSystemType(drive) : "-";
+                status.State = isPresent ? (isEnabled ? "ready" : "disabled") : "unavailable";
                 status.Files = 0;
                 status.Dirs = 0;
             }
@@ -133,7 +142,7 @@ internal sealed class SearchEngineDriveMaintenance
         if (current.TryGetValue(drive, out var existing))
         {
             var wasEnabled = existing.Enabled;
-            var hasCache = FileRecordStoreSerializer.Exists(IndexCacheDir, drive);
+            var hasCache = LocalDriveCacheLocator.HasCache(IndexCacheDir, drive);
             existing.Enabled = isPresent && isEnabled;
             existing.Kind = isPresent ? VolumeHelper.GetDisplayFileSystemType(drive) : "-";
             existing.State = isPresent ? existing.State : "unavailable";
@@ -150,7 +159,7 @@ internal sealed class SearchEngineDriveMaintenance
             return existing;
         }
 
-        var shouldBuild = isPresent && isEnabled && !FileRecordStoreSerializer.Exists(IndexCacheDir, drive);
+        var shouldBuild = isPresent && isEnabled && !LocalDriveCacheLocator.HasCache(IndexCacheDir, drive);
         if (shouldBuild)
             drivesToBuild.Add(drive);
         return new UsnIndexer.DriveIndexStatus
@@ -159,7 +168,7 @@ internal sealed class SearchEngineDriveMaintenance
             Enabled = isPresent && isEnabled,
             Kind = isPresent ? VolumeHelper.GetDisplayFileSystemType(drive) : "-",
             State = shouldBuild ? "pending" : isPresent && isEnabled ? "ready" : isPresent ? "disabled" : "unavailable",
-            CachePath = FileRecordStoreSerializer.GetBasePath(IndexCacheDir, drive) + ".meta"
+            CachePath = isPresent ? LocalDriveCacheLocator.GetCachePath(IndexCacheDir, drive) : string.Empty
         };
     }
 

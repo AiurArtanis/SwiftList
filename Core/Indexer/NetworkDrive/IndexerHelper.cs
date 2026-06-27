@@ -36,29 +36,13 @@ internal static class IndexerHelper
         _ => null
     };
 
-    public static string GetCachePath(string drive) => FileRecordStoreSerializer.GetBasePath(Path.Combine(Logger.UserDataDir, "indexes"), drive) + ".meta";
-    public static bool HasCache(string drive) => FileRecordStoreSerializer.Exists(Path.Combine(Logger.UserDataDir, "indexes"), drive);
-    public static IReadOnlyList<string> GetCachedDrives() => FileRecordStoreSerializer.ListSourceKeys(Path.Combine(Logger.UserDataDir, "indexes"));
-    public static void DeleteCache(string drive) => FileRecordStoreSerializer.Delete(Path.Combine(Logger.UserDataDir, "indexes"), drive);
+    public static string GetCachePath(string drive) => NetworkDriveCacheLocator.GetCachePath(drive);
+    public static bool HasCache(string drive) => NetworkDriveCacheLocator.HasCache(drive);
+    public static IReadOnlyList<string> GetCachedDrives() => NetworkDriveCacheLocator.GetCachedDrives();
+    public static void DeleteCache(string drive) => NetworkDriveCacheLocator.DeleteCache(drive);
 
     public static bool TryLoad(string drive, out NetworkIndex index)
-    {
-        index = new NetworkIndex(drive);
-        var store = FileRecordStoreSerializer.Load(Path.Combine(Logger.UserDataDir, "indexes"), drive);
-        if (store == null)
-            return false;
+        => NetworkDriveCacheLocator.TryLoad(drive, out index);
 
-        try
-        {
-            index = NetworkIndex.FromStore(store);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[IndexerHelper] Failed to load network drive {drive}: {ex.Message}", LogLevel.Error);
-            return false;
-        }
-    }
-
-    public static void Save(NetworkIndex index) => FileRecordStoreSerializer.Save(Path.Combine(Logger.UserDataDir, "indexes"), index.ToStore());
+    public static void Save(NetworkIndex index) => NetworkDriveCacheLocator.Save(index);
 }

@@ -4,7 +4,7 @@ namespace SwiftList.Core;
 
 public class MachineSettings
 {
-    public List<string> EnabledLocalDrives { get; set; } = new();
+    public List<string> LocalDrives { get; set; } = new();
 
     public static string SettingsPath => Path.Combine(Logger.SharedDataDir, "machine-settings.json");
 
@@ -16,7 +16,12 @@ public class MachineSettings
                 return new MachineSettings();
 
             var json = File.ReadAllText(SettingsPath);
-            return JsonSerializer.Deserialize<MachineSettings>(json) ?? new MachineSettings();
+            var settings = JsonSerializer.Deserialize<MachineSettings>(json) ?? new MachineSettings();
+            settings.LocalDrives = settings.LocalDrives
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            return settings;
         }
         catch (Exception ex)
         {

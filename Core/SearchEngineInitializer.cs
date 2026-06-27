@@ -33,7 +33,7 @@ internal class SearchEngineInitializer
             Enabled = enabled.Contains(d),
             Kind = VolumeHelper.GetDisplayFileSystemType(d),
             State = enabled.Contains(d) ? "pending" : "disabled",
-            CachePath = FileRecordStoreSerializer.GetBasePath(_indexCacheDir, d) + ".meta"
+            CachePath = LocalDriveCacheLocator.GetCachePath(_indexCacheDir, d)
         }).ToList();
 
         _indexer.SetDriveStatuses(statuses);
@@ -47,10 +47,10 @@ internal class SearchEngineInitializer
 
             var machineSettings = MachineSettings.Load();
             var detectedDrives = VolumeHelper.DetectIndexableLocalDrives();
-            var enabledSet = new HashSet<string>(machineSettings.EnabledLocalDrives, StringComparer.OrdinalIgnoreCase);
-            var supportedDrives = enabledSet.Count == 0
+            var enabledIds = new HashSet<string>(machineSettings.LocalDrives, StringComparer.OrdinalIgnoreCase);
+            var supportedDrives = enabledIds.Count == 0
                 ? detectedDrives
-                : detectedDrives.Where(enabledSet.Contains).ToList();
+                : detectedDrives.Where(d => enabledIds.Contains(VolumeHelper.GetVolumeId(d) ?? string.Empty)).ToList();
 
             EnsureDriveStatuses(detectedDrives, supportedDrives);
 

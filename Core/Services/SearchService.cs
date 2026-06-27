@@ -158,6 +158,7 @@ public class SearchService : IDisposable
     }
 
     public void RefreshNetworkIndexes() => UserNetworkDriveSearch.Refresh();
+    public void ConfigureNetworkIndexes() => UserNetworkDriveSearch.Configure();
     public bool RefreshNetworkDriveIndex(string drive) => UserNetworkDriveSearch.RefreshDrive(drive);
     public IReadOnlyList<NetworkIndexStatus> GetNetworkIndexStatuses() => UserNetworkDriveSearch.GetStatuses();
     public bool HasNetworkDriveCache(string drive) => UserNetworkDriveSearch.HasCache(drive);
@@ -270,7 +271,8 @@ public class SearchService : IDisposable
             if (driveInfo.DriveType == DriveType.Network)
             {
                 var letter = dir.Substring(0, 1);
-                return !UserSettings.Load().NetworkDrives.Any(d => d.Enabled && string.Equals(d.Drive, letter, StringComparison.OrdinalIgnoreCase));
+                var id = NetworkDriveResolver.GetNetworkId(letter);
+                return string.IsNullOrWhiteSpace(id) || !UserSettings.Load().NetworkDrives.Any(d => string.Equals(d.Id, id, StringComparison.OrdinalIgnoreCase));
             }
             // Both NTFS and ReFS are indexed by the USN journal indexer.
             var fs = driveInfo.DriveFormat;

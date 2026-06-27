@@ -94,8 +94,8 @@ public class SearchEngine : IDisposable
 
     public void UpdateMachineSettings(MachineSettings settings)
     {
-        var oldDrives = _machineSettings?.EnabledLocalDrives ?? new List<string>();
-        var newDrives = settings.EnabledLocalDrives ?? new List<string>();
+        var oldDrives = _machineSettings?.LocalDrives ?? new List<string>();
+        var newDrives = settings.LocalDrives ?? new List<string>();
 
         var drivesChanged = !oldDrives.OrderBy(d => d).SequenceEqual(newDrives.OrderBy(d => d), StringComparer.OrdinalIgnoreCase);
 

@@ -48,10 +48,9 @@ public sealed class NetworkIndexer : IDisposable
     public void Configure(IEnumerable<NetworkDriveSetting> driveSettings, bool forceRefresh = false)
     {
         var enabledSettings = driveSettings
-            .Where(d => d.Enabled)
             .Select(d => new
             {
-                Drive = IndexerHelper.NormalizeDrive(d.Drive),
+                Drive = ResolveDriveFromId(d.Id),
                 RefreshMode = IndexerHelper.NormalizeRefreshMode(d.RefreshMode)
             })
             .Where(d => d.Drive.Length == 1)
@@ -276,5 +275,15 @@ public sealed class NetworkIndexer : IDisposable
 
         _watcherManager?.Dispose();
         _watcherManager = null;
+    }
+
+    private static string ResolveDriveFromId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+            return string.Empty;
+
+        return NetworkDriveResolver.GetNetworkDrives()
+            .FirstOrDefault(d => string.Equals(NetworkDriveResolver.GetNetworkId(d.Letter), id, StringComparison.OrdinalIgnoreCase))
+            ?.Letter ?? string.Empty;
     }
 }

@@ -1,0 +1,129 @@
+using System.Security.Cryptography;
+using System.Text;
+
+namespace SwiftList.Core.Indexer.NetworkDrive;
+
+internal static class NetworkDriveCacheLocator
+{
+    public static string GetCachePath(string drive)
+        => FileRecordStoreSerializer.GetBasePath(Path.Combine(Logger.UserDataDir, "indexes"), GetStorageKeyOrFallback(drive)) + ".meta";
+
+    public static bool HasCache(string drive) => TryResolveStorageKey(drive) != null;
+
+    public static IReadOnlyList<string> GetCachedDrives()
+    {
+        var resolvedByUnc = NetworkDriveResolver.GetNetworkDrives()
+            .Where(d => !string.IsNullOrWhiteSpace(d.UncPath))
+            .ToDictionary(d => NormalizeUnc(d.UncPath), d => d.Letter, StringComparer.OrdinalIgnoreCase);
+
+        return EnumerateNetworkStores()
+            .Select(store =>
+            {
+                var unc = NormalizeUnc(store.FileSystemType);
+                return unc.Length > 0 && resolvedByUnc.TryGetValue(unc, out var currentDrive)
+                    ? currentDrive
+                    : IndexerHelper.NormalizeDrive(store.SourceKey);
+            })
+            .Where(drive => drive.Length == 1)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(drive => drive, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    public static void DeleteCache(string drive)
+    {
+        var storageKey = TryResolveStorageKey(drive);
+        if (storageKey != null)
+            FileRecordStoreSerializer.Delete(Path.Combine(Logger.UserDataDir, "indexes"), storageKey);
+    }
+
+    public static bool TryLoad(string drive, out NetworkIndex index)
+    {
+        index = new NetworkIndex(drive);
+        var storageKey = TryResolveStorageKey(drive);
+        if (storageKey == null)
+            return false;
+
+        var store = FileRecordStoreSerializer.Load(Path.Combine(Logger.UserDataDir, "indexes"), storageKey);
+        if (store == null)
+            return false;
+
+        try
+        {
+            store.SourceKey = IndexerHelper.NormalizeDrive(drive);
+            index = NetworkIndex.FromStore(store);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[NetworkDriveCacheLocator] Failed to load network drive {drive}: {ex.Message}", LogLevel.Error);
+            return false;
+        }
+    }
+
+    public static void Save(NetworkIndex index)
+        => FileRecordStoreSerializer.Save(Path.Combine(Logger.UserDataDir, "indexes"), index.ToStore(), GetStorageKeyOrFallback(index.Drive));
+
+    private static string GetStorageKeyOrFallback(string drive)
+    {
+        var unc = NetworkDriveResolver.GetUncPath(drive);
+        return !string.IsNullOrWhiteSpace(unc)
+            ? BuildStorageKey(unc)
+            : BuildFallbackStorageKey(IndexerHelper.NormalizeDrive(drive));
+    }
+
+    private static string? TryResolveStorageKey(string drive)
+    {
+        var normalizedDrive = IndexerHelper.NormalizeDrive(drive);
+        if (normalizedDrive.Length == 0)
+            return null;
+
+        var unc = NetworkDriveResolver.GetUncPath(normalizedDrive);
+        if (!string.IsNullOrWhiteSpace(unc))
+            return BuildStorageKey(unc);
+
+        var fallback = EnumerateNetworkStores().FirstOrDefault(store =>
+            store.SourceKey.Equals(normalizedDrive, StringComparison.OrdinalIgnoreCase));
+        return fallback == null ? null : BuildStorageKey(fallback.FileSystemType);
+    }
+
+    private static IEnumerable<FileRecordStore> EnumerateNetworkStores()
+    {
+        var cacheDir = Path.Combine(Logger.UserDataDir, "indexes");
+        if (!Directory.Exists(cacheDir))
+            yield break;
+
+        foreach (var path in Directory.EnumerateFiles(cacheDir, "*.meta"))
+        {
+            var name = Path.GetFileNameWithoutExtension(path);
+            if (string.IsNullOrWhiteSpace(name))
+                continue;
+
+            var storageKey = name;
+            var store = FileRecordStoreSerializer.Load(cacheDir, storageKey);
+            if (store?.SourceKind == FileRecordSourceKind.NetworkMappedDrive)
+                yield return store;
+        }
+    }
+
+    public static string GetIdForUnc(string unc)
+    {
+        var normalized = NormalizeUnc(unc).ToLowerInvariant();
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    private static string BuildStorageKey(string unc) => GetIdForUnc(unc);
+
+    private static string BuildFallbackStorageKey(string drive)
+    {
+        var normalized = IndexerHelper.NormalizeDrive(drive).ToLowerInvariant();
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    private static string NormalizeUnc(string? unc)
+        => string.IsNullOrWhiteSpace(unc)
+            ? string.Empty
+            : unc.Trim().TrimEnd('\\').Replace('/', '\\');
+}

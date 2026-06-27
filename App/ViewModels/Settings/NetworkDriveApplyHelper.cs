@@ -1,4 +1,3 @@
-using SwiftList.App.Services;
 using SwiftList.Core;
 
 namespace SwiftList.App.ViewModels.Settings;
@@ -10,26 +9,29 @@ internal static class NetworkDriveApplyHelper
         IReadOnlyList<NetworkDriveSetting> previousSettings,
         IReadOnlyList<NetworkDriveSetting> newSettings)
     {
+        searchService.ConfigureNetworkIndexes();
+
         var previousByDrive = previousSettings
-            .GroupBy(d => d.Drive, StringComparer.OrdinalIgnoreCase)
+            .Where(d => !string.IsNullOrWhiteSpace(d.Id))
+            .GroupBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
-            .ToDictionary(d => d.Drive, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(d => d.Id, StringComparer.OrdinalIgnoreCase);
 
         foreach (var drive in newSettings
-                     .GroupBy(d => d.Drive, StringComparer.OrdinalIgnoreCase)
+                     .Where(d => !string.IsNullOrWhiteSpace(d.Id))
+                     .GroupBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
                      .Select(g => g.First())
-                     .OrderBy(d => d.Drive, StringComparer.OrdinalIgnoreCase))
+                     .OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase))
         {
-            if (!drive.Enabled)
+            previousByDrive.TryGetValue(drive.Id, out var previous);
+            var resolvedDrive = NetworkDriveResolver.GetNetworkDrives()
+                .FirstOrDefault(d => string.Equals(NetworkDriveResolver.GetNetworkId(d.Letter), drive.Id, StringComparison.OrdinalIgnoreCase))
+                ?.Letter;
+            if (previous != null || string.IsNullOrWhiteSpace(resolvedDrive) || searchService.HasNetworkDriveCache(resolvedDrive))
                 continue;
 
-            previousByDrive.TryGetValue(drive.Drive, out var previous);
-            var wasEnabled = previous?.Enabled == true;
-            if (wasEnabled || searchService.HasNetworkDriveCache(drive.Drive))
-                continue;
-
-            if (await WaitForNetworkIdleAsync(searchService) && searchService.RefreshNetworkDriveIndex(drive.Drive))
-                await WaitForNetworkDriveRefreshAsync(searchService, drive.Drive);
+            if (await WaitForNetworkIdleAsync(searchService) && searchService.RefreshNetworkDriveIndex(resolvedDrive))
+                await WaitForNetworkDriveRefreshAsync(searchService, resolvedDrive);
         }
     }
 

@@ -182,7 +182,7 @@ public class UsnIndexer : IDisposable
             metadata.RootId,
             metadata.JournalId,
             metadata.NextUsn);
-        FileRecordStoreSerializer.Save(Path.Combine(Logger.UserDataDir, "indexes"), store);
+        LocalDriveCacheLocator.Save(Path.Combine(Logger.UserDataDir, "indexes"), drive, store);
     }
 
     public void CompactMemory()

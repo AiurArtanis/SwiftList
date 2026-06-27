@@ -70,22 +70,24 @@ public class LocalDriveSettingsViewModel : ViewModelBase
 
     public void UpdateStatus(UsnIndexer.IndexerStatus status, MachineSettings settings)
     {
-        var enabled = settings.EnabledLocalDrives.Count == 0
+        var enabled = settings.LocalDrives.Count == 0
 
             ? null
 
-            : settings.EnabledLocalDrives.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            : settings.LocalDrives.ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var drive in status.Drives.OrderBy(d => d.Drive))
         {
             var item = LocalDrives.FirstOrDefault(d => d.Drive.Equals(drive.Drive, StringComparison.OrdinalIgnoreCase));
             var isPresent = drive.State != "unavailable";
-            var appliedEnabled = isPresent && (enabled == null ? drive.Enabled : enabled.Contains(drive.Drive));
+            var driveId = VolumeHelper.GetVolumeId(drive.Drive) ?? string.Empty;
+            var appliedEnabled = isPresent && (enabled == null ? drive.Enabled : enabled.Contains(driveId));
             var isEnabled = item?.IsEnabled ?? appliedEnabled;
             if (item == null)
             {
                 item = new LocalDriveSettingsItem
                 {
                     Drive = drive.Drive,
+                    Id = driveId,
                     Name = $"{drive.Drive}:",
                     IsEnabled = isEnabled
                 };
@@ -93,8 +95,9 @@ public class LocalDriveSettingsViewModel : ViewModelBase
                 item.PropertyChanged += OnLocalDriveItemChanged;
                 LocalDrives.Add(item);
             }
+            item.Id = driveId;
 
-            var hasCache = FileRecordStoreSerializer.ExistsBasePath(FileRecordStoreSerializer.GetBasePath(Path.GetDirectoryName(drive.CachePath) ?? string.Empty, drive.Drive));
+            var hasCache = !string.IsNullOrWhiteSpace(drive.CachePath) && File.Exists(drive.CachePath);
             TrackPendingRebuild(drive);
 
             item.RowAction = appliedEnabled ? LocalDriveRowAction.Rebuild : hasCache ? LocalDriveRowAction.Delete : LocalDriveRowAction.None;
@@ -188,9 +191,12 @@ public class LocalDriveSettingsViewModel : ViewModelBase
         else if (item.RowAction == LocalDriveRowAction.Delete)
         {
             await _searchService.DeleteDriveIndexAsync(item.Drive);
+            var isUnavailable = item.State == TranslationManager.Instance["Local_DriveUnavailable"];
             item.RowAction = LocalDriveRowAction.None;
-            item.State = TranslationManager.Instance["Local_StateDisabled"];
+            item.State = isUnavailable ? TranslationManager.Instance["Local_DriveUnavailable"] : TranslationManager.Instance["Local_StateDisabled"];
             item.ItemCount = "-";
+            item.CanRunRowAction = false;
+            item.CanEditEnabled = !isUnavailable && IsDriveCheckboxEnabled;
         }
 
         _onTriggerFastRefresh?.Invoke();
@@ -253,6 +259,7 @@ public class LocalDriveSettingsItem : ViewModelBase
     private bool _canEditEnabled;
     private LocalDriveRowAction _rowAction;
     public string Drive { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string CachePath { get; set; } = string.Empty;
     public ICommand RowActionCommand { get; set; } = null!;

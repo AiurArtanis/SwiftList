@@ -135,7 +135,7 @@ public static class PipeResponseBinarySerializer
     private static int CalculateSettingsSize(MachineSettings settings)
     {
         var size = 4; // Count
-        foreach (var drive in settings.EnabledLocalDrives)
+        foreach (var drive in settings.LocalDrives)
             size += GetStringByteCount(drive) + 5;
         return size;
     }
@@ -181,9 +181,9 @@ public static class PipeResponseBinarySerializer
     }
     private static void WriteMachineSettings(Span<byte> span, ref int offset, MachineSettings settings)
     {
-        BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), settings.EnabledLocalDrives.Count);
+        BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), settings.LocalDrives.Count);
         offset += 4;
-        foreach (var drive in settings.EnabledLocalDrives)
+        foreach (var drive in settings.LocalDrives)
             WriteString(span, ref offset, drive);
     }
     private static UsnIndexer.IndexerStatus ReadStatus(byte[] payload, ref int offset)
@@ -238,7 +238,7 @@ public static class PipeResponseBinarySerializer
         offset += 4;
         var settings = new MachineSettings();
         for (var i = 0; i < count; i++)
-            settings.EnabledLocalDrives.Add(ReadString(payload, ref offset));
+            settings.LocalDrives.Add(ReadString(payload, ref offset));
         return settings;
     }
 

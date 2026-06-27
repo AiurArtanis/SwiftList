@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace SwiftList.Core;
@@ -6,6 +7,19 @@ namespace SwiftList.Core;
 public static class VolumeHelper
 {
     public readonly record struct VolumeIdentity(string FileSystemType, uint SerialNumber);
+
+    public static string GetVolumeCacheKey(VolumeIdentity identity)
+    {
+        var raw = $"{identity.SerialNumber:x8}";
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(raw));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    public static string? GetVolumeId(string driveLetter)
+    {
+        var identity = GetVolumeIdentity(driveLetter);
+        return identity.HasValue ? GetVolumeCacheKey(identity.Value) : null;
+    }
 
     public static UInt128? GetRootFrn(string driveLetter)
     {

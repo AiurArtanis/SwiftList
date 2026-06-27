@@ -87,7 +87,7 @@ public static class FileRecordStoreSerializer
     private const string NamesMagic = "SLRCNAME";
     private const int Version = 7;
 
-    public static string GetBasePath(string cacheDir, string sourceKey) => Path.Combine(cacheDir, $"source-{sourceKey.ToLowerInvariant()}");
+    public static string GetBasePath(string cacheDir, string sourceKey) => Path.Combine(cacheDir, sourceKey.ToLowerInvariant());
 
     public static bool Exists(string cacheDir, string sourceKey)
     {
@@ -104,10 +104,10 @@ public static class FileRecordStoreSerializer
         if (!Directory.Exists(cacheDir))
             return new List<string>();
 
-        return Directory.EnumerateFiles(cacheDir, "source-*.meta")
+        return Directory.EnumerateFiles(cacheDir, "*.meta")
             .Select(Path.GetFileNameWithoutExtension)
-            .Where(name => name?.StartsWith("source-", StringComparison.OrdinalIgnoreCase) == true)
-            .Select(name => name!["source-".Length..].ToUpperInvariant())
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!.ToUpperInvariant())
             .Where(key => Exists(cacheDir, key))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
@@ -124,10 +124,12 @@ public static class FileRecordStoreSerializer
     }
 
 
-    public static void Save(string cacheDir, FileRecordStore store)
+    public static void Save(string cacheDir, FileRecordStore store) => Save(cacheDir, store, store.SourceKey);
+
+    public static void Save(string cacheDir, FileRecordStore store, string storageKey)
     {
         Directory.CreateDirectory(cacheDir);
-        var basePath = GetBasePath(cacheDir, store.SourceKey);
+        var basePath = GetBasePath(cacheDir, storageKey);
         var metaTemp = basePath + ".meta.tmp";
         var recordsTemp = basePath + ".records.tmp";
         var namesTemp = basePath + ".names.tmp";

@@ -138,28 +138,26 @@ public class SettingsViewModel : ViewModelBase
 
             .Select(d => new NetworkDriveSetting
             {
-                Drive = d.Drive,
-                Enabled = d.Enabled,
+                Id = d.Id,
                 RefreshMode = d.RefreshMode
 
             })
 
             .ToList();
-        var previousLocalDrives = (await _searchService.GetMachineSettingsAsync()).EnabledLocalDrives.ToList();
+        var previousLocalDrives = (await _searchService.GetMachineSettingsAsync()).LocalDrives.ToList();
         var previousExclusions = SettingsChangeSnapshot.CaptureExclusions(_userSettings);
 
         var machineSettings = new MachineSettings
         {
-            EnabledLocalDrives = LocalDrive.LocalDrives.Where(d => d.IsEnabled).Select(d => d.Drive).ToList()
+            LocalDrives = LocalDrive.LocalDrives.Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id)).Select(d => d.Id).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
 
         };
-        if (SettingsChangeSnapshot.StringListChanged(previousLocalDrives, machineSettings.EnabledLocalDrives))
+        if (SettingsChangeSnapshot.StringListChanged(previousLocalDrives, machineSettings.LocalDrives))
             await _searchService.SaveMachineSettingsAsync(machineSettings);
 
-        _userSettings.NetworkDrives = NetworkDrive.NetworkDrives.Select(d => new NetworkDriveSetting
+        _userSettings.NetworkDrives = NetworkDrive.NetworkDrives.Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id)).Select(d => new NetworkDriveSetting
         {
-            Drive = d.Drive,
-            Enabled = d.IsEnabled,
+            Id = d.Id,
             RefreshMode = d.RefreshMode
 
         }).ToList();
@@ -181,15 +179,15 @@ public class SettingsViewModel : ViewModelBase
             await NetworkDriveApplyHelper.ApplyChangesAsync(_searchService, previousNetworkDrives, _userSettings.NetworkDrives);
 
         if (exclusionsChanged)
-            await RebuildScanBasedLocalDrivesAsync(machineSettings.EnabledLocalDrives);
+            await RebuildScanBasedLocalDrivesAsync(machineSettings.LocalDrives);
 
         Refresh();
     }
 
-    private async Task RebuildScanBasedLocalDrivesAsync(IReadOnlyList<string> enabledLocalDrives)
+    private async Task RebuildScanBasedLocalDrivesAsync(IReadOnlyList<string> enabledLocalDriveIds)
     {
-        var enabled = enabledLocalDrives.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var drive in LocalDrive.LocalDrives.Where(d => d.IsEnabled && (enabled.Count == 0 || enabled.Contains(d.Drive))))
+        var enabled = enabledLocalDriveIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var drive in LocalDrive.LocalDrives.Where(d => d.IsEnabled && (enabled.Count == 0 || enabled.Contains(d.Id))))
         {
             var fs = VolumeHelper.GetFileSystemType(drive.Drive);
             if (!fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) &&
@@ -213,16 +211,12 @@ public class SettingsViewModel : ViewModelBase
     private static bool NetworkSettingsChanged(IReadOnlyList<NetworkDriveSetting> oldSettings, IReadOnlyList<NetworkDriveSetting> newSettings)
     {
         var oldOrdered = oldSettings
-
-            .OrderBy(d => d.Drive, StringComparer.OrdinalIgnoreCase)
-
-            .Select(d => $"{d.Drive}|{d.Enabled}|{d.RefreshMode}");
+            .OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(d => $"{d.Id}|{d.RefreshMode}");
 
         var newOrdered = newSettings
-
-            .OrderBy(d => d.Drive, StringComparer.OrdinalIgnoreCase)
-
-            .Select(d => $"{d.Drive}|{d.Enabled}|{d.RefreshMode}");
+            .OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(d => $"{d.Id}|{d.RefreshMode}");
         return !oldOrdered.SequenceEqual(newOrdered, StringComparer.OrdinalIgnoreCase);
     }
 }

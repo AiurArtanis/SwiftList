@@ -31,7 +31,7 @@ public static class UsnIndexerCacheExtensions
             var metadata = new List<(string Drive, ulong JournalId, long NextUsn)>();
             foreach (var drive in drives)
             {
-                var store = FileRecordStoreSerializer.Load(cacheDir, drive);
+                var store = LocalDriveCacheLocator.Load(cacheDir, drive);
                 if (store != null && IsCurrentVolumeCache(drive, store))
                 {
                     var runtime = new RuntimeIndex();
@@ -64,7 +64,7 @@ public static class UsnIndexerCacheExtensions
     {
         lock (indexer.LockObj)
         {
-            var store = FileRecordStoreSerializer.Load(cacheDir, drive);
+            var store = LocalDriveCacheLocator.Load(cacheDir, drive);
             if (store == null || !IsCurrentVolumeCache(drive, store))
                 return null;
 

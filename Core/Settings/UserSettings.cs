@@ -218,8 +218,7 @@ public class UserSettings
 
 public class NetworkDriveSetting
 {
-    public string Drive { get; set; } = string.Empty;
-    public bool Enabled { get; set; }
+    public string Id { get; set; } = string.Empty;
     public string RefreshMode { get; set; } = "Manual";
 }
 

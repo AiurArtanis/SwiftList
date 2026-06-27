@@ -18,6 +18,7 @@ internal static class DriveRecovery
         {
             if (!SupportsJournal(drive))
             {
+                indexer.SaveDrivesToCache(cacheDir, new() { (drive, cached.Value.JournalId, cached.Value.NextUsn) });
                 StartFolderMonitor(indexer, drive, onReindexRequired, addMonitor, token);
                 Logger.Log($"[SearchEngine] Restored folder-scan drive {drive} from cache.");
                 return;

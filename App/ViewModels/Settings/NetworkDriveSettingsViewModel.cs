@@ -89,7 +89,11 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
 
     public void RefreshNetworkDrives(UserSettings userSettings, IReadOnlyList<NetworkIndexStatus>? indexStatuses = null, bool isGlobalBusy = false)
     {
-        var configured = userSettings.NetworkDrives.ToDictionary(d => d.Drive, StringComparer.OrdinalIgnoreCase);
+        var configured = userSettings.NetworkDrives
+            .Where(d => !string.IsNullOrWhiteSpace(d.Id))
+            .GroupBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToDictionary(d => d.Id, StringComparer.OrdinalIgnoreCase);
         var statuses = (indexStatuses ?? Array.Empty<NetworkIndexStatus>())
             .ToDictionary(s => s.Drive, StringComparer.OrdinalIgnoreCase);
 
@@ -111,6 +115,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
 
                 statuses.TryGetValue(letter, out var indexStatus);
                 resolvedByDrive.TryGetValue(letter, out var drive);
+                item.Id = NetworkDriveResolver.GetNetworkId(letter);
                 item.IsPresent = drive != null;
                 if (!item.IsPresent)
                     item.IsEnabled = false;
@@ -129,16 +134,18 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
 
             foreach (var letter in visibleDrives)
             {
-                configured.TryGetValue(letter, out var saved);
                 statuses.TryGetValue(letter, out var indexStatus);
                 resolvedByDrive.TryGetValue(letter, out var drive);
+                var id = NetworkDriveResolver.GetNetworkId(letter);
+                configured.TryGetValue(id, out var saved);
 
                 var item = new NetworkDriveSettingsItem
                 {
+                    Id = id,
                     Drive = letter,
                     IsPresent = drive != null,
-                    IsEnabled = drive != null && (saved?.Enabled ?? false),
-                    AppliedEnabled = drive != null && (saved?.Enabled ?? false),
+                    IsEnabled = drive != null && saved != null,
+                    AppliedEnabled = drive != null && saved != null,
                     State = drive == null ? TranslationManager.Instance["Network_StatusUnavailable"] : GetStateText(drive, indexStatus),
                     ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-",
                     RefreshMode = NormalizeRefreshMode(saved?.RefreshMode)
@@ -186,10 +193,9 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
             return;
         _isBusy = true;
 
-        _userSettings.NetworkDrives = NetworkDrives.Select(d => new NetworkDriveSetting
+        _userSettings.NetworkDrives = NetworkDrives.Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id)).Select(d => new NetworkDriveSetting
         {
-            Drive = d.Drive,
-            Enabled = d.IsEnabled,
+            Id = d.Id,
             RefreshMode = d.RefreshMode
         }).ToList();
         _userSettings.Save();
@@ -210,13 +216,13 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
         if (item.RowAction == NetworkDriveRowAction.Rebuild)
         {
             _isBusy = true;
-            _userSettings.NetworkDrives = NetworkDrives.Select(d => new NetworkDriveSetting
+            _userSettings.NetworkDrives = NetworkDrives.Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id)).Select(d => new NetworkDriveSetting
             {
-                Drive = d.Drive,
-                Enabled = d.IsEnabled,
+                Id = d.Id,
                 RefreshMode = d.RefreshMode
             }).ToList();
             _userSettings.Save();
+            _searchService.ConfigureNetworkIndexes();
             ResetPendingEdits();
             item.State = TranslationManager.Instance["Network_StatusIndexing"];
             item.ItemCount = "-";
@@ -232,8 +238,13 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
         {
             _searchService.DeleteNetworkDriveCache(item.Drive);
             item.RowAction = NetworkDriveRowAction.None;
-            item.State = TranslationManager.Instance["Network_StatusConnected"];
+            item.State = item.IsPresent ? TranslationManager.Instance["Network_StatusConnected"] : TranslationManager.Instance["Network_StatusUnavailable"];
             item.ItemCount = "-";
+            item.CanRunRowAction = false;
+            item.CanEditEnabled = item.IsPresent && !_isBusy;
+            item.CanEditRefreshMode = item.IsPresent && !_isBusy;
+            if (!item.IsPresent)
+                item.IsEnabled = false;
         }
         _onTriggerFastRefresh?.Invoke();
     }

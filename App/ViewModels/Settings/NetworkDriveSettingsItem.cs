@@ -16,6 +16,7 @@ public class NetworkDriveSettingsItem : ViewModelBase
     private NetworkDriveRowAction _rowAction;
 
     public string Drive { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty;
     public ICommand RowActionCommand { get; set; } = null!;
     public bool AppliedEnabled { get; set; }
 

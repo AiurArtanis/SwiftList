@@ -68,7 +68,7 @@ internal static class IndexCacheManager
                     metadata.RootId,
                     metadata.JournalId,
                     metadata.NextUsn);
-                FileRecordStoreSerializer.Save(cacheDir, store);
+                LocalDriveCacheLocator.Save(cacheDir, meta.Drive, store);
             }
         }
     }
