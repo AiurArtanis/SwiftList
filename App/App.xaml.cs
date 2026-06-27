@@ -160,6 +160,7 @@ public partial class App : Application
         // Start the activation named pipe server to listen to subsequent launches
 
         _ = AppPipeService.StartPipeServerAsync();
+        AppStartupServiceBootstrapper.EnsureServiceStarted();
         Logger.Log("Starting normal WPF GUI client mode.");
         base.OnStartup(e);
 

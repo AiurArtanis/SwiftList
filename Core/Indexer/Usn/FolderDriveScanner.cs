@@ -4,6 +4,8 @@ namespace SwiftList.Core.Indexer.Usn;
 
 internal static class FolderDriveScanner
 {
+    internal readonly record struct FolderDriveBuildResult(FileRecordStore Store, string FileSystemType, uint VolumeSerialNumber, UInt128 RootId);
+
     public static FileRecordStore Build(string drive, Action<int, int>? onProgress, CancellationToken token)
     {
         var root = $"{drive}:\\";
@@ -19,24 +21,21 @@ internal static class FolderDriveScanner
         };
         store.Records.Add(new FileRecord(1, 1, string.Empty, FileRecordFlags.Directory | FileRecordFlags.SourceRoot));
 
-        var settings = UserSettings.Load();
-        var filter = WalkFilter.Create(root, new WalkOptions(
-            settings.ExcludedPaths,
-            settings.IgnoredPathGlobs,
-            settings.IgnoredPathRegexes,
-            0,
-            0,
-            true));
         var files = 0;
         var dirs = 0;
-        Walk(root, root, 1, 0, NetworkIgnoreRuleSet.Empty, filter, store, ref files, ref dirs, onProgress, token);
+        Walk(root, 1, store, ref files, ref dirs, onProgress, token);
         onProgress?.Invoke(files, dirs);
         return store;
     }
 
-    private static void Walk(string dir, string logicalDir, UInt128 parentId, int depth, NetworkIgnoreRuleSet inheritedRules, WalkFilter filter, FileRecordStore store, ref int files, ref int dirs, Action<int, int>? onProgress, CancellationToken token)
+    public static FolderDriveBuildResult? BuildStreaming(string drive, Action<int, int>? onProgress, CancellationToken token)
     {
-        var ignoreRules = filter.LoadIgnoreRules(dir, logicalDir, inheritedRules);
+        var store = Build(drive, onProgress, token);
+        return new FolderDriveBuildResult(store, store.FileSystemType, store.VolumeSerialNumber, store.RootId);
+    }
+
+    private static void Walk(string dir, UInt128 parentId, FileRecordStore store, ref int files, ref int dirs, Action<int, int>? onProgress, CancellationToken token)
+    {
         IEnumerable<string> entries;
         try { entries = Directory.EnumerateFileSystemEntries(dir); }
         catch { return; }
@@ -54,7 +53,7 @@ internal static class FolderDriveScanner
             var isDir = (attrs & FileAttributes.Directory) != 0;
             var logicalPath = PathHelpers.NormalizePath(entry, isDir);
             var name = Path.GetFileName(entry.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            if (!filter.ShouldIndex(logicalPath, name, isDir, attrs, ignoreRules))
+            if (string.IsNullOrWhiteSpace(name))
                 continue;
 
             var id = (UInt128)PathHelpers.HashPath64(logicalPath);
@@ -63,8 +62,8 @@ internal static class FolderDriveScanner
             else files++;
             if (((files + dirs) & 4095) == 0)
                 onProgress?.Invoke(files, dirs);
-            if (isDir && filter.ShouldDescend(logicalPath, attrs, depth + 1, ignoreRules))
-                Walk(entry, logicalPath, id, depth + 1, ignoreRules, filter, store, ref files, ref dirs, onProgress, token);
+            if (isDir)
+                Walk(entry, id, store, ref files, ref dirs, onProgress, token);
         }
     }
 }

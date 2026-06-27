@@ -129,6 +129,12 @@ internal sealed class UsnServicePipeServer : IDisposable
                         continue;
                     }
 
+                    if (request.Id == SearchRequestId.SubscribeStatus)
+                    {
+                        await StreamStatusUpdatesAsync(pipe, token).ConfigureAwait(false);
+                        continue;
+                    }
+
                     if (!pipe.IsConnected)
                     {
                         break;
@@ -163,6 +169,38 @@ internal sealed class UsnServicePipeServer : IDisposable
         Logger.Log("[PipeServer] Client disconnected from pipe.", LogLevel.Debug);
     }
 
+    private async Task StreamStatusUpdatesAsync(NamedPipeServerStream pipe, CancellationToken token)
+    {
+        if (_engine == null)
+            return;
+
+        var signal = new SemaphoreSlim(0);
+        void Handler(Core.Indexer.Usn.UsnIndexer.IndexerStatus _) => signal.Release();
+
+        try
+        {
+            _engine.StatusChanged += Handler;
+            await PipeResponseBinarySerializer.WriteStatusAsync(pipe, _engine.GetStatus(), token).ConfigureAwait(false);
+
+            while (!token.IsCancellationRequested && pipe.IsConnected)
+            {
+                await signal.WaitAsync(token).ConfigureAwait(false);
+                if (!pipe.IsConnected)
+                    break;
+
+                await PipeResponseBinarySerializer.WriteStatusAsync(pipe, _engine.GetStatus(), token).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex) when (IsClientDisconnect(ex) || ex is OperationCanceledException)
+        {
+        }
+        finally
+        {
+            _engine.StatusChanged -= Handler;
+            signal.Dispose();
+        }
+    }
+
     private PipeResponse ProcessClientRequest(SearchRequestMessage msg, CancellationToken token)
     {
         try
@@ -170,6 +208,9 @@ internal sealed class UsnServicePipeServer : IDisposable
             token.ThrowIfCancellationRequested();
             switch (msg.Id)
             {
+                case SearchRequestId.Ping:
+                    return new PipeResponse { Kind = PipeResponseKind.Ok };
+
                 case SearchRequestId.Status:
                     var status = _engine?.GetStatus();
                     return new PipeResponse
@@ -182,6 +223,11 @@ internal sealed class UsnServicePipeServer : IDisposable
                 case SearchRequestId.Rebuild:
                     Logger.Log("[UsnService] Received REBUILD request from client.");
                     _engine?.InitializeOrLoadIndex(true);
+                    return new PipeResponse { Kind = PipeResponseKind.Ok };
+
+                case SearchRequestId.Initialize:
+                    Logger.Log("[UsnService] Received INITIALIZE request from client.");
+                    _engine?.InitializeOrLoadIndex(false);
                     return new PipeResponse { Kind = PipeResponseKind.Ok };
 
                 case SearchRequestId.RebuildDrive:

@@ -174,52 +174,25 @@ public class ServiceMonitorViewModel : ViewModelBase, IDisposable
             StatusBarVisibility = Visibility.Visible;
         }
 
-        _ = Task.Run(async () =>
-        {
-            UsnIndexer.IndexerStatus status;
-            if (!forceRebuild)
+        SearchIndexBuildCoordinator.Trigger(
+            _searchService,
+            _connectionHandler,
+            shouldWaitForReconnect: _connectionHandler.ShouldWaitForServiceReconnect,
+            resetAutoInstallFlag: _connectionHandler.ResetAutoInstallFlag,
+            onReadyStatus: status =>
             {
-                status = await _searchService.GetStatusAsync();
-            }
-
-            else
+                IsIndexReady = true;
+                ApplyReadyStatus(status);
+                LoadingPanelVisibility = Visibility.Collapsed;
+                StatusBarVisibility = Visibility.Visible;
+                Logger.Log($"[ServiceMonitor] Connection fast-pass: service already ready.");
+            },
+            onPendingStatus: status =>
             {
-                status = new UsnIndexer.IndexerStatus { State = "force-rebuild" };
-            }
-
-            _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-            {
-                if (status.State == "ready")
-                {
-                    IsIndexReady = true;
-                    _connectionHandler.ClearServiceReconnectState();
-                    ApplyReadyStatus(status);
-                    LoadingPanelVisibility = Visibility.Collapsed;
-                    StatusBarVisibility = Visibility.Visible;
-                    _mainVm.Search.PerformSearch(_mainVm.Search.SearchQuery);
-                    Logger.Log($"[ServiceMonitor] Connection fast-pass: service already ready.");
-                }
-
-                else
-                {
-                    IsIndexReady = false;
-                    if (!_connectionHandler.ShouldWaitForServiceReconnect())
-                    {
-                        _connectionHandler.ResetAutoInstallFlag();
-                    }
-
-                    _statusHandler.ProcessStatusTimerTick(status);
-
-                    Task.Run(async () =>
-                    {
-                        await _searchService.InitializeOrLoadIndexAsync(forceRebuild);
-
-                        _ = Application.Current.Dispatcher.BeginInvoke(new Action(() => _connectionHandler.Start()));
-                    });
-                }
-
-            }));
-        });
+                IsIndexReady = false;
+                _statusHandler.ProcessStatusTimerTick(status);
+            },
+            forceRebuild: forceRebuild);
     }
 
     public void StopStatusTimer() => _connectionHandler.Stop();

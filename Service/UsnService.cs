@@ -22,7 +22,6 @@ public class UsnService : ServiceBase
         {
             ServicePluginLoader.LoadForService();
             _engine = new SearchEngine();
-            _engine.InitializeOrLoadIndex(false);
 
             _pipeServer = new UsnServicePipeServer();
             _pipeServer.Start(_engine);

@@ -157,7 +157,20 @@ public class LocalDriveSettingsViewModel : ViewModelBase
         SetBusy(true);
         IsLocalDrivesEmpty = false;
         IndexSummary = TranslationManager.Instance["Local_Rebuilding"];
-        await _searchService.InitializeOrLoadIndexAsync(true);
+        var enabledDrives = LocalDrives
+            .Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Drive))
+            .Select(d => d.Drive)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var drive in LocalDrives.Where(d => enabledDrives.Contains(d.Drive)))
+        {
+            drive.State = TranslationManager.Instance["Local_StateIndexing"];
+            drive.ItemCount = "-";
+        }
+        await LocalDriveRebuildHelper.RebuildEnabledDrivesAsync(
+            _searchService,
+            LocalDrives,
+            drive => enabledDrives.Contains(drive),
+            drive => _pendingRowRebuilds.Add(drive));
         _onTriggerFastRefresh?.Invoke();
     }
 

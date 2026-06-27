@@ -2,14 +2,17 @@ namespace SwiftList.Core;
 
 public enum SearchRequestId : byte
 {
+    Ping = 0,
     Status = 1,
+    SubscribeStatus = 9,
     Rebuild = 2,
     GetMachineSettings = 3,
     SetMachineSettings = 4,
     Search = 5,
     SearchDir = 6,
     RebuildDrive = 7,
-    DeleteDriveIndex = 8
+    DeleteDriveIndex = 8,
+    Initialize = 10
 }
 
 public struct SearchRequestMessage

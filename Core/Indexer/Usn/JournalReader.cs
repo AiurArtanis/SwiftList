@@ -4,9 +4,7 @@ namespace SwiftList.Core.Indexer.Usn;
 
 public class JournalReader
 {
-    public (UInt128 RootFrn,
-            Dictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)> SearchItems,
-            long NextUsn, ulong JournalId)? IndexDrive(string drive, Action<int, int>? onProgress = null)
+    internal UsnDriveIndexResult? IndexDrive(string drive, Action<int, int>? onProgress = null)
     {
         Logger.Log($"[JournalReader] Indexing drive {drive}...");
         var volumePath = $"\\\\.\\{drive}:";
@@ -95,7 +93,9 @@ public class JournalReader
         var bufSize = 1024 * 1024;
         var outBuf = new byte[bufSize];
         ulong nextFrn = 0;
-        var driveSearchItems = new Dictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)>();
+        var store = IndexCacheManager.CreateEmptyStore(drive, rootFrn.Value, nextUsn, journalId);
+        var namePool = new FileRecordNamePool();
+        var seenItems = new Dictionary<UInt128, int>();
         var progress = new EnumerationProgress(onProgress);
 
         while (true)
@@ -150,14 +150,24 @@ public class JournalReader
                 try
                 {
                     var record = UsnRecordParser.ParseRecord(recordSpan);
+                    var flags = record.IsDirectory ? FileRecordFlags.Directory : FileRecordFlags.None;
 
-                    if (driveSearchItems.TryAdd(record.FileReferenceNumber, (record.FileName, record.ParentFileReferenceNumber, record.IsDirectory)))
+                    if (seenItems.TryAdd(record.FileReferenceNumber, store.Records.Count))
                     {
-                        progress.Add(record.IsDirectory, driveSearchItems.Count);
+                        store.Records.Add(new FileRecord(
+                            record.FileReferenceNumber,
+                            record.ParentFileReferenceNumber,
+                            namePool.Get(record.FileName),
+                            flags));
+                        progress.Add(record.IsDirectory, store.Records.Count - 1);
                     }
                     else
                     {
-                        driveSearchItems[record.FileReferenceNumber] = (record.FileName, record.ParentFileReferenceNumber, record.IsDirectory);
+                        store.Records[seenItems[record.FileReferenceNumber]] = new FileRecord(
+                            record.FileReferenceNumber,
+                            record.ParentFileReferenceNumber,
+                            namePool.Get(record.FileName),
+                            flags);
                     }
                 }
                 catch (Exception ex)
@@ -169,9 +179,15 @@ public class JournalReader
             }
         }
 
-        Logger.Log($"[JournalReader] Drive {drive} enum complete: {driveSearchItems.Count} items.");
+        Logger.Log($"[JournalReader] Drive {drive} enum complete: {store.Records.Count - 1} items.");
         progress.Report();
-        return (rootFrn.Value, driveSearchItems, nextUsn, journalId);
+        return new UsnDriveIndexResult
+        {
+            Store = store,
+            NextUsn = nextUsn,
+            JournalId = journalId,
+            IsSortedById = true
+        };
     }
 
     public long CatchUpDrive(string drive, ulong journalId, long startUsn, Action<ParsedUsnRecord> onRecord)

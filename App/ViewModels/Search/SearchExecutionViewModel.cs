@@ -21,7 +21,6 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
     private Visibility _resultsSeparatorVisibility = Visibility.Collapsed;
     private string? _searchScope;
     private bool _isInlineSearchContext;
-
     public SearchExecutionViewModel(QuickSearchViewModel mainVm, SearchService searchService)
     {
         _mainVm = mainVm;
@@ -71,8 +70,7 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
                         appLimit: 51,
                         resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, value, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
                         state => IsSearching = state,
-                        (results, status, final) => ApplySearchResults(value, results, status, final),
-                        OnServiceUnavailable
+                        (results, status, final) => ApplySearchResults(value, results, status, final)
                     );
                 }
             }
@@ -197,8 +195,7 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
             appLimit: 51,
             resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, query, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
             state => IsSearching = state,
-            (results, status, final) => ApplySearchResults(query, results, status, final),
-            OnServiceUnavailable
+            (results, status, final) => ApplySearchResults(query, results, status, final)
         );
     }
 
@@ -215,19 +212,6 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
         ResultsSeparatorVisibility = hasResults ? Visibility.Visible : Visibility.Collapsed;
         _mainVm.Monitor.StatusBarVisibility = Visibility.Visible;
         _mainVm.Monitor.StatusText = statusText;
-    }
-
-    private void OnServiceUnavailable()
-    {
-        _mainVm.Monitor.SetOfflineState();
-        var results = new List<AppSearchResult>();
-        if (!string.IsNullOrWhiteSpace(SearchQuery))
-        {
-            results.Add(SearchResultMapper.CreateNoResultsResult(SearchQuery));
-        }
-        ReplaceResults(results);
-        ResultsPanelVisibility = Visibility.Visible;
-        ResultsSeparatorVisibility = Visibility.Visible;
     }
 
     private static bool AreSameResults(IReadOnlyList<AppSearchResult> current, IReadOnlyList<AppSearchResult> next)

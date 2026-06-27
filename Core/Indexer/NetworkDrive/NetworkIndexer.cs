@@ -2,6 +2,8 @@ namespace SwiftList.Core.Indexer.NetworkDrive;
 
 public sealed class NetworkIndexer : IDisposable
 {
+    public event Action<IReadOnlyList<NetworkIndexStatus>>? StatusesChanged;
+
     private readonly object _gate = new();
     internal object Gate => _gate;
     internal readonly Dictionary<string, NetworkIndex> _indexes = new(StringComparer.OrdinalIgnoreCase);
@@ -40,8 +42,16 @@ public sealed class NetworkIndexer : IDisposable
                 return;
 
             var settings = UserSettings.Load();
-            Configure(settings.NetworkDrives);
             _configured = true;
+            try
+            {
+                Configure(settings.NetworkDrives);
+            }
+            catch
+            {
+                _configured = false;
+                throw;
+            }
         }
     }
 
@@ -111,6 +121,7 @@ public sealed class NetworkIndexer : IDisposable
         }
 
         _scheduler?.StartRefresh(enabledDrives, refreshModes, forceRefresh ? null : cachedDrives, forceRefresh ? null : lastUpdatedTimes);
+        PublishStatusesChanged();
     }
 
     public bool RefreshDrive(string drive)
@@ -152,6 +163,7 @@ public sealed class NetworkIndexer : IDisposable
             _indexes.Remove(drive);
             _statuses.Remove(drive);
         }
+        PublishStatusesChanged();
     }
 
 
@@ -177,6 +189,7 @@ public sealed class NetworkIndexer : IDisposable
                 Error = error ?? string.Empty
             };
         }
+        PublishStatusesChanged();
     }
 
     private void OnRefreshFinished(string drive, NetworkIndex index)
@@ -202,6 +215,7 @@ public sealed class NetworkIndexer : IDisposable
 
         // Re-establish watcher in case it was evicted due to a prior error.
         _watcherManager?.EnsureWatcher(drive);
+        PublishStatusesChanged();
     }
 
     private void PublishIncrementalUpdate(string drive, NetworkIndex index)
@@ -226,6 +240,7 @@ public sealed class NetworkIndexer : IDisposable
                 Error = string.Empty,
             };
         }
+        PublishStatusesChanged();
     }
 
     private void PublishCheckpoint(string drive, FileRecordStore store, NetworkDriveWalkStats stats, CancellationToken token)
@@ -255,6 +270,7 @@ public sealed class NetworkIndexer : IDisposable
                     LastUpdated = index.LastUpdated
                 };
             }
+            PublishStatusesChanged();
         }
         catch (OperationCanceledException)
         {
@@ -285,5 +301,16 @@ public sealed class NetworkIndexer : IDisposable
         return NetworkDriveResolver.GetNetworkDrives()
             .FirstOrDefault(d => string.Equals(NetworkDriveResolver.GetNetworkId(d.Letter), id, StringComparison.OrdinalIgnoreCase))
             ?.Letter ?? string.Empty;
+    }
+
+    private void PublishStatusesChanged()
+    {
+        try
+        {
+            StatusesChanged?.Invoke(GetStatuses());
+        }
+        catch
+        {
+        }
     }
 }

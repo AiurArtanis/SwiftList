@@ -15,6 +15,7 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
     private readonly SearchService _searchService;
     private ServiceConnectionHandler _connectionHandler = null!;
     private SearchServiceStatusPresenter _statusPresenter = null!;
+    private bool _isRecovering;
 
     private bool _isSearchBoxEnabled;
     private Visibility _loadingPanelVisibility = Visibility.Collapsed;
@@ -92,9 +93,16 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
 
     public void CheckServiceStatusOnStartup()
     {
+        _isRecovering = true;
         _statusPresenter.ShowConnecting(_connectionHandler.ShouldWaitForServiceReconnect());
         IsSearchBoxEnabled = false;
-        _connectionHandler.Start();
+        SearchIndexBuildCoordinator.Trigger(
+            _searchService,
+            _connectionHandler,
+            shouldWaitForReconnect: _connectionHandler.ShouldWaitForServiceReconnect,
+            resetAutoInstallFlag: _connectionHandler.ResetAutoInstallFlag,
+            onReadyStatus: status => _statusPresenter.ProcessStatus(status),
+            onPendingStatus: status => _statusPresenter.ProcessStatus(status));
     }
 
     public void ResetAutoInstallFlag() => _connectionHandler.ResetAutoInstallFlag();
@@ -103,11 +111,13 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
     {
         _connectionHandler.Stop();
         _connectionHandler.ClearServiceReconnectState();
+        _isRecovering = false;
         _mainVm.PerformSearch(_mainVm.AdvancedQuery);
     }
 
     private void OnServiceInstallStarted()
     {
+        _isRecovering = true;
         LoadingTitle = TranslationManager.Instance["Service_AutoConnecting"];
         LoadingStats = TranslationManager.Instance["Service_AdminPrivilegeTip"];
         _statusPresenter.ShowReconnecting();
@@ -142,7 +152,13 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
 
         _connectionHandler = new ServiceConnectionHandler(
             _searchService,
-            onStatusUpdated: status => _statusPresenter.ProcessStatus(status),
+            onStatusUpdated: status =>
+            {
+                if (!_isRecovering && status.State == "ready")
+                    return;
+
+                _statusPresenter.ProcessStatus(status);
+            },
             onServiceInstallStarted: OnServiceInstallStarted,
             onServiceInstallCompleted: CheckServiceStatusOnStartup,
             onServiceInstallError: ex => MessageBox.Show(string.Format(TranslationManager.Instance["Service_InstallFailedPrompt"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error),
@@ -152,6 +168,7 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
         InstallServiceCommand = new RelayCommand(_connectionHandler.ExecuteInstallService);
 
         IsSearchBoxEnabled = true;
+        _connectionHandler.Start();
     }
 
     public void Dispose() => _connectionHandler.Dispose();

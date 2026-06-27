@@ -38,14 +38,13 @@ internal static class DriveRecovery
             indexer.DropDriveFromRuntime(drive);
 
         Logger.Log($"[SearchEngine] Cache restore unavailable for drive {drive}; rebuilding this drive only.");
-        var metadata = indexer.BuildDrives(new[] { drive }, clearExisting: false);
+        var metadata = indexer.BuildDrives(new[] { drive }, clearExisting: false, cacheDir: cacheDir);
         if (metadata.Count == 0)
         {
             indexer.SetDriveState(drive, "failed");
             return;
         }
 
-        TrySaveDriveCache(indexer, cacheDir, metadata, drive, "drive rebuild");
         foreach (var (builtDrive, journalId, nextUsn) in metadata)
         {
             if (SupportsJournal(builtDrive))
@@ -75,6 +74,8 @@ internal static class DriveRecovery
         string drive,
         string stage)
     {
+        if (metadata.Count == 0)
+            return;
         try
         {
             indexer.SaveDrivesToCache(cacheDir, metadata);

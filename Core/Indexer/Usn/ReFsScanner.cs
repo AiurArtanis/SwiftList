@@ -8,9 +8,7 @@ namespace SwiftList.Core.Indexer.Usn;
 
 public static class ReFsScanner
 {
-    public static (UInt128 RootFrn,
-            Dictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)> SearchItems,
-            long NextUsn, ulong JournalId)? ScanDrive(
+    internal static UsnDriveIndexResult? ScanDrive(
         string drive,
         SafeFileHandle volumeHandle,
         UInt128 rootFrn,
@@ -31,7 +29,13 @@ public static class ReFsScanner
         stopwatch.Stop();
         var rate = stopwatch.Elapsed.TotalSeconds > 0 ? items.Count / stopwatch.Elapsed.TotalSeconds : items.Count;
         Logger.Log($"[ReFsScanner] Drive {drive}: directory-id BFS complete ({items.Count} items, {stopwatch.Elapsed.TotalSeconds:F2}s, {rate:F0} items/s).");
-        return (rootFrn, items, nextUsn, journalId);
+        return new UsnDriveIndexResult
+        {
+            Store = IndexCacheManager.CreateStoreFromDriveData(drive, rootFrn, items, nextUsn, journalId),
+            NextUsn = nextUsn,
+            JournalId = journalId,
+            IsSortedById = false
+        };
     }
 
     // Slow path: parallel BFS using Channel<UInt128> as the work queue.

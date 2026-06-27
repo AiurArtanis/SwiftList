@@ -5,7 +5,7 @@ internal sealed class EnumerationProgress
     private readonly Action<int, int>? _onProgress;
     private int _files;
     private int _dirs;
-    private int _nextReport = 4096;
+    private int _nextReport = 32768;
 
     public EnumerationProgress(Action<int, int>? onProgress) => _onProgress = onProgress;
 
@@ -18,7 +18,7 @@ internal sealed class EnumerationProgress
             return;
 
         Report();
-        _nextReport = totalItems + 4096;
+        _nextReport = totalItems + 32768;
     }
 
     public void Report() => _onProgress?.Invoke(_files, _dirs);

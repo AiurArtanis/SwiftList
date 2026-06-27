@@ -20,10 +20,8 @@ public class SearchViewModel : ViewModelBase, IDisposable
     private string _advancedQuery = string.Empty;
     private List<AppSearchResult> _allResults = new();
     private string _resultCountText = "";
-
     private bool _isSearching;
     private bool _isResultsListEnabled = true;
-
     public bool IsSearching
     {
         get => _isSearching;
@@ -180,7 +178,7 @@ public class SearchViewModel : ViewModelBase, IDisposable
                 if (final)
                     IsSearching = false;
             },
-            _serviceStatus.CheckServiceStatusOnStartup
+            () => _serviceStatus.CheckServiceStatusOnStartup()
         );
 
     internal void PerformSearch(string query)
@@ -192,7 +190,10 @@ public class SearchViewModel : ViewModelBase, IDisposable
             _allResults.Clear();
             ApplyFiltersAndRender();
             LoadingPanelVisibility = Visibility.Collapsed;
+            return;
         }
+
+        OnAdvancedQueryChanged(query);
     }
 
     private string _currentSortColumn = string.Empty;

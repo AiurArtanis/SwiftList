@@ -128,10 +128,6 @@ public partial class QuickSearchWindow : Window, ISearchWindow
             Helpers.WindowEffectHelper.ApplyThemeEffects(this, ThemeManager.Instance.ActiveTheme);
         }
 
-        // Start index build
-
-        _viewModel.TriggerIndexBuild();
-
         // Position the window
 
         _controller.PositionWindow();

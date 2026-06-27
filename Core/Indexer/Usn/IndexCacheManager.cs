@@ -4,10 +4,9 @@ namespace SwiftList.Core.Indexer.Usn;
 
 internal static class IndexCacheManager
 {
-    public static FileRecordStore CreateStoreFromDriveData(
+    public static FileRecordStore CreateEmptyStore(
         string drive,
         UInt128 rootFrn,
-        Dictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)> searchItems,
         long nextUsn,
         ulong journalId)
     {
@@ -16,6 +15,7 @@ internal static class IndexCacheManager
             SourceKey = drive,
             SourceKind = FileRecordSourceKind.LocalMft,
             IdKind = FileRecordIdKind.MftFrn,
+            RootId = rootFrn,
             JournalId = journalId,
             NextUsn = nextUsn
         };
@@ -25,14 +25,24 @@ internal static class IndexCacheManager
             store.FileSystemType = identity.Value.FileSystemType;
             store.VolumeSerialNumber = identity.Value.SerialNumber;
         }
-        var namePool = new FileRecordNamePool();
 
-        store.RootId = rootFrn;
         store.Records.Add(new FileRecord(
             store.RootId,
             store.RootId,
             string.Empty,
             FileRecordFlags.Directory | FileRecordFlags.SourceRoot));
+        return store;
+    }
+
+    public static FileRecordStore CreateStoreFromDriveData(
+        string drive,
+        UInt128 rootFrn,
+        Dictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)> searchItems,
+        long nextUsn,
+        ulong journalId)
+    {
+        var store = CreateEmptyStore(drive, rootFrn, nextUsn, journalId);
+        var namePool = new FileRecordNamePool();
 
         foreach (var kvp in searchItems)
         {
@@ -55,8 +65,10 @@ internal static class IndexCacheManager
     {
         foreach (var meta in driveMetadata)
         {
-            if (recordIndexes.TryGetValue(meta.Drive, out var runtime) &&
-                driveMetadataMap.TryGetValue(meta.Drive, out var metadata))
+            if (!driveMetadataMap.TryGetValue(meta.Drive, out var metadata))
+                continue;
+
+            if (recordIndexes.TryGetValue(meta.Drive, out var runtime))
             {
                 metadata.JournalId = meta.JournalId;
                 metadata.NextUsn = meta.NextUsn;

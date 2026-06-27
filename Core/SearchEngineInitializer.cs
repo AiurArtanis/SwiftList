@@ -126,9 +126,8 @@ internal class SearchEngineInitializer
                     if (missingDrives.Count > 0)
                     {
                         Logger.Log($"[SearchEngineInitializer] Building missing per-drive indices: {string.Join(", ", missingDrives)}");
-                        var missingMetadata = _indexer.BuildDrives(missingDrives, clearExisting: false);
+                        var missingMetadata = _indexer.BuildDrives(missingDrives, clearExisting: false, cacheDir: _indexCacheDir);
                         monitorsToStart.AddRange(missingMetadata);
-                        TrySaveDriveCache(missingMetadata, "missing-drive build");
                     }
                 }
                 else
@@ -146,11 +145,8 @@ internal class SearchEngineInitializer
             if (!loadedFromCache)
             {
                 Logger.Log("[SearchEngineInitializer] Building new index from scratch...");
-                var newMetadata = _indexer.BuildDrives(supportedDrives, clearExisting: true);
+                var newMetadata = _indexer.BuildDrives(supportedDrives, clearExisting: true, cacheDir: _indexCacheDir);
                 monitorsToStart = newMetadata;
-
-                // Persist the completed index for the next startup.
-                TrySaveDriveCache(newMetadata, "full build");
             }
 
             _indexer.CompactMemory();
@@ -187,6 +183,8 @@ internal class SearchEngineInitializer
 
     private void TrySaveDriveCache(List<(string Drive, ulong JournalId, long NextUsn)> metadata, string stage)
     {
+        if (metadata.Count == 0)
+            return;
         try
         {
             _indexer.SaveDrivesToCache(_indexCacheDir, metadata);

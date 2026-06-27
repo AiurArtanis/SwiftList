@@ -41,4 +41,5 @@ public partial class SearchBoxControl : UserControl
         get => (bool)GetValue(IsIconOnLeftProperty);
         set => SetValue(IsIconOnLeftProperty, value);
     }
+
 }

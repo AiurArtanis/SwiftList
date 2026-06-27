@@ -65,7 +65,6 @@ internal sealed class ServiceMonitorStatusHandler
                 _vm.LoadingPanelVisibility = Visibility.Collapsed;
                 _vm.StatusBarVisibility = Visibility.Visible;
                 _vm.StatusText = string.Format(TranslationManager.Instance["Service_BuildingIndexQuery"], status.Progress, _mainVm.Search.Results.Count);
-                _mainVm.Search.PerformSearch(_mainVm.Search.SearchQuery);
             }
             else
             {
@@ -86,7 +85,8 @@ internal sealed class ServiceMonitorStatusHandler
 
             _vm.LoadingPanelVisibility = Visibility.Collapsed;
             _vm.ApplyReadyStatus(status);
-            _mainVm.Search.PerformSearch(_mainVm.Search.SearchQuery);
+            if (hasQuery)
+                _mainVm.Search.PerformSearch(_mainVm.Search.SearchQuery);
             Logger.Log($"[ServiceMonitor] Index ready. Files={status.TotalFiles}, Dirs={status.TotalDirs}");
         }
     }

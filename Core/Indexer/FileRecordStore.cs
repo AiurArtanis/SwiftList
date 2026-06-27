@@ -59,6 +59,19 @@ public sealed class FileRecordStore
     public List<FileRecord> Records { get; } = new();
 }
 
+public readonly record struct FileRecordStoreSummary(
+    string SourceKey,
+    FileRecordSourceKind SourceKind,
+    FileRecordIdKind IdKind,
+    string FileSystemType,
+    uint VolumeSerialNumber,
+    UInt128 RootId,
+    ulong JournalId,
+    long NextUsn,
+    int RecordCount,
+    int LiveRecordCount,
+    DateTime LastUpdated);
+
 internal sealed class FileRecordNamePool
 {
     private readonly object _lock = new();
@@ -255,6 +268,53 @@ public static class FileRecordStoreSerializer
         catch (Exception ex)
         {
             Logger.Log($"[FileRecordStore] Failed to load {basePath}: {ex.Message}", LogLevel.Error);
+            return null;
+        }
+    }
+
+    public static FileRecordStoreSummary? LoadSummary(string cacheDir, string sourceKey)
+    {
+        var basePath = GetBasePath(cacheDir, sourceKey);
+        try
+        {
+            if (!Exists(cacheDir, sourceKey))
+                return null;
+
+            using var meta = File.OpenRead(basePath + ".meta");
+            using var reader = new BinaryReader(meta, Encoding.UTF8);
+            if (reader.ReadString() != MetaMagic || reader.ReadInt32() != Version)
+                return null;
+
+            var storeSourceKey = reader.ReadString();
+            var sourceKind = (FileRecordSourceKind)reader.ReadByte();
+            var idKind = (FileRecordIdKind)reader.ReadByte();
+            var fileSystemType = reader.ReadString();
+            var volumeSerialNumber = reader.ReadUInt32();
+            var rootLow = reader.ReadUInt64();
+            var rootHigh = reader.ReadUInt64();
+            var journalId = reader.ReadUInt64();
+            var nextUsn = reader.ReadInt64();
+            var recordCount = reader.ReadInt32();
+            var liveRecordCount = reader.ReadInt32();
+            var ticks = reader.ReadInt64();
+            var rootId = new UInt128(rootHigh, rootLow);
+            var lastUpdated = new DateTime(ticks, DateTimeKind.Utc).ToLocalTime();
+            return new FileRecordStoreSummary(
+                storeSourceKey,
+                sourceKind,
+                idKind,
+                fileSystemType,
+                volumeSerialNumber,
+                rootId,
+                journalId,
+                nextUsn,
+                recordCount,
+                liveRecordCount,
+                lastUpdated);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[FileRecordStore] Failed to load summary {basePath}: {ex.Message}", LogLevel.Error);
             return null;
         }
     }

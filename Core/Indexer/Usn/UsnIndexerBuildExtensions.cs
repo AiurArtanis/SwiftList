@@ -15,7 +15,8 @@ public static class UsnIndexerBuildExtensions
     public static List<(string Drive, ulong JournalId, long NextUsn)> BuildDrives(
         this UsnIndexer indexer,
         IReadOnlyList<string> drives,
-        bool clearExisting)
+        bool clearExisting,
+        string? cacheDir = null)
     {
         lock (indexer.LockObj)
         {
@@ -51,14 +52,17 @@ public static class UsnIndexerBuildExtensions
             drives,
             indexer.SetDriveState,
             indexer.UpdateDriveProgress,
-            (drive, onProgress) => FolderDriveScanner.Build(drive, onProgress, CancellationToken.None),
-            (drive, store, progress, index) =>
+            (drive, onProgress) => FolderDriveScanner.BuildStreaming(drive, onProgress, CancellationToken.None),
+            (drive, result, progress, index) =>
             {
+                var runtime = new RuntimeIndex();
+                runtime.Load(result.Store);
+                if (!string.IsNullOrWhiteSpace(cacheDir))
+                    LocalDriveCacheLocator.Save(cacheDir, drive, result.Store);
+                var metadata = UsnIndexer.CreateMetadata(result.Store);
                 lock (indexer.LockObj)
                 {
-                    var runtime = new RuntimeIndex();
-                    runtime.Load(store);
-                    indexer._driveMetadata[drive] = UsnIndexer.CreateMetadata(store);
+                    indexer._driveMetadata[drive] = metadata;
                     indexer._recordIndexes[drive] = runtime;
                     indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
                     indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
@@ -66,15 +70,16 @@ public static class UsnIndexerBuildExtensions
                     indexer.UpdateDriveCounts(drive);
                 }
             },
-            (drive, rootFrn, searchItems, nextUsn, journalId, progress, index) =>
+            (drive, result, progress, index) =>
             {
+                var runtime = new RuntimeIndex();
+                runtime.Load(result.Store);
+                if (!string.IsNullOrWhiteSpace(cacheDir))
+                    LocalDriveCacheLocator.Save(cacheDir, drive, result.Store);
+                var metadata = UsnIndexer.CreateMetadata(result.Store);
                 lock (indexer.LockObj)
                 {
-                    var store = IndexCacheManager.CreateStoreFromDriveData(drive, rootFrn, searchItems, nextUsn, journalId);
-
-                    var runtime = new RuntimeIndex();
-                    runtime.Load(store);
-                    indexer._driveMetadata[drive] = UsnIndexer.CreateMetadata(store);
+                    indexer._driveMetadata[drive] = metadata;
                     indexer._recordIndexes[drive] = runtime;
                     indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
                     indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);

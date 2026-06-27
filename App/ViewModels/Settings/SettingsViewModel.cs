@@ -13,17 +13,22 @@ public class SettingsViewModel : ViewModelBase
     private readonly SearchService _searchService = new();
     private readonly UserSettings _userSettings = UserSettings.Load();
     private readonly System.Windows.Threading.DispatcherTimer _refreshTimer;
+    private readonly CancellationTokenSource _statusSubscriptionCts = new();
+    private Task? _statusSubscriptionTask;
     private bool _canApply = true;
     private bool _isBusy;
     private bool _isServiceReady = true;
+    private UsnIndexer.IndexerStatus _latestStatus = new() { State = "error" };
+    private IReadOnlyList<NetworkIndexStatus> _latestNetworkStatuses = Array.Empty<NetworkIndexStatus>();
+    private MachineSettings _latestMachineSettings = new();
 
     public SettingsViewModel()
     {
-        Service = new ServiceSettingsViewModel(_searchService, Refresh);
+        Service = new ServiceSettingsViewModel(_searchService, RefreshLists);
 
-        LocalDrive = new LocalDriveSettingsViewModel(_searchService, () => _refreshTimer?.Interval = TimeSpan.FromMilliseconds(100));
+        LocalDrive = new LocalDriveSettingsViewModel(_searchService, RefreshLists);
 
-        NetworkDrive = new NetworkDriveSettingsViewModel(_searchService, _userSettings, () => _refreshTimer?.Interval = TimeSpan.FromMilliseconds(100));
+        NetworkDrive = new NetworkDriveSettingsViewModel(_searchService, _userSettings, RefreshLists);
         General = new GeneralSettingsViewModel(_userSettings);
         Exclusions = new ExclusionSettingsViewModel(_userSettings);
         Plugins = new PluginManagementViewModel(_userSettings);
@@ -36,16 +41,17 @@ public class SettingsViewModel : ViewModelBase
 
         _refreshTimer = new System.Windows.Threading.DispatcherTimer
         {
-            Interval = TimeSpan.FromSeconds(5) // Start with slow refresh
-
+            Interval = TimeSpan.FromSeconds(5)
         };
-        _refreshTimer.Tick += (s, e) => Refresh();
+        _refreshTimer.Tick += (s, e) => RefreshLists();
         _refreshTimer.Start();
+        UserNetworkDriveSearch.StatusesChanged += OnNetworkStatusesChanged;
         TranslationManager.Instance.PropertyChanged += OnLanguageChanged;
-        Refresh();
+        EnsureStatusSubscription();
+        RefreshLists();
     }
 
-    private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e) => Refresh();
+    private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e) => ApplyUiState();
 
     public ServiceSettingsViewModel Service { get; }
     public LocalDriveSettingsViewModel LocalDrive { get; }
@@ -63,7 +69,6 @@ public class SettingsViewModel : ViewModelBase
     public bool CanApply
     {
         get => _canApply;
-
         set
         {
             if (SetProperty(ref _canApply, value))
@@ -86,81 +91,66 @@ public class SettingsViewModel : ViewModelBase
     public void Cleanup()
     {
         _refreshTimer?.Stop();
+        _statusSubscriptionCts.Cancel();
+        UserNetworkDriveSearch.StatusesChanged -= OnNetworkStatusesChanged;
         TranslationManager.Instance.PropertyChanged -= OnLanguageChanged;
     }
 
-    public void Refresh() => _ = Task.Run(async () =>
-                                  {
-                                      UsnIndexer.IndexerStatus status;
-                                      MachineSettings settings;
-                                      IReadOnlyList<NetworkIndexStatus> networkStatuses;
+    public void Refresh() => RefreshLists();
 
-                                      try
-                                      {
-                                          status = await _searchService.GetStatusAsync();
-                                          settings = await _searchService.GetMachineSettingsAsync();
-                                          networkStatuses = _searchService.GetNetworkIndexStatuses();
-                                      }
+    public void RefreshLists() => _ = Task.Run(async () =>
+    {
+        MachineSettings settings;
+        var isServiceReady = false;
 
-                                      catch
-                                      {
-                                          status = new UsnIndexer.IndexerStatus { State = "error" };
-                                          settings = new MachineSettings();
-                                          networkStatuses = Array.Empty<NetworkIndexStatus>();
-                                      }
+        try
+        {
+            isServiceReady = await _searchService.PingAsync();
+            settings = await _searchService.GetMachineSettingsAsync();
+            _latestNetworkStatuses = _searchService.GetNetworkIndexStatuses();
+        }
+        catch
+        {
+            settings = new MachineSettings();
+            _latestNetworkStatuses = Array.Empty<NetworkIndexStatus>();
+        }
 
-                                      _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                                      {
-                                          // Update sub-viewmodels
+        _latestMachineSettings = settings;
+        if (!isServiceReady)
+            _latestStatus = new UsnIndexer.IndexerStatus { State = "error" };
 
-                                          var isServiceReady = status.State != "error";
-                                          var isLocalDriveBusy = status.Drives.Any(d => d.State is "indexing" or "pending");
-                                          var isNetworkBusy = networkStatuses.Any(s => s.State is "indexing" or "pending");
-                                          var isServiceLifecycleBusy = status.State is "indexing" or "loading-cache" or "pending" || status.IsMaintenanceBusy && !isLocalDriveBusy;
-                                          var isBusy = isServiceLifecycleBusy || isLocalDriveBusy || isNetworkBusy;
-                                          Service.UpdateStatus(status);
-                                          LocalDrive.UpdateStatus(status, settings);
-                                          NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses);
-                                          IsServiceReady = isServiceReady;
-                                          IsBusy = isBusy;
-                                          CanApply = isServiceReady && !isBusy;
-                                          _refreshTimer?.Interval = isBusy ? TimeSpan.FromMilliseconds(500) : TimeSpan.FromSeconds(5);
+        EnsureStatusSubscription();
+        _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplyUiState));
+    });
 
-                                      }));
-                                  });
-
-    public async void Apply()
+    public void Apply()
     {
         if (!CanApply)
             return;
 
         var previousNetworkDrives = _userSettings.NetworkDrives
-
             .Select(d => new NetworkDriveSetting
             {
                 Id = d.Id,
                 RefreshMode = d.RefreshMode
-
             })
-
             .ToList();
-        var previousLocalDrives = (await _searchService.GetMachineSettingsAsync()).LocalDrives.ToList();
         var previousExclusions = SettingsChangeSnapshot.CaptureExclusions(_userSettings);
 
         var machineSettings = new MachineSettings
         {
             LocalDrives = LocalDrive.LocalDrives.Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id)).Select(d => d.Id).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
-
         };
-        if (SettingsChangeSnapshot.StringListChanged(previousLocalDrives, machineSettings.LocalDrives))
-            await _searchService.SaveMachineSettingsAsync(machineSettings);
 
-        _userSettings.NetworkDrives = NetworkDrive.NetworkDrives.Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id)).Select(d => new NetworkDriveSetting
+        var newNetworkDrives = NetworkDrive.NetworkDrives.Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id)).Select(d => new NetworkDriveSetting
         {
             Id = d.Id,
             RefreshMode = d.RefreshMode
-
         }).ToList();
+        var localDriveSnapshots = LocalDrive.LocalDrives
+            .Select(d => new LocalDriveSnapshot(d.Drive, d.Id, d.IsEnabled))
+            .ToList();
+        _userSettings.NetworkDrives = newNetworkDrives;
         Exclusions.Save();
         General.Apply();
         Plugins.Save();
@@ -173,21 +163,78 @@ public class SettingsViewModel : ViewModelBase
         PluginManager.Instance.RefreshDisabledComponents();
         NetworkDrive.ResetPendingEdits();
         var exclusionsChanged = SettingsChangeSnapshot.ExclusionsChanged(previousExclusions, SettingsChangeSnapshot.CaptureExclusions(_userSettings));
-        if (exclusionsChanged)
-            _searchService.RefreshNetworkIndexes();
-        else if (NetworkSettingsChanged(previousNetworkDrives, _userSettings.NetworkDrives))
-            await NetworkDriveApplyHelper.ApplyChangesAsync(_searchService, previousNetworkDrives, _userSettings.NetworkDrives);
+        _ = Task.Run(async () =>
+        {
+            var previousLocalDrives = (await _searchService.GetMachineSettingsAsync()).LocalDrives.ToList();
+            if (SettingsChangeSnapshot.StringListChanged(previousLocalDrives, machineSettings.LocalDrives))
+                await _searchService.SaveMachineSettingsAsync(machineSettings);
 
-        if (exclusionsChanged)
-            await RebuildScanBasedLocalDrivesAsync(machineSettings.LocalDrives);
+            if (exclusionsChanged)
+                _searchService.RefreshNetworkIndexes();
+            else if (NetworkSettingsChanged(previousNetworkDrives, newNetworkDrives))
+                await NetworkDriveApplyHelper.ApplyChangesAsync(_searchService, previousNetworkDrives, newNetworkDrives);
 
-        Refresh();
+            if (exclusionsChanged)
+                await RebuildScanBasedLocalDrivesAsync(localDriveSnapshots, machineSettings.LocalDrives);
+
+            RefreshLists();
+        });
     }
 
-    private async Task RebuildScanBasedLocalDrivesAsync(IReadOnlyList<string> enabledLocalDriveIds)
+    private void EnsureStatusSubscription()
+    {
+        if (_statusSubscriptionTask is { IsCompleted: false })
+            return;
+
+        _statusSubscriptionTask = StartStatusSubscriptionAsync(_statusSubscriptionCts.Token);
+    }
+
+    private async Task StartStatusSubscriptionAsync(CancellationToken token)
+    {
+        if (token.IsCancellationRequested)
+            return;
+
+        try
+        {
+            await SearchStatusStream.SubscribeAsync(status =>
+            {
+                _latestStatus = status;
+                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplyUiState));
+            }, token).ConfigureAwait(false);
+        }
+        catch
+        {
+        }
+    }
+
+    private void OnNetworkStatusesChanged(IReadOnlyList<NetworkIndexStatus> statuses)
+    {
+        _latestNetworkStatuses = statuses;
+        _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplyUiState));
+    }
+
+    private void ApplyUiState()
+    {
+        var status = _latestStatus;
+        var settings = _latestMachineSettings;
+        var networkStatuses = _latestNetworkStatuses;
+        var isServiceReady = status.State != "error";
+        var isLocalDriveBusy = status.Drives.Any(d => d.State is "indexing" or "pending");
+        var isNetworkBusy = networkStatuses.Any(s => s.State is "indexing" or "pending");
+        var isServiceLifecycleBusy = status.State is "indexing" or "loading-cache" or "pending" || status.IsMaintenanceBusy && !isLocalDriveBusy;
+        var isBusy = isServiceLifecycleBusy || isLocalDriveBusy || isNetworkBusy;
+        Service.UpdateStatus(status);
+        LocalDrive.UpdateStatus(status, settings);
+        NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses, isServiceLifecycleBusy || isLocalDriveBusy);
+        IsServiceReady = isServiceReady;
+        IsBusy = isBusy;
+        CanApply = isServiceReady && !isBusy;
+    }
+
+    private async Task RebuildScanBasedLocalDrivesAsync(IReadOnlyList<LocalDriveSnapshot> drives, IReadOnlyList<string> enabledLocalDriveIds)
     {
         var enabled = enabledLocalDriveIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var drive in LocalDrive.LocalDrives.Where(d => d.IsEnabled && (enabled.Count == 0 || enabled.Contains(d.Id))))
+        foreach (var drive in drives.Where(d => d.IsEnabled && (enabled.Count == 0 || enabled.Contains(d.Id))))
         {
             var fs = VolumeHelper.GetFileSystemType(drive.Drive);
             if (!fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) &&
@@ -219,4 +266,6 @@ public class SettingsViewModel : ViewModelBase
             .Select(d => $"{d.Id}|{d.RefreshMode}");
         return !oldOrdered.SequenceEqual(newOrdered, StringComparer.OrdinalIgnoreCase);
     }
+
+    private sealed record LocalDriveSnapshot(string Drive, string Id, bool IsEnabled);
 }

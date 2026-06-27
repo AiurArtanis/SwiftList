@@ -25,6 +25,12 @@ internal static class LocalDriveCacheLocator
         return store;
     }
 
+    public static FileRecordStoreSummary? TryLoadSummary(string cacheDir, string drive)
+    {
+        var key = GetCacheKey(drive);
+        return key == null ? null : FileRecordStoreSerializer.LoadSummary(cacheDir, key);
+    }
+
     public static void Save(string cacheDir, string drive, FileRecordStore store)
         => FileRecordStoreSerializer.Save(cacheDir, store, GetRequiredCacheKey(drive));
 
@@ -43,9 +49,9 @@ internal static class LocalDriveCacheLocator
         return Directory.EnumerateFiles(cacheDir, "*.meta")
             .Select(Path.GetFileNameWithoutExtension)
             .OfType<string>()
-            .Select(key => FileRecordStoreSerializer.Load(cacheDir, key))
-            .Where(store => store?.SourceKind == FileRecordSourceKind.LocalMft)
-            .Select(store => NormalizeDrive(store!.SourceKey))
+            .Select(key => FileRecordStoreSerializer.LoadSummary(cacheDir, key))
+            .Where(summary => summary?.SourceKind == FileRecordSourceKind.LocalMft)
+            .Select(summary => NormalizeDrive(summary!.Value.SourceKey))
             .Where(drive => drive.Length == 1)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(drive => drive, StringComparer.OrdinalIgnoreCase)

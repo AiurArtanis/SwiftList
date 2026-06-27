@@ -6,6 +6,9 @@ namespace SwiftList.Core.Indexer.Usn;
 
 public class UsnIndexer : IDisposable
 {
+    public event Action<IndexerStatus>? StatusChanged;
+    private long _lastProgressPublishTicks;
+
     public class IndexerStatus
     {
         public string State { get; set; } = "idle";
@@ -57,6 +60,7 @@ public class UsnIndexer : IDisposable
         {
             Status.Drives = drives.ToList();
         }
+        PublishStatusChanged();
     }
 
     public void SetDriveState(string drive, string state) => SetDriveState(drive, state, false);
@@ -76,6 +80,7 @@ public class UsnIndexer : IDisposable
                 item.Dirs = 0;
             }
         }
+        PublishStatusChanged();
     }
 
     public void UpdateDriveProgress(string drive, int files, int dirs)
@@ -89,8 +94,12 @@ public class UsnIndexer : IDisposable
             item.State = "indexing";
             item.Files = files;
             item.Dirs = dirs;
-            Status.Progress = Math.Min(99, Math.Max(Status.Progress, 1));
+            if (Status.ActiveDrives.Count == 1 && Status.ActiveDrives.Contains(drive, StringComparer.OrdinalIgnoreCase))
+                Status.Progress = Math.Min(95, Status.Progress + 1);
+            else
+                Status.Progress = Math.Min(99, Math.Max(Status.Progress, 1));
         }
+        NotifyProgressChanged();
     }
 
     public long CatchUpDrive(string drive, ulong journalId, long startUsn)
@@ -139,6 +148,7 @@ public class UsnIndexer : IDisposable
             UpdateDriveCounts(drive);
             SearchCoordinator.ClearCaches();
         }
+        PublishStatusChanged();
     }
 
     public void ApplyFolderChange(string drive, WatcherChangeTypes changeType, string path, string? oldPath = null)
@@ -148,7 +158,6 @@ public class UsnIndexer : IDisposable
             if (!_recordIndexes.TryGetValue(drive, out var runtime))
                 return;
 
-            var exclusionRules = ExclusionRuleSet.From(UserSettings.Load());
             var root = $"{drive}:\\";
             var normalizedPath = PathHelpers.NormalizePath(path, Directory.Exists(path));
             var changed = false;
@@ -156,8 +165,8 @@ public class UsnIndexer : IDisposable
             changed = changeType switch
             {
                 WatcherChangeTypes.Deleted => PathDeltaApplier.ApplyDeleted(runtime, normalizedPath),
-                WatcherChangeTypes.Renamed when !string.IsNullOrWhiteSpace(oldPath) => PathDeltaApplier.ApplyRenamed(runtime, (UInt128)1, root, oldPath, normalizedPath, exclusionRules),
-                _ => PathDeltaApplier.ApplyCreatedOrChanged(runtime, (UInt128)1, root, normalizedPath, exclusionRules),
+                WatcherChangeTypes.Renamed when !string.IsNullOrWhiteSpace(oldPath) => PathDeltaApplier.ApplyRenamed(runtime, (UInt128)1, root, oldPath, normalizedPath),
+                _ => PathDeltaApplier.ApplyCreatedOrChanged(runtime, (UInt128)1, root, normalizedPath),
             };
             if (!changed)
                 return;
@@ -167,6 +176,7 @@ public class UsnIndexer : IDisposable
             SearchCoordinator.ClearCaches();
             SaveDriveSnapshot(drive, runtime);
         }
+        PublishStatusChanged();
     }
 
     private void SaveDriveSnapshot(string drive, RuntimeIndex runtime)
@@ -196,6 +206,27 @@ public class UsnIndexer : IDisposable
     }
 
     public void ClearCaches() => SearchCoordinator.ClearCaches();
+
+    public void CompactStatusQueryMemory()
+    {
+        ClearCaches();
+        CompactMemory();
+    }
+
+    public void UnloadRuntime()
+    {
+        lock (LockObj)
+        {
+            _driveMetadata.Clear();
+            _recordIndexes.Clear();
+            Status.ActiveDrives.Clear();
+            Status.TotalFiles = Status.Drives.Sum(d => d.Files);
+            Status.TotalDirs = Status.Drives.Sum(d => d.Dirs);
+            if (Status.State == "ready")
+                Status.State = "idle";
+        }
+        PublishStatusChanged();
+    }
 
     internal static DriveRuntimeMetadata CreateMetadata(FileRecordStore store) => new DriveRuntimeMetadata
     {
@@ -234,5 +265,56 @@ public class UsnIndexer : IDisposable
     {
         _driveMetadata.Clear();
         _recordIndexes.Clear();
+    }
+
+    public IndexerStatus SnapshotStatus()
+    {
+        lock (LockObj)
+        {
+            return new IndexerStatus
+            {
+                State = Status.State,
+                Progress = Status.Progress,
+                TotalFiles = Status.TotalFiles,
+                TotalDirs = Status.TotalDirs,
+                ElapsedTime = Status.ElapsedTime,
+                IsMaintenanceBusy = Status.IsMaintenanceBusy,
+                ActiveDrives = Status.ActiveDrives.ToList(),
+                Drives = Status.Drives.Select(d => new DriveIndexStatus
+                {
+                    Drive = d.Drive,
+                    Enabled = d.Enabled,
+                    Kind = d.Kind,
+                    State = d.State,
+                    Files = d.Files,
+                    Dirs = d.Dirs,
+                    CachePath = d.CachePath
+                }).ToList()
+            };
+        }
+    }
+
+    private void PublishStatusChanged()
+    {
+        try
+        {
+            StatusChanged?.Invoke(SnapshotStatus());
+        }
+        catch
+        {
+        }
+    }
+
+    public void NotifyStatusChanged() => PublishStatusChanged();
+
+    public void NotifyProgressChanged()
+    {
+        var now = Environment.TickCount64;
+        var last = Interlocked.Read(ref _lastProgressPublishTicks);
+        if (now - last < 100)
+            return;
+
+        Interlocked.Exchange(ref _lastProgressPublishTicks, now);
+        PublishStatusChanged();
     }
 }

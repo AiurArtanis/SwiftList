@@ -27,23 +27,32 @@ public static class UsnIndexerCacheExtensions
             indexer.Status.ActiveDrives.Clear();
             indexer.Status.TotalFiles = 0;
             indexer.Status.TotalDirs = 0;
+        }
 
+        var loaded = new List<(string Drive, RuntimeIndex Runtime, UsnIndexer.DriveRuntimeMetadata Metadata, ulong JournalId, long NextUsn)>();
+        foreach (var drive in drives)
+        {
+            var store = LocalDriveCacheLocator.Load(cacheDir, drive);
+            if (store == null || !IsCurrentVolumeCache(drive, store))
+                continue;
+
+            var runtime = new RuntimeIndex();
+            runtime.Load(store);
+            loaded.Add((drive, runtime, UsnIndexer.CreateMetadata(store), store.JournalId, store.NextUsn));
+        }
+
+        lock (indexer.LockObj)
+        {
             var metadata = new List<(string Drive, ulong JournalId, long NextUsn)>();
-            foreach (var drive in drives)
+            foreach (var item in loaded)
             {
-                var store = LocalDriveCacheLocator.Load(cacheDir, drive);
-                if (store != null && IsCurrentVolumeCache(drive, store))
-                {
-                    var runtime = new RuntimeIndex();
-                    runtime.Load(store);
-                    indexer._driveMetadata[drive] = UsnIndexer.CreateMetadata(store);
-                    indexer._recordIndexes[drive] = runtime;
-                    indexer.Status.TotalFiles += runtime.TotalFiles;
-                    indexer.Status.TotalDirs += runtime.TotalDirs;
-                    indexer.Status.ActiveDrives.Add(drive);
-                    metadata.Add((drive, store.JournalId, store.NextUsn));
-                    indexer.UpdateDriveCounts(drive);
-                }
+                indexer._driveMetadata[item.Drive] = item.Metadata;
+                indexer._recordIndexes[item.Drive] = item.Runtime;
+                indexer.Status.TotalFiles += item.Runtime.TotalFiles;
+                indexer.Status.TotalDirs += item.Runtime.TotalDirs;
+                indexer.Status.ActiveDrives.Add(item.Drive);
+                metadata.Add((item.Drive, item.JournalId, item.NextUsn));
+                indexer.UpdateDriveCounts(item.Drive);
             }
 
             if (metadata.Count > 0)
@@ -62,15 +71,17 @@ public static class UsnIndexerCacheExtensions
         string cacheDir,
         string drive)
     {
+        var store = LocalDriveCacheLocator.Load(cacheDir, drive);
+        if (store == null || !IsCurrentVolumeCache(drive, store))
+            return null;
+
+        var runtime = new RuntimeIndex();
+        runtime.Load(store);
+        var metadata = UsnIndexer.CreateMetadata(store);
+
         lock (indexer.LockObj)
         {
-            var store = LocalDriveCacheLocator.Load(cacheDir, drive);
-            if (store == null || !IsCurrentVolumeCache(drive, store))
-                return null;
-
-            var runtime = new RuntimeIndex();
-            runtime.Load(store);
-            indexer._driveMetadata[drive] = UsnIndexer.CreateMetadata(store);
+            indexer._driveMetadata[drive] = metadata;
             indexer._recordIndexes[drive] = runtime;
 
             if (!indexer.Status.ActiveDrives.Contains(drive, StringComparer.OrdinalIgnoreCase))

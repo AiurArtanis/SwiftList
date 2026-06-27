@@ -10,6 +10,7 @@ internal sealed class SearchEngineDriveMaintenance
     private readonly Func<CancellationToken> _token;
     private readonly Func<bool> _isRebuilding;
     private readonly Action<IDisposable> _addMonitor;
+    private readonly Action _onActivityCompleted;
     private readonly HashSet<string> _pendingDriveRebuilds = new(StringComparer.OrdinalIgnoreCase);
     public bool HasPendingRebuilds { get { lock (_pendingDriveRebuilds) return _pendingDriveRebuilds.Count > 0; } }
 
@@ -18,13 +19,15 @@ internal sealed class SearchEngineDriveMaintenance
         Func<MachineSettings> settings,
         Func<CancellationToken> token,
         Func<bool> isRebuilding,
-        Action<IDisposable> addMonitor)
+        Action<IDisposable> addMonitor,
+        Action onActivityCompleted)
     {
         _indexer = indexer;
         _settings = settings;
         _token = token;
         _isRebuilding = isRebuilding;
         _addMonitor = addMonitor;
+        _onActivityCompleted = onActivityCompleted;
     }
 
     public void RefreshDrivesInStatus()
@@ -58,6 +61,14 @@ internal sealed class SearchEngineDriveMaintenance
         {
             Logger.Log($"[SearchEngine] Failed to refresh drive statuses: {ex.Message}", LogLevel.Error);
         }
+    }
+
+    public UsnIndexer.IndexerStatus BuildStatusSnapshot()
+    {
+        RefreshDrivesInStatus();
+        _indexer.Status.IsMaintenanceBusy = _isRebuilding() || HasPendingRebuilds;
+        PopulateCountsFromCache();
+        return _indexer.Status;
     }
 
     public bool RebuildDriveIndex(string drive)
@@ -115,18 +126,13 @@ internal sealed class SearchEngineDriveMaintenance
                 return false;
             }
 
-            if (forceRebuild && _pendingDriveRebuilds.Count > 0)
-            {
-                Logger.Log($"[SearchEngine] Ignored drive {drive} rebuild request because another drive rebuild is running.");
-                return false;
-            }
-
             if (!_pendingDriveRebuilds.Add(drive))
             {
                 Logger.Log($"[SearchEngine] Ignored duplicate rebuild request for drive {drive}.");
                 return false;
             }
         }
+        UpdateMaintenanceBusyState();
         _indexer.SetDriveState(drive, "indexing", resetCounts: true);
         Task.Run(() => RebuildDrive(drive, forceRebuild));
         return true;
@@ -190,21 +196,28 @@ internal sealed class SearchEngineDriveMaintenance
         {
             lock (_pendingDriveRebuilds)
                 _pendingDriveRebuilds.Remove(drive);
+            UpdateMaintenanceBusyState();
+            _onActivityCompleted();
         }
     }
 
     private void ForceRebuildDrive(string drive)
     {
         Logger.Log($"[SearchEngine] Rebuilding drive {drive} by client request.");
+        lock (_indexer.LockObj)
+        {
+            _indexer.Status.State = "indexing";
+            _indexer.Status.Progress = 0;
+            _indexer.Status.ActiveDrives = new List<string> { drive };
+        }
         _indexer.SetDriveState(drive, "indexing");
-        var metadata = _indexer.BuildDrives(new[] { drive }, clearExisting: false);
+        var metadata = _indexer.BuildDrives(new[] { drive }, clearExisting: false, cacheDir: IndexCacheDir);
         if (metadata.Count == 0)
         {
             _indexer.SetDriveState(drive, "failed");
             return;
         }
 
-        TrySaveDriveCache(drive, metadata);
         EnsureDriveMonitor(drive, metadata[0].JournalId, metadata[0].NextUsn);
     }
 
@@ -226,15 +239,63 @@ internal sealed class SearchEngineDriveMaintenance
         ? string.Empty
         : drive.Trim().TrimEnd(':', '\\').ToUpperInvariant();
 
-    private void TrySaveDriveCache(string drive, List<(string Drive, ulong JournalId, long NextUsn)> metadata)
+    private void PopulateCountsFromCache()
     {
-        try
+        var totalFiles = 0;
+        var totalDirs = 0;
+
+        lock (_indexer.LockObj)
         {
-            _indexer.SaveDrivesToCache(IndexCacheDir, metadata);
+            foreach (var drive in _indexer.Status.Drives)
+            {
+                if (drive.State == "indexing")
+                {
+                    totalFiles += drive.Files;
+                    totalDirs += drive.Dirs;
+                    continue;
+                }
+
+                if (_indexer._recordIndexes.TryGetValue(drive.Drive, out var runtime))
+                {
+                    drive.Files = runtime.TotalFiles;
+                    drive.Dirs = runtime.TotalDirs;
+                    totalFiles += runtime.TotalFiles;
+                    totalDirs += runtime.TotalDirs;
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(drive.CachePath) || !File.Exists(drive.CachePath))
+                {
+                    if (drive.State != "indexing")
+                    {
+                        drive.Files = 0;
+                        drive.Dirs = 0;
+                    }
+                    continue;
+                }
+
+                var summary = LocalDriveCacheLocator.TryLoadSummary(IndexCacheDir, drive.Drive);
+                if (summary == null)
+                    continue;
+
+                var liveItems = Math.Max(0, summary.Value.LiveRecordCount - 1);
+                if (drive.State != "indexing")
+                {
+                    drive.Files = liveItems;
+                    drive.Dirs = 0;
+                }
+                totalFiles += liveItems;
+            }
+
+            _indexer.Status.TotalFiles = totalFiles;
+            _indexer.Status.TotalDirs = totalDirs;
         }
-        catch (Exception ex)
-        {
-            Logger.Log($"[SearchEngine] Failed to save cache for drive {drive} after manual rebuild: {ex.Message}", LogLevel.Warn);
-        }
+    }
+
+    private void UpdateMaintenanceBusyState()
+    {
+        lock (_indexer.LockObj)
+            _indexer.Status.IsMaintenanceBusy = _isRebuilding() || HasPendingRebuilds;
+        _indexer.NotifyStatusChanged();
     }
 }

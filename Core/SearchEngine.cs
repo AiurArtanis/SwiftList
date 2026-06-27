@@ -32,9 +32,16 @@ public class SearchEngine : IDisposable
             () => _machineSettings,
             () => _cts?.Token ?? CancellationToken.None,
             () => _isRebuilding,
-            AddFolderMonitor);
+            AddFolderMonitor,
+            TryReleaseRuntimeAfterActivity);
         _appIndex.Refresh();
         _idleTimer = new Timer(OnIdleTimerTick, null, 3000, 3000);
+    }
+
+    public event Action<UsnIndexer.IndexerStatus> StatusChanged
+    {
+        add => _indexer.StatusChanged += value;
+        remove => _indexer.StatusChanged -= value;
     }
 
     private void RecordSearchActivity()
@@ -80,7 +87,7 @@ public class SearchEngine : IDisposable
             _lastDriveDetectTime = now;
             RefreshDrivesInStatus();
         }
-        return _indexer.Status;
+        return _drives.BuildStatusSnapshot();
     }
 
     private void RefreshDrivesInStatus()
@@ -174,6 +181,12 @@ public class SearchEngine : IDisposable
             if (_isRebuilding) return;
             _isRebuilding = true;
         }
+        lock (_indexer.LockObj)
+        {
+            _indexer.Status.State = forceRebuild ? "indexing" : "pending";
+            _indexer.Status.Progress = 0;
+        }
+        _indexer.NotifyStatusChanged();
 
         Task.Run(() =>
         {
@@ -192,6 +205,8 @@ public class SearchEngine : IDisposable
                 {
                     _isRebuilding = isRebuilding;
                 }
+                if (!isRebuilding)
+                    TryReleaseRuntimeAfterActivity();
             });
         });
     }
@@ -226,5 +241,14 @@ public class SearchEngine : IDisposable
                 monitor.Dispose();
             _folderMonitors.Clear();
         }
+    }
+
+    private void TryReleaseRuntimeAfterActivity()
+    {
+        if (_isRebuilding)
+            return;
+
+        _indexer.ClearCaches();
+        Win32Api.TrimWorkingSet();
     }
 }

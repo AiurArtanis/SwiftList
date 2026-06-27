@@ -10,7 +10,7 @@ public class SearchService : IDisposable
     private static async Task<NamedPipeClientStream> GetPipeAsync(CancellationToken token)
     {
         var pipe = new NamedPipeClientStream(".", "SwiftListPipe", PipeDirection.InOut, PipeOptions.Asynchronous);
-        await pipe.ConnectAsync(1000, token).ConfigureAwait(false);
+        await pipe.ConnectAsync(10, token).ConfigureAwait(false);
         return pipe;
     }
 
@@ -22,7 +22,13 @@ public class SearchService : IDisposable
         return new UsnIndexer.IndexerStatus { State = "error" };
     }
 
-    public async Task<bool> SearchStreamingAsync(string query, int maxResults, int maxAppResults, string? directoryFilter, Action<SearchResult, bool> onResult, CancellationToken token = default)
+    public async Task<bool> PingAsync(CancellationToken token = default)
+    {
+        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.Ping }, token).ConfigureAwait(false);
+        return resp.Kind == PipeResponseKind.Ok;
+    }
+
+    public async Task<bool> SearchStreamingAsync(string query, int maxResults, int maxAppResults, string? directoryFilter, Action<SearchResult, bool> onResult, CancellationToken token = default, Action? onLocalSearchFailed = null)
     {
         var exclusionRules = ExclusionRuleSet.From(UserSettings.Load());
         var fileCandidateLimit = Math.Clamp(maxResults * 4, maxResults, 2000);
@@ -76,6 +82,7 @@ public class SearchService : IDisposable
             catch (Exception ex)
             {
                 Logger.Log($"[SearchService] Streaming local search failed: {ex.Message}", LogLevel.Error);
+                onLocalSearchFailed?.Invoke();
                 return false;
             }
         }, token);
@@ -167,7 +174,8 @@ public class SearchService : IDisposable
 
     public async Task InitializeOrLoadIndexAsync(bool forceRebuild = false, CancellationToken token = default)
     {
-        if (forceRebuild) await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.Rebuild }, token).ConfigureAwait(false);
+        var requestId = forceRebuild ? SearchRequestId.Rebuild : SearchRequestId.Initialize;
+        await SendPipeCommandAsync(new SearchRequestMessage { Id = requestId }, token).ConfigureAwait(false);
     }
 
     public async Task<bool> RebuildDriveIndexAsync(string drive, CancellationToken token = default)
@@ -205,7 +213,7 @@ public class SearchService : IDisposable
                 Logger.Log($"[PipeClient] Connecting to pipe for command: {msg.Id}...", LogLevel.Debug);
             using var pipe = new NamedPipeClientStream(".", "SwiftListPipe", PipeDirection.InOut, PipeOptions.Asynchronous);
 
-            await pipe.ConnectAsync(1000, token).ConfigureAwait(false);
+            await pipe.ConnectAsync(10, token).ConfigureAwait(false);
             if (verboseLog)
                 Logger.Log("[PipeClient] Connected. Writing command...", LogLevel.Debug);
             await SearchRequestBinarySerializer.WriteSearchRequestAsync(pipe, msg, token).ConfigureAwait(false);

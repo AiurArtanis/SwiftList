@@ -79,7 +79,7 @@ public class ServiceSettingsViewModel : ViewModelBase
                 : TranslationManager.Instance["Service_ProgressLoading"];
             LoadingStats = string.Format(TranslationManager.Instance["Service_StatsTemplate"], status.TotalFiles, status.TotalDirs);
         }
-        else // ready / idle
+        else
         {
             ProgressBarVisibility = Visibility.Collapsed;
             ErrorIconVisibility = Visibility.Collapsed;
@@ -90,34 +90,34 @@ public class ServiceSettingsViewModel : ViewModelBase
     }
 
     private void InstallService() => Task.Run(() =>
-                                          {
-                                              System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                                              {
-                                                  ProgressBarVisibility = Visibility.Visible;
-                                                  ErrorIconVisibility = Visibility.Collapsed;
-                                                  InstallButtonVisibility = Visibility.Collapsed;
-                                                  LoadingTitle = TranslationManager.Instance["Service_InstallingTitle"];
-                                                  LoadingStats = TranslationManager.Instance["Service_InstallingStats"];
-                                              }));
+    {
+        System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            ProgressBarVisibility = Visibility.Visible;
+            ErrorIconVisibility = Visibility.Collapsed;
+            InstallButtonVisibility = Visibility.Collapsed;
+            LoadingTitle = TranslationManager.Instance["Service_InstallingTitle"];
+            LoadingStats = TranslationManager.Instance["Service_InstallingStats"];
+        }));
 
-                                              try
-                                              {
-                                                  ServiceInstallManager.InstallService(
-                                                      () => System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => _onStatusChanged?.Invoke())),
-                                                      ex => System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                                                      {
-                                                          MessageBox.Show($"{TranslationManager.Instance["Service_InstallFailed"]}{ex.Message}", TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
-                                                          _onStatusChanged?.Invoke();
-                                                      }))
-                                                  );
-                                              }
-                                              catch (Exception ex)
-                                              {
-                                                  System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                                                  {
-                                                      MessageBox.Show($"{TranslationManager.Instance["Service_Exception"]}{ex.Message}", TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
-                                                      _onStatusChanged?.Invoke();
-                                                  }));
-                                              }
-                                          });
+        try
+        {
+            ServiceInstallManager.InstallService(
+                () => System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => _onStatusChanged?.Invoke())),
+                ex => System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    MessageBox.Show($"{TranslationManager.Instance["Service_InstallFailed"]}{ex.Message}", TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
+                    _onStatusChanged?.Invoke();
+                }))
+            );
+        }
+        catch (Exception ex)
+        {
+            System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                MessageBox.Show($"{TranslationManager.Instance["Service_Exception"]}{ex.Message}", TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
+                _onStatusChanged?.Invoke();
+            }));
+        }
+    });
 }
