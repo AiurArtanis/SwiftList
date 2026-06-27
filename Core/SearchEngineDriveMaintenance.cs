@@ -204,7 +204,7 @@ internal sealed class SearchEngineDriveMaintenance
             return;
         }
 
-        _indexer.SaveDrivesToCache(IndexCacheDir, metadata);
+        TrySaveDriveCache(drive, metadata);
         EnsureDriveMonitor(drive, metadata[0].JournalId, metadata[0].NextUsn);
     }
 
@@ -225,4 +225,16 @@ internal sealed class SearchEngineDriveMaintenance
     private static string NormalizeDrive(string drive) => string.IsNullOrWhiteSpace(drive)
         ? string.Empty
         : drive.Trim().TrimEnd(':', '\\').ToUpperInvariant();
+
+    private void TrySaveDriveCache(string drive, List<(string Drive, ulong JournalId, long NextUsn)> metadata)
+    {
+        try
+        {
+            _indexer.SaveDrivesToCache(IndexCacheDir, metadata);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[SearchEngine] Failed to save cache for drive {drive} after manual rebuild: {ex.Message}", LogLevel.Warn);
+        }
+    }
 }

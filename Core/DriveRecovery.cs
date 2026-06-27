@@ -18,7 +18,7 @@ internal static class DriveRecovery
         {
             if (!SupportsJournal(drive))
             {
-                indexer.SaveDrivesToCache(cacheDir, new() { (drive, cached.Value.JournalId, cached.Value.NextUsn) });
+                TrySaveDriveCache(indexer, cacheDir, new() { (drive, cached.Value.JournalId, cached.Value.NextUsn) }, drive, "folder restore");
                 StartFolderMonitor(indexer, drive, onReindexRequired, addMonitor, token);
                 Logger.Log($"[SearchEngine] Restored folder-scan drive {drive} from cache.");
                 return;
@@ -27,7 +27,7 @@ internal static class DriveRecovery
             var nextUsn = indexer.CatchUpDrive(drive, cached.Value.JournalId, cached.Value.NextUsn);
             if (nextUsn >= 0)
             {
-                indexer.SaveDrivesToCache(cacheDir, new() { (drive, cached.Value.JournalId, nextUsn) });
+                TrySaveDriveCache(indexer, cacheDir, new() { (drive, cached.Value.JournalId, nextUsn) }, drive, "USN catch-up");
                 new UsnMonitor(drive, cached.Value.JournalId, nextUsn, indexer, token, onReindexRequired).Start();
                 Logger.Log($"[SearchEngine] Restored drive {drive} from cache and USN catch-up.");
                 return;
@@ -45,7 +45,7 @@ internal static class DriveRecovery
             return;
         }
 
-        indexer.SaveDrivesToCache(cacheDir, metadata);
+        TrySaveDriveCache(indexer, cacheDir, metadata, drive, "drive rebuild");
         foreach (var (builtDrive, journalId, nextUsn) in metadata)
         {
             if (SupportsJournal(builtDrive))
@@ -66,5 +66,22 @@ internal static class DriveRecovery
         var monitor = new FolderDriveMonitor(drive, (changeType, path, oldPath) => indexer.ApplyFolderChange(drive, changeType, path, oldPath), token);
         monitor.Start();
         addMonitor(monitor);
+    }
+
+    private static void TrySaveDriveCache(
+        UsnIndexer indexer,
+        string cacheDir,
+        List<(string Drive, ulong JournalId, long NextUsn)> metadata,
+        string drive,
+        string stage)
+    {
+        try
+        {
+            indexer.SaveDrivesToCache(cacheDir, metadata);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[SearchEngine] Failed to save cache for drive {drive} after {stage}: {ex.Message}", LogLevel.Warn);
+        }
     }
 }

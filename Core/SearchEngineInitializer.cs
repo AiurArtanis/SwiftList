@@ -119,7 +119,7 @@ internal class SearchEngineInitializer
                 {
                     Logger.Log("[SearchEngineInitializer] Silent background catch-up completed successfully.");
                     monitorsToStart.AddRange(updatedMetadata);
-                    _indexer.SaveDrivesToCache(_indexCacheDir, updatedMetadata);
+                    TrySaveDriveCache(updatedMetadata, "catch-up");
 
                     var loadedDrives = new HashSet<string>(updatedMetadata.Select(m => m.Drive), StringComparer.OrdinalIgnoreCase);
                     var missingDrives = supportedDrives.Where(d => !loadedDrives.Contains(d)).ToList();
@@ -128,7 +128,7 @@ internal class SearchEngineInitializer
                         Logger.Log($"[SearchEngineInitializer] Building missing per-drive indices: {string.Join(", ", missingDrives)}");
                         var missingMetadata = _indexer.BuildDrives(missingDrives, clearExisting: false);
                         monitorsToStart.AddRange(missingMetadata);
-                        _indexer.SaveDrivesToCache(_indexCacheDir, missingMetadata);
+                        TrySaveDriveCache(missingMetadata, "missing-drive build");
                     }
                 }
                 else
@@ -150,7 +150,7 @@ internal class SearchEngineInitializer
                 monitorsToStart = newMetadata;
 
                 // Persist the completed index for the next startup.
-                _indexer.SaveDrivesToCache(_indexCacheDir, newMetadata);
+                TrySaveDriveCache(newMetadata, "full build");
             }
 
             _indexer.CompactMemory();
@@ -183,6 +183,18 @@ internal class SearchEngineInitializer
     {
         var fs = VolumeHelper.GetFileSystemType(drive);
         return fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void TrySaveDriveCache(List<(string Drive, ulong JournalId, long NextUsn)> metadata, string stage)
+    {
+        try
+        {
+            _indexer.SaveDrivesToCache(_indexCacheDir, metadata);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[SearchEngineInitializer] Failed to save drive cache after {stage}: {ex.Message}", LogLevel.Warn);
+        }
     }
 
     private void StartMonitor(string drive, ulong journalId, long nextUsn, CancellationToken token)

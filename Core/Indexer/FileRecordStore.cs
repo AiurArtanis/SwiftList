@@ -260,18 +260,7 @@ public static class FileRecordStoreSerializer
     }
 
     private static void Replace(string tempPath, string finalPath)
-    {
-        var backupPath = finalPath + ".bak";
-        if (File.Exists(finalPath))
-        {
-            File.Replace(tempPath, finalPath, backupPath, ignoreMetadataErrors: true);
-            TryDelete(backupPath);
-        }
-        else
-        {
-            File.Move(tempPath, finalPath, overwrite: true);
-        }
-    }
+        => FileRecordStoreReplaceHelper.ReplaceWithRetry(tempPath, finalPath, TryDelete);
 
     private static void TryDelete(string path)
     {
