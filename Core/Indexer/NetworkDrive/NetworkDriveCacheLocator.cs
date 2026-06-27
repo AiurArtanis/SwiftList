@@ -8,7 +8,11 @@ internal static class NetworkDriveCacheLocator
     public static string GetCachePath(string drive)
         => FileRecordStoreSerializer.GetBasePath(Path.Combine(Logger.UserDataDir, "indexes"), GetStorageKeyOrFallback(drive)) + ".meta";
 
-    public static bool HasCache(string drive) => TryResolveStorageKey(drive) != null;
+    public static bool HasCache(string drive)
+    {
+        var key = TryResolveStorageKey(drive);
+        return key != null && FileRecordStoreSerializer.Exists(Path.Combine(Logger.UserDataDir, "indexes"), key);
+    }
 
     public static IReadOnlyList<string> GetCachedDrives()
     {
