@@ -23,6 +23,7 @@ public partial class App : Application
         Logger.Initialize("app.log", overwrite: true);
         var settings = UserSettings.Load();
         Logger.MinimumLevel = GeneralSettingsViewModel.ParseLogLevel(settings.LogLevel);
+        StartupManager.SetEnabled(settings.StartWithWindows);
         Logger.Log("=========================================");
         Logger.Log($"Application starting with arguments: {string.Join(" ", e.Args)}");
         Logger.Log($"[App] Running as Administrator: {ElevationManager.IsRunningAsAdmin()}");

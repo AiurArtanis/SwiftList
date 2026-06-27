@@ -15,7 +15,6 @@ public class GeneralSettingsViewModel : ViewModelBase
     public GeneralSettingsViewModel(UserSettings userSettings)
     {
         _userSettings = userSettings;
-        _userSettings.StartWithWindows = StartupManager.IsEnabled();
 
         _selectedLogLevel = LogLevelOptions.FirstOrDefault(o => o.Value == NormalizeLogLevel(_userSettings.LogLevel))
                             ?? LogLevelOptions[2]; // Default to Info
@@ -160,7 +159,6 @@ public class GeneralSettingsViewModel : ViewModelBase
             if (_userSettings.StartWithWindows != value)
             {
                 _userSettings.StartWithWindows = value;
-                StartupManager.SetEnabled(value);
                 _userSettings.Save();
                 OnPropertyChanged();
             }
