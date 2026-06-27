@@ -1,14 +1,28 @@
 using System.Threading.Channels;
-using SwiftList.Core;
-namespace SwiftList.Service;
 
-internal static class SearchStreamPump
+namespace SwiftList.Core.Services;
+using SwiftList.Core;
+
+public static class SearchStreamPump
 {
     public static async Task RunAsync(SearchEngine? engine, SearchRequestMessage msg, Stream stream, CancellationToken token)
     {
         Logger.Log($"[SearchStreamPump] Starting query: '{msg.Query}', limit={msg.Limit}, appLimit={msg.AppLimit}, directoryFilter='{msg.DirectoryFilter}'", LogLevel.Debug);
         using var queryCts = CancellationTokenSource.CreateLinkedTokenSource(token);
         var queryToken = queryCts.Token;
+
+        HashSet<byte>? disabledIds = null;
+        if (msg.DisabledAliasComponents != null && msg.DisabledAliasComponents.Count > 0)
+        {
+            disabledIds = new HashSet<byte>();
+            foreach (var comp in msg.DisabledAliasComponents)
+            {
+                var id = AliasProviderRegistry.GetProviderIdByComponentId(comp);
+                if (id != 255)
+                    disabledIds.Add(id);
+            }
+        }
+        SearchContext.DisabledAliasIds = disabledIds;
 
         using var bufferedStream = new BufferedStream(stream, 8192);
 
@@ -64,7 +78,7 @@ internal static class SearchStreamPump
         catch (Exception ex)
         {
             queryCts.Cancel();
-            Logger.Log($"[UsnService] Error processing streaming search request {msg.Id}: {ex.Message}", LogLevel.Error);
+            Logger.Log($"[SearchStreamPump] Error processing streaming search request {msg.Id}: {ex.Message}", LogLevel.Error);
         }
         finally
         {
@@ -80,8 +94,6 @@ internal static class SearchStreamPump
     }
 
     private static bool IsClientDisconnect(Exception ex) => ex is EndOfStreamException ||
-
                ex is IOException ||
-
                ex.InnerException != null && IsClientDisconnect(ex.InnerException);
 }

@@ -6,6 +6,8 @@ namespace SwiftList.Core;
 public static class AliasProviderRegistry
 {
     private static readonly ConcurrentBag<IAliasProvider> Providers = new();
+    private static readonly ConcurrentDictionary<string, byte> ProviderIdMap = new(StringComparer.OrdinalIgnoreCase);
+    private static byte _nextId = 0;
 
     public static Func<IAliasProvider, bool> FilterFunc { get; set; } = _ => true;
 
@@ -13,8 +15,24 @@ public static class AliasProviderRegistry
     {
         if (provider == null) return;
         Providers.Add(provider);
-        Logger.Log($"[AliasProviderRegistry] Registered alias provider: {provider.Name}");
+
+        var dllName = Path.GetFileName(provider.GetType().Assembly.Location);
+        var typeName = provider.GetType().Name;
+        var componentId = $"{dllName}::AliasProvider::{typeName}";
+
+        var id = ProviderIdMap.GetOrAdd(componentId, _ => _nextId++);
+        Logger.Log($"[AliasProviderRegistry] Registered alias provider: {provider.Name} with ID: {id} ({componentId})");
     }
+
+    public static byte GetProviderId(IAliasProvider provider)
+    {
+        var dllName = Path.GetFileName(provider.GetType().Assembly.Location);
+        var typeName = provider.GetType().Name;
+        var componentId = $"{dllName}::AliasProvider::{typeName}";
+        return ProviderIdMap.TryGetValue(componentId, out var id) ? id : (byte)0;
+    }
+
+    public static byte GetProviderIdByComponentId(string componentId) => ProviderIdMap.TryGetValue(componentId, out var id) ? id : (byte)255; // 255 represents not found
 
     public static IEnumerable<IAliasProvider> GetActiveProviders()
     {

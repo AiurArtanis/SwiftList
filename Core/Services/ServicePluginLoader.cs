@@ -1,9 +1,7 @@
 using System.Reflection;
-using SwiftList.Core;
 using SwiftList.PluginSdk;
-using Logger = SwiftList.Core.Logger;
 
-namespace SwiftList.Service;
+namespace SwiftList.Core.Services;
 
 public static class ServicePluginLoader
 {
@@ -82,7 +80,7 @@ public static class ServicePluginLoader
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[ServicePluginLoader] Failed to load plugin assembly {Path.GetFileName(dllFile)}: {ex.Message}", Core.LogLevel.Error);
+                    Logger.Log($"[ServicePluginLoader] Failed to load plugin assembly {Path.GetFileName(dllFile)}: {ex.Message}", LogLevel.Error);
                 }
             }
 
@@ -104,7 +102,7 @@ public static class ServicePluginLoader
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log($"[ServicePluginLoader] Failed to load translations from '{provider.Name}': {ex.Message}", Core.LogLevel.Error);
+                    Logger.Log($"[ServicePluginLoader] Failed to load translations from '{provider.Name}': {ex.Message}", LogLevel.Error);
                 }
             }
 
@@ -116,27 +114,9 @@ public static class ServicePluginLoader
                 // The lambda reads UserSettings.Load() (cached) on every call, so after a
                 // ReloadSettings command triggers UserSettings.ForceReload() the next adapter
                 // lookup will automatically reflect the new disabled-components list.
-                static bool IsAdapterEnabled(object obj)
-                {
-                    try
-                    {
-                        var dllName = Path.GetFileName(obj.GetType().Assembly.Location);
-                        var typeName = obj.GetType().Name;
-                        var settings = UserSettings.Load();
-                        // Match the same ID format used by App's ComponentFilter
-                        var idInlineSearch = $"{dllName}::InlineSearchAdapter::{typeName}";
-                        var idFileDialog = $"{dllName}::FileDialogAdapter::{typeName}";
-                        var idPathCollect = $"{dllName}::ActivePathCollector::{typeName}";
-                        return !settings.DisabledPluginComponents.Contains(idInlineSearch, StringComparer.OrdinalIgnoreCase)
-                            && !settings.DisabledPluginComponents.Contains(idFileDialog, StringComparer.OrdinalIgnoreCase)
-                            && !settings.DisabledPluginComponents.Contains(idPathCollect, StringComparer.OrdinalIgnoreCase);
-                    }
-                    catch { return true; }
-                }
-
-                InlineSearchAdapterRegistry.FilterFunc = a => IsAdapterEnabled(a);
-                FileDialogAdapterRegistry.FilterFunc = a => IsAdapterEnabled(a);
-                ActivePathCollectorRegistry.FilterFunc = a => IsAdapterEnabled(a);
+                InlineSearchAdapterRegistry.FilterFunc = a => IsComponentEnabled(a);
+                FileDialogAdapterRegistry.FilterFunc = a => IsComponentEnabled(a);
+                ActivePathCollectorRegistry.FilterFunc = a => IsComponentEnabled(a);
             }
 
             // Now register alias providers (this will trigger provider.Name evaluation)
@@ -148,7 +128,32 @@ public static class ServicePluginLoader
         }
         catch (Exception ex)
         {
-            Logger.Log($"[ServicePluginLoader] Error while loading plugins: {ex.Message}", Core.LogLevel.Error);
+            Logger.Log($"[ServicePluginLoader] Error while loading plugins: {ex.Message}", LogLevel.Error);
+        }
+    }
+
+    private static bool IsComponentEnabled(object obj)
+    {
+        try
+        {
+            var dllName = Path.GetFileName(obj.GetType().Assembly.Location);
+            var typeName = obj.GetType().Name;
+            var settings = UserSettings.Load();
+
+            // Match the same ID formats used by App's ComponentFilter / MakeId helper
+            var idInlineSearch = $"{dllName}::InlineSearchAdapter::{typeName}";
+            var idFileDialog = $"{dllName}::FileDialogAdapter::{typeName}";
+            var idPathCollect = $"{dllName}::ActivePathCollector::{typeName}";
+            var idAlias = $"{dllName}::AliasProvider::{typeName}";
+
+            return !settings.DisabledPluginComponents.Contains(idInlineSearch, StringComparer.OrdinalIgnoreCase)
+                && !settings.DisabledPluginComponents.Contains(idFileDialog, StringComparer.OrdinalIgnoreCase)
+                && !settings.DisabledPluginComponents.Contains(idPathCollect, StringComparer.OrdinalIgnoreCase)
+                && !settings.DisabledPluginComponents.Contains(idAlias, StringComparer.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return true;
         }
     }
 }

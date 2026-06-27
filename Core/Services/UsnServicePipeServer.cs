@@ -1,10 +1,11 @@
 using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
-using SwiftList.Core;
-namespace SwiftList.Service;
 
-internal sealed class UsnServicePipeServer : IDisposable
+namespace SwiftList.Core.Services;
+using SwiftList.Core;
+
+public sealed class UsnServicePipeServer : IDisposable
 {
     private SearchEngine? _engine;
     private CancellationTokenSource? _pipeCts;
@@ -175,7 +176,7 @@ internal sealed class UsnServicePipeServer : IDisposable
             return;
 
         var signal = new SemaphoreSlim(0);
-        void Handler(Core.Indexer.Usn.UsnIndexer.IndexerStatus _) => signal.Release();
+        void Handler(Indexer.Usn.UsnIndexer.IndexerStatus _) => signal.Release();
 
         try
         {
@@ -216,8 +217,7 @@ internal sealed class UsnServicePipeServer : IDisposable
                     return new PipeResponse
                     {
                         Kind = PipeResponseKind.Status,
-                        Status = status ?? new Core.Indexer.Usn.UsnIndexer.IndexerStatus { State = "error" }
-
+                        Status = status ?? new Indexer.Usn.UsnIndexer.IndexerStatus { State = "error" }
                     };
 
                 case SearchRequestId.Rebuild:
@@ -249,7 +249,6 @@ internal sealed class UsnServicePipeServer : IDisposable
                     {
                         Kind = PipeResponseKind.MachineSettings,
                         MachineSettings = _engine?.GetMachineSettings() ?? new MachineSettings()
-
                     };
 
                 case SearchRequestId.SetMachineSettings:
@@ -263,12 +262,10 @@ internal sealed class UsnServicePipeServer : IDisposable
 
             return new PipeResponse { Kind = PipeResponseKind.Error, Message = "Unknown command" };
         }
-
         catch (OperationCanceledException)
         {
             return new PipeResponse { Kind = PipeResponseKind.Error, Message = "Cancelled" };
         }
-
         catch (Exception ex)
         {
             Logger.Log($"[UsnService] Error processing request {msg.Id}: {ex.Message}", LogLevel.Error);
@@ -280,17 +277,13 @@ internal sealed class UsnServicePipeServer : IDisposable
     {
         PipeResponseKind.Ok => PipeResponseBinarySerializer.WriteOkAsync(stream, token),
         PipeResponseKind.Error => PipeResponseBinarySerializer.WriteErrorAsync(stream, response.Message, token),
-        PipeResponseKind.Status => PipeResponseBinarySerializer.WriteStatusAsync(stream, response.Status ?? new Core.Indexer.Usn.UsnIndexer.IndexerStatus { State = "error" }, token),
-
+        PipeResponseKind.Status => PipeResponseBinarySerializer.WriteStatusAsync(stream, response.Status ?? new Indexer.Usn.UsnIndexer.IndexerStatus { State = "error" }, token),
         PipeResponseKind.MachineSettings => PipeResponseBinarySerializer.WriteMachineSettingsAsync(stream, response.MachineSettings ?? new MachineSettings(), token),
         _ => PipeResponseBinarySerializer.WriteErrorAsync(stream, "Unknown response kind", token)
-
     };
 
     private static bool IsClientDisconnect(Exception ex) => ex is EndOfStreamException ||
-
                ex is IOException ||
-
                ex.InnerException != null && IsClientDisconnect(ex.InnerException);
 
     public void Dispose() => Stop();

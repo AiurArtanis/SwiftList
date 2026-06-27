@@ -56,11 +56,16 @@ internal static class ParallelCacheExtensions
                     var match = FzfAlgorithm.FuzzyMatchV1(name, term.Text, term.CaseSensitive, FzfScoringScheme.Default);
                     if (!match.IsMatch)
                     {
-                        if (index.TryGetAliases(i, out var aliases))
+                        if (index.TryGetAliases(i, out var aliases, out var providerIds))
                         {
                             var aliasMatched = false;
-                            foreach (var alias in aliases)
+                            var disabledIds = SearchContext.DisabledAliasIds;
+                            for (var j = 0; j < aliases.Length; j++)
                             {
+                                if (disabledIds != null && disabledIds.Contains(providerIds[j]))
+                                    continue;
+
+                                var alias = aliases[j];
                                 var aliasMatch = FzfAlgorithm.FuzzyMatchV1(alias, term.Text, term.CaseSensitive, FzfScoringScheme.Default);
                                 if (aliasMatch.IsMatch)
                                 {
@@ -157,11 +162,16 @@ internal static class ParallelCacheExtensions
 
                     if (!pattern.TryMatch(name, out var match, FzfScoringScheme.Default, worker.Slab))
                     {
-                        if (index.TryGetAliases(i, out var aliases))
+                        if (index.TryGetAliases(i, out var aliases, out var providerIds))
                         {
                             var aliasMatched = false;
-                            foreach (var alias in aliases)
+                            var disabledIds = SearchContext.DisabledAliasIds;
+                            for (var j = 0; j < aliases.Length; j++)
                             {
+                                if (disabledIds != null && disabledIds.Contains(providerIds[j]))
+                                    continue;
+
+                                var alias = aliases[j];
                                 if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, worker.Slab))
                                 {
                                     var span = aliasMatch.MaxEnd - aliasMatch.MinBegin;

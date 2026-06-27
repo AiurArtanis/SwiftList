@@ -51,11 +51,16 @@ internal static class CacheExtensions
 
             if (!pattern.TryMatch(name, out var match, FzfScoringScheme.Default, slab))
             {
-                if (index.TryGetAliases(i, out var aliases))
+                if (index.TryGetAliases(i, out var aliases, out var providerIds))
                 {
                     var aliasMatched = false;
-                    foreach (var alias in aliases)
+                    var disabledIds = SearchContext.DisabledAliasIds;
+                    for (var j = 0; j < aliases.Length; j++)
                     {
+                        if (disabledIds != null && disabledIds.Contains(providerIds[j]))
+                            continue;
+
+                        var alias = aliases[j];
                         if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, slab))
                         {
                             var span = aliasMatch.MaxEnd - aliasMatch.MinBegin;

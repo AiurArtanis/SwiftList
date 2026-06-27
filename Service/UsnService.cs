@@ -1,5 +1,6 @@
 using System.ServiceProcess;
 using SwiftList.Core;
+using SwiftList.Core.Services;
 
 namespace SwiftList.Service;
 

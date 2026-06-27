@@ -34,10 +34,11 @@ public static class UpdateExtensions
             index.ParentIndexes[oldIndex] = newParentIndex;
             index.NameIds[oldIndex] = index.Names.GetId(name);
             index.Flags[oldIndex] = (byte)record.Flags;
-            var newAliases = index.GenerateAliases(name);
+            var newAliases = index.GenerateAliases(name, out var newProviderIds);
             if (newAliases != null && newAliases.Length > 0)
             {
                 index.DeltaNameAliases[oldIndex] = newAliases;
+                index.DeltaAliasProviderIds[oldIndex] = newProviderIds;
                 if (oldIndex < index.LoadedCount)
                 {
                     index.HasAlias.Set(oldIndex, true);
@@ -47,6 +48,7 @@ public static class UpdateExtensions
             else
             {
                 index.DeltaNameAliases[oldIndex] = Array.Empty<string>();
+                index.DeltaAliasProviderIds[oldIndex] = Array.Empty<byte>();
                 if (oldIndex < index.LoadedCount)
                 {
                     index.HasAlias.Set(oldIndex, false);
@@ -100,10 +102,11 @@ public static class UpdateExtensions
         else
             index.TotalFiles++;
 
-        var addedAliases = index.GenerateAliases(name);
+        var addedAliases = index.GenerateAliases(name, out var addedProviderIds);
         if (addedAliases != null && addedAliases.Length > 0)
         {
             index.DeltaNameAliases[idx] = addedAliases;
+            index.DeltaAliasProviderIds[idx] = addedProviderIds;
             index.CharMasks[idx] = ulong.MaxValue;
         }
         else if (record.IsDeleted)
@@ -126,6 +129,7 @@ public static class UpdateExtensions
 
         index.DeltaIdToIndex.Remove(id);
         index.DeltaNameAliases.Remove(idx);
+        index.DeltaAliasProviderIds.Remove(idx);
 
         var parentIndex = index.ParentIndexes[idx];
         if (parentIndex >= 0 && index.ParentToChildren.TryGetValue(parentIndex, out var list))
@@ -168,25 +172,30 @@ public static class UpdateExtensions
         index.CharMasks.Add(FzfAlgorithm.GetCharMask(name));
     }
 
-    internal static string[]? GenerateAliases(this RuntimeIndex index, string name)
+    internal static string[]? GenerateAliases(this RuntimeIndex index, string name, out byte[] providerIds)
     {
+        providerIds = Array.Empty<byte>();
         if (string.IsNullOrEmpty(name) || !AliasProviderRegistry.HasNonAscii(name))
             return null;
 
         List<string>? list = null;
+        List<byte>? idList = null;
         foreach (var provider in AliasProviderRegistry.GetActiveProviders())
         {
             try
             {
                 if (provider.CanHandle(name))
                 {
+                    var provId = AliasProviderRegistry.GetProviderId(provider);
                     foreach (var alias in provider.GetAliases(name))
                     {
                         if (string.IsNullOrWhiteSpace(alias))
                             continue;
 
                         list ??= new List<string>();
+                        idList ??= new List<byte>();
                         list.Add(alias.ToLowerInvariant());
+                        idList.Add(provId);
                     }
                 }
             }
@@ -196,6 +205,11 @@ public static class UpdateExtensions
             }
         }
 
-        return list?.ToArray();
+        if (list != null && idList != null)
+        {
+            providerIds = idList.ToArray();
+            return list.ToArray();
+        }
+        return null;
     }
 }

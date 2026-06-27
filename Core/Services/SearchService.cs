@@ -39,7 +39,10 @@ public class SearchService : IDisposable
             Limit = fileCandidateLimit,
             AppLimit = maxAppResults,
             DirectoryFilter = directoryFilter,
-            Query = query
+            Query = query,
+            DisabledAliasComponents = UserSettings.Load().DisabledPluginComponents
+                .Where(c => c.Contains("::AliasProvider::", StringComparison.OrdinalIgnoreCase))
+                .ToList()
         };
 
         var parsed = SearchQueryParser.Parse(query);

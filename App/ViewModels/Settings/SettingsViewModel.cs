@@ -136,6 +136,9 @@ public class SettingsViewModel : ViewModelBase
             })
             .ToList();
         var previousExclusions = SettingsChangeSnapshot.CaptureExclusions(_userSettings);
+        var previousDisabledAliases = _userSettings.DisabledPluginComponents
+            .Where(c => c.Contains("::AliasProvider::", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
         var machineSettings = new MachineSettings
         {
@@ -163,6 +166,11 @@ public class SettingsViewModel : ViewModelBase
         PluginManager.Instance.RefreshDisabledComponents();
         NetworkDrive.ResetPendingEdits();
         var exclusionsChanged = SettingsChangeSnapshot.ExclusionsChanged(previousExclusions, SettingsChangeSnapshot.CaptureExclusions(_userSettings));
+        var newDisabledAliases = _userSettings.DisabledPluginComponents
+            .Where(c => c.Contains("::AliasProvider::", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var aliasProviderEnabled = previousDisabledAliases.Any(c => !newDisabledAliases.Contains(c, StringComparer.OrdinalIgnoreCase));
+
         _ = Task.Run(async () =>
         {
             var previousLocalDrives = (await _searchService.GetMachineSettingsAsync()).LocalDrives.ToList();
@@ -176,6 +184,9 @@ public class SettingsViewModel : ViewModelBase
 
             if (exclusionsChanged)
                 await RebuildScanBasedLocalDrivesAsync(localDriveSnapshots, machineSettings.LocalDrives);
+
+            if (aliasProviderEnabled)
+                await _searchService.InitializeOrLoadIndexAsync(false);
 
             RefreshLists();
         });

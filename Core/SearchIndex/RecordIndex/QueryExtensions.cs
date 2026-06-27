@@ -29,7 +29,9 @@ public static class QueryExtensions
 
     public static FileRecord GetRecord(this RuntimeIndex index, int i) => new FileRecord(index.Ids[i], index.GetParentId(i), index.GetName(i), (FileRecordFlags)index.Flags[i]);
 
-    public static bool TryGetAliases(this RuntimeIndex index, int i, out string[] aliases)
+    public static bool TryGetAliases(this RuntimeIndex index, int i, out string[] aliases) => index.TryGetAliases(i, out aliases, out _);
+
+    public static bool TryGetAliases(this RuntimeIndex index, int i, out string[] aliases, out byte[] providerIds)
     {
         if (i >= index.LoadedCount)
         {
@@ -38,16 +40,19 @@ public static class QueryExtensions
                 if (deltaAliases != null && deltaAliases.Length > 0)
                 {
                     aliases = deltaAliases;
+                    providerIds = index.DeltaAliasProviderIds.TryGetValue(i, out var dp) ? dp : Array.Empty<byte>();
                     return true;
                 }
             }
             aliases = Array.Empty<string>();
+            providerIds = Array.Empty<byte>();
             return false;
         }
 
         if (!index.HasAlias.Get(i))
         {
             aliases = Array.Empty<string>();
+            providerIds = Array.Empty<byte>();
             return false;
         }
 
@@ -56,9 +61,11 @@ public static class QueryExtensions
             if (deltaAliasesOverridden != null && deltaAliasesOverridden.Length > 0)
             {
                 aliases = deltaAliasesOverridden;
+                providerIds = index.DeltaAliasProviderIds.TryGetValue(i, out var dp) ? dp : Array.Empty<byte>();
                 return true;
             }
             aliases = Array.Empty<string>();
+            providerIds = Array.Empty<byte>();
             return false;
         }
 
@@ -66,10 +73,12 @@ public static class QueryExtensions
         if (pos >= 0)
         {
             aliases = index.AliasValues[pos];
+            providerIds = index.AliasProviderIds[pos];
             return true;
         }
 
         aliases = Array.Empty<string>();
+        providerIds = Array.Empty<byte>();
         return false;
     }
 

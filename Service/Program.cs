@@ -3,6 +3,7 @@ using System.ServiceProcess;
 
 using SwiftList.Core;
 using SwiftList.Core.Hook;
+using SwiftList.Core.Services;
 
 namespace SwiftList.Service;
 
@@ -182,7 +183,7 @@ static class Program
         // Load plugins to register path collectors in the hook process
         ServicePluginLoader.LoadForHook();
 
-        Logger.Log($"[HookMode] Starting hook process (elevated={Core.Services.ElevationManager.IsRunningAsAdmin()}).");
+        Logger.Log($"[HookMode] Starting hook process (elevated={ElevationManager.IsRunningAsAdmin()}).");
 
         using var ipcServer = new HookIpcServer();
         using var hookProcess = new HookProcess(ipcServer);

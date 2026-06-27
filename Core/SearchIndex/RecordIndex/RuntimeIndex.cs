@@ -13,7 +13,9 @@ public sealed class RuntimeIndex
     private readonly List<ulong> _charMasks = new();
     private int[] _aliasIndices = Array.Empty<int>();
     private string[][] _aliasValues = Array.Empty<string[]>();
+    private byte[][] _aliasProviderIds = Array.Empty<byte[]>();
     private readonly Dictionary<int, string[]> _deltaNameAliases = new();
+    private readonly Dictionary<int, byte[]> _deltaAliasProviderIds = new();
     private System.Collections.BitArray _hasAlias = new(0);
     private readonly NameTable _names = new();
     private Dictionary<char, int[]> _nameCharBuckets = new();
@@ -62,6 +64,12 @@ public sealed class RuntimeIndex
         get => _aliasValues;
         set => _aliasValues = value;
     }
+    internal byte[][] AliasProviderIds
+    {
+        get => _aliasProviderIds;
+        set => _aliasProviderIds = value;
+    }
+    internal Dictionary<int, byte[]> DeltaAliasProviderIds => _deltaAliasProviderIds;
     internal Dictionary<char, int[]> NameCharBuckets => _nameCharBuckets;
 
     internal void SetNameCharBuckets(Dictionary<char, int[]> buckets) => _nameCharBuckets = buckets;
@@ -83,7 +91,9 @@ public sealed class RuntimeIndex
         _deltaIdToIndex.Clear();
         _aliasIndices = Array.Empty<int>();
         _aliasValues = Array.Empty<string[]>();
+        _aliasProviderIds = Array.Empty<byte[]>();
         _deltaNameAliases.Clear();
+        _deltaAliasProviderIds.Clear();
         _hasAlias = new System.Collections.BitArray(0);
         _parentToChildren.Clear();
         _nameCharDelta.Clear();
@@ -109,6 +119,7 @@ public sealed class RuntimeIndex
         var parentIds = new List<UInt128>(store.Records.Count);
         var tempAliasIndices = new List<int>();
         var tempAliasValues = new List<string[]>();
+        var tempAliasProviderIds = new List<byte[]>();
 
         foreach (var record in store.Records)
         {
@@ -122,11 +133,12 @@ public sealed class RuntimeIndex
                 record.Flags);
             parentIds.Add(record.ParentId);
 
-            var aliases = this.GenerateAliases(record.Name);
+            var aliases = this.GenerateAliases(record.Name, out var providerIds);
             if (aliases != null && aliases.Length > 0)
             {
                 tempAliasIndices.Add(index);
                 tempAliasValues.Add(aliases);
+                tempAliasProviderIds.Add(providerIds);
                 _charMasks[index] = ulong.MaxValue;
             }
 
@@ -139,6 +151,7 @@ public sealed class RuntimeIndex
         _loadedCount = Count;
         _aliasIndices = tempAliasIndices.ToArray();
         _aliasValues = tempAliasValues.ToArray();
+        _aliasProviderIds = tempAliasProviderIds.ToArray();
 
         _hasAlias = new System.Collections.BitArray(_loadedCount);
         foreach (var index in _aliasIndices)

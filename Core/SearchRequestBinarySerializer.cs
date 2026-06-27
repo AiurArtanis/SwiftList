@@ -22,10 +22,10 @@ public static class SearchRequestBinarySerializer
                 payloadSize += GetStringByteCount(msg.Drive) + 5;
                 break;
             case SearchRequestId.Search:
-                payloadSize += 8 + GetStringByteCount(msg.Query) + 5;
+                payloadSize += 8 + GetStringByteCount(msg.Query) + 5 + CalculateStringListSize(msg.DisabledAliasComponents);
                 break;
             case SearchRequestId.SearchDir:
-                payloadSize += 8 + GetStringByteCount(msg.DirectoryFilter) + 5 + GetStringByteCount(msg.Query) + 5;
+                payloadSize += 8 + GetStringByteCount(msg.DirectoryFilter) + 5 + GetStringByteCount(msg.Query) + 5 + CalculateStringListSize(msg.DisabledAliasComponents);
                 break;
         }
 
@@ -52,6 +52,7 @@ public static class SearchRequestBinarySerializer
                     BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), msg.AppLimit);
                     offset += 4;
                     WriteString(span, ref offset, msg.Query);
+                    WriteStringList(span, ref offset, msg.DisabledAliasComponents);
                     break;
                 case SearchRequestId.SearchDir:
                     BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), msg.Limit);
@@ -60,6 +61,7 @@ public static class SearchRequestBinarySerializer
                     offset += 4;
                     WriteString(span, ref offset, msg.DirectoryFilter);
                     WriteString(span, ref offset, msg.Query);
+                    WriteStringList(span, ref offset, msg.DisabledAliasComponents);
                     break;
             }
 
@@ -112,6 +114,7 @@ public static class SearchRequestBinarySerializer
                 msg.AppLimit = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
                 offset += 4;
                 msg.Query = ReadString(payload, ref offset);
+                msg.DisabledAliasComponents = ReadStringList(payload, ref offset);
                 break;
             case SearchRequestId.SearchDir:
                 msg.Limit = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
@@ -120,6 +123,7 @@ public static class SearchRequestBinarySerializer
                 offset += 4;
                 msg.DirectoryFilter = ReadString(payload, ref offset);
                 msg.Query = ReadString(payload, ref offset);
+                msg.DisabledAliasComponents = ReadStringList(payload, ref offset);
                 break;
         }
 
@@ -216,5 +220,40 @@ public static class SearchRequestBinarySerializer
             offset += read;
         }
         return buffer;
+    }
+
+    private static int CalculateStringListSize(List<string>? list)
+    {
+        var size = 4; // Count
+        if (list != null)
+        {
+            foreach (var s in list)
+                size += GetStringByteCount(s) + 5;
+        }
+        return size;
+    }
+
+    private static void WriteStringList(Span<byte> span, ref int offset, List<string>? list)
+    {
+        var count = list?.Count ?? 0;
+        BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), count);
+        offset += 4;
+        if (list != null)
+        {
+            foreach (var s in list)
+                WriteString(span, ref offset, s);
+        }
+    }
+
+    private static List<string> ReadStringList(byte[] payload, ref int offset)
+    {
+        var count = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
+        offset += 4;
+        var list = new List<string>(count);
+        for (var i = 0; i < count; i++)
+        {
+            list.Add(ReadString(payload, ref offset));
+        }
+        return list;
     }
 }

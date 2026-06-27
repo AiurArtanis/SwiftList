@@ -24,4 +24,5 @@ public struct SearchRequestMessage
     public string? DirectoryFilter { get; set; }
     public string? Drive { get; set; }
     public MachineSettings? MachineSettings { get; set; }
+    public List<string>? DisabledAliasComponents { get; set; }
 }
