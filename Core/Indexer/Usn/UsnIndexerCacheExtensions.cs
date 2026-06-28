@@ -32,13 +32,29 @@ public static class UsnIndexerCacheExtensions
         var loaded = new List<(string Drive, RuntimeIndex Runtime, UsnIndexer.DriveRuntimeMetadata Metadata, ulong JournalId, long NextUsn)>();
         foreach (var drive in drives)
         {
-            var store = LocalDriveCacheLocator.Load(cacheDir, drive);
-            if (store == null || !IsCurrentVolumeCache(drive, store))
+            var runtime = new RuntimeIndex();
+            string? basePath = null;
+            try
+            {
+                var metaPath = LocalDriveCacheLocator.GetCachePath(cacheDir, drive);
+                if (!string.IsNullOrEmpty(metaPath) && metaPath.EndsWith(".meta", StringComparison.OrdinalIgnoreCase))
+                {
+                    basePath = metaPath.Substring(0, metaPath.Length - 5);
+                }
+            }
+            catch {}
+
+            if (basePath == null)
                 continue;
 
-            var runtime = new RuntimeIndex();
-            runtime.Load(store);
-            loaded.Add((drive, runtime, UsnIndexer.CreateMetadata(store), store.JournalId, store.NextUsn));
+            var metadata = runtime.LoadFromCacheDirect(basePath);
+            if (metadata == null || !IsCurrentVolumeCache(drive, metadata))
+                continue;
+
+            loaded.Add((drive, runtime, metadata, metadata.JournalId, metadata.NextUsn));
+
+            GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+            Win32Api.TrimWorkingSet();
         }
 
         lock (indexer.LockObj)
@@ -71,13 +87,24 @@ public static class UsnIndexerCacheExtensions
         string cacheDir,
         string drive)
     {
-        var store = LocalDriveCacheLocator.Load(cacheDir, drive);
-        if (store == null || !IsCurrentVolumeCache(drive, store))
+        var runtime = new RuntimeIndex();
+        string? basePath = null;
+        try
+        {
+            var metaPath = LocalDriveCacheLocator.GetCachePath(cacheDir, drive);
+            if (!string.IsNullOrEmpty(metaPath) && metaPath.EndsWith(".meta", StringComparison.OrdinalIgnoreCase))
+            {
+                basePath = metaPath.Substring(0, metaPath.Length - 5);
+            }
+        }
+        catch {}
+
+        if (basePath == null)
             return null;
 
-        var runtime = new RuntimeIndex();
-        runtime.Load(store);
-        var metadata = UsnIndexer.CreateMetadata(store);
+        var metadata = runtime.LoadFromCacheDirect(basePath);
+        if (metadata == null || !IsCurrentVolumeCache(drive, metadata))
+            return null;
 
         lock (indexer.LockObj)
         {
@@ -92,7 +119,7 @@ public static class UsnIndexerCacheExtensions
             indexer.Status.State = "ready";
             indexer.Status.Progress = 100;
             indexer.UpdateDriveCounts(drive);
-            return (store.JournalId, store.NextUsn);
+            return (metadata.JournalId, metadata.NextUsn);
         }
     }
 
@@ -108,9 +135,9 @@ public static class UsnIndexerCacheExtensions
         }
     }
 
-    private static bool IsCurrentVolumeCache(string drive, FileRecordStore store)
+    private static bool IsCurrentVolumeCache(string drive, UsnIndexer.DriveRuntimeMetadata metadata)
     {
-        if (store.SourceKind != FileRecordSourceKind.LocalMft)
+        if (metadata.SourceKind != FileRecordSourceKind.LocalMft)
             return true;
 
         var identity = VolumeHelper.GetVolumeIdentity(drive);
@@ -121,8 +148,8 @@ public static class UsnIndexerCacheExtensions
         }
 
         var current = identity.Value;
-        var matches = store.VolumeSerialNumber == current.SerialNumber &&
-            store.FileSystemType.Equals(current.FileSystemType, StringComparison.OrdinalIgnoreCase);
+        var matches = metadata.VolumeSerialNumber == current.SerialNumber &&
+            metadata.FileSystemType.Equals(current.FileSystemType, StringComparison.OrdinalIgnoreCase);
         if (!matches)
         {
             Logger.Log($"[UsnIndexer] Ignoring cached index for drive {drive}: volume identity changed.", LogLevel.Warn);

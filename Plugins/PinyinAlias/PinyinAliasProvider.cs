@@ -12,6 +12,16 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
 
     private static readonly Dictionary<string, Dictionary<string, string>> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object LockObj = new();
+    private static readonly string[][] AsciiSyllableCache;
+
+    static PinyinAliasProvider()
+    {
+        AsciiSyllableCache = new string[128][];
+        for (var i = 0; i < 128; i++)
+        {
+            AsciiSyllableCache[i] = new string[] { ((char)i).ToString().ToLowerInvariant() };
+        }
+    }
 
     public IReadOnlyDictionary<string, string> GetTranslations(string cultureName)
     {
@@ -61,16 +71,56 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
         }
 
         var lists = GetSyllableLists(text);
+        
+        // Fast path: check if there's only 1 combination (no polyphonic characters)
+        var totalCombinations = 1;
+        for (var i = 0; i < lists.Length; i++)
+        {
+            totalCombinations *= lists[i].Length;
+            if (totalCombinations > 32)
+                break;
+        }
+
+        if (totalCombinations == 1)
+        {
+            var initialsArr = new char[lists.Length];
+            var fullLen = 0;
+            for (var i = 0; i < lists.Length; i++)
+            {
+                var s = lists[i][0];
+                initialsArr[i] = s.Length > 0 ? s[0] : '\0';
+                fullLen += s.Length;
+            }
+
+            var initialAlias = new string(initialsArr);
+            yield return initialAlias;
+
+            var fullBuffer = new char[fullLen];
+            var offset = 0;
+            for (var i = 0; i < lists.Length; i++)
+            {
+                var s = lists[i][0];
+                s.CopyTo(0, fullBuffer, offset, s.Length);
+                offset += s.Length;
+            }
+            var fullAlias = new string(fullBuffer);
+            if (fullAlias != initialAlias)
+            {
+                yield return fullAlias;
+            }
+            yield break;
+        }
+
         var fullPinyins = new List<string>();
         var initials = new List<string>();
         var count = 0;
 
-        var fullBuffer = new char[256];
+        var fullBufferTemp = new char[256];
         var initialsBuffer = new char[lists.Length];
 
         // Generate combinations. Since we concatenate them, we can safely allow up to 32 combinations
         // to support longer polyphonic names without database explosion.
-        GenerateCombinations(lists, 0, 0, fullPinyins, initials, fullBuffer, initialsBuffer, ref count);
+        GenerateCombinations(lists, 0, 0, fullPinyins, initials, fullBufferTemp, initialsBuffer, ref count);
 
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -125,7 +175,14 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
             }
             else
             {
-                lists[i] = new string[] { char.ToLowerInvariant(c).ToString() };
+                if (c < 128)
+                {
+                    lists[i] = AsciiSyllableCache[c];
+                }
+                else
+                {
+                    lists[i] = new string[] { char.ToLowerInvariant(c).ToString() };
+                }
             }
         }
         return lists;

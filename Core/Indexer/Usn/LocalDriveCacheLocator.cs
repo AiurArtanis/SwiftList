@@ -11,20 +11,6 @@ internal static class LocalDriveCacheLocator
         return key != null && FileRecordStoreSerializer.Exists(cacheDir, key);
     }
 
-    public static FileRecordStore? Load(string cacheDir, string drive)
-    {
-        var key = GetCacheKey(drive);
-        if (key == null)
-            return null;
-
-        var store = FileRecordStoreSerializer.Load(cacheDir, key);
-        if (store == null)
-            return null;
-
-        store.SourceKey = drive;
-        return store;
-    }
-
     public static FileRecordStoreSummary? TryLoadSummary(string cacheDir, string drive)
     {
         var key = GetCacheKey(drive);

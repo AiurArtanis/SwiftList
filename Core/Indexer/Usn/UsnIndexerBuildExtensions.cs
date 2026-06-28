@@ -55,38 +55,128 @@ public static class UsnIndexerBuildExtensions
             (drive, onProgress) => FolderDriveScanner.BuildStreaming(drive, onProgress, CancellationToken.None),
             (drive, result, progress, index) =>
             {
-                var runtime = new RuntimeIndex();
-                runtime.Load(result.Store);
+                indexer.DropDriveFromRuntime(drive);
+
+                RuntimeIndex runtime;
+                UsnIndexer.DriveRuntimeMetadata? metadata;
+
                 if (!string.IsNullOrWhiteSpace(cacheDir))
-                    LocalDriveCacheLocator.Save(cacheDir, drive, result.Store);
-                var metadata = UsnIndexer.CreateMetadata(result.Store);
-                lock (indexer.LockObj)
                 {
-                    indexer._driveMetadata[drive] = metadata;
-                    indexer._recordIndexes[drive] = runtime;
-                    indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
-                    indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
-                    indexer.Status.Progress = progress;
-                    indexer.UpdateDriveCounts(drive);
+                    LocalDriveCacheLocator.Save(cacheDir, drive, result.Store);
+                    result.Store.Records.Clear();
+                    result.Store.Records.TrimExcess();
+
+                    GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+                    Win32Api.TrimWorkingSet();
+
+                    string? basePath = null;
+                    try
+                    {
+                        var metaPath = LocalDriveCacheLocator.GetCachePath(cacheDir, drive);
+                        if (!string.IsNullOrEmpty(metaPath) && metaPath.EndsWith(".meta", StringComparison.OrdinalIgnoreCase))
+                        {
+                            basePath = metaPath.Substring(0, metaPath.Length - 5);
+                        }
+                    }
+                    catch {}
+
+                    if (basePath != null)
+                    {
+                        runtime = new RuntimeIndex();
+                        metadata = runtime.LoadFromCacheDirect(basePath);
+                    }
+                    else
+                    {
+                        runtime = new RuntimeIndex();
+                        runtime.Load(result.Store);
+                        metadata = UsnIndexer.CreateMetadata(result.Store);
+                    }
                 }
+                else
+                {
+                    runtime = new RuntimeIndex();
+                    runtime.Load(result.Store);
+                    metadata = UsnIndexer.CreateMetadata(result.Store);
+                }
+
+                if (metadata != null)
+                {
+                    lock (indexer.LockObj)
+                    {
+                        indexer._driveMetadata[drive] = metadata;
+                        indexer._recordIndexes[drive] = runtime;
+                        indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
+                        indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
+                        indexer.Status.Progress = progress;
+                        indexer.UpdateDriveCounts(drive);
+                    }
+                }
+
+                GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+                Win32Api.TrimWorkingSet();
             },
             (drive, result, progress, index) =>
             {
-                var runtime = new RuntimeIndex();
-                runtime.Load(result.Store);
-                if (!string.IsNullOrWhiteSpace(cacheDir))
-                    LocalDriveCacheLocator.Save(cacheDir, drive, result.Store);
-                var metadata = UsnIndexer.CreateMetadata(result.Store);
-                lock (indexer.LockObj)
-                {
-                    indexer._driveMetadata[drive] = metadata;
-                    indexer._recordIndexes[drive] = runtime;
-                    indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
-                    indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
+                indexer.DropDriveFromRuntime(drive);
 
-                    indexer.Status.Progress = progress;
-                    indexer.UpdateDriveCounts(drive);
+                RuntimeIndex runtime;
+                UsnIndexer.DriveRuntimeMetadata? metadata;
+
+                if (!string.IsNullOrWhiteSpace(cacheDir))
+                {
+                    LocalDriveCacheLocator.Save(cacheDir, drive, result.Store);
+                    result.Store.Records.Clear();
+                    result.Store.Records.TrimExcess();
+
+                    GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+                    Win32Api.TrimWorkingSet();
+
+                    string? basePath = null;
+                    try
+                    {
+                        var metaPath = LocalDriveCacheLocator.GetCachePath(cacheDir, drive);
+                        if (!string.IsNullOrEmpty(metaPath) && metaPath.EndsWith(".meta", StringComparison.OrdinalIgnoreCase))
+                        {
+                            basePath = metaPath.Substring(0, metaPath.Length - 5);
+                        }
+                    }
+                    catch {}
+
+                    if (basePath != null)
+                    {
+                        runtime = new RuntimeIndex();
+                        metadata = runtime.LoadFromCacheDirect(basePath);
+                    }
+                    else
+                    {
+                        runtime = new RuntimeIndex();
+                        runtime.Load(result.Store);
+                        metadata = UsnIndexer.CreateMetadata(result.Store);
+                    }
                 }
+                else
+                {
+                    runtime = new RuntimeIndex();
+                    runtime.Load(result.Store);
+                    metadata = UsnIndexer.CreateMetadata(result.Store);
+                }
+
+                if (metadata != null)
+                {
+                    lock (indexer.LockObj)
+                    {
+                        indexer._driveMetadata[drive] = metadata;
+                        indexer._recordIndexes[drive] = runtime;
+                        indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
+                        indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
+
+                        indexer.Status.Progress = progress;
+                        indexer.UpdateDriveCounts(drive);
+                    }
+                }
+
+                GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+                Win32Api.TrimWorkingSet();
             },
             elapsedSeconds =>
             {
@@ -97,6 +187,9 @@ public static class UsnIndexerBuildExtensions
                     indexer.Status.ElapsedTime = elapsedSeconds;
                 }
                 Logger.Log($"[UsnIndexer] All indices built! Files: {indexer.Status.TotalFiles}, Folders: {indexer.Status.TotalDirs}. Time: {elapsedSeconds:F2}s");
+
+                GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+                Win32Api.TrimWorkingSet();
             }
         );
     }

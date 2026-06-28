@@ -45,6 +45,19 @@ public class SearchService : IDisposable
                 .ToList()
         };
 
+        HashSet<byte>? disabledIds = null;
+        if (msg.DisabledAliasComponents != null && msg.DisabledAliasComponents.Count > 0)
+        {
+            disabledIds = new HashSet<byte>();
+            foreach (var comp in msg.DisabledAliasComponents)
+            {
+                var id = AliasProviderRegistry.GetProviderIdByComponentId(comp);
+                if (id != 255)
+                    disabledIds.Add(id);
+            }
+        }
+        SearchContext.DisabledAliasIds = disabledIds;
+
         var parsed = SearchQueryParser.Parse(query);
         string? queryExemptRoot = null;
         if (parsed.IsPathMode && !string.IsNullOrEmpty(parsed.ExactPathLower))

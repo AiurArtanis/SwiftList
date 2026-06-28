@@ -73,6 +73,7 @@ public class SearchEngine : IDisposable
             {
                 Logger.Log("[SearchEngine] Service has been idle for 3s. Trimming working set...", LogLevel.Debug);
                 _indexer.ClearCaches();
+                GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
                 Win32Api.TrimWorkingSet();
             }
         }

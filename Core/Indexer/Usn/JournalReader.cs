@@ -94,9 +94,10 @@ public class JournalReader
         var outBuf = new byte[bufSize];
         ulong nextFrn = 0;
         var store = IndexCacheManager.CreateEmptyStore(drive, rootFrn.Value, nextUsn, journalId);
+        store.Records.EnsureCapacity(2500000);
         var namePool = new FileRecordNamePool();
-        var seenItems = new Dictionary<UInt128, int>();
         var progress = new EnumerationProgress(onProgress);
+        var loopCount = 0;
 
         while (true)
         {
@@ -152,23 +153,12 @@ public class JournalReader
                     var record = UsnRecordParser.ParseRecord(recordSpan);
                     var flags = record.IsDirectory ? FileRecordFlags.Directory : FileRecordFlags.None;
 
-                    if (seenItems.TryAdd(record.FileReferenceNumber, store.Records.Count))
-                    {
-                        store.Records.Add(new FileRecord(
-                            record.FileReferenceNumber,
-                            record.ParentFileReferenceNumber,
-                            namePool.Get(record.FileName),
-                            flags));
-                        progress.Add(record.IsDirectory, store.Records.Count - 1);
-                    }
-                    else
-                    {
-                        store.Records[seenItems[record.FileReferenceNumber]] = new FileRecord(
-                            record.FileReferenceNumber,
-                            record.ParentFileReferenceNumber,
-                            namePool.Get(record.FileName),
-                            flags);
-                    }
+                    store.Records.Add(new FileRecord(
+                        record.FileReferenceNumber,
+                        record.ParentFileReferenceNumber,
+                        namePool.Get(record.FileName),
+                        flags));
+                    progress.Add(record.IsDirectory, store.Records.Count - 1);
                 }
                 catch (Exception ex)
                 {
@@ -176,6 +166,12 @@ public class JournalReader
                 }
 
                 offset += (int)recordLen;
+            }
+
+            loopCount++;
+            if (loopCount % 60 == 0)
+            {
+                GC.Collect(1, GCCollectionMode.Forced, blocking: false);
             }
         }
 
