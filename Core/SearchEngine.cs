@@ -250,6 +250,10 @@ public class SearchEngine : IDisposable
             return;
 
         _indexer.ClearCaches();
-        Win32Api.TrimWorkingSet();
+        Task.Run(async () =>
+        {
+            await Task.Delay(150);
+            _indexer.CompactMemory();
+        });
     }
 }

@@ -1,5 +1,3 @@
-using SwiftList.Core.Indexer.NetworkDrive;
-using SwiftList.Core.Indexer.Shared;
 using SwiftList.Core.SearchIndex.RecordIndex;
 
 namespace SwiftList.Core.Indexer.Usn;
@@ -102,104 +100,15 @@ public class UsnIndexer : IDisposable
         NotifyProgressChanged();
     }
 
-    public long CatchUpDrive(string drive, ulong journalId, long startUsn)
-    {
-        var changes = new List<ParsedUsnRecord>();
-        var nextUsn = _reader.CatchUpDrive(drive, journalId, startUsn, changes.Add);
-        if (nextUsn >= 0 && changes.Count > 0)
-            ApplyUsnRecords(drive, changes);
+    // Usn records and changes apply logic is extracted to UsnIndexerExtensions.cs
 
-        return nextUsn;
-    }
-
-    public void ApplyUsnRecord(string drive, ParsedUsnRecord record) => ApplyUsnRecords(drive, new[] { record });
-
-    public void ApplyUsnRecords(string drive, IReadOnlyList<ParsedUsnRecord> records)
-    {
-        Logger.Log($"[UsnIndexer] Applying {records.Count} USN records to drive {drive}", LogLevel.Debug);
-        lock (LockObj)
-        {
-            if (!_recordIndexes.TryGetValue(drive, out var runtime))
-                return;
-            var namePool = new FileRecordNamePool();
-
-            foreach (var record in records)
-            {
-                if ((record.Reason & (Win32Api.USN_REASON_FILE_DELETE | Win32Api.USN_REASON_RENAME_OLD_NAME)) != 0)
-                {
-                    runtime.Remove(ToSourceLocalId(record.FileReferenceNumber));
-                    continue;
-                }
-
-                if ((record.Reason & (Win32Api.USN_REASON_FILE_CREATE | Win32Api.USN_REASON_RENAME_NEW_NAME)) == 0)
-                    continue;
-
-                var flags = record.IsDirectory ? FileRecordFlags.Directory : FileRecordFlags.None;
-                var fileRecord = new FileRecord(
-                    ToSourceLocalId(record.FileReferenceNumber),
-                    ToSourceLocalId(record.ParentFileReferenceNumber),
-                    namePool.Get(record.FileName),
-                    flags);
-
-                runtime.Upsert(fileRecord);
-            }
-
-            UpdateTotalsFromRuntime();
-            UpdateDriveCounts(drive);
-            SearchCoordinator.ClearCaches();
-        }
-        PublishStatusChanged();
-    }
-
-    public void ApplyFolderChange(string drive, WatcherChangeTypes changeType, string path, string? oldPath = null)
-    {
-        lock (LockObj)
-        {
-            if (!_recordIndexes.TryGetValue(drive, out var runtime))
-                return;
-
-            var root = $"{drive}:\\";
-            var normalizedPath = PathHelpers.NormalizePath(path, Directory.Exists(path));
-            var changed = false;
-
-            changed = changeType switch
-            {
-                WatcherChangeTypes.Deleted => PathDeltaApplier.ApplyDeleted(runtime, normalizedPath),
-                WatcherChangeTypes.Renamed when !string.IsNullOrWhiteSpace(oldPath) => PathDeltaApplier.ApplyRenamed(runtime, (UInt128)1, root, oldPath, normalizedPath),
-                _ => PathDeltaApplier.ApplyCreatedOrChanged(runtime, (UInt128)1, root, normalizedPath),
-            };
-            if (!changed)
-                return;
-
-            UpdateTotalsFromRuntime();
-            UpdateDriveCounts(drive);
-            SearchCoordinator.ClearCaches();
-            SaveDriveSnapshot(drive, runtime);
-        }
-        PublishStatusChanged();
-    }
-
-    private void SaveDriveSnapshot(string drive, RuntimeIndex runtime)
-    {
-        if (!_driveMetadata.TryGetValue(drive, out var metadata))
-            return;
-
-        var store = runtime.ToStore(
-            metadata.SourceKind,
-            metadata.IdKind,
-            metadata.FileSystemType,
-            metadata.VolumeSerialNumber,
-            metadata.RootId,
-            metadata.JournalId,
-            metadata.NextUsn);
-        LocalDriveCacheLocator.Save(Path.Combine(Logger.UserDataDir, "indexes"), drive, store);
-    }
 
     public void CompactMemory()
     {
         try
         {
             System.Runtime.GCSettings.LargeObjectHeapCompactionMode = System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
             Win32Api.TrimWorkingSet();
         }
         catch { }
@@ -241,7 +150,7 @@ public class UsnIndexer : IDisposable
 
     private static UInt128 ToSourceLocalId(UInt128 value) => value;
 
-    private void UpdateTotalsFromRuntime()
+    internal void UpdateTotalsFromRuntime()
     {
         Status.TotalFiles = _recordIndexes.Values.Sum(r => r.TotalFiles);
         Status.TotalDirs = _recordIndexes.Values.Sum(r => r.TotalDirs);
@@ -294,7 +203,7 @@ public class UsnIndexer : IDisposable
         }
     }
 
-    private void PublishStatusChanged()
+    internal void PublishStatusChanged()
     {
         try
         {

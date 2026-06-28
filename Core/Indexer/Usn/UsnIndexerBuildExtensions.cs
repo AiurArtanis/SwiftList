@@ -111,9 +111,6 @@ public static class UsnIndexerBuildExtensions
                         indexer.UpdateDriveCounts(drive);
                     }
                 }
-
-                GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
-                Win32Api.TrimWorkingSet();
             },
             (drive, result, progress, index) =>
             {
@@ -174,9 +171,6 @@ public static class UsnIndexerBuildExtensions
                         indexer.UpdateDriveCounts(drive);
                     }
                 }
-
-                GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
-                Win32Api.TrimWorkingSet();
             },
             elapsedSeconds =>
             {

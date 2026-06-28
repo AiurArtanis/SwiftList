@@ -141,6 +141,7 @@ public static class FileRecordStoreSerializer
 
     public static void Save(string cacheDir, FileRecordStore store, string storageKey)
     {
+        store.Records.Sort((a, b) => a.Id.CompareTo(b.Id));
         Directory.CreateDirectory(cacheDir);
         var basePath = GetBasePath(cacheDir, storageKey);
         var metaTemp = basePath + ".meta.tmp";
