@@ -8,6 +8,9 @@ hero:
     src: /logo.png
     alt: SwiftList Logo
 features:
+  - icon: 💡
+    title: Listary 的开源替代
+    details: 现代化高颜值界面，支持深度扩展定制，全面替代并超越商业级文件检索启动器。
   - icon: 🚀
     title: 极速索引
     details: 基于 Windows USN 日志与 MFT 机制，秒级读取数百万磁盘文件，Service 进程轻量共享。

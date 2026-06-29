@@ -8,6 +8,9 @@ hero:
     src: /logo.png
     alt: SwiftList Logo
 features:
+  - icon: 💡
+    title: Listary Alternative
+    details: A modern, beautiful, and highly extensible open-source alternative to commercial file search launchers.
   - icon: 🚀
     title: Instant Indexing
     details: Leverages Windows USN Journal and MFT to read millions of files in seconds, lightweight and system-shared via a background service.
