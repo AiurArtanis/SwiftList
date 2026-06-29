@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 340" class="architecture-diagram" style="width: 100%; max-width: 840px; margin: 30px auto; display: block; font-family: system-ui, -apple-system, sans-serif; background-color: transparent;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 310" width="840" height="310" class="architecture-diagram" style="width: 100%; max-width: 840px; margin: 20px auto; display: block; font-family: system-ui, -apple-system, sans-serif; background-color: transparent;">
   <defs>
     <!-- Gradients -->
     <linearGradient id="serviceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -19,95 +19,95 @@
     </linearGradient>
     
     <!-- Shadow -->
-    <filter id="premium-shadow" x="-10%" y="-10%" width="130%" height="130%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.08" />
-      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.04" />
+    <filter id="premium-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.06" />
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.04" />
     </filter>
   </defs>
 
   <!-- Column 1: Service Indexer -->
   <g filter="url(#premium-shadow)">
-    <rect x="50" y="60" width="200" height="90" rx="16" fill="#f6f6f7" stroke="url(#serviceGrad)" stroke-width="2.5" />
-    <rect x="65" y="75" width="8" height="8" rx="4" fill="#3b82f6" />
-    <text x="150" y="92" font-weight="800" font-size="15" fill="#1e293b" text-anchor="middle">Service (Indexer)</text>
-    <text x="150" y="115" font-size="11" fill="#64748b" text-anchor="middle" font-weight="500">bin: Service.exe --service</text>
-    <text x="150" y="132" font-size="9" fill="#3b82f6" text-anchor="middle" font-weight="700" letter-spacing="1">SYSTEM DAEMON</text>
+    <rect x="50" y="40" width="200" height="90" rx="16" fill="#f6f6f7" stroke="url(#serviceGrad)" stroke-width="2.5" />
+    <rect x="65" y="55" width="8" height="8" rx="4" fill="#3b82f6" />
+    <text x="150" y="72" font-weight="800" font-size="15" fill="#1e293b" text-anchor="middle">Service (Indexer)</text>
+    <text x="150" y="95" font-size="11" fill="#64748b" text-anchor="middle" font-weight="500">bin: Service.exe --service</text>
+    <text x="150" y="112" font-size="9" fill="#3b82f6" text-anchor="middle" font-weight="700" letter-spacing="1">SYSTEM DAEMON</text>
   </g>
 
   <!-- Column 2: App UI -->
   <g filter="url(#premium-shadow)">
-    <rect x="320" y="60" width="200" height="90" rx="16" fill="#f6f6f7" stroke="url(#appGrad)" stroke-width="2.5" />
-    <rect x="335" y="75" width="8" height="8" rx="4" fill="#8b5cf6" />
-    <text x="420" y="92" font-weight="800" font-size="15" fill="#1e293b" text-anchor="middle">SwiftList.App</text>
-    <text x="420" y="115" font-size="11" fill="#64748b" text-anchor="middle" font-weight="500">Main Search UI (WPF)</text>
-    <text x="420" y="132" font-size="9" fill="#8b5cf6" text-anchor="middle" font-weight="700" letter-spacing="1">USER DESKTOP LEVEL</text>
+    <rect x="320" y="40" width="200" height="90" rx="16" fill="#f6f6f7" stroke="url(#appGrad)" stroke-width="2.5" />
+    <rect x="335" y="55" width="8" height="8" rx="4" fill="#8b5cf6" />
+    <text x="420" y="72" font-weight="800" font-size="15" fill="#1e293b" text-anchor="middle">SwiftList.App</text>
+    <text x="420" y="95" font-size="11" fill="#64748b" text-anchor="middle" font-weight="500">Main Search UI (WPF)</text>
+    <text x="420" y="112" font-size="9" fill="#8b5cf6" text-anchor="middle" font-weight="700" letter-spacing="1">USER DESKTOP LEVEL</text>
   </g>
 
   <!-- Column 3: Service Hook -->
   <g filter="url(#premium-shadow)">
-    <rect x="590" y="60" width="200" height="90" rx="16" fill="#f6f6f7" stroke="url(#hookGrad)" stroke-width="2.5" />
-    <rect x="605" y="75" width="8" height="8" rx="4" fill="#f59e0b" />
-    <text x="690" y="92" font-weight="800" font-size="15" fill="#1e293b" text-anchor="middle">Service (Hook)</text>
-    <text x="690" y="115" font-size="11" fill="#64748b" text-anchor="middle" font-weight="500">bin: Service.exe --hook</text>
-    <text x="690" y="132" font-size="9" fill="#f59e0b" text-anchor="middle" font-weight="700" letter-spacing="1">USER INPUT HOOK</text>
+    <rect x="590" y="40" width="200" height="90" rx="16" fill="#f6f6f7" stroke="url(#hookGrad)" stroke-width="2.5" />
+    <rect x="605" y="55" width="8" height="8" rx="4" fill="#f59e0b" />
+    <text x="690" y="72" font-weight="800" font-size="15" fill="#1e293b" text-anchor="middle">Service (Hook)</text>
+    <text x="690" y="95" font-size="11" fill="#64748b" text-anchor="middle" font-weight="500">bin: Service.exe --hook</text>
+    <text x="690" y="112" font-size="9" fill="#f59e0b" text-anchor="middle" font-weight="700" letter-spacing="1">USER INPUT HOOK</text>
   </g>
 
   <!-- Column 1 Downward: NTFS -->
   <g filter="url(#premium-shadow)">
-    <rect x="50" y="200" width="200" height="80" rx="14" fill="#f6f6f7" stroke="url(#dbGrad)" stroke-width="2" />
-    <text x="150" y="235" font-weight="700" font-size="13" fill="#1e293b" text-anchor="middle">NTFS MFT &amp; USN</text>
-    <text x="150" y="258" font-size="11" fill="#64748b" text-anchor="middle">Low-Level Scan &amp; Monitor</text>
+    <rect x="50" y="190" width="200" height="80" rx="14" fill="#f6f6f7" stroke="url(#dbGrad)" stroke-width="2" />
+    <text x="150" y="225" font-weight="700" font-size="13" fill="#1e293b" text-anchor="middle">NTFS MFT &amp; USN</text>
+    <text x="150" y="248" font-size="11" fill="#64748b" text-anchor="middle">Low-Level Scan &amp; Monitor</text>
   </g>
 
   <!-- Column 2 Downward: Plugins -->
   <g filter="url(#premium-shadow)">
-    <rect x="320" y="200" width="200" height="80" rx="14" fill="#f6f6f7" stroke="url(#appGrad)" stroke-width="2" />
-    <text x="420" y="235" font-weight="700" font-size="13" fill="#1e293b" text-anchor="middle">User Plugins</text>
-    <text x="420" y="258" font-size="11" fill="#64748b" text-anchor="middle">CustomAlias / Settings</text>
+    <rect x="320" y="190" width="200" height="80" rx="14" fill="#f6f6f7" stroke="url(#appGrad)" stroke-width="2" />
+    <text x="420" y="225" font-weight="700" font-size="13" fill="#1e293b" text-anchor="middle">User Plugins</text>
+    <text x="420" y="248" font-size="11" fill="#64748b" text-anchor="middle">CustomAlias / Settings</text>
   </g>
 
   <!-- Column 3 Downward: System Hooks -->
   <g filter="url(#premium-shadow)">
-    <rect x="590" y="200" width="200" height="80" rx="14" fill="#f6f6f7" stroke="#e2e8f0" stroke-width="2" />
-    <text x="690" y="235" font-weight="700" font-size="13" fill="#1e293b" text-anchor="middle">Win32 Hooks &amp; Trackers</text>
-    <text x="690" y="258" font-size="11" fill="#64748b" text-anchor="middle">Keyboard Hooks &amp; Tracking</text>
+    <rect x="590" y="190" width="200" height="80" rx="14" fill="#f6f6f7" stroke="#e2e8f0" stroke-width="2" />
+    <text x="690" y="225" font-weight="700" font-size="13" fill="#1e293b" text-anchor="middle">Win32 Hooks &amp; Trackers</text>
+    <text x="690" y="248" font-size="11" fill="#64748b" text-anchor="middle">Keyboard Hooks &amp; Tracking</text>
   </g>
 
   <!-- Search Pipe Connection (Indexer <-> App) -->
   <g>
-    <path d="M 250 105 L 320 105" stroke="#3b82f6" stroke-dasharray="4,3" stroke-width="1.5" />
-    <polygon points="250,105 260,101 260,109" fill="#3b82f6" />
-    <polygon points="320,105 310,101 310,109" fill="#3b82f6" />
+    <path d="M 250 85 L 320 85" stroke="#3b82f6" stroke-dasharray="4,3" stroke-width="1.5" />
+    <polygon points="250,85 260,81 260,89" fill="#3b82f6" />
+    <polygon points="320,85 310,81 310,89" fill="#3b82f6" />
     
-    <rect x="257" y="96" width="56" height="18" rx="5" fill="#ffffff" stroke="#3b82f6" stroke-width="1" />
-    <text x="285" y="109" font-size="9" fill="#3b82f6" text-anchor="middle" font-weight="700">Search Pipe</text>
+    <rect x="257" y="76" width="56" height="18" rx="5" fill="#ffffff" stroke="#3b82f6" stroke-width="1" />
+    <text x="285" y="89" font-size="9" fill="#3b82f6" text-anchor="middle" font-weight="700">Search Pipe</text>
   </g>
 
   <!-- Hook IPC Connection (Hook <-> App) -->
   <g>
-    <path d="M 520 105 L 590 105" stroke="#f59e0b" stroke-dasharray="4,3" stroke-width="1.5" />
-    <polygon points="520,105 530,101 530,109" fill="#f59e0b" />
-    <polygon points="590,105 580,101 580,109" fill="#f59e0b" />
+    <path d="M 520 85 L 590 85" stroke="#f59e0b" stroke-dasharray="4,3" stroke-width="1.5" />
+    <polygon points="520,85 530,81 530,89" fill="#f59e0b" />
+    <polygon points="590,85 580,81 580,89" fill="#f59e0b" />
     
-    <rect x="535" y="96" width="40" height="18" rx="5" fill="#ffffff" stroke="#f59e0b" stroke-width="1" />
-    <text x="555" y="109" font-size="9" fill="#f59e0b" text-anchor="middle" font-weight="700">IPC</text>
+    <rect x="535" y="76" width="40" height="18" rx="5" fill="#ffffff" stroke="#f59e0b" stroke-width="1" />
+    <text x="555" y="89" font-size="9" fill="#f59e0b" text-anchor="middle" font-weight="700">IPC</text>
   </g>
 
   <!-- Column 1 Downward Line -->
   <g>
-    <path d="M 150 150 L 150 200" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3,3" />
-    <polygon points="150,200 145,190 155,190" fill="#10b981" />
+    <path d="M 150 130 L 150 190" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3,3" />
+    <polygon points="150,190 145,180 155,180" fill="#10b981" />
   </g>
 
   <!-- Column 2 Downward Line -->
   <g>
-    <path d="M 420 150 L 420 200" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="3,3" />
-    <polygon points="420,200 415,190 425,190" fill="#8b5cf6" />
+    <path d="M 420 130 L 420 190" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="3,3" />
+    <polygon points="420,190 415,180 425,180" fill="#8b5cf6" />
   </g>
 
   <!-- Column 3 Downward Line -->
   <g>
-    <path d="M 690 150 L 690 200" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" />
-    <polygon points="690,200 685,190 695,190" fill="#f59e0b" />
+    <path d="M 690 130 L 690 190" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,3" />
+    <polygon points="690,190 685,180 695,180" fill="#f59e0b" />
   </g>
 </svg>
