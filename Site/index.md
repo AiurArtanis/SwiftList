@@ -3,7 +3,7 @@ layout: home
 hero:
   name: SwiftList
   text: High-Performance Extensible Search for Windows
-  tagline: An open-source alternative to Listary. Index millions of local files in seconds. Lightweight, lightning fast, with a powerful alias and plugin ecosystem.
+  tagline: Index millions of local files in seconds. Lightweight, lightning fast, with a powerful alias and plugin ecosystem.
   image:
     src: /logo.png
     alt: SwiftList Logo
