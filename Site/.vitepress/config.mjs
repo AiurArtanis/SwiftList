@@ -106,6 +106,12 @@ export default defineConfig({
                   ]
                 }
               ]
+            },
+            {
+              text: 'Sponsorship',
+              items: [
+                { text: 'Donate', link: '/guide/donate' }
+              ]
             }
           ]
         },
@@ -209,6 +215,12 @@ export default defineConfig({
                     { text: 'ITheme (主题数据模型)', link: '/zh-CN/guide/sdk-abstractions#itheme' }
                   ]
                 }
+              ]
+            },
+            {
+              text: '支持与赞助',
+              items: [
+                { text: '捐赠支持', link: '/zh-CN/guide/donate' }
               ]
             }
           ]
