@@ -26,5 +26,4 @@ public interface IAliasProvider
 }
 ```
 
-## 插件加载路径
-主程序启动时，会自动扫描 `%APPDATA%\SwiftList\Plugins` 以及主程序目录下的 `Plugins` 文件夹，并动态加载实现了 SDK 接口的 DLL 文件。
+主程序启动时，会自动扫描主程序目录下的 `Plugins` 文件夹，并动态加载实现了 SDK 接口的 DLL 文件。

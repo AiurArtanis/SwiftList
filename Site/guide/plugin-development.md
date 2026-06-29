@@ -26,5 +26,4 @@ public interface IAliasProvider
 }
 ```
 
-## Plugin Load Path
-When the application starts, it scans `%APPDATA%\SwiftList\Plugins` and the `Plugins` folder in the executable's directory to load DLL files implementing SDK interfaces.
+When the application starts, it scans the `Plugins` folder in the executable's directory to load DLL files implementing SDK interfaces.
