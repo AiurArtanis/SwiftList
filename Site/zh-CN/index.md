@@ -3,7 +3,7 @@ layout: home
 hero:
   name: SwiftList
   text: 高性能、可扩展的 Windows 检索系统
-  tagline: 秒级检索数百万本地文件，极速轻量，支持强大的别名与插件生态。
+  tagline: Listary 的开源替代。秒级检索数百万本地文件，极速轻量，支持强大的别名与插件生态。
   image:
     src: /logo.png
     alt: SwiftList Logo

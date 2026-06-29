@@ -1,6 +1,6 @@
 # Introduction to SwiftList
 
-SwiftList is a high-performance, low-overhead, and highly extensible global search utility designed for Windows. It quickly builds and maintains indexes for local files, while offering a plugin SDK for developers to extend its capabilities.
+SwiftList is a high-performance, low-overhead, and highly extensible global search utility designed for Windows, aiming to be a beautiful, deeply customizable, open-source alternative to **Listary**. It quickly builds and maintains indexes for local files, while offering a plugin SDK for developers to extend its capabilities.
 
 ## Download & Installation
 
