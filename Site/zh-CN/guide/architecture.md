@@ -4,7 +4,7 @@ SwiftList 采用 **“索引服务常驻后台 + 钩子进程拦截输入 + 应�
 
 ## 进程职责划分
 
-![进程职责划分](../../.vitepress/public/architecture.svg)
+![进程职责划分](../../.vitepress/public/architecture-zh-CN.svg)
 
 ### SwiftList.Service (索引模式 - SYSTEM 权限)
 * **职责**：后台极速索引扫描器。

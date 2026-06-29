@@ -4,7 +4,7 @@ SwiftList employs a multi-process separated architecture consisting of **"System
 
 ## Process Responsibilities
 
-![Process Responsibilities](../.vitepress/public/architecture-en.svg)
+![Process Responsibilities](../.vitepress/public/architecture.svg)
 
 ### SwiftList.Service (Indexer Mode - SYSTEM Privilege)
 * **Responsibilities**: High-performance background indexer daemon.
