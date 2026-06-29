@@ -105,11 +105,11 @@ SwiftList-Setup.exe
 SwiftList-Portable.zip
 
 # VitePress site exclusions
-site/node_modules/
-site/.vitepress/dist/
-site/.vitepress/cache/
-site/public/
-site/.vitepress/public/logo.png
-site/.vitepress/public/favicon.ico
+Site/node_modules/
+Site/.vitepress/dist/
+Site/.vitepress/cache/
+Site/public/
+Site/.vitepress/public/logo.png
+Site/.vitepress/public/favicon.ico
 
 

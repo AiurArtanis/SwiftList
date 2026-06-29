@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'site/**'
+      - 'Site/**'
       - '.github/workflows/deploy-docs.yml'
 
   workflow_dispatch:
@@ -28,20 +28,20 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: site/package-lock.json
+          cache-dependency-path: Site/package-lock.json
 
       - name: Install dependencies
         run: npm ci
-        working-directory: site
+        working-directory: Site
 
       - name: Build with VitePress
         run: npm run site:build
-        working-directory: site
+        working-directory: Site
 
       - name: Deploy to swiftlist.github.io
         uses: peaceiris/actions-gh-pages@v4
         with:
           personal_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           external_repository: SwiftList/swiftlist.github.io
-          publish_dir: site/.vitepress/dist
+          publish_dir: Site/.vitepress/dist
           publish_branch: main
