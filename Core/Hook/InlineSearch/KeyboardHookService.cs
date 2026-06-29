@@ -156,7 +156,7 @@ public class KeyboardHookService : IDisposable
 
         if (_explorerTracker.ActiveInlineAdapter == null)
         {
-            var matched = PluginSdk.InlineSearchAdapterRegistry.GetMatchingAdapter(targetFocus, className, processName);
+            var matched = PluginSdk.Registries.InlineSearchAdapterRegistry.GetMatchingAdapter(targetFocus, className, processName);
             if (matched != null)
             {
                 _explorerTracker.SetActiveInlineAdapterDirectly(matched, targetFocus);

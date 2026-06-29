@@ -1,8 +1,10 @@
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.ListSearch;
 
-public class ListSearchPlugin : IActionPlugin, ITranslationProvider
+public class ListSearchPlugin : IAction, ITranslationProvider
 {
     public string Name => TranslationService.Get("Plugins_ListSearchPluginName");
 

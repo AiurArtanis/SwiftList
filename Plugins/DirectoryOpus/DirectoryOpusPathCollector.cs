@@ -1,4 +1,5 @@
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Helpers;
 using SwiftList.Plugins.DirectoryOpus.Win32;
 
 namespace SwiftList.Plugins.DirectoryOpus;

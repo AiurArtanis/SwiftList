@@ -6,9 +6,9 @@ namespace SwiftList.App.Services.PluginManagerCore;
 
 /// <summary>
 /// Scans the <c>Plugins/</c> directory for DLL assemblies and registers every
-/// recognised <see cref="PluginSdk.IActionPlugin"/>, <see cref="IAliasProvider"/>,
-/// <see cref="PluginSdk.IInstantResultProvider"/>, <see cref="PluginSdk.ISidebarFilterProvider"/>,
-/// <see cref="PluginSdk.IResultColumnProvider"/> and <see cref="PluginSdk.ITranslationProvider"/>.
+/// recognised <see cref="PluginSdk.Abstractions.Plugins.IAction"/>, <see cref="IAliasProvider"/>,
+/// <see cref="PluginSdk.Abstractions.Plugins.IInstantResultProvider"/>, <see cref="PluginSdk.Abstractions.Plugins.ISidebarFilterProvider"/>,
+/// <see cref="PluginSdk.Abstractions.Plugins.IResultColumnProvider"/> and <see cref="PluginSdk.Abstractions.Plugins.ITranslationProvider"/>.
 /// </summary>
 internal static class PluginLoader
 {
@@ -49,93 +49,94 @@ internal static class PluginLoader
                 if (type.IsInterface || type.IsAbstract)
                     continue;
 
-                if (typeof(PluginSdk.IActionPlugin).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.IAction).IsAssignableFrom(type))
                 {
-                    var plugin = (PluginSdk.IActionPlugin)Activator.CreateInstance(type)!;
+                    var plugin = (PluginSdk.Abstractions.Plugins.IAction)Activator.CreateInstance(type)!;
                     registry.RegisterPlugin(plugin);
-                    Logger.Log($"[PluginManager] Loaded action plugin: '{type.Name}' (v{plugin.Version}) from {fileName}");
+                    var pluginVer = assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+                    Logger.Log($"[PluginManager] Loaded action plugin: '{type.Name}' (v{pluginVer}) from {fileName}");
                 }
 
-                if (typeof(PluginSdk.IAliasProvider).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.IAliasProvider).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.IAliasProvider)Activator.CreateInstance(type)!;
+                    var provider = (PluginSdk.Abstractions.Plugins.IAliasProvider)Activator.CreateInstance(type)!;
                     AliasProviderRegistry.Register(provider);
                     Logger.Log($"[PluginManager] Loaded alias provider: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.IInstantResultProvider).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.IInstantResultProvider).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.IInstantResultProvider)Activator.CreateInstance(type)!;
+                    var provider = (PluginSdk.Abstractions.Plugins.IInstantResultProvider)Activator.CreateInstance(type)!;
                     registry.AddInstantResultProvider(provider);
                     Logger.Log($"[PluginManager] Loaded instant result provider: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.ISearchableItemProvider).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.ISearchableItemProvider).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.ISearchableItemProvider)Activator.CreateInstance(type)!;
+                    var provider = (PluginSdk.Abstractions.Plugins.ISearchableItemProvider)Activator.CreateInstance(type)!;
                     registry.AddSearchableItemProvider(provider);
                     Logger.Log($"[PluginManager] Loaded searchable item provider: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.ISidebarFilterProvider).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.ISidebarFilterProvider).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.ISidebarFilterProvider)Activator.CreateInstance(type)!;
+                    var provider = (PluginSdk.Abstractions.Plugins.ISidebarFilterProvider)Activator.CreateInstance(type)!;
                     registry.AddSidebarFilterProvider(provider);
                     Logger.Log($"[PluginManager] Loaded sidebar filter provider from {fileName}");
                 }
 
-                if (typeof(PluginSdk.IResultColumnProvider).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.IResultColumnProvider).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.IResultColumnProvider)Activator.CreateInstance(type)!;
+                    var provider = (PluginSdk.Abstractions.Plugins.IResultColumnProvider)Activator.CreateInstance(type)!;
                     registry.AddResultColumnProvider(provider);
                     Logger.Log($"[PluginManager] Loaded result column provider from {fileName}");
                 }
 
-                if (typeof(PluginSdk.ITranslationProvider).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.ITranslationProvider).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.ITranslationProvider)Activator.CreateInstance(type)!;
+                    var provider = (PluginSdk.Abstractions.Plugins.ITranslationProvider)Activator.CreateInstance(type)!;
                     registry.AddTranslationProvider(provider);
                     Logger.Log($"[PluginManager] Loaded translation provider: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.IThemeProvider).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.IThemeProvider).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.IThemeProvider)Activator.CreateInstance(type)!;
+                    var provider = (PluginSdk.Abstractions.Plugins.IThemeProvider)Activator.CreateInstance(type)!;
                     registry.AddThemeProvider(provider);
                     Logger.Log($"[PluginManager] Loaded theme provider: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.IActivePathCollector).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.IActivePathCollector).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.IActivePathCollector)Activator.CreateInstance(type)!;
+                    var provider = (PluginSdk.Abstractions.Plugins.IActivePathCollector)Activator.CreateInstance(type)!;
                     registry.AddActivePathCollector(provider);
                     Logger.Log($"[PluginManager] Loaded active path collector: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.IFilePreviewProvider).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.IFilePreviewProvider).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.IFilePreviewProvider)Activator.CreateInstance(type)!;
+                    var provider = (PluginSdk.Abstractions.Plugins.IFilePreviewProvider)Activator.CreateInstance(type)!;
                     registry.AddFilePreviewProvider(provider);
                     Logger.Log($"[PluginManager] Loaded file preview provider: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.IFileDialogAdapter).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.IFileDialogAdapter).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.IFileDialogAdapter)Activator.CreateInstance(type)!;
-                    PluginSdk.FileDialogAdapterRegistry.Register(provider);
+                    var provider = (PluginSdk.Abstractions.Plugins.IFileDialogAdapter)Activator.CreateInstance(type)!;
+                    PluginSdk.Registries.FileDialogAdapterRegistry.Register(provider);
                     Logger.Log($"[PluginManager] Loaded file dialog adapter: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.IInlineSearchAdapter).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.IInlineSearchAdapter).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.IInlineSearchAdapter)Activator.CreateInstance(type)!;
-                    PluginSdk.InlineSearchAdapterRegistry.Register(provider);
+                    var provider = (PluginSdk.Abstractions.Plugins.IInlineSearchAdapter)Activator.CreateInstance(type)!;
+                    PluginSdk.Registries.InlineSearchAdapterRegistry.Register(provider);
                     Logger.Log($"[PluginManager] Loaded inline search adapter: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.IQuickNavigationProvider).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.IQuickNavigationProvider).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.IQuickNavigationProvider)Activator.CreateInstance(type)!;
+                    var provider = (PluginSdk.Abstractions.Plugins.IQuickNavigationProvider)Activator.CreateInstance(type)!;
                     registry.AddQuickNavigationProvider(provider);
                     Logger.Log($"[PluginManager] Loaded quick navigation provider: '{type.Name}' from {fileName}");
                 }

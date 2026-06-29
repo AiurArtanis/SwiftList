@@ -1,8 +1,10 @@
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.SystemSettings;
 
-public class SystemSettingsPlugin : IActionPlugin
+public class SystemSettingsPlugin : IAction
 {
     public string Name => TranslationService.Get("SystemSettings_PluginName");
 

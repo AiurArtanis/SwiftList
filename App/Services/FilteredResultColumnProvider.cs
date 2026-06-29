@@ -1,4 +1,5 @@
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.App.ViewModels.Settings.Plugins;
 
 namespace SwiftList.App.Services;

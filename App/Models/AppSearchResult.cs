@@ -3,7 +3,7 @@ using SwiftList.App.Services;
 
 namespace SwiftList.App;
 
-public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, PluginSdk.ISearchResult
+public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, PluginSdk.Abstractions.ISearchResult
 {
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     protected virtual void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
@@ -40,7 +40,7 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
 
     public bool[]? GetHighlightMask(string text, string query)
     {
-        if (SourceProvider is PluginSdk.IInstantResultProvider instantProvider)
+        if (SourceProvider is PluginSdk.Abstractions.Plugins.IInstantResultProvider instantProvider)
         {
             return instantProvider.GetHighlightMask(text, query);
         }

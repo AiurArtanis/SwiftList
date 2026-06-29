@@ -3,7 +3,7 @@ using System.Windows.Input;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.Core;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions.Plugins;
 
 namespace SwiftList.App.ViewModels.Settings.Plugins;
 
@@ -65,7 +65,7 @@ public class PluginManagementViewModel : ViewModelBase
 
     public bool IsEmpty => Plugins.Count == 0;
 
-    public string HostSdkVersion { get; } = typeof(IActionPlugin).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+    public string HostSdkVersion { get; } = typeof(IAction).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
     public void Save()
     {

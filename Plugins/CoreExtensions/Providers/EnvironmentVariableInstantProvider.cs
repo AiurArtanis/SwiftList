@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.RegularExpressions;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.CoreExtensions.Providers;
 

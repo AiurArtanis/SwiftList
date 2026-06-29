@@ -1,7 +1,7 @@
 using System.IO;
 using SwiftList.App.Services;
 using SwiftList.Core;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Helpers;
 
 namespace SwiftList.App.ViewModels.Search;
 

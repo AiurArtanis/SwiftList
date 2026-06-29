@@ -136,7 +136,7 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
                 var className = tracker.LastActiveExplorerClassName;
                 if (className != null)
                 {
-                    var collectors = PluginSdk.ActivePathCollectorRegistry.GetCollectors();
+                    var collectors = PluginSdk.Registries.ActivePathCollectorRegistry.GetCollectors();
                     foreach (var collector in collectors)
                     {
                         if (collector.CanHandle(className))

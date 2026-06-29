@@ -1,5 +1,6 @@
 using System.Text;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 using SwiftList.Plugins.ListSearch.Helpers;
 
 namespace SwiftList.Plugins.ListSearch;

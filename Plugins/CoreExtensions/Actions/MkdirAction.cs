@@ -1,6 +1,8 @@
 using System.IO;
 using System.Windows.Media;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Services;
+using SwiftList.PluginSdk.Helpers;
 
 namespace SwiftList.Plugins.CoreExtensions.Actions;
 

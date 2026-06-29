@@ -1,8 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using ListBox = System.Windows.Controls.ListBox;
-
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
 
 namespace SwiftList.App.Services;
 

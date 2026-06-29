@@ -1,6 +1,6 @@
 using System.IO;
 using System.Windows;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Services;
 using SwiftList.App.Services;
 
 namespace SwiftList.App.Views.QuickLook;

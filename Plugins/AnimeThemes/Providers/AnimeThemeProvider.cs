@@ -1,7 +1,9 @@
 using System.IO;
 using System.Resources;
 using System.Windows;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.AnimeThemes.Providers;
 

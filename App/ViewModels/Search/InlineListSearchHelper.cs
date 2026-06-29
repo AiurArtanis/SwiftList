@@ -1,5 +1,5 @@
 using System.IO;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.App.Services;
 using SwiftList.App.Converters;
 

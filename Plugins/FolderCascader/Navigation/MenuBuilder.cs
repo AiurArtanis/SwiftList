@@ -1,5 +1,8 @@
 using System.IO;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
+using SwiftList.PluginSdk.Helpers;
 
 namespace SwiftList.Plugins.FolderCascader.Navigation;
 

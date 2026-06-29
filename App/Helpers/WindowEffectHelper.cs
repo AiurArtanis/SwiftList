@@ -4,7 +4,7 @@ namespace SwiftList.App.Helpers;
 
 public static class WindowEffectHelper
 {
-    public static void ApplyThemeEffects(Window window, PluginSdk.ITheme theme)
+    public static void ApplyThemeEffects(Window window, PluginSdk.Abstractions.ITheme theme)
     {
         var opacity = theme.WindowOpacity;
 

@@ -1,4 +1,6 @@
 using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Helpers;
 
 namespace SwiftList.Plugins.FolderCascader.Navigation;
 

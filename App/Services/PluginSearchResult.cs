@@ -1,4 +1,4 @@
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
 
 namespace SwiftList.App.Services;
 

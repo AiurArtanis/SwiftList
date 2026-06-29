@@ -19,18 +19,18 @@ public class PluginManager : PluginRegistry
     /// <summary>Gets the singleton instance of the PluginManager.</summary>
     public static PluginManager Instance => _instance.Value;
 
-    private readonly List<PluginSdk.IActionPlugin> _plugins = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IAction> _plugins = new();
     private readonly List<PluginActionRegistration> _actions = new();
-    private readonly List<PluginSdk.IDynamicActionProvider> _dynamicProviders = new();
-    private readonly List<PluginSdk.IInstantResultProvider> _instantResultProviders = new();
-    private readonly List<PluginSdk.ISearchableItemProvider> _searchableItemProviders = new();
-    private readonly List<PluginSdk.ISidebarFilterProvider> _sidebarFilterProviders = new();
-    private readonly List<PluginSdk.IResultColumnProvider> _resultColumnProviders = new();
-    private readonly List<PluginSdk.ITranslationProvider> _translationProviders = new();
-    private readonly List<PluginSdk.IThemeProvider> _themeProviders = new();
-    private readonly List<PluginSdk.IActivePathCollector> _pathCollectors = new();
-    private readonly List<PluginSdk.IFilePreviewProvider> _previewProviders = new();
-    private readonly List<PluginSdk.IQuickNavigationProvider> _quickNavigationProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> _dynamicProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IInstantResultProvider> _instantResultProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.ISearchableItemProvider> _searchableItemProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.ISidebarFilterProvider> _sidebarFilterProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IResultColumnProvider> _resultColumnProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.ITranslationProvider> _translationProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IThemeProvider> _themeProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IActivePathCollector> _pathCollectors = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IFilePreviewProvider> _previewProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IQuickNavigationProvider> _quickNavigationProviders = new();
     private uint _nextRuntimeActionId = 0x80000000;
 
     private readonly ComponentFilter _filter = new();
@@ -44,49 +44,49 @@ public class PluginManager : PluginRegistry
             _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.AliasProvider, prov.GetType().Name);
 
         // Wire up the dynamic filtering delegate for active path collectors
-        PluginSdk.ActivePathCollectorRegistry.FilterFunc = prov =>
+        PluginSdk.Registries.ActivePathCollectorRegistry.FilterFunc = prov =>
             _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.ActivePathCollector, prov.GetType().Name);
 
         // Wire up the dynamic filtering delegate for file dialog adapters
-        PluginSdk.FileDialogAdapterRegistry.FilterFunc = prov =>
+        PluginSdk.Registries.FileDialogAdapterRegistry.FilterFunc = prov =>
             _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.FileDialogAdapter, prov.GetType().Name);
 
         // Wire up the dynamic filtering delegate for inline search adapters
-        PluginSdk.InlineSearchAdapterRegistry.FilterFunc = prov =>
+        PluginSdk.Registries.InlineSearchAdapterRegistry.FilterFunc = prov =>
             _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.InlineSearchAdapter, prov.GetType().Name);
 
         // Wire up the settings delegate for plugins using the in-memory UserSettings cache
-        PluginSdk.PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
+        PluginSdk.Services.PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
             UserSettings.Load().GetPluginSetting(pluginId, key, defaultValue);
 
         // Wire up the history service delegate for plugins using Core SearchHistoryStore
-        PluginSdk.HistoryService.GetHistoryPathsFunc = () =>
+        PluginSdk.Services.HistoryService.GetHistoryPathsFunc = () =>
             SearchHistoryStore.GetEntries();
 
         // Wire up the favorites service delegate for plugins using Core UserSettings
-        PluginSdk.FavoritesService.GetFavoritesFunc = () =>
-            UserSettings.Load().Favorites.Select(f => new PluginSdk.FavoriteItem { Name = f.Name, Path = f.Path });
+        PluginSdk.Services.FavoritesService.GetFavoritesFunc = () =>
+            UserSettings.Load().Favorites.Select(f => new PluginSdk.Models.FavoriteItem { Name = f.Name, Path = f.Path });
 
         PluginLoader.Load(this);
     }
 
     // ── PluginRegistry callbacks ──────────────────────────────────────────
 
-    void PluginRegistry.RegisterPlugin(PluginSdk.IActionPlugin plugin) => RegisterPlugin(plugin);
+    void PluginRegistry.RegisterPlugin(PluginSdk.Abstractions.Plugins.IAction plugin) => RegisterPlugin(plugin);
 
-    void PluginRegistry.AddInstantResultProvider(PluginSdk.IInstantResultProvider p) => _instantResultProviders.Add(p);
-    void PluginRegistry.AddSearchableItemProvider(PluginSdk.ISearchableItemProvider p) => _searchableItemProviders.Add(p);
-    void PluginRegistry.AddSidebarFilterProvider(PluginSdk.ISidebarFilterProvider p) => _sidebarFilterProviders.Add(p);
-    void PluginRegistry.AddResultColumnProvider(PluginSdk.IResultColumnProvider p) => _resultColumnProviders.Add(p);
-    void PluginRegistry.AddTranslationProvider(PluginSdk.ITranslationProvider p) => _translationProviders.Add(p);
-    void PluginRegistry.AddThemeProvider(PluginSdk.IThemeProvider p) => _themeProviders.Add(p);
-    void PluginRegistry.AddActivePathCollector(PluginSdk.IActivePathCollector p)
+    void PluginRegistry.AddInstantResultProvider(PluginSdk.Abstractions.Plugins.IInstantResultProvider p) => _instantResultProviders.Add(p);
+    void PluginRegistry.AddSearchableItemProvider(PluginSdk.Abstractions.Plugins.ISearchableItemProvider p) => _searchableItemProviders.Add(p);
+    void PluginRegistry.AddSidebarFilterProvider(PluginSdk.Abstractions.Plugins.ISidebarFilterProvider p) => _sidebarFilterProviders.Add(p);
+    void PluginRegistry.AddResultColumnProvider(PluginSdk.Abstractions.Plugins.IResultColumnProvider p) => _resultColumnProviders.Add(p);
+    void PluginRegistry.AddTranslationProvider(PluginSdk.Abstractions.Plugins.ITranslationProvider p) => _translationProviders.Add(p);
+    void PluginRegistry.AddThemeProvider(PluginSdk.Abstractions.Plugins.IThemeProvider p) => _themeProviders.Add(p);
+    void PluginRegistry.AddActivePathCollector(PluginSdk.Abstractions.Plugins.IActivePathCollector p)
     {
         _pathCollectors.Add(p);
-        PluginSdk.ActivePathCollectorRegistry.Register(p);
+        PluginSdk.Registries.ActivePathCollectorRegistry.Register(p);
     }
-    void PluginRegistry.AddFilePreviewProvider(PluginSdk.IFilePreviewProvider p) => _previewProviders.Add(p);
-    void PluginRegistry.AddQuickNavigationProvider(PluginSdk.IQuickNavigationProvider p) => _quickNavigationProviders.Add(p);
+    void PluginRegistry.AddFilePreviewProvider(PluginSdk.Abstractions.Plugins.IFilePreviewProvider p) => _previewProviders.Add(p);
+    void PluginRegistry.AddQuickNavigationProvider(PluginSdk.Abstractions.Plugins.IQuickNavigationProvider p) => _quickNavigationProviders.Add(p);
 
     // ── Public API ────────────────────────────────────────────────────────
 
@@ -96,7 +96,7 @@ public class PluginManager : PluginRegistry
         => _filter.IsEnabled(dllName, type, name);
 
     /// <summary>Registers a plugin and loads its actions and dynamic providers.</summary>
-    public void RegisterPlugin(PluginSdk.IActionPlugin plugin)
+    public void RegisterPlugin(PluginSdk.Abstractions.Plugins.IAction plugin)
     {
         if (plugin == null) return;
         _plugins.Add(plugin);
@@ -108,26 +108,26 @@ public class PluginManager : PluginRegistry
 
     // ── Filtered collections (active components only) ─────────────────────
 
-    public IEnumerable<PluginSdk.IActionPlugin> Plugins => _plugins;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IAction> Plugins => _plugins;
 
     public IEnumerable<PluginActionRegistration> Actions
         => _actions.Where(a => _filter.IsEnabled(ComponentFilter.GetDllName(a.Plugin), PluginComponentType.Action, a.Action.Id));
 
-    public IEnumerable<PluginSdk.IDynamicActionProvider> DynamicProviders
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> DynamicProviders
         => _dynamicProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.DynamicProvider, p.GetType().Name));
 
-    public IEnumerable<PluginSdk.IQuickNavigationProvider> QuickNavigationProviders
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IQuickNavigationProvider> QuickNavigationProviders
         => _quickNavigationProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.QuickNavigationProvider, p.GetType().Name));
 
-    public IEnumerable<PluginSdk.IQuickNavigationProvider> AllQuickNavigationProviders => _quickNavigationProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IQuickNavigationProvider> AllQuickNavigationProviders => _quickNavigationProviders;
 
-    public IEnumerable<PluginSdk.IInstantResultProvider> InstantResultProviders
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IInstantResultProvider> InstantResultProviders
         => _instantResultProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.InstantProvider, p.Id));
 
-    public IEnumerable<PluginSdk.ISearchableItemProvider> SearchableItemProviders
+    public IEnumerable<PluginSdk.Abstractions.Plugins.ISearchableItemProvider> SearchableItemProviders
         => _searchableItemProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.SearchableItemProvider, p.Id));
 
-    public IEnumerable<PluginSdk.ISidebarFilterProvider> SidebarFilterProviders
+    public IEnumerable<PluginSdk.Abstractions.Plugins.ISidebarFilterProvider> SidebarFilterProviders
     {
         get
         {
@@ -136,7 +136,7 @@ public class PluginManager : PluginRegistry
         }
     }
 
-    public IEnumerable<PluginSdk.IResultColumnProvider> ResultColumnProviders
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IResultColumnProvider> ResultColumnProviders
     {
         get
         {
@@ -145,33 +145,33 @@ public class PluginManager : PluginRegistry
         }
     }
 
-    public IEnumerable<PluginSdk.ITranslationProvider> TranslationProviders => _translationProviders;
-    public IEnumerable<PluginSdk.IThemeProvider> ThemeProviders => _themeProviders;
-    public IEnumerable<PluginSdk.IActivePathCollector> ActivePathCollectors => _pathCollectors;
-    public IEnumerable<PluginSdk.IFilePreviewProvider> FilePreviewProviders
+    public IEnumerable<PluginSdk.Abstractions.Plugins.ITranslationProvider> TranslationProviders => _translationProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IThemeProvider> ThemeProviders => _themeProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IActivePathCollector> ActivePathCollectors => _pathCollectors;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IFilePreviewProvider> FilePreviewProviders
         => _previewProviders
             .Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.FilePreviewProvider, p.GetType().Name))
             .OrderByDescending(p => p.Priority);
 
     // ── Unfiltered collections (settings UI ?show disabled as unchecked) ─
 
-    public IEnumerable<PluginSdk.IFilePreviewProvider> AllFilePreviewProviders => _previewProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IFilePreviewProvider> AllFilePreviewProviders => _previewProviders;
 
     public IEnumerable<PluginActionRegistration> AllActions => _actions;
-    public IEnumerable<PluginSdk.IDynamicActionProvider> AllDynamicProviders => _dynamicProviders;
-    public IEnumerable<PluginSdk.IInstantResultProvider> AllInstantResultProviders => _instantResultProviders;
-    public IEnumerable<PluginSdk.ISearchableItemProvider> AllSearchableItemProviders => _searchableItemProviders;
-    public IEnumerable<PluginSdk.ISidebarFilterProvider> AllSidebarFilterProviders => _sidebarFilterProviders;
-    public IEnumerable<PluginSdk.IResultColumnProvider> AllResultColumnProviders => _resultColumnProviders;
-    public IEnumerable<PluginSdk.ITranslationProvider> AllTranslationProviders => _translationProviders;
-    public IEnumerable<PluginSdk.IThemeProvider> AllThemeProviders => _themeProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> AllDynamicProviders => _dynamicProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IInstantResultProvider> AllInstantResultProviders => _instantResultProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.ISearchableItemProvider> AllSearchableItemProviders => _searchableItemProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.ISidebarFilterProvider> AllSidebarFilterProviders => _sidebarFilterProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IResultColumnProvider> AllResultColumnProviders => _resultColumnProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.ITranslationProvider> AllTranslationProviders => _translationProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IThemeProvider> AllThemeProviders => _themeProviders;
 
     // ── Search and execution ──────────────────────────────────────────────
 
-    public IEnumerable<PluginSearchActionMatch> SearchActionItems(string query, PluginSdk.SearchWindowType windowType, string? contextDirectory = null)
+    public IEnumerable<PluginSearchActionMatch> SearchActionItems(string query, PluginSdk.Abstractions.SearchWindowType windowType, string? contextDirectory = null)
     {
         if (string.IsNullOrWhiteSpace(query)) yield break;
-        if (windowType == PluginSdk.SearchWindowType.Inline && InlineSearchManager.Instance.ExplorerTracker.IsActiveWindowDialog) yield break;
+        if (windowType == PluginSdk.Abstractions.SearchWindowType.Inline && InlineSearchManager.Instance.ExplorerTracker.IsActiveWindowDialog) yield break;
 
         var tempResult = new SimpleSearchResult
         {
@@ -194,7 +194,7 @@ public class PluginManager : PluginRegistry
         }
     }
 
-    public bool TryExecuteSearchAction(AppSearchResult result, PluginSdk.IPluginSearchWindow view)
+    public bool TryExecuteSearchAction(AppSearchResult result, PluginSdk.Abstractions.IPluginSearchWindow view)
     {
         if (result.IsInstantResult)
         {
@@ -275,7 +275,7 @@ public class PluginManager : PluginRegistry
         => _actions.FirstOrDefault(x => x.RuntimeActionId == runtimeActionId);
 }
 
-internal class SimpleSearchResult : PluginSdk.ISearchResult
+internal class SimpleSearchResult : PluginSdk.Abstractions.ISearchResult
 {
     public string Name { get; set; } = string.Empty;
     public string FullPath { get; set; } = string.Empty;

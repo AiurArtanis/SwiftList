@@ -10,17 +10,17 @@ public class ThemeManager
 
     private ResourceDictionary? _activeThemeDictionary;
     private string _currentThemeId = "Light";
-    private PluginSdk.ITheme? _activeTheme;
+    private PluginSdk.Abstractions.ITheme? _activeTheme;
 
     public string CurrentThemeId => _currentThemeId;
     public ResourceDictionary? ActiveThemeDictionary => _activeThemeDictionary;
-    public PluginSdk.ITheme? ActiveTheme => _activeTheme;
+    public PluginSdk.Abstractions.ITheme? ActiveTheme => _activeTheme;
 
     private ThemeManager()
     {
     }
 
-    public IEnumerable<PluginSdk.ITheme> GetAvailableThemes() => PluginManager.Instance.ThemeProviders
+    public IEnumerable<PluginSdk.Abstractions.ITheme> GetAvailableThemes() => PluginManager.Instance.ThemeProviders
             .SelectMany(p => p.GetThemes())
             .GroupBy(t => t.Id)
             .Select(g => g.First()); // Avoid duplicates

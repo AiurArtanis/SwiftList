@@ -1,6 +1,6 @@
 using System.Text;
 using SwiftList.Core.Hook.InlineSearch;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Registries;
 
 namespace SwiftList.Core.Hook;
 

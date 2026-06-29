@@ -1,9 +1,11 @@
 using SwiftList.Plugins.CoreExtensions.Actions;
 using SwiftList.Plugins.CoreExtensions.Shell;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 namespace SwiftList.Plugins.CoreExtensions;
 
-public class CoreExtensionsPlugin : IActionPlugin
+public class CoreExtensionsPlugin : IAction
 {
     public string Name => TranslationService.Get("Plugins_CoreActionPluginName");
 

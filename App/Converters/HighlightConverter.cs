@@ -56,7 +56,7 @@ public static class TextHighlighter
         }
 
         bool[]? highlights = null;
-        if (textBlock.DataContext is PluginSdk.ISearchResult searchResult)
+        if (textBlock.DataContext is PluginSdk.Abstractions.ISearchResult searchResult)
         {
             try
             {

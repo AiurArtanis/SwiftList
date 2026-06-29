@@ -181,7 +181,7 @@ public class FavoriteItemViewModel : ViewModelBase
 
             if (Path.StartsWith("shell:::", StringComparison.OrdinalIgnoreCase) || Path.StartsWith("::", StringComparison.OrdinalIgnoreCase))
             {
-                return PluginSdk.ShellPathHelper.GetVirtualFolderDisplayName(Path, Path);
+                return PluginSdk.Helpers.ShellPathHelper.GetVirtualFolderDisplayName(Path, Path);
             }
             try
             {

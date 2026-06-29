@@ -4,7 +4,10 @@ using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings;
 using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.Core;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
+using SwiftList.PluginSdk.Registries;
 
 namespace SwiftList.App.Helpers;
 
@@ -43,15 +46,15 @@ public static class PluginLoaderHelper
             var pluginName = Path.GetFileNameWithoutExtension(dllName);
             var pluginVersion = assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
-            var pluginType = assembly.GetTypes().FirstOrDefault(t => typeof(IActionPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
-            IActionPlugin? pluginInstance = null;
+            var pluginType = assembly.GetTypes().FirstOrDefault(t => typeof(IAction).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+            IAction? pluginInstance = null;
             if (pluginType != null)
             {
                 pluginInstance = manager.Plugins.FirstOrDefault(p => p.GetType() == pluginType);
                 if (pluginInstance != null)
                 {
                     pluginName = pluginInstance.Name;
-                    pluginVersion = pluginInstance.Version;
+                    
                 }
             }
 
@@ -96,22 +99,22 @@ public static class PluginLoaderHelper
         return defaultName;
     }
 
-    private static void TryLoadConfigFields(Assembly assembly, string dllName, IActionPlugin? pluginInstance, UserSettings userSettings, List<PluginConfigFieldViewModel> configFields)
+    private static void TryLoadConfigFields(Assembly assembly, string dllName, IAction? pluginInstance, UserSettings userSettings, List<PluginConfigFieldViewModel> configFields)
     {
         try
         {
             var configurableType = assembly.GetTypes()
-                .FirstOrDefault(t => typeof(IConfigurablePlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+                .FirstOrDefault(t => typeof(IConfigurable).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
             if (configurableType != null)
             {
-                IConfigurablePlugin? configurableInstance = null;
+                IConfigurable? configurableInstance = null;
                 if (pluginInstance != null && configurableType.IsAssignableFrom(pluginInstance.GetType()))
                 {
-                    configurableInstance = (IConfigurablePlugin)pluginInstance;
+                    configurableInstance = (IConfigurable)pluginInstance;
                 }
                 else
                 {
-                    configurableInstance = Activator.CreateInstance(configurableType) as IConfigurablePlugin;
+                    configurableInstance = Activator.CreateInstance(configurableType) as IConfigurable;
                 }
 
                 if (configurableInstance != null)
@@ -131,7 +134,7 @@ public static class PluginLoaderHelper
         catch { }
     }
 
-    private static List<PluginComponentViewModel> BuildComponents(IActionPlugin plugin, string dllName, PluginManager manager, HashSet<string> disabledSet)
+    private static List<PluginComponentViewModel> BuildComponents(IAction plugin, string dllName, PluginManager manager, HashSet<string> disabledSet)
     {
         var components = new List<PluginComponentViewModel>();
         var assembly = plugin.GetType().Assembly;

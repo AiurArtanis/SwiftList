@@ -16,7 +16,7 @@ internal sealed class FileDialogNavigationTracker
         _lastExplorerPathUpdateTime = DateTime.Now;
     }
 
-    public void HandleDialogSeen(IntPtr mainDialog, PluginSdk.IFileDialogAdapter? adapter, bool previousWasPathProvider)
+    public void HandleDialogSeen(IntPtr mainDialog, PluginSdk.Abstractions.Plugins.IFileDialogAdapter? adapter, bool previousWasPathProvider)
     {
         var isNewDialog = false;
         var dialogFirstSeenTime = _dialogFirstSeenTimes.GetOrAdd(mainDialog, _ =>

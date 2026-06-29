@@ -1,7 +1,8 @@
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
 using MenuItem = System.Windows.Controls.MenuItem;
 using ContextMenu = System.Windows.Controls.ContextMenu;
 using Separator = System.Windows.Controls.Separator;

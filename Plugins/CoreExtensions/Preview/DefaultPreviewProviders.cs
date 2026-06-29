@@ -6,7 +6,8 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Input;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 namespace SwiftList.Plugins.CoreExtensions.Preview;
 // 1. Folder Preview Provider
 public class FolderPreviewProvider : IFilePreviewProvider

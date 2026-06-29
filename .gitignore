@@ -104,3 +104,12 @@ publish/
 SwiftList-Setup.exe
 SwiftList-Portable.zip
 
+# VitePress site exclusions
+site/node_modules/
+site/.vitepress/dist/
+site/.vitepress/cache/
+site/public/
+site/.vitepress/public/logo.png
+site/.vitepress/public/favicon.ico
+
+

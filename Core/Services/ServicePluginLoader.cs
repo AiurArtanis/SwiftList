@@ -1,5 +1,7 @@
 using System.Reflection;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
+using SwiftList.PluginSdk.Registries;
 
 namespace SwiftList.Core.Services;
 

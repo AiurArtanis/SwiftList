@@ -67,7 +67,7 @@ public partial class App : Application
             var trk = InlineSearchManager.Instance.ExplorerTracker;
             var proc = GetProcessNameOfWindow(trk.ActiveHwnd);
             var cls = GetClassNameOfWindow(trk.ActiveHwnd);
-            if (PluginManager.Instance.QuickNavigationProviders.Any(p => p.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, PluginSdk.MouseTriggerType.DoubleClick)))
+            if (PluginManager.Instance.QuickNavigationProviders.Any(p => p.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, PluginSdk.Abstractions.Plugins.MouseTriggerType.DoubleClick)))
                 Dispatcher.BeginInvoke(() => QuickNavigationMenu.Show(x, y));
         };
 
@@ -78,14 +78,14 @@ public partial class App : Application
             var trk = InlineSearchManager.Instance.ExplorerTracker;
             var proc = GetProcessNameOfWindow(trk.ActiveHwnd);
             var cls = GetClassNameOfWindow(trk.ActiveHwnd);
-            if (PluginManager.Instance.QuickNavigationProviders.Any(p => p.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, PluginSdk.MouseTriggerType.MiddleClick)))
+            if (PluginManager.Instance.QuickNavigationProviders.Any(p => p.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, PluginSdk.Abstractions.Plugins.MouseTriggerType.MiddleClick)))
                 Dispatcher.BeginInvoke(() => QuickNavigationMenu.Show(x, y));
         };
 
-        PluginSdk.ListControlIpcBridge.GetListItemsFunc = hwnd => HookClient != null ? Core.Hook.ListIpcCoordinator.GetListItems(hwnd, HookClient.SendMessage) : Array.Empty<string>();
-        PluginSdk.ListControlIpcBridge.GetSelectedIndicesFunc = (hwnd, className) => HookClient != null ? Core.Hook.ListIpcCoordinator.GetSelectedIndices(hwnd, className, HookClient.SendMessage) : Array.Empty<int>();
+        PluginSdk.Models.ListControlIpcBridge.GetListItemsFunc = hwnd => HookClient != null ? Core.Hook.ListIpcCoordinator.GetListItems(hwnd, HookClient.SendMessage) : Array.Empty<string>();
+        PluginSdk.Models.ListControlIpcBridge.GetSelectedIndicesFunc = (hwnd, className) => HookClient != null ? Core.Hook.ListIpcCoordinator.GetSelectedIndices(hwnd, className, HookClient.SendMessage) : Array.Empty<int>();
 
-        PluginSdk.ListControlIpcBridge.SelectItemAction = (hwnd, className, index, clearOthers, selectState) =>
+        PluginSdk.Models.ListControlIpcBridge.SelectItemAction = (hwnd, className, index, clearOthers, selectState) =>
             HookClient?.SendMessage(new IpcMessage
             {
                 Id = IpcMessageId.SelectItem,
@@ -96,7 +96,7 @@ public partial class App : Application
                 IsDesktop = selectState
             });
 
-        PluginSdk.ListControlIpcBridge.ClearSelectionAction = (hwnd, className) =>
+        PluginSdk.Models.ListControlIpcBridge.ClearSelectionAction = (hwnd, className) =>
             HookClient?.SendMessage(new IpcMessage
             {
                 Id = IpcMessageId.ClearSelection,
@@ -135,10 +135,10 @@ public partial class App : Application
         {
             // Register TranslationService delegate for decoupled plugins
 
-            PluginSdk.TranslationService.LookupFunc = key => TranslationManager.Instance[key];
+            PluginSdk.Services.TranslationService.LookupFunc = key => TranslationManager.Instance[key];
 
             // Register IconService delegate for decoupled plugins
-            PluginSdk.IconService.GetIconFunc = (path, isDir) => ShellIconHelper.GetIconForPath(path, isDir);
+            PluginSdk.Services.IconService.GetIconFunc = (path, isDir) => ShellIconHelper.GetIconForPath(path, isDir);
 
             // Register Logger delegate for decoupled plugins
 

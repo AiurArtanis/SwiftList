@@ -2,7 +2,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 using SwiftList.Plugins.CoreExtensions.Providers;
 namespace SwiftList.Plugins.CoreExtensions.InlineSearch;
 

@@ -74,7 +74,7 @@ public static class PluginSearchResultMapper
     {
         string? currentGroup = null;
         var added = false;
-        var windowType = isInlineWindow ? PluginSdk.SearchWindowType.Inline : PluginSdk.SearchWindowType.Main;
+        var windowType = isInlineWindow ? PluginSdk.Abstractions.SearchWindowType.Inline : PluginSdk.Abstractions.SearchWindowType.Main;
         foreach (var match in PluginManager.Instance.SearchActionItems(query, windowType, contextDirectory))
         {
             var action = match.Registration.Action;

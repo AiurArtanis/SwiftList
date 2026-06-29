@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.App.Services;
 
 namespace SwiftList.App.ViewModels.Search;

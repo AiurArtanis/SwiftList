@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
 using SwiftList.App.Helpers;
 
 namespace SwiftList.App.ViewModels.Settings.Plugins;

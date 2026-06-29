@@ -1,8 +1,10 @@
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.FolderCascader;
 
-public class FolderCascaderPlugin : IActionPlugin, IConfigurablePlugin
+public class FolderCascaderPlugin : IAction, IConfigurable
 {
     public string Name => TranslationService.Get("FolderCascader_PluginName") ?? "Folder Cascader";
 

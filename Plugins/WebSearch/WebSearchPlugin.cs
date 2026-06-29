@@ -1,8 +1,10 @@
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.WebSearch;
 
-public class WebSearchPlugin : IActionPlugin, IConfigurablePlugin
+public class WebSearchPlugin : IAction, IConfigurable
 {
     public string Name => TranslationService.Get("WebSearch_PluginName");
 

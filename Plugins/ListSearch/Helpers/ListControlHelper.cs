@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using SwiftList.PluginSdk;
+using SwiftList.PluginSdk.Models;
 
 namespace SwiftList.Plugins.ListSearch.Helpers;
 
