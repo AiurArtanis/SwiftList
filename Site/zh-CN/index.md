@@ -7,13 +7,6 @@ hero:
   image:
     src: /logo.png
     alt: SwiftList Logo
-  actions:
-    - theme: brand
-      text: 快速开始
-      link: /zh-CN/guide/introduction
-    - theme: alt
-      text: 插件开发
-      link: /zh-CN/guide/plugin-development
 features:
   - icon: 🚀
     title: 极速索引

@@ -2,6 +2,14 @@
 
 SwiftList 是一款针对 Windows 系统设计的高性能、低消耗、可扩展的全局检索工具。它能以极快的速度建立和维护本地物理文件索引，并提供开放的插件 SDK 方便开发者扩展各项功能。
 
+## 下载与安装
+
+SwiftList 提供官方打包的安装器与免安装便携版（最新稳定版）：
+
+* 💾 **[下载安装包](https://github.com/SwiftList/SwiftList/releases/latest/download/SwiftList-Setup.exe)** — 全功能安装包（支持开机自启和 Windows 服务后台运行）。
+* 📦 **[下载便携版](https://github.com/SwiftList/SwiftList/releases/latest/download/SwiftList-Portable.zip)** — 绿色免安装，解压即用。
+* 🔍 或者前往 **[GitHub Releases 历史版本页面](https://github.com/SwiftList/SwiftList/releases)** 查看所有发布版本。
+
 ## 核心设计理念
 
 1. **YAGNI (You Aren't Gonna Need It)**：拒绝繁琐的多余设计，保持逻辑的简洁与代码的高效。

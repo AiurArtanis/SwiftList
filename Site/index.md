@@ -7,13 +7,6 @@ hero:
   image:
     src: /logo.png
     alt: SwiftList Logo
-  actions:
-    - theme: brand
-      text: Get Started
-      link: /guide/introduction
-    - theme: alt
-      text: Plugin Dev
-      link: /guide/plugin-development
 features:
   - icon: 🚀
     title: Instant Indexing
