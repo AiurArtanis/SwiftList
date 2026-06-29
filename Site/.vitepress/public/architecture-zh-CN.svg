@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" class="architecture-diagram" style="width: 100%; max-width: 800px; margin: 30px auto; display: block; font-family: system-ui, -apple-system, sans-serif; background-color: transparent;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" class="architecture-diagram" style="width: 100%; max-width: 800px; margin: 30px auto; display: block; font-family: system-ui, -apple-system, sans-serif; background-color: transparent;">
   <defs>
     <!-- Gradients -->
     <linearGradient id="serviceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
