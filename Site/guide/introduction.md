@@ -17,5 +17,5 @@ SwiftList provides official installer and portable zip releases (Latest Stable V
    * **`SwiftList.Service` (System Service - `--service`)**: Runs in Session 0 with SYSTEM privileges, indexing NTFS MFT and USN logs, shared globally.
    * **`SwiftList.Service` (Hook Process - `--hook`)**: Runs in the user session, capturing global keyboard hotkeys and tracking explorer paths.
    * **`SwiftList.App` (User Application)**: Runs in the user session, hosting UI interactions, rendering search results, and loading user-scoped plugins.
-3. **High-Speed FZF Matching**: Optimized search matching supporting fuzzy queries, Pinyin initials, and customized aliases.
+3. **High-Speed FZF Matching**: Optimized search matching supporting fuzzy queries and customized aliases.
 
