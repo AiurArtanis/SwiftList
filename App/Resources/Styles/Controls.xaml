@@ -221,10 +221,10 @@
     <Style TargetType="TextBox">
         <Setter Property="ContextMenu">
             <Setter.Value>
-                <ContextMenu>
-                    <MenuItem Command="ApplicationCommands.Cut"/>
-                    <MenuItem Command="ApplicationCommands.Copy"/>
-                    <MenuItem Command="ApplicationCommands.Paste"/>
+                <ContextMenu Style="{DynamicResource {x:Type ContextMenu}}">
+                    <MenuItem Style="{DynamicResource {x:Type MenuItem}}" Command="ApplicationCommands.Cut"/>
+                    <MenuItem Style="{DynamicResource {x:Type MenuItem}}" Command="ApplicationCommands.Copy"/>
+                    <MenuItem Style="{DynamicResource {x:Type MenuItem}}" Command="ApplicationCommands.Paste"/>
                 </ContextMenu>
             </Setter.Value>
         </Setter>

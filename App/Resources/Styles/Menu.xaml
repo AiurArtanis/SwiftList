@@ -143,17 +143,4 @@
         </Setter>
     </Style>
 
-    <!-- Global TextBox Style to automatically apply modern ContextMenu with system Cut/Copy/Paste -->
-    <Style TargetType="{x:Type TextBox}">
-        <Setter Property="ContextMenu">
-            <Setter.Value>
-                <ContextMenu>
-                    <MenuItem Command="ApplicationCommands.Cut"/>
-                    <MenuItem Command="ApplicationCommands.Copy"/>
-                    <MenuItem Command="ApplicationCommands.Paste"/>
-                </ContextMenu>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
 </ResourceDictionary>
