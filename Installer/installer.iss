@@ -4,7 +4,7 @@
 
 #define AppName "SwiftList"
 #define AppPublisher "SwiftList developer"
-#define AppURL "https://github.com/swiftlist/SwiftList"
+#define AppURL "https://swiftlist.github.io/"
 #define AppExeName "SwiftList.App.exe"
 #define ServiceExeName "SwiftList.Service.exe"
 #define ServiceName "SwiftListService"

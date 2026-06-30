@@ -52,8 +52,8 @@
                     <WrapPanel Margin="0,14,0,0">
                         <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_Homepage]}" Foreground="{DynamicResource TextSecondary2}"/>
                         <TextBlock>
-                            <Hyperlink NavigateUri="https://github.com/swiftlist/SwiftList" RequestNavigate="Hyperlink_RequestNavigate">
-                                <Run Text="https://github.com/swiftlist/SwiftList"/>
+                            <Hyperlink NavigateUri="https://swiftlist.github.io/" RequestNavigate="Hyperlink_RequestNavigate">
+                                <Run Text="https://swiftlist.github.io/"/>
                             </Hyperlink>
                         </TextBlock>
                     </WrapPanel>

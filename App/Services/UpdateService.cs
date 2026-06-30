@@ -7,6 +7,7 @@ using System.Security.Principal;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Security.Cryptography;
 
 namespace SwiftList.App.Services;
 
@@ -111,6 +112,31 @@ public class UpdateService
         }
     }
 
+    private const string PUBLIC_KEY_PEM =
+        "-----BEGIN PUBLIC KEY-----\n" +
+        "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEA8CUYlnSks5CMNM3wPz9NTMg8kbs\n" +
+        "tEcU4mtgkW0OScTVRO3IhEb6j4H4cjgvM/gyM2sumFpbBR9+VtvVr46nFQ==\n" +
+        "-----END PUBLIC KEY-----";
+
+    private bool VerifySignature(string filePath, string signaturePath)
+    {
+        try
+        {
+            var fileBytes = File.ReadAllBytes(filePath);
+            var signatureBytes = File.ReadAllBytes(signaturePath);
+
+            using var ecdsa = ECDsa.Create();
+            ecdsa.ImportFromPem(PUBLIC_KEY_PEM);
+
+            return ecdsa.VerifyData(fileBytes, signatureBytes, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
+        }
+        catch (Exception ex)
+        {
+            Core.Logger.Log($"[UpdateService] Signature verification encountered error: {ex.Message}", Core.LogLevel.Error);
+            return false;
+        }
+    }
+
     /// <summary>
     /// Downloads the portable zip, extracts it, and triggers the portable-updater.bat.
     /// </summary>
@@ -126,6 +152,7 @@ public class UpdateService
             Directory.CreateDirectory(tempPath);
 
             var tempZipFile = Path.Combine(tempPath, "latest.zip");
+            var tempSigFile = Path.Combine(tempPath, "latest.zip.sig");
 
             // Download zip file with progress report
             using (var response = await _httpClient.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead))
@@ -147,6 +174,22 @@ public class UpdateService
                         progressCallback((double)totalRead / totalBytes);
                     }
                 }
+            }
+
+            // Download signature file
+            var sigUrl = zipUrl + ".sig";
+            using (var sigResponse = await _httpClient.GetAsync(sigUrl))
+            {
+                sigResponse.EnsureSuccessStatusCode();
+                using var sigFileStream = new FileStream(tempSigFile, FileMode.Create, FileAccess.Write, FileShare.None);
+                await sigResponse.Content.CopyToAsync(sigFileStream);
+            }
+
+            // Verify signature before extracting
+            if (!VerifySignature(tempZipFile, tempSigFile))
+            {
+                Core.Logger.Log("[UpdateService] Signature verification failed! The downloaded update package is not signed by a trusted key.", Core.LogLevel.Error);
+                return false;
             }
 
             // Extract Zip

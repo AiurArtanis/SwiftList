@@ -51,7 +51,75 @@ jobs:
           fi
           echo "" >> changelog.md
 
-      # 6. Publish release and upload artifacts (installer and portable ZIP)
+      # 5.5 Sign portable ZIP and generate hash checksums
+      - name: Sign Artifacts and Add Verification Info
+        shell: pwsh
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          # Calculate SHA-256 hashes of build artifacts
+          $exeHash = (Get-FileHash -Path "dist/SwiftList-Setup.exe" -Algorithm SHA256).Hash.ToLower()
+          $zipHash = (Get-FileHash -Path "dist/SwiftList-Portable.zip" -Algorithm SHA256).Hash.ToLower()
+          
+          # Sign portable zip if signing key is present
+          if ($env:SIGNING_KEY) {
+              # Write signing key to temp file
+              [System.IO.File]::WriteAllText("tempKey.pem", $env:SIGNING_KEY)
+              
+              # Sign using OpenSSL
+              openssl dgst -sha256 -sign tempKey.pem -out dist/SwiftList-Portable.zip.sig dist/SwiftList-Portable.zip
+              
+              # Clean up private key file immediately
+              if (Test-Path "tempKey.pem") { Remove-Item -Force "tempKey.pem" }
+              
+              $signedText = "Successfully signed portable release with OpenSSL."
+          } else {
+              # Write a placeholder file so the release upload step doesn't fail when looking for .sig
+              New-Item -Path "dist/SwiftList-Portable.zip.sig" -ItemType File -Value "unsigned" > $null
+              $signedText = "Warning: Release is NOT signed (SIGNING_KEY secret is missing)."
+          }
+          Write-Host $signedText
+
+          # Append verification info to changelog.md
+          echo '' >> changelog.md
+          echo '## Security Verification' >> changelog.md
+          echo '' >> changelog.md
+          echo '### SHA-256 Checksums' >> changelog.md
+          echo "* **SwiftList-Setup.exe**: ``$exeHash``" >> changelog.md
+          echo "* **SwiftList-Portable.zip**: ``$zipHash``" >> changelog.md
+          
+          if ($env:SIGNING_KEY) {
+              echo '' >> changelog.md
+              echo '### Signature Verification (ECDsa NistP256)' >> changelog.md
+              echo 'The portable ZIP release is signed using our official release key.' >> changelog.md
+              echo '' >> changelog.md
+              echo 'To verify the signature manually using OpenSSL:' >> changelog.md
+              echo '```bash' >> changelog.md
+              echo '# 1. Save the public key shown above to ''public_key.pem''' >> changelog.md
+              echo '# 2. Run the following command:' >> changelog.md
+              echo 'openssl dgst -sha256 -verify public_key.pem -signature SwiftList-Portable.zip.sig SwiftList-Portable.zip' >> changelog.md
+              echo '# Expected output: Verified OK' >> changelog.md
+              echo '```' >> changelog.md
+              echo '' >> changelog.md
+              echo 'To verify the signature manually in PowerShell (.NET 5.0+):' >> changelog.md
+              echo '```powershell' >> changelog.md
+              echo '$zipBytes = [System.IO.File]::ReadAllBytes(''SwiftList-Portable.zip'')' >> changelog.md
+              echo '$sigBytes = [System.IO.File]::ReadAllBytes(''SwiftList-Portable.zip.sig'')' >> changelog.md
+              echo '$ecdsa = [System.Security.Cryptography.ECDsa]::Create()' >> changelog.md
+              echo '$pubKeyPem = ''-----BEGIN PUBLIC KEY-----' >> changelog.md
+              echo 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEA8CUYlnSks5CMNM3wPz9NTMg8kbs' >> changelog.md
+              echo 'tEcU4mtgkW0OScTVRO3IhEb6j4H4cjgvM/gyM2sumFpbBR9+VtvVr46nFQ==' >> changelog.md
+              echo '-----END PUBLIC KEY-----''' >> changelog.md
+              echo '$ecdsa.ImportFromPem($pubKeyPem)' >> changelog.md
+              echo '$ecdsa.VerifyData($zipBytes, $sigBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.DSASignatureFormat]::Rfc3279DerSequence)' >> changelog.md
+              echo '# Expected output: True' >> changelog.md
+              echo '```' >> changelog.md
+          } else {
+              echo '' >> changelog.md
+              echo '*Note: This release is unsigned (SIGNING_KEY missing).*' >> changelog.md
+          }
+
+      # 6. Publish release and upload artifacts (installer, portable ZIP, and signature)
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -59,6 +127,7 @@ jobs:
           files: |
             dist/SwiftList-Setup.exe
             dist/SwiftList-Portable.zip
+            dist/SwiftList-Portable.zip.sig
           name: ${{ github.ref_name }}
           draft: false
           prerelease: false
