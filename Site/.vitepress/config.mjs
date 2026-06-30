@@ -102,7 +102,8 @@ export default defineConfig({
                     { text: 'ISearchResultAction (Action Details)', link: '/guide/sdk-abstractions#isearchresultaction' },
                     { text: 'IPluginSearchWindow (Window Handles)', link: '/guide/sdk-abstractions#ipluginsearchwindow' },
                     { text: 'IConfigurable (Config Schemas)', link: '/guide/sdk-abstractions#iconfigurable' },
-                    { text: 'ITheme (Theme Dictionaries)', link: '/guide/sdk-abstractions#itheme' }
+                    { text: 'ITheme (Theme Dictionaries)', link: '/guide/sdk-abstractions#itheme' },
+                    { text: 'Shared SDK Services (Shared Services)', link: '/guide/sdk-abstractions#sdk-services' }
                   ]
                 }
               ]
@@ -212,7 +213,8 @@ export default defineConfig({
                     { text: 'ISearchResultAction (动作行为契约)', link: '/zh-CN/guide/sdk-abstractions#isearchresultaction' },
                     { text: 'IPluginSearchWindow (搜索视窗句柄)', link: '/zh-CN/guide/sdk-abstractions#ipluginsearchwindow' },
                     { text: 'IConfigurable (配置表单)', link: '/zh-CN/guide/sdk-abstractions#iconfigurable' },
-                    { text: 'ITheme (主题数据模型)', link: '/zh-CN/guide/sdk-abstractions#itheme' }
+                    { text: 'ITheme (主题数据模型)', link: '/zh-CN/guide/sdk-abstractions#itheme' },
+                    { text: 'Shared SDK Services (共享系统服务)', link: '/zh-CN/guide/sdk-abstractions#sdk-services' }
                   ]
                 }
               ]

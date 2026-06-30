@@ -141,4 +141,3 @@ public static class HistoryService
     public static Func<IEnumerable<string>>? GetHistoryPathsFunc { get; set; }
 }
 ```
-```
