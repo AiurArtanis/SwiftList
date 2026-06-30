@@ -4,18 +4,25 @@
 
 ---
 
-## 1. `IAction` (动作插件) {#iaction}
-动作插件用于扩展搜索结果的右键菜单或双击/快捷键响应事件。
+## 1. `IPlugin` 与 `IActionProvider` {#iplugin}
+插件的基础接口被重构为更单一职责的定义：`IPlugin` 作为所有插件的最基础标识接口，而 `IActionProvider` 则用于可选提供右键菜单动作。
 
 ```csharp
-public interface IAction
+public interface IPlugin
 {
     string Name { get; }
+}
+
+public interface IActionProvider
+{
     IEnumerable<ISearchResultAction> GetActions();
+    IEnumerable<IDynamicActionProvider> GetDynamicProviders();
 }
 ```
-* **Name**：在插件管理中显示的动作组名称（支持本地化翻译）。
-* **GetActions()**：返回该插件提供的具体动作实例列表（每一个动作需要实现 `ISearchResultAction` 接口）。
+* **IPlugin**：插件的最基础接口，包含插件本地化名称 `Name`。
+* **IActionProvider**：当插件需要扩展搜索结果的右键菜单、双击或快捷键响应事件时实现的接口。
+  * `GetActions()`：返回该插件提供的静态动作实例列表（动作需实现 `ISearchResultAction` 接口）。
+  * `GetDynamicProviders()`：返回该插件提供的动态动作提供者列表（如系统资源管理器右键菜单，需实现 `IDynamicActionProvider` 接口）。
 
 ---
 

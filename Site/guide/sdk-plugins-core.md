@@ -4,18 +4,25 @@ These interfaces define plugin modules directly associated with SwiftList's core
 
 ---
 
-## 1. `IAction` (Action Extension) {#iaction}
-Used to extend context menus on search results or respond to double-clicks and hotkey triggers.
+## 1. `IPlugin` & `IActionProvider` {#iplugin}
+The core interface has been refactored into cleaner, single-responsibility definitions: `IPlugin` as the base identifier for all plugins, and `IActionProvider` to optionally expose search actions.
 
 ```csharp
-public interface IAction
+public interface IPlugin
 {
     string Name { get; }
+}
+
+public interface IActionProvider
+{
     IEnumerable<ISearchResultAction> GetActions();
+    IEnumerable<IDynamicActionProvider> GetDynamicProviders();
 }
 ```
-* **Name**: The display name of the action group in the plugin manager.
-* **GetActions()**: Returns a list of concrete actions provided by this plugin (each must implement the `ISearchResultAction` interface).
+* **IPlugin**: The base interface for all plugins, containing the localized plugin `Name`.
+* **IActionProvider**: Implemented when the plugin extends search result context menus or responds to double-clicks/hotkey execution.
+  * `GetActions()`: Returns a list of static actions provided by this plugin (each must implement the `ISearchResultAction` interface).
+  * `GetDynamicProviders()`: Returns a list of dynamic action providers (e.g. Shell Context Menu, which must implement the `IDynamicActionProvider` interface).
 
 ---
 
