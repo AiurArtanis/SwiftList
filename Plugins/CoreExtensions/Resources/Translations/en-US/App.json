@@ -183,6 +183,8 @@
   "About_Success": "Update downloaded successfully. Restarting...",
   "About_Failed": "Auto-update failed. Please try again or update manually.",
   "About_NoAdminTip": "Warning: Administrative privileges are required to update background services. Click 'Go to Download Page' or run SwiftList as Administrator to update.",
+  "Update_SigVerificationFailedTitle": "Update Security Verification Failed",
+  "Update_SigVerificationFailedMessage": "The downloaded update package failed security signature verification!\nThe update process has been aborted to protect your system.",
   "Search_Title": "SwiftList Search",
   "Search_Total": "{0:N0} items",
   "Search_StatusText": "MFT/USN Local Drive Service Connected",

@@ -8,6 +8,8 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Security.Cryptography;
+using System.Windows;
+using SwiftList.App.Views.Controls;
 
 namespace SwiftList.App.Services;
 
@@ -189,6 +191,11 @@ public class UpdateService
             if (!VerifySignature(tempZipFile, tempSigFile))
             {
                 Core.Logger.Log("[UpdateService] Signature verification failed! The downloaded update package is not signed by a trusted key.", Core.LogLevel.Error);
+                CustomMessageBox.Show(
+                    TranslationManager.Instance["Update_SigVerificationFailedMessage"],
+                    TranslationManager.Instance["Update_SigVerificationFailedTitle"],
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
                 return false;
             }
 
