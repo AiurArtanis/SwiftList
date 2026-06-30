@@ -68,3 +68,20 @@ public interface IThemeProvider
     IEnumerable<ITheme> GetThemes();
 }
 ```
+
+---
+
+## 6. `IThumbnailProvider` (Custom File Thumbnails) {#ithumbnailprovider}
+Provides custom file thumbnails or icon overrides for search results.
+
+```csharp
+public interface IThumbnailProvider
+{
+    string Id { get; }
+    string Name { get; }
+    bool CanProvideThumbnail(string path, bool isDir);
+    ImageSource? GetThumbnail(string path, int size);
+}
+```
+* **CanProvideThumbnail**: Returns whether this provider can generate a thumbnail/icon for the specified path and directory state.
+* **GetThumbnail**: Generates or retrieves the `ImageSource` for the file preview icon at the requested pixel size.

@@ -69,3 +69,20 @@ public interface IThemeProvider
 }
 ```
 * **GetThemes()**：返回一个或多个 `ITheme` 主题包列表。
+
+---
+
+## 6. `IThumbnailProvider` (自定义缩略图/图标提供器) {#ithumbnailprovider}
+为特定文件类型在搜索结果列表中提供定制的缩略图生成或覆盖默认文件图标。
+
+```csharp
+public interface IThumbnailProvider
+{
+    string Id { get; }
+    string Name { get; }
+    bool CanProvideThumbnail(string path, bool isDir);
+    ImageSource? GetThumbnail(string path, int size);
+}
+```
+* **CanProvideThumbnail**：判断当前提供器是否能够为指定的路径和文件夹状态生成图标/缩略图。
+* **GetThumbnail**：根据指定的文件路径和请求的像素大小（size），生成或获取文件的缩略图/图标 `ImageSource`。
