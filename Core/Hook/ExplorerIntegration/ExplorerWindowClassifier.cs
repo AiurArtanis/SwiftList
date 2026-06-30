@@ -87,12 +87,12 @@ internal sealed class ExplorerWindowClassifier
                     {
                         var activePath = collector.TryGetPath(focusedHwnd, activeClassName, rootHwnd, windowClassName, processName);
                         handledByPlugin = true;
+                        _tracker.ActiveHwnd = rootHwnd;
                         _tracker.IsExplorerOrDesktopActive = true;
                         _tracker.IsDesktop = isDesktop;
                         _tracker.IsActiveWindowDialog = false;
-                        _tracker.IsActiveWindowExplorer = !isDesktop && windowClassName.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase);
+                        _tracker.IsActiveWindowExplorer = !isDesktop && (_tracker.ActiveInlineAdapter?.IsFileExplorer ?? false);
                         _tracker.LastActiveExplorerClassName = windowClassName;
-                        _tracker.ActiveHwnd = rootHwnd;
 
                         if (rootHwnd != _tracker.LastActiveHwnd)
                         {

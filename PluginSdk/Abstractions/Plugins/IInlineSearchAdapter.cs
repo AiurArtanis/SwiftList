@@ -39,6 +39,12 @@ public interface IInlineSearchAdapter
     bool CanEnterActionsMode(IntPtr hwnd);
 
     /// <summary>
+    /// Indicates whether this adapter targets a file manager / explorer-like window
+    /// that supports combining local folder search with global search results.
+    /// </summary>
+    bool IsFileExplorer => false;
+
+    /// <summary>
     /// Returns the full list of items currently available in the target control.
     /// When non-empty, the inline search filters this list instead of querying the
     /// global search service. Return an empty enumerable (default) to fall back to

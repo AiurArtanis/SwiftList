@@ -11,6 +11,8 @@ public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
 {
     public string Name => TranslationService.Get("Plugins_ExplorerTargetName");
 
+    public bool IsFileExplorer => true;
+
     public bool CanHandle(IntPtr hwnd, string className, string processName)
     {
         if (string.IsNullOrEmpty(className) || string.IsNullOrEmpty(processName))

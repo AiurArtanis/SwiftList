@@ -71,6 +71,10 @@ public static class Win32Helper
         return false;
     }
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+
     public static bool IsLocalWindowVisible(IntPtr hWnd) => (GetWindowLong(hWnd, GWL_STYLE) & WS_VISIBLE) != 0;
 
     public static List<IntPtr> GetVisibleContainers(IntPtr listerHwnd)
@@ -80,7 +84,7 @@ public static class Win32Helper
         {
             if (GetClassName(hWnd).Equals("dopus.filedisplaycontainer", StringComparison.OrdinalIgnoreCase))
             {
-                if (IsLocalWindowVisible(hWnd))
+                if (IsWindowVisible(hWnd))
                 {
                     containers.Add(hWnd);
                 }

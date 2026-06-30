@@ -85,7 +85,7 @@ public class ExplorerTracker : IDisposable
         ActiveHwnd = hwnd;
         IsExplorerOrDesktopActive = true;
         IsDesktop = isDesktop;
-        IsActiveWindowExplorer = className.Equals("CabinetWClass", StringComparison.OrdinalIgnoreCase);
+        IsActiveWindowExplorer = ActiveInlineAdapter?.IsFileExplorer ?? false;
         if (!IsActiveWindowDialog) LastActiveExplorerClassName = className;
         RaiseExplorerActivated(hwnd, title, className, isDesktop);
     }
