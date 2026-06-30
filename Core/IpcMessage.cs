@@ -16,6 +16,7 @@ public enum IpcMessageId : byte
     ClearSelection = 11,
     GetSelectedIndices = 12,
     ForceForeground = 13,
+    KillProcess = 14,
 
     // Hook -> App
     Activate = 20,

@@ -61,6 +61,7 @@ public static class PipeRequestBinarySerializer
                 break;
 
             case IpcMessageId.SetAppProcessId:
+            case IpcMessageId.KillProcess:
                 writer.Write(msg.ProcessId);
                 break;
 
@@ -154,6 +155,7 @@ public static class PipeRequestBinarySerializer
                 break;
 
             case IpcMessageId.SetAppProcessId:
+            case IpcMessageId.KillProcess:
                 msg.ProcessId = reader.ReadUInt32();
                 break;
 

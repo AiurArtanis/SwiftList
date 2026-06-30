@@ -246,6 +246,27 @@ public sealed class HookCommandHandler
                         });
                     }
                     break;
+                case IpcMessageId.KillProcess:
+                    {
+                        var pid = (int)msg.ProcessId;
+                        if (pid != 0)
+                        {
+                            ThreadPool.QueueUserWorkItem(_ =>
+                            {
+                                try
+                                {
+                                    using var proc = System.Diagnostics.Process.GetProcessById(pid);
+                                    proc.Kill(true);
+                                    Logger.Log($"[HookCommandHandler] Killed process {pid} successfully", LogLevel.Info);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.Log($"[HookCommandHandler] Failed to kill process {pid}: {ex.Message}", LogLevel.Warn);
+                                }
+                            });
+                        }
+                    }
+                    break;
             }
         }
         catch (Exception ex)

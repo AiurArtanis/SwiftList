@@ -24,16 +24,24 @@ public static class PluginSearchResultMapper
                         continue;
 
                     System.Windows.Media.ImageSource? iconOverride = null;
+                    var iconPath = "";
                     if (!string.IsNullOrWhiteSpace(item.IconData))
                     {
-                        try
+                        if (item.IconData.StartsWith("path:", StringComparison.OrdinalIgnoreCase))
                         {
-                            var color = string.IsNullOrWhiteSpace(item.IconColor) ? "DefaultPluginIconColor" : item.IconColor;
-                            iconOverride = ShellIconHelper.CreateVectorIcon(item.IconData, color);
+                            iconPath = item.IconData.Substring(5).Trim();
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            Logger.Log($"[SearchResultMapper] Failed to create vector icon for instant result: {ex.Message}", LogLevel.Error);
+                            try
+                            {
+                                var color = string.IsNullOrWhiteSpace(item.IconColor) ? "DefaultPluginIconColor" : item.IconColor;
+                                iconOverride = ShellIconHelper.CreateVectorIcon(item.IconData, color);
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Log($"[SearchResultMapper] Failed to create vector icon for instant result: {ex.Message}", LogLevel.Error);
+                            }
                         }
                     }
                     else
@@ -48,14 +56,14 @@ public static class PluginSearchResultMapper
                     uiResults.Add(new AppSearchResult
                     {
                         Name = item.Title,
-                        FullPath = $"__INSTANT_RESULT__:{provider.Name}:{item.Title}",
+                        FullPath = !string.IsNullOrEmpty(iconPath) ? iconPath : $"__INSTANT_RESULT__:{provider.Name}:{item.Title}",
                         ParentDir = item.Description,
                         IsDir = false,
                         Drive = string.Empty,
                         ResultKind = "InstantResult",
                         Index = uiResults.Count,
                         SearchQuery = query,
-                        IconOverride = iconOverride,
+                        IconOverride = !string.IsNullOrEmpty(iconPath) ? null : iconOverride,
                         InstantResultActionType = item.ActionType ?? "Copy",
                         InstantResultActionArgument = item.ActionArgument ?? string.Empty,
                         TabCompletion = item.TabCompletion,

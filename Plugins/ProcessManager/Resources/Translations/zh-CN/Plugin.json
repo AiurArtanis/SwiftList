@@ -1,0 +1,8 @@
+{
+  "ProcessManager_PluginName": "进程管理",
+  "ProcessManager_Name": "进程管理",
+  "ProcessManager_Description": "进程管理 (ps)",
+  "ProcessManager_Path": "路径",
+  "ProcessManager_Window": "窗口",
+  "ProcessManager_AccessDenied": "[拒绝访问]"
+}

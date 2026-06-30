@@ -1,0 +1,8 @@
+{
+  "ProcessManager_PluginName": "Process Manager",
+  "ProcessManager_Name": "Process Manager",
+  "ProcessManager_Description": "Process Manager (ps)",
+  "ProcessManager_Path": "Path",
+  "ProcessManager_Window": "Window",
+  "ProcessManager_AccessDenied": "[Access Denied]"
+}
