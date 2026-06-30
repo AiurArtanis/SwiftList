@@ -69,24 +69,11 @@ public class SettingsViewModel : ViewModelBase
     public bool CanApply
     {
         get => _canApply;
-        set
-        {
-            if (SetProperty(ref _canApply, value))
-                CommandManager.InvalidateRequerySuggested();
-        }
+        set { if (SetProperty(ref _canApply, value)) CommandManager.InvalidateRequerySuggested(); }
     }
 
-    public bool IsBusy
-    {
-        get => _isBusy;
-        set => SetProperty(ref _isBusy, value);
-    }
-
-    public bool IsServiceReady
-    {
-        get => _isServiceReady;
-        set => SetProperty(ref _isServiceReady, value);
-    }
+    public bool IsBusy { get => _isBusy; set => SetProperty(ref _isBusy, value); }
+    public bool IsServiceReady { get => _isServiceReady; set => SetProperty(ref _isServiceReady, value); }
 
     public void Cleanup()
     {
@@ -129,11 +116,10 @@ public class SettingsViewModel : ViewModelBase
             return;
 
         var previousNetworkDrives = _userSettings.NetworkDrives
-            .Select(d => new NetworkDriveSetting
-            {
-                Id = d.Id,
-                RefreshMode = d.RefreshMode
-            })
+            .Select(d => new NetworkDriveSetting { Id = d.Id, RefreshMode = d.RefreshMode })
+            .ToList();
+        var previousWslDrives = _userSettings.WslSettings
+            .Select(w => new WslSetting { Id = w.Id, RefreshMode = w.RefreshMode })
             .ToList();
         var previousExclusions = SettingsChangeSnapshot.CaptureExclusions(_userSettings);
         var previousDisabledAliases = _userSettings.DisabledPluginComponents
@@ -150,10 +136,16 @@ public class SettingsViewModel : ViewModelBase
             Id = d.Id,
             RefreshMode = d.RefreshMode
         }).ToList();
+        var newWslDrives = NetworkDrive.WslDrives.Where(w => w.IsEnabled && !string.IsNullOrWhiteSpace(w.Id)).Select(w => new WslSetting
+        {
+            Id = w.Id,
+            RefreshMode = w.RefreshMode
+        }).ToList();
         var localDriveSnapshots = LocalDrive.LocalDrives
             .Select(d => new LocalDriveSnapshot(d.Drive, d.Id, d.IsEnabled))
             .ToList();
         _userSettings.NetworkDrives = newNetworkDrives;
+        _userSettings.WslSettings = newWslDrives;
         Exclusions.Save();
         General.Apply();
         Plugins.Save();
@@ -178,9 +170,21 @@ public class SettingsViewModel : ViewModelBase
                 await _searchService.SaveMachineSettingsAsync(machineSettings);
 
             if (exclusionsChanged)
+            {
                 _searchService.RefreshNetworkIndexes();
-            else if (NetworkSettingsChanged(previousNetworkDrives, newNetworkDrives))
+            }
+            else if (NetworkSettingsChanged(previousNetworkDrives, newNetworkDrives) || WslSettingsChanged(previousWslDrives, newWslDrives))
+            {
                 await NetworkDriveApplyHelper.ApplyChangesAsync(_searchService, previousNetworkDrives, newNetworkDrives);
+                foreach (var wsl in newWslDrives)
+                {
+                    if (!previousWslDrives.Any(w => w.Id.Equals(wsl.Id, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var unc = $@"\\wsl.localhost\{wsl.Id}";
+                        _searchService.RefreshNetworkDriveIndex(unc);
+                    }
+                }
+            }
 
             if (exclusionsChanged)
                 await RebuildScanBasedLocalDrivesAsync(localDriveSnapshots, machineSettings.LocalDrives);
@@ -267,6 +271,18 @@ public class SettingsViewModel : ViewModelBase
     }
 
     private static bool NetworkSettingsChanged(IReadOnlyList<NetworkDriveSetting> oldSettings, IReadOnlyList<NetworkDriveSetting> newSettings)
+    {
+        var oldOrdered = oldSettings
+            .OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(d => $"{d.Id}|{d.RefreshMode}");
+
+        var newOrdered = newSettings
+            .OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(d => $"{d.Id}|{d.RefreshMode}");
+        return !oldOrdered.SequenceEqual(newOrdered, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool WslSettingsChanged(IReadOnlyList<WslSetting> oldSettings, IReadOnlyList<WslSetting> newSettings)
     {
         var oldOrdered = oldSettings
             .OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase)

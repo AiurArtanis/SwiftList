@@ -11,9 +11,9 @@ public sealed record RefreshModeOption(string Value, string Label)
 
 internal static class NetworkDriveSettingsHelper
 {
-    public static string GetStateText(ResolvedNetworkDrive drive, NetworkIndexStatus? indexStatus)
+    public static string GetStateText(ResolvedNetworkDrive? drive, NetworkIndexStatus? indexStatus)
     {
-        if (!drive.IsReady)
+        if (drive != null && !drive.IsReady)
             return TranslationManager.Instance["Network_StatusUnavailable"];
 
         return indexStatus?.State switch
@@ -25,6 +25,30 @@ internal static class NetworkDriveSettingsHelper
             "pending" => TranslationManager.Instance["Network_StatusPending"],
             _ => TranslationManager.Instance["Network_StatusConnected"]
         };
+    }
+
+    public static List<string> GetWslDistros()
+    {
+        var distros = new List<string>();
+        try
+        {
+            string? searchPath = null;
+            if (System.IO.Directory.Exists(@"\\wsl.localhost"))
+                searchPath = @"\\wsl.localhost";
+
+            if (searchPath != null)
+            {
+                foreach (var dir in System.IO.Directory.GetDirectories(searchPath))
+                {
+                    distros.Add(System.IO.Path.GetFileName(dir));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[NetworkDriveSettings] Failed to scan WSL distributions: {ex.Message}", LogLevel.Warn);
+        }
+        return distros;
     }
 
     public static string NormalizeRefreshMode(string? refreshMode) => refreshMode switch

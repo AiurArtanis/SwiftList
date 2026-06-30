@@ -11,8 +11,8 @@ public static class UserNetworkDriveSearch
         remove => NetworkIndexer.StatusesChanged -= value;
     }
 
-    public static void Configure() => NetworkIndexer.Configure(UserSettings.Load().NetworkDrives);
-    public static void Refresh() => NetworkIndexer.Configure(UserSettings.Load().NetworkDrives, forceRefresh: true);
+    public static void Configure() => NetworkIndexer.Configure(UserSettings.Load().NetworkDrives, UserSettings.Load().WslSettings);
+    public static void Refresh() => NetworkIndexer.Configure(UserSettings.Load().NetworkDrives, UserSettings.Load().WslSettings, forceRefresh: true);
     public static bool RefreshDrive(string drive) => NetworkIndexer.RefreshDrive(drive);
 
     public static IReadOnlyList<NetworkIndexStatus> GetStatuses() => NetworkIndexer.GetStatuses();

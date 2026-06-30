@@ -15,18 +15,11 @@ internal sealed class Scheduler : IDisposable
     private readonly Action<string, NetworkIndex> _onRefreshFinished;
     private readonly Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> _onPublishCheckpoint;
 
-    public Scheduler(
-        Action<string, string> onWatcherEnsure,
-        Action<string> onWatcherRemove,
-        Action<string, string, int?, string?> setStatus,
-        Action<string, NetworkIndex> onRefreshFinished,
-        Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> onPublishCheckpoint)
+    public Scheduler(Action<string, string> onWatcherEnsure, Action<string> onWatcherRemove, Action<string, string, int?, string?> setStatus,
+        Action<string, NetworkIndex> onRefreshFinished, Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> onPublishCheckpoint)
     {
-        _onWatcherEnsure = onWatcherEnsure;
-        _onWatcherRemove = onWatcherRemove;
-        _setStatus = setStatus;
-        _onRefreshFinished = onRefreshFinished;
-        _onPublishCheckpoint = onPublishCheckpoint;
+        _onWatcherEnsure = onWatcherEnsure; _onWatcherRemove = onWatcherRemove; _setStatus = setStatus;
+        _onRefreshFinished = onRefreshFinished; _onPublishCheckpoint = onPublishCheckpoint;
     }
 
     public void StartRefresh(
@@ -223,7 +216,11 @@ internal sealed class Scheduler : IDisposable
 
     private void RefreshDrive(string drive, CancellationToken token)
     {
-        var root = drive + @":\";
+        var root = (drive.StartsWith(@"\\") || drive.StartsWith(@"//")) ? drive : drive + @":\";
+        if (!root.EndsWith(Path.DirectorySeparatorChar.ToString()) && !root.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
+        {
+            root += Path.DirectorySeparatorChar;
+        }
         var physicalRoot = root;
 
         try

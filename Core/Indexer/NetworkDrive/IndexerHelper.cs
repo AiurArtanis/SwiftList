@@ -16,7 +16,14 @@ internal static class IndexerHelper
         if (string.IsNullOrWhiteSpace(drive))
             return string.Empty;
 
-        var letter = char.ToUpperInvariant(drive.Trim()[0]);
+        drive = drive.Trim();
+        if (drive.StartsWith(@"\\") || drive.StartsWith(@"//"))
+        {
+            var normalized = drive.Replace('/', '\\');
+            return normalized.TrimEnd('\\');
+        }
+
+        var letter = char.ToUpperInvariant(drive[0]);
         return char.IsLetter(letter) ? letter.ToString() : string.Empty;
     }
 

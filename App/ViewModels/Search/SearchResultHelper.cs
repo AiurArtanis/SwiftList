@@ -62,7 +62,14 @@ internal static class SearchResultHelper
             return FormatRelativeParentPath(parentDir, scope);
         }
 
-        return parentDir ?? string.Empty;
+        var path = parentDir ?? string.Empty;
+        if (path.StartsWith(@"\\wsl.localhost\", StringComparison.OrdinalIgnoreCase))
+        {
+            var suffix = path.Substring(@"\\wsl.localhost\".Length).Replace('\\', '/');
+            var firstSlash = suffix.IndexOf('/');
+            return firstSlash < 0 ? $"WSL-{suffix}:/" : $"WSL-{suffix.Substring(0, firstSlash)}:{suffix.Substring(firstSlash)}";
+        }
+        return path;
     }
 
     public static string FormatRelativeParentPath(string parentDir, string scope)

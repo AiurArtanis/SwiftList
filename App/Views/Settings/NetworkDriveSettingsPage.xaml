@@ -55,6 +55,46 @@
                     </Grid>
                 </Border>
             </DataTemplate>
+
+            <DataTemplate x:Key="WslDriveTemplate">
+                <Border Style="{StaticResource SettingsRow}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="1.2*"/>
+                            <ColumnDefinition Width="1.1*"/>
+                            <ColumnDefinition Width="1.4*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanEditEnabled}"
+                                  VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding DistroName}" FontSize="13" VerticalAlignment="Center" ToolTip="{Binding UncPath}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding State}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="{Binding ItemCount}" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="4"
+                                  Width="116"
+                                  HorizontalAlignment="Left"
+                                  VerticalAlignment="Center"
+                                  Style="{StaticResource SettingsComboBox}"
+                                  ItemsSource="{Binding DataContext.NetworkDrive.RefreshModeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  DisplayMemberPath="Label"
+                                  SelectedValuePath="Value"
+                                  SelectedValue="{Binding RefreshMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  IsEnabled="{Binding CanEditRefreshMode}"/>
+                        <Button Grid.Column="5"
+                                Style="{StaticResource SettingsButton}"
+                                MinWidth="72"
+                                Height="28"
+                                Padding="10,0"
+                                Content="{Binding RowActionText}"
+                                Command="{Binding RowActionCommand}"
+                                IsEnabled="{Binding CanRunRowAction}"
+                                Visibility="{Binding IsRowActionVisible, Converter={StaticResource BoolToVis}}"/>
+                    </Grid>
+                </Border>
+            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -122,6 +162,43 @@
                     </Border>
 
                     <ItemsControl ItemsSource="{Binding NetworkDrive.NetworkDrives}" ItemTemplate="{StaticResource NetworkDriveTemplate}"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource SettingsSectionTitle}" Margin="0,16,0,6"
+                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_WslSectionTitle]}"
+                       Visibility="{Binding NetworkDrive.IsWslPanelVisible, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"/>
+            <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
+                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_WslSectionHint]}"
+                       Visibility="{Binding NetworkDrive.IsWslPanelVisible, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"/>
+
+            <Border Style="{StaticResource SettingsCard}"
+                    Visibility="{Binding NetworkDrive.IsWslPanelVisible, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
+                <StackPanel>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="1.2*"/>
+                            <ColumnDefinition Width="1.1*"/>
+                            <ColumnDefinition Width="1.4*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="1" 
+                                   Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_WslHeaderDistro]}" 
+                                   Foreground="{DynamicResource TextSecondary2}"/>
+                        <TextBlock Grid.Column="2" 
+                                   Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderStatus]}" 
+                                   Foreground="{DynamicResource TextSecondary2}"/>
+                        <TextBlock Grid.Column="3" 
+                                   Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderItems]}" 
+                                   Foreground="{DynamicResource TextSecondary2}"/>
+                        <TextBlock Grid.Column="4" 
+                                   Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderMode]}" 
+                                   Foreground="{DynamicResource TextSecondary2}"/>
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding NetworkDrive.WslDrives}" ItemTemplate="{StaticResource WslDriveTemplate}"/>
                 </StackPanel>
             </Border>
 

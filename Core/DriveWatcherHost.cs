@@ -19,7 +19,11 @@ internal sealed class DriveWatcherHost : IDisposable
     {
         _name = name;
         _drive = drive;
-        _rootPath = $"{drive}:\\";
+        _rootPath = (drive.StartsWith(@"\\") || drive.StartsWith(@"//")) ? drive : $"{drive}:\\";
+        if (!_rootPath.EndsWith(Path.DirectorySeparatorChar.ToString()) && !_rootPath.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
+        {
+            _rootPath += Path.DirectorySeparatorChar;
+        }
         _exists = exists;
         _configure = configure;
         _onLog = onLog;

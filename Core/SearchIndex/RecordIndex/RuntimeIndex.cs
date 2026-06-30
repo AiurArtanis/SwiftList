@@ -116,7 +116,9 @@ public sealed class RuntimeIndex
     {
         Clear();
         SourceKey = store.SourceKey;
-        _sourceRoot = store.SourceKey + @":\";
+        _sourceRoot = (store.SourceKey.StartsWith(@"\\") || store.SourceKey.StartsWith(@"//"))
+            ? (store.SourceKey.EndsWith(@"\") ? store.SourceKey : store.SourceKey + @"\")
+            : store.SourceKey + @":\";
         _sourceRootLower = _sourceRoot.ToLowerInvariant();
 
         // Sort store.Records by Id

@@ -5,6 +5,7 @@ namespace SwiftList.Core;
 public class UserSettings
 {
     public List<NetworkDriveSetting> NetworkDrives { get; set; } = new();
+    public List<WslSetting> WslSettings { get; set; } = new();
     public List<FavoriteItemSetting> Favorites { get; set; } = new();
     public List<string> ExcludedPaths { get; set; } = new()
     {
@@ -219,6 +220,12 @@ public class UserSettings
 public class NetworkDriveSetting
 {
     public string Id { get; set; } = string.Empty;
+    public string RefreshMode { get; set; } = "Manual";
+}
+
+public class WslSetting
+{
+    public string Id { get; set; } = string.Empty; // e.g. "Ubuntu"
     public string RefreshMode { get; set; } = "Manual";
 }
 

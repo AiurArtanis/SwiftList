@@ -103,10 +103,11 @@ internal sealed class NetworkIndex
     {
         lock (_gate)
         {
+            var unc = (Drive.StartsWith(@"\\") || Drive.StartsWith(@"//")) ? Drive : NetworkDriveResolver.GetUncPath(Drive);
             var store = _runtime.ToStore(
                 FileRecordSourceKind.NetworkMappedDrive,
                 FileRecordIdKind.SourceLocalId64,
-                fileSystemType: string.Empty,
+                fileSystemType: unc,
                 volumeSerialNumber: 0,
                 RootId,
                 journalId: 0,

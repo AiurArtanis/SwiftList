@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -7,9 +5,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using SwiftList.PluginSdk.Abstractions.Plugins;
-using SwiftList.PluginSdk;
 using SwiftList.PluginSdk.Services;
-using System.Threading;
 
 namespace SwiftList.Plugins.CoreExtensions.Providers;
 
@@ -41,7 +37,7 @@ public class ShellThumbnailProvider : IThumbnailProvider
 
             try
             {
-                var list = PluginSettingsService.GetSetting<List<string>>(
+                var list = PluginSettingsService.GetSetting(
                     "SwiftList.Plugins.CoreExtensions", 
                     "ThumbnailExtensions", 
                     defaultList);
@@ -97,7 +93,7 @@ public class ShellThumbnailProvider : IThumbnailProvider
 
     public ImageSource? GetThumbnail(string path, int size)
     {
-        IntPtr hBitmap = IntPtr.Zero;
+        var hBitmap = IntPtr.Zero;
         IShellItemImageFactory? factory = null;
         try
         {
@@ -110,7 +106,7 @@ public class ShellThumbnailProvider : IThumbnailProvider
             if (hr == 0 && factory != null)
             {
                 // Pack cx and cy into a 64-bit long: lower 32 bits = cx, upper 32 bits = cy
-                long packedSize = ((long)size) | (((long)size) << 32);
+                var packedSize = ((long)size) | (((long)size) << 32);
 
                 // SIIGBF_RESIZETOFIT = 0x0
                 var hrGetImage = factory.GetImage(packedSize, 0x0, out hBitmap);

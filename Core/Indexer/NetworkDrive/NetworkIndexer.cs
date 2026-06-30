@@ -45,7 +45,7 @@ public sealed class NetworkIndexer : IDisposable
             _configured = true;
             try
             {
-                Configure(settings.NetworkDrives);
+                Configure(settings.NetworkDrives, settings.WslSettings);
             }
             catch
             {
@@ -55,7 +55,7 @@ public sealed class NetworkIndexer : IDisposable
         }
     }
 
-    public void Configure(IEnumerable<NetworkDriveSetting> driveSettings, bool forceRefresh = false)
+    public void Configure(IEnumerable<NetworkDriveSetting> driveSettings, IEnumerable<WslSetting> wslSettings, bool forceRefresh = false)
     {
         var enabledSettings = driveSettings
             .Select(d => new
@@ -64,6 +64,12 @@ public sealed class NetworkIndexer : IDisposable
                 RefreshMode = IndexerHelper.NormalizeRefreshMode(d.RefreshMode)
             })
             .Where(d => d.Drive.Length == 1)
+            .Concat(wslSettings.Select(w => new
+            {
+                Drive = $@"\\wsl.localhost\{w.Id}",
+                RefreshMode = IndexerHelper.NormalizeRefreshMode(w.RefreshMode)
+            }))
+            .Where(d => !string.IsNullOrEmpty(d.Drive))
             .GroupBy(d => d.Drive, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
             .ToList();

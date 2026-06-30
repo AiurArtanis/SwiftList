@@ -87,7 +87,7 @@ internal static class NetworkDriveCacheLocator
             return BuildStorageKey(unc);
 
         var fallback = EnumerateNetworkStores().FirstOrDefault(store =>
-            store.SourceKey.Equals(normalizedDrive, StringComparison.OrdinalIgnoreCase));
+            store.SourceKey.TrimEnd(':').Equals(normalizedDrive.TrimEnd(':'), StringComparison.OrdinalIgnoreCase));
         return fallback == null ? null : BuildStorageKey(fallback.FileSystemType);
     }
 
