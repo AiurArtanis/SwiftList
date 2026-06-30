@@ -3,7 +3,6 @@ namespace SwiftList.Core;
 public class SearchResponse
 {
     public List<SearchResult> FileResults { get; set; } = new();
-    public List<SearchResult> AppResults { get; set; } = new();
 }
 
 public class SearchResult

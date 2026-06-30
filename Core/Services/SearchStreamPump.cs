@@ -29,7 +29,7 @@ public static class SearchStreamPump
         await SearchResponseBinarySerializer.WriteHeaderAsync(bufferedStream, queryToken).ConfigureAwait(false);
         await bufferedStream.FlushAsync(queryToken).ConfigureAwait(false);
 
-        var channel = Channel.CreateUnbounded<(SearchResult Result, bool IsApp)>(
+        var channel = Channel.CreateUnbounded<SearchResult>(
             new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
 
         var producer = Task.Run(() =>
@@ -39,7 +39,7 @@ public static class SearchStreamPump
                 var directory = msg.Id == SearchRequestId.SearchDir ? msg.DirectoryFilter : null;
 
                 engine?.SearchStreaming(msg.Query ?? string.Empty, msg.Limit, msg.AppLimit, directory,
-                    (result, isApp) => channel.Writer.TryWrite((result, isApp)), queryToken);
+                    (result, _) => channel.Writer.TryWrite(result), queryToken);
                 channel.Writer.TryComplete();
             }
             catch (Exception ex)
@@ -53,10 +53,7 @@ public static class SearchStreamPump
             var count = 0;
             await foreach (var item in channel.Reader.ReadAllAsync(queryToken).ConfigureAwait(false))
             {
-                if (item.IsApp)
-                    await SearchResponseBinarySerializer.WriteAppResultAsync(bufferedStream, item.Result, queryToken).ConfigureAwait(false);
-                else
-                    await SearchResponseBinarySerializer.WriteFileResultAsync(bufferedStream, item.Result, queryToken).ConfigureAwait(false);
+                await SearchResponseBinarySerializer.WriteFileResultAsync(bufferedStream, item, queryToken).ConfigureAwait(false);
 
                 count++;
                 if (count <= 10 || count % 50 == 0)
