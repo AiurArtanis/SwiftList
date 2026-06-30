@@ -1,0 +1,18 @@
+{
+  "CustomCommands_PluginName": "自定义命令插件",
+  "CustomCommands_ProviderName": "自定义命令",
+  "CustomCommands_ResultTitle": "执行命令: {0}",
+  "CustomCommands_ResultDesc": "运行 '{0}' {1}",
+  "CustomCommands_ResultDescAdmin": "(管理员权限)",
+  "CustomCommands_Config_CommandsLabel": "自定义命令列表",
+  "CustomCommands_Config_CommandsDesc": "配置可以通过关键字直接触发运行的自定义命令行命令。",
+  "CustomCommands_Config_EnabledLabel": "已启用",
+  "CustomCommands_Config_KeywordLabel": "关键字",
+  "CustomCommands_Config_TitleLabel": "标题",
+  "CustomCommands_Config_PathLabel": "路径 (程序或文件)",
+  "CustomCommands_Config_ParameterLabel": "参数",
+  "CustomCommands_Config_IconLabel": "图标 (SVG Path 数据)",
+  "CustomCommands_Config_WorkingDirLabel": "工作目录",
+  "CustomCommands_Config_RunSilentlyLabel": "静默执行",
+  "CustomCommands_Config_RunAsAdminLabel": "以管理员身份运行"
+}

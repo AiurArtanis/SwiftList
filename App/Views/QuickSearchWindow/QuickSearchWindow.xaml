@@ -61,7 +61,7 @@
             </Border.Effect>
 
             <Border CornerRadius="{Binding InnerCornerRadius}" ClipToBounds="True">
-                <Grid>
+                <Grid Width="{Binding SearchBarWidth}">
             <Grid.RowDefinitions>
                 <!-- Search bar -->
                 <RowDefinition Height="Auto"/>
@@ -74,7 +74,7 @@
             </Grid.RowDefinitions>
 
             <!-- ═══════════ 1. Search Bar ═══════════ -->
-            <local:SearchBoxControl x:Name="SearchBox" Grid.Row="0" SearchText="{Binding SearchQuery, Mode=TwoWay}" Width="{Binding SearchBarWidth}" Height="{Binding SearchBarHeight}"/>
+            <local:SearchBoxControl x:Name="SearchBox" Grid.Row="0" SearchText="{Binding SearchQuery, Mode=TwoWay}" Height="{Binding SearchBarHeight}" HorizontalAlignment="Stretch"/>
 
             <!-- ═══════════ 2. Separator ═══════════ -->
             <Rectangle x:Name="ResultsSeparator"

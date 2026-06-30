@@ -1,0 +1,18 @@
+{
+  "CustomCommands_PluginName": "Custom Commands Plugin",
+  "CustomCommands_ProviderName": "Custom Commands",
+  "CustomCommands_ResultTitle": "Run Command: {0}",
+  "CustomCommands_ResultDesc": "Run '{0}' {1}",
+  "CustomCommands_ResultDescAdmin": "(As Administrator)",
+  "CustomCommands_Config_CommandsLabel": "Custom Commands",
+  "CustomCommands_Config_CommandsDesc": "Configure custom command-line commands triggered directly by keywords.",
+  "CustomCommands_Config_EnabledLabel": "Enabled",
+  "CustomCommands_Config_KeywordLabel": "Keyword",
+  "CustomCommands_Config_TitleLabel": "Title",
+  "CustomCommands_Config_PathLabel": "Path (Program or File)",
+  "CustomCommands_Config_ParameterLabel": "Parameters",
+  "CustomCommands_Config_IconLabel": "Icon (SVG Path Data)",
+  "CustomCommands_Config_WorkingDirLabel": "Working Directory",
+  "CustomCommands_Config_RunSilentlyLabel": "Run Silently",
+  "CustomCommands_Config_RunAsAdminLabel": "Run as Administrator"
+}

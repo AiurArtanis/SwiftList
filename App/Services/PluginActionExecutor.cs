@@ -21,6 +21,40 @@ public static class PluginActionExecutor
                 else if (result.InstantResultActionType == "Execute")
                 {
                     var arg = result.InstantResultActionArgument.Trim();
+                    if (arg.StartsWith("cc_exec:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var json = arg.Substring(8).Trim();
+                        using var doc = System.Text.Json.JsonDocument.Parse(json);
+                        var root = doc.RootElement;
+                        var path = root.GetProperty("Path").GetString() ?? "";
+                        var args = root.GetProperty("Arguments").GetString() ?? "";
+                        var workingDir = root.GetProperty("WorkingDir").GetString() ?? "";
+                        var runSilently = root.GetProperty("RunSilently").GetBoolean();
+                        var targetRunAsAdmin = root.GetProperty("RunAsAdmin").GetBoolean();
+
+                        var targetPsi = new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = path,
+                            Arguments = args,
+                            UseShellExecute = true
+                        };
+                        if (!string.IsNullOrWhiteSpace(workingDir))
+                        {
+                            targetPsi.WorkingDirectory = workingDir;
+                        }
+                        if (runSilently)
+                        {
+                            targetPsi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                            targetPsi.CreateNoWindow = true;
+                        }
+                        if (targetRunAsAdmin)
+                        {
+                            targetPsi.Verb = "runas";
+                        }
+                        System.Diagnostics.Process.Start(targetPsi);
+                        return true;
+                    }
+
                     if (arg.StartsWith("kill:", StringComparison.OrdinalIgnoreCase))
                     {
                         var pidStr = arg.Substring(5).Trim();
