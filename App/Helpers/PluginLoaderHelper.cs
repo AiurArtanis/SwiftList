@@ -46,8 +46,8 @@ public static class PluginLoaderHelper
             var pluginName = Path.GetFileNameWithoutExtension(dllName);
             var pluginVersion = assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
-            var pluginType = assembly.GetTypes().FirstOrDefault(t => typeof(IAction).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
-            IAction? pluginInstance = null;
+            var pluginType = assembly.GetTypes().FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+            IPlugin? pluginInstance = null;
             if (pluginType != null)
             {
                 pluginInstance = manager.Plugins.FirstOrDefault(p => p.GetType() == pluginType);
@@ -99,7 +99,7 @@ public static class PluginLoaderHelper
         return defaultName;
     }
 
-    private static void TryLoadConfigFields(Assembly assembly, string dllName, IAction? pluginInstance, UserSettings userSettings, List<PluginConfigFieldViewModel> configFields)
+    private static void TryLoadConfigFields(Assembly assembly, string dllName, IPlugin? pluginInstance, UserSettings userSettings, List<PluginConfigFieldViewModel> configFields)
     {
         try
         {
@@ -134,7 +134,7 @@ public static class PluginLoaderHelper
         catch { }
     }
 
-    private static List<PluginComponentViewModel> BuildComponents(IAction plugin, string dllName, PluginManager manager, HashSet<string> disabledSet)
+    private static List<PluginComponentViewModel> BuildComponents(IPlugin plugin, string dllName, PluginManager manager, HashSet<string> disabledSet)
     {
         var components = new List<PluginComponentViewModel>();
         var assembly = plugin.GetType().Assembly;

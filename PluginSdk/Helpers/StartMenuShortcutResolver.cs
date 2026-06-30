@@ -1,14 +1,14 @@
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 
-namespace SwiftList.Core;
+namespace SwiftList.PluginSdk.Helpers;
 
 /// <summary>
 /// Resolves .lnk shortcut targets and enumerates start menu directories.
-/// Extracted from StartMenuAppIndex to keep its file under 300 lines.
 /// </summary>
-internal static class StartMenuShortcutResolver
+public static class StartMenuShortcutResolver
 {
     private const int MAX_PATH = 260;
     private const uint SLGP_UNCPRIORITY = 0x0002;
@@ -34,13 +34,33 @@ internal static class StartMenuShortcutResolver
     {
         var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-        AddIfDirectory(roots, Path.Combine(programData, "Microsoft", "Windows", "Start Menu"));
-
-        foreach (var userDir in Services.UserProfileHelper.GetAllUserProfilePaths())
+        try
         {
-            AddIfDirectory(roots, Services.UserProfileHelper.GetStartMenuPath(userDir));
-            AddIfDirectory(roots, Services.UserProfileHelper.GetDesktopPath(userDir));
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders");
+            if (key != null)
+            {
+                var commonStartMenu = key.GetValue("Common Start Menu") as string;
+                if (!string.IsNullOrEmpty(commonStartMenu))
+                {
+                    AddIfDirectory(roots, Environment.ExpandEnvironmentVariables(commonStartMenu));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[StartMenuShortcutResolver] Failed to read common start menu from registry: {ex.Message}", LogLevel.Warn);
+        }
+
+        if (roots.Count == 0)
+        {
+            var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+            AddIfDirectory(roots, Path.Combine(programData, "Microsoft", "Windows", "Start Menu"));
+        }
+
+        foreach (var userDir in UserProfileHelper.GetAllUserProfilePaths())
+        {
+            AddIfDirectory(roots, UserProfileHelper.GetStartMenuPath(userDir));
+            AddIfDirectory(roots, UserProfileHelper.GetDesktopPath(userDir));
         }
 
         return roots;
@@ -62,7 +82,7 @@ internal static class StartMenuShortcutResolver
             }
             catch (Exception ex)
             {
-                Logger.Log($"[StartMenuAppIndex] Failed to enumerate files in {dir}: {ex.Message}", LogLevel.Warn);
+                Logger.Log($"[StartMenuShortcutResolver] Failed to enumerate files in {dir}: {ex.Message}", LogLevel.Warn);
                 continue;
             }
 
@@ -76,7 +96,7 @@ internal static class StartMenuShortcutResolver
             }
             catch (Exception ex)
             {
-                Logger.Log($"[StartMenuAppIndex] Failed to enumerate directories in {dir}: {ex.Message}", LogLevel.Warn);
+                Logger.Log($"[StartMenuShortcutResolver] Failed to enumerate directories in {dir}: {ex.Message}", LogLevel.Warn);
                 continue;
             }
 
@@ -117,7 +137,7 @@ internal static class StartMenuShortcutResolver
         }
         catch (Exception ex)
         {
-            Logger.Log($"[StartMenuAppIndex] Failed to resolve shortcut target for {shortcutPath}: {ex.Message}", LogLevel.Warn);
+            Logger.Log($"[StartMenuShortcutResolver] Failed to resolve shortcut target for {shortcutPath}: {ex.Message}", LogLevel.Warn);
             return null;
         }
         finally
@@ -131,19 +151,6 @@ internal static class StartMenuShortcutResolver
     {
         if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
             roots.Add(Path.GetFullPath(path));
-    }
-
-    private static IEnumerable<string> EnumerateDirectoriesSafe(string root)
-    {
-        try
-        {
-            return Directory.EnumerateDirectories(root);
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[StartMenuAppIndex] Failed to enumerate directories in {root}: {ex.Message}", LogLevel.Warn);
-            return Array.Empty<string>();
-        }
     }
 
     [ComImport]

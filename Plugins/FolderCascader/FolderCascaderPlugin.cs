@@ -4,13 +4,11 @@ using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.FolderCascader;
 
-public class FolderCascaderPlugin : IAction, IConfigurable
+public class FolderCascaderPlugin : IPlugin, IConfigurable
 {
     public string Name => TranslationService.Get("FolderCascader_PluginName") ?? "Folder Cascader";
 
-    public IEnumerable<ISearchResultAction> GetActions() => Array.Empty<ISearchResultAction>();
 
-    public IEnumerable<IDynamicActionProvider> GetDynamicProviders() => Array.Empty<IDynamicActionProvider>();
 
     public class FolderConfigItem
     {

@@ -28,6 +28,11 @@ public interface ISearchableItemProvider
     /// Defaults to true.
     /// </summary>
     bool EnableAlias => true;
+
+    /// <summary>
+    /// Fired when the items of the provider change, notifying the host to clear cache.
+    /// </summary>
+    event Action? ItemsChanged;
 }
 
 /// <summary>
@@ -66,4 +71,10 @@ public class SearchableItem
     /// Optional direct execution callback delegate.
     /// </summary>
     public Action? OnExecute { get; set; }
+
+    /// <summary>
+    /// Optional custom ResultKind override (e.g. "Application", "File", "InstantResult").
+    /// Defaults to "InstantResult".
+    /// </summary>
+    public string? ResultKind { get; set; }
 }

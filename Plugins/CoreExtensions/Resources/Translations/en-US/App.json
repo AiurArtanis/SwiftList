@@ -309,6 +309,7 @@
   "Theme_Sakura": "Sakura",
   "Theme_Cyberpunk": "Cyberpunk",
   "Plugins_CoreActionPluginName": "Core Extensions Plugin",
+  "Plugins_StartMenuAppItemProviderName": "Start Menu & Desktop Applications",
   "Plugins_PinyinAliasPluginName": "Pinyin Search Alias Plugin",
   "Plugins_Comp_ShellMenuActionProvider": "Windows File Explorer Shortcut Menu Support",
   "Plugins_Comp_CalculatorInstantProvider": "Math Calculator and Base Conversion",

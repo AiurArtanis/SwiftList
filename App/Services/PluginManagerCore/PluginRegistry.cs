@@ -8,7 +8,7 @@ namespace SwiftList.App.Services.PluginManagerCore;
 /// </summary>
 internal interface PluginRegistry
 {
-    void RegisterPlugin(IAction plugin);
+    void RegisterPlugin(IPlugin plugin);
     void AddInstantResultProvider(IInstantResultProvider provider);
     void AddSearchableItemProvider(ISearchableItemProvider provider);
     void AddSidebarFilterProvider(ISidebarFilterProvider provider);

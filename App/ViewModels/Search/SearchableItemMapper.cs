@@ -10,6 +10,7 @@ public static class SearchableItemMapper
 
     private static readonly ConcurrentDictionary<string, List<CacheEntry>> _cache = new();
     private static readonly ConcurrentDictionary<string, Task> _loadingTasks = new();
+    private static readonly ConcurrentDictionary<string, bool> _subscribed = new();
 
     public static void AddSearchableItemResults(List<AppSearchResult> uiResults, string query, bool isInlineWindow)
     {
@@ -41,7 +42,13 @@ public static class SearchableItemMapper
                     var highlights = new bool[title.Length];
                     Converters.FuzzyHighlightMatcher.MarkFuzzyMatch(title.ToLowerInvariant(), q.ToLowerInvariant(), highlights);
                     if (highlights.Any(h => h))
+                    {
                         aliasMatches.Add(entry);
+                    }
+                    else if (entry.Aliases.Any(alias => alias.Contains(q, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        aliasMatches.Add(entry);
+                    }
                 }
             }
 
@@ -85,11 +92,11 @@ public static class SearchableItemMapper
                 uiResults.Add(new AppSearchResult
                 {
                     Name = item.Title,
-                    FullPath = $"__SEARCHABLE_ITEM__:{provider.Name}:{item.Title}",
+                    FullPath = (item.ResultKind == "Application" || item.ResultKind == "File") ? item.ActionArgument : $"__SEARCHABLE_ITEM__:{provider.Name}:{item.Title}",
                     ParentDir = item.Description,
                     IsDir = false,
                     Drive = string.Empty,
-                    ResultKind = "InstantResult",
+                    ResultKind = item.ResultKind ?? "InstantResult",
                     Index = uiResults.Count,
                     SearchQuery = query ?? string.Empty,
                     IconOverride = iconOverride,
@@ -108,6 +115,15 @@ public static class SearchableItemMapper
     private static void EnsureLoaded(ISearchableItemProvider provider)
     {
         var id = provider.Id;
+        if (_subscribed.TryAdd(id, true))
+        {
+            provider.ItemsChanged += () =>
+            {
+                _cache.TryRemove(id, out _);
+                _loadingTasks.TryRemove(id, out _);
+            };
+        }
+
         if (_cache.ContainsKey(id)) return;
 
         _loadingTasks.GetOrAdd(id, _ => Task.Run(() =>

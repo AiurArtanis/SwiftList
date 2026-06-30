@@ -5,7 +5,6 @@ namespace SwiftList.Core;
 public class SearchEngine : IDisposable
 {
     private readonly UsnIndexer _indexer = new();
-    private readonly StartMenuAppIndex _appIndex = new();
     private CancellationTokenSource? _cts;
     private readonly object _startLock = new();
     private bool _isRebuilding = false;
@@ -34,7 +33,6 @@ public class SearchEngine : IDisposable
             () => _isRebuilding,
             AddFolderMonitor,
             TryReleaseRuntimeAfterActivity);
-        _appIndex.Refresh();
         _idleTimer = new Timer(OnIdleTimerTick, null, 3000, 3000);
     }
 
@@ -146,25 +144,15 @@ public class SearchEngine : IDisposable
             }
         }
 
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(searchCts.Token, requestToken);
-        var searchToken = linkedCts.Token;
-
-        var parsed = SearchQueryParser.Parse(query);
-        if (!parsed.IsPathMode)
-        {
-            foreach (var result in _appIndex.Search(query, appLimit, searchToken))
-            {
-                searchToken.ThrowIfCancellationRequested();
-                onResult(result, true);
-            }
-        }
-
         var status = GetStatus();
         if (status.State != "ready")
         {
             Logger.Log($"[SearchEngine] File search skipped because index is not ready. State: {status.State}", LogLevel.Warn);
             return true;
         }
+
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(searchCts.Token, requestToken);
+        var searchToken = linkedCts.Token;
 
         _indexer.SearchStreaming(query, fileLimit, result =>
         {
@@ -191,15 +179,13 @@ public class SearchEngine : IDisposable
 
         Task.Run(() =>
         {
-            _appIndex.Refresh();
-
             // Cancel any active monitors
             _cts?.Cancel();
             _cts?.Dispose();
             DisposeFolderMonitors();
             _cts = new CancellationTokenSource();
 
-            var initializer = new SearchEngineInitializer(_indexer, _appIndex, IndexCacheDir, _drives.QueueDriveRebuild, AddFolderMonitor);
+            var initializer = new SearchEngineInitializer(_indexer, IndexCacheDir, _drives.QueueDriveRebuild, AddFolderMonitor);
             initializer.Run(forceRebuild, _cts, isRebuilding =>
             {
                 lock (_startLock)

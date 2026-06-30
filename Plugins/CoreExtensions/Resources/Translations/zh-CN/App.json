@@ -309,6 +309,7 @@
   "Theme_Sakura": "樱花粉",
   "Theme_Cyberpunk": "赛博朋克",
   "Plugins_CoreActionPluginName": "核心功能扩展插件",
+  "Plugins_StartMenuAppItemProviderName": "开始菜单与桌面应用搜索",
   "Plugins_PinyinAliasPluginName": "拼音拼写搜索别名插件",
   "Plugins_Comp_ShellMenuActionProvider": "Windows 资源管理器快捷菜单支持",
   "Plugins_Comp_CalculatorInstantProvider": "全能数学计算与进制转换",

@@ -6,7 +6,7 @@ namespace SwiftList.App.Services.PluginManagerCore;
 
 /// <summary>
 /// Scans the <c>Plugins/</c> directory for DLL assemblies and registers every
-/// recognised <see cref="PluginSdk.Abstractions.Plugins.IAction"/>, <see cref="IAliasProvider"/>,
+/// recognised <see cref="PluginSdk.Abstractions.Plugins.IPlugin"/>, <see cref="IAliasProvider"/>,
 /// <see cref="PluginSdk.Abstractions.Plugins.IInstantResultProvider"/>, <see cref="PluginSdk.Abstractions.Plugins.ISidebarFilterProvider"/>,
 /// <see cref="PluginSdk.Abstractions.Plugins.IResultColumnProvider"/> and <see cref="PluginSdk.Abstractions.Plugins.ITranslationProvider"/>.
 /// </summary>
@@ -49,12 +49,12 @@ internal static class PluginLoader
                 if (type.IsInterface || type.IsAbstract)
                     continue;
 
-                if (typeof(PluginSdk.Abstractions.Plugins.IAction).IsAssignableFrom(type))
+                if (typeof(PluginSdk.Abstractions.Plugins.IPlugin).IsAssignableFrom(type))
                 {
-                    var plugin = (PluginSdk.Abstractions.Plugins.IAction)Activator.CreateInstance(type)!;
+                    var plugin = (PluginSdk.Abstractions.Plugins.IPlugin)Activator.CreateInstance(type)!;
                     registry.RegisterPlugin(plugin);
                     var pluginVer = assembly.GetName().Version?.ToString(3) ?? "1.0.0";
-                    Logger.Log($"[PluginManager] Loaded action plugin: '{type.Name}' (v{pluginVer}) from {fileName}");
+                    Logger.Log($"[PluginManager] Loaded plugin: '{type.Name}' (v{pluginVer}) from {fileName}");
                 }
 
                 if (typeof(PluginSdk.Abstractions.Plugins.IAliasProvider).IsAssignableFrom(type))

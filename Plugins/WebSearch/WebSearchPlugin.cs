@@ -4,13 +4,9 @@ using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.WebSearch;
 
-public class WebSearchPlugin : IAction, IConfigurable
+public class WebSearchPlugin : IPlugin, IConfigurable
 {
     public string Name => TranslationService.Get("WebSearch_PluginName");
-
-    public IEnumerable<ISearchResultAction> GetActions() => Array.Empty<ISearchResultAction>();
-
-    public IEnumerable<IDynamicActionProvider> GetDynamicProviders() => Array.Empty<IDynamicActionProvider>();
 
     public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
     {

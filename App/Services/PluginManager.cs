@@ -19,7 +19,7 @@ public class PluginManager : PluginRegistry
     /// <summary>Gets the singleton instance of the PluginManager.</summary>
     public static PluginManager Instance => _instance.Value;
 
-    private readonly List<PluginSdk.Abstractions.Plugins.IAction> _plugins = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IPlugin> _plugins = new();
     private readonly List<PluginActionRegistration> _actions = new();
     private readonly List<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> _dynamicProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.IInstantResultProvider> _instantResultProviders = new();
@@ -72,7 +72,7 @@ public class PluginManager : PluginRegistry
 
     // ── PluginRegistry callbacks ──────────────────────────────────────────
 
-    void PluginRegistry.RegisterPlugin(PluginSdk.Abstractions.Plugins.IAction plugin) => RegisterPlugin(plugin);
+    void PluginRegistry.RegisterPlugin(PluginSdk.Abstractions.Plugins.IPlugin plugin) => RegisterPlugin(plugin);
 
     void PluginRegistry.AddInstantResultProvider(PluginSdk.Abstractions.Plugins.IInstantResultProvider p) => _instantResultProviders.Add(p);
     void PluginRegistry.AddSearchableItemProvider(PluginSdk.Abstractions.Plugins.ISearchableItemProvider p) => _searchableItemProviders.Add(p);
@@ -96,19 +96,22 @@ public class PluginManager : PluginRegistry
         => _filter.IsEnabled(dllName, type, name);
 
     /// <summary>Registers a plugin and loads its actions and dynamic providers.</summary>
-    public void RegisterPlugin(PluginSdk.Abstractions.Plugins.IAction plugin)
+    public void RegisterPlugin(PluginSdk.Abstractions.Plugins.IPlugin plugin)
     {
         if (plugin == null) return;
         _plugins.Add(plugin);
-        foreach (var action in plugin.GetActions())
-            _actions.Add(new PluginActionRegistration(_nextRuntimeActionId++, plugin, action));
-        foreach (var provider in plugin.GetDynamicProviders())
-            _dynamicProviders.Add(provider);
+        if (plugin is PluginSdk.Abstractions.Plugins.IActionProvider actionProvider)
+        {
+            foreach (var action in actionProvider.GetActions())
+                _actions.Add(new PluginActionRegistration(_nextRuntimeActionId++, plugin, action));
+            foreach (var provider in actionProvider.GetDynamicProviders())
+                _dynamicProviders.Add(provider);
+        }
     }
 
     // ── Filtered collections (active components only) ─────────────────────
 
-    public IEnumerable<PluginSdk.Abstractions.Plugins.IAction> Plugins => _plugins;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IPlugin> Plugins => _plugins;
 
     public IEnumerable<PluginActionRegistration> Actions
         => _actions.Where(a => _filter.IsEnabled(ComponentFilter.GetDllName(a.Plugin), PluginComponentType.Action, a.Action.Id));

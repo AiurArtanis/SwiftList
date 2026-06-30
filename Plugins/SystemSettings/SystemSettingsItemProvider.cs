@@ -12,6 +12,12 @@ public class SystemSettingsItemProvider : ISearchableItemProvider
 {
     public string Name => TranslationService.Get("SystemSettings_Name");
 
+    public event Action? ItemsChanged
+    {
+        add { }
+        remove { }
+    }
+
     // GodMode — "All Tasks" virtual folder that lists every Control Panel item and task.
     private const string GodModePath = "shell:::{ED7BA470-8E54-465E-825C-99712043E01C}";
 

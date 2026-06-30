@@ -251,4 +251,45 @@ public static class ShellPathHelper
             if (hdc    != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdc);
         }
     }
+
+    /// <summary>
+    /// Gets an icon HBITMAP for a physical file or directory path.
+    /// Caller must free the returned HBITMAP with DeleteObject when no longer needed.
+    /// </summary>
+    public static IntPtr GetIconHBitmapForPath(string path, int size = 32)
+    {
+        if (string.IsNullOrEmpty(path)) return IntPtr.Zero;
+        var hIcon  = IntPtr.Zero;
+        var hdc    = IntPtr.Zero;
+        var hMemDC = IntPtr.Zero;
+        var hBmp   = IntPtr.Zero;
+        try
+        {
+            var shfi = new SHFILEINFO();
+            var flags = SHGFI_ICON | SHGFI_LARGEICON;
+            var res = SHGetFileInfo(path, 0, ref shfi, (uint)Marshal.SizeOf(shfi), flags);
+            if (res == IntPtr.Zero || shfi.hIcon == IntPtr.Zero)
+                return IntPtr.Zero;
+            hIcon = shfi.hIcon;
+
+            hdc    = GetDC(IntPtr.Zero);
+            hMemDC = CreateCompatibleDC(hdc);
+            hBmp   = CreateCompatibleBitmap(hdc, size, size);
+            var hOld = SelectObject(hMemDC, hBmp);
+            DrawIconEx(hMemDC, 0, 0, hIcon, size, size, 0, IntPtr.Zero, 0x0003 /* DI_NORMAL */);
+            SelectObject(hMemDC, hOld);
+            return hBmp;
+        }
+        catch
+        {
+            if (hBmp != IntPtr.Zero) DeleteObject(hBmp);
+            return IntPtr.Zero;
+        }
+        finally
+        {
+            if (hIcon  != IntPtr.Zero) DestroyIcon(hIcon);
+            if (hMemDC != IntPtr.Zero) DeleteDC(hMemDC);
+            if (hdc    != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdc);
+        }
+    }
 }

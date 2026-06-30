@@ -5,26 +5,23 @@ namespace SwiftList.Core;
 internal class SearchEngineInitializer
 {
     private readonly UsnIndexer _indexer;
-    private readonly StartMenuAppIndex _appIndex;
     private readonly string _indexCacheDir;
     private readonly Action<string>? _onReindexRequired;
     private readonly Action<IDisposable>? _addMonitor;
 
     public SearchEngineInitializer(
         UsnIndexer indexer,
-        StartMenuAppIndex appIndex,
         string indexCacheDir,
         Action<string>? onReindexRequired = null,
         Action<IDisposable>? addMonitor = null)
     {
         _indexer = indexer;
-        _appIndex = appIndex;
         _indexCacheDir = indexCacheDir;
         _onReindexRequired = onReindexRequired;
         _addMonitor = addMonitor;
     }
 
-    public void EnsureDriveStatuses(IReadOnlyList<string> detectedDrives, IReadOnlyList<string> enabledDrives)
+    private void EnsureDriveStatuses(IReadOnlyList<string> detectedDrives, IReadOnlyList<string> enabledDrives)
     {
         var enabled = new HashSet<string>(enabledDrives, StringComparer.OrdinalIgnoreCase);
         var statuses = detectedDrives.Select(d => new UsnIndexer.DriveIndexStatus
@@ -43,8 +40,6 @@ internal class SearchEngineInitializer
     {
         try
         {
-            _appIndex.Refresh();
-
             var machineSettings = MachineSettings.Load();
             var detectedDrives = VolumeHelper.DetectIndexableLocalDrives();
             var enabledIds = new HashSet<string>(machineSettings.LocalDrives, StringComparer.OrdinalIgnoreCase);

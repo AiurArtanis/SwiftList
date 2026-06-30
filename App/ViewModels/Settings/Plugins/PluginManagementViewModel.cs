@@ -65,7 +65,7 @@ public class PluginManagementViewModel : ViewModelBase
 
     public bool IsEmpty => Plugins.Count == 0;
 
-    public string HostSdkVersion { get; } = typeof(IAction).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+    public string HostSdkVersion { get; } = typeof(IPlugin).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
     public void Save()
     {

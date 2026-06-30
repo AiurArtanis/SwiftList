@@ -1,4 +1,6 @@
-namespace SwiftList.Core.Services;
+using System.IO;
+
+namespace SwiftList.PluginSdk.Helpers;
 
 public static class UserProfileHelper
 {
