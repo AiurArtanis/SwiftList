@@ -68,6 +68,9 @@ public class PluginManager : PluginRegistry
         PluginSdk.Services.FavoritesService.GetFavoritesFunc = () =>
             UserSettings.Load().Favorites.Select(f => new PluginSdk.Models.FavoriteItem { Name = f.Name, Path = f.Path });
 
+        // Trigger CoreDirectoryIndexManager singleton instantiation to bind SDK DirectoryIndexerService delegates
+        _ = CoreDirectoryIndexManager.Instance;
+
         PluginLoader.Load(this);
     }
 

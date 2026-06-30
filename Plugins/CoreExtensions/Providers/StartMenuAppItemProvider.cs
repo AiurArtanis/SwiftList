@@ -15,10 +15,9 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
 
     public event Action? ItemsChanged;
 
-    private readonly List<FileSystemWatcher> _watchers = new();
-
     public StartMenuAppItemProvider()
     {
+        DirectoryIndexerService.DirectoryChanged += OnDirectoryChanged;
         try
         {
             foreach (var root in StartMenuShortcutResolver.GetStartMenuRoots())
@@ -26,43 +25,32 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
                 if (!Directory.Exists(root))
                     continue;
 
-                var watcher = new FileSystemWatcher(root)
-                {
-                    IncludeSubdirectories = true,
-                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
-                    EnableRaisingEvents = true
-                };
-
-                FileSystemEventHandler handler = (s, e) => OnFileChanged();
-                RenamedEventHandler renamedHandler = (s, e) => OnFileChanged();
-
-                watcher.Created += handler;
-                watcher.Deleted += handler;
-                watcher.Changed += handler;
-                watcher.Renamed += renamedHandler;
-
-                _watchers.Add(watcher);
+                // Register directory to the host system indexer for global monitoring and search
+                DirectoryIndexerService.RegisterDirectory("CoreExtensions.StartMenu", root, recursive: true, filterPattern: "*.lnk");
             }
         }
         catch (Exception ex)
         {
-            PluginSdk.Logger.Log($"[StartMenuAppItemProvider] Failed to initialize file watchers: {ex.Message}", PluginSdk.LogLevel.Warn);
+            PluginSdk.Logger.Log($"[StartMenuAppItemProvider] Failed to register directories to indexer: {ex.Message}", PluginSdk.LogLevel.Warn);
         }
     }
 
-    private void OnFileChanged() => ItemsChanged?.Invoke();
+    private void OnDirectoryChanged(string pluginId)
+    {
+        if (string.Equals(pluginId, "CoreExtensions.StartMenu", StringComparison.OrdinalIgnoreCase))
+        {
+            ItemsChanged?.Invoke();
+        }
+    }
 
     public void Dispose()
     {
-        foreach (var watcher in _watchers)
+        DirectoryIndexerService.DirectoryChanged -= OnDirectoryChanged;
+        try
         {
-            try
-            {
-                watcher.Dispose();
-            }
-            catch { }
+            DirectoryIndexerService.UnregisterDirectories("CoreExtensions.StartMenu");
         }
-        _watchers.Clear();
+        catch { }
         GC.SuppressFinalize(this);
     }
 
