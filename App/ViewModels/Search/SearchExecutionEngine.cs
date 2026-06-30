@@ -165,7 +165,7 @@ internal sealed class SearchExecutionEngine : IDisposable
                 {
                     snapshot = new SearchResponse
                     {
-                        AppResults = new List<SearchResult>(streamedResponse.AppResults),
+                        AppResults = new List<SearchResult>(),
                         FileResults = new List<SearchResult>(streamedResponse.FileResults)
                     };
                 }
@@ -194,7 +194,7 @@ internal sealed class SearchExecutionEngine : IDisposable
                     uiResults.Add(SearchResultMapper.CreateNoResultsResult(query));
                 var statusText = "";
                 if (uiResults.Count > 0)
-                    statusText = SearchResultMapper.FormatSearchStatus(snapshot.AppResults.Count, snapshot.FileResults.Count);
+                    statusText = SearchResultMapper.FormatSearchStatus(0, snapshot.FileResults.Count);
                 else if (final)
                     statusText = "No matching results";
                 onResultsUpdated(uiResults, statusText, final);
@@ -212,11 +212,11 @@ internal sealed class SearchExecutionEngine : IDisposable
 
             lock (responseLock)
             {
-                if (isApplication)
-                    streamedResponse.AppResults.Add(result);
-                else
+                if (!isApplication)
+                {
                     streamedResponse.FileResults.Add(result);
-                streamedCount++;
+                    streamedCount++;
+                }
             }
 
             if (Volatile.Read(ref renderState) == 0 && Volatile.Read(ref streamedCount) < 9)

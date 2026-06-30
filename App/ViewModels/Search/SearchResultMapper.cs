@@ -10,7 +10,6 @@ public static class SearchResultMapper
         var uiResults = new List<AppSearchResult>();
         PluginSearchResultMapper.AddInstantResults(uiResults, query, isInlineWindow);
 
-        var appResults = response.AppResults;
         var fileResults = response.FileResults;
 
         if (fileResults != null && !string.IsNullOrWhiteSpace(query))
@@ -27,51 +26,37 @@ public static class SearchResultMapper
             catch { }
         }
 
-        if (isInlineWindow && scope != "__UniversalList__")
+        // If a directory scope is provided, keep only file/folder results that reside inside the scoped path.
+        if (!string.IsNullOrEmpty(scope) && fileResults != null)
         {
-            appResults = new List<SearchResult>();
-        }
-
-        // If a directory scope is provided, filter out start menu apps completely
-        // and keep only file/folder results that reside inside the scoped path.
-        if (!string.IsNullOrEmpty(scope))
-        {
-            appResults = new List<SearchResult>();
-            if (fileResults != null)
+            var normalizedScope = SearchResultHelper.NormalizePath(scope);
+            fileResults = fileResults.FindAll(x =>
             {
-                var normalizedScope = SearchResultHelper.NormalizePath(scope);
-                fileResults = fileResults.FindAll(x =>
-                {
-                    var normalizedPath = SearchResultHelper.NormalizePath(x.Path);
-                    return SearchResultHelper.IsPathInsideScope(normalizedPath, normalizedScope)
-                        && !string.Equals(normalizedPath, normalizedScope, StringComparison.OrdinalIgnoreCase);
-                });
-            }
+                var normalizedPath = SearchResultHelper.NormalizePath(x.Path);
+                return SearchResultHelper.IsPathInsideScope(normalizedPath, normalizedScope)
+                    && !string.Equals(normalizedPath, normalizedScope, StringComparison.OrdinalIgnoreCase);
+            });
         }
 
         var historySnapshot = SearchHistoryStore.Snapshot();
         var comparer = new SearchResultRankComparer(historySnapshot);
-        appResults?.Sort(comparer);
         fileResults?.Sort(comparer);
-        appResults ??= new List<SearchResult>();
 
         // Add history/favorites first (Highest priority result group)
-        AddHistoryPriorityResults(uiResults, appResults, fileResults, query, scope, historySnapshot);
+        AddHistoryPriorityResults(uiResults, fileResults, query, scope, historySnapshot);
 
-        // Add other searchable items and action results
         SearchableItemMapper.AddSearchableItemResults(uiResults, query, isInlineWindow);
         var hasPluginSearchActions = PluginSearchResultMapper.AddPluginSearchActionResults(uiResults, query, contextDirectory, isInlineWindow);
 
-        var appLimit = Math.Min(appResults.Count, Math.Max(0, 5 - uiResults.Count));
-        for (var i = 0; i < appLimit; i++)
+        if (fileResults != null)
         {
-            uiResults.Add(SearchResultHelper.CreateUiResult(appResults[i], query, uiResults.Count, isApplication: true, scope));
+            var existingPaths = new HashSet<string>(uiResults.Select(r => SearchResultHelper.NormalizePath(r.FullPath)), StringComparer.OrdinalIgnoreCase);
+            fileResults.RemoveAll(r => existingPaths.Contains(SearchResultHelper.NormalizePath(r.Path)));
         }
 
-        var hasMoreApps = appResults.Count > appLimit;
         var fileResultsCount = fileResults != null ? fileResults.Count : 0;
         var hasInstantResults = uiResults.Any(x => x.IsInstantResult);
-        if (!hasMoreApps && uiResults.Count + fileResultsCount < 10 && fileResults != null)
+        if (uiResults.Count + fileResultsCount < 10 && fileResults != null)
         {
             for (var i = 0; i < fileResultsCount; i++)
             {
@@ -128,7 +113,6 @@ public static class SearchResultMapper
 
     public static void AddHistoryPriorityResults(
         List<AppSearchResult> uiResults,
-        List<SearchResult> appResults,
         List<SearchResult>? fileResults,
         string query,
         string? scope,
@@ -158,21 +142,6 @@ public static class SearchResultMapper
                         NormalizedPath = SearchResultHelper.NormalizePath(fav.Path)
                     });
                 }
-            }
-        }
-
-        foreach (var result in appResults)
-        {
-            var lookupPath = result.Path.Length > 3 && result.Path[^1] == '\\' ? result.Path.TrimEnd('\\') : result.Path;
-            if (historySnapshot.TryGetValue(lookupPath, out var priority))
-            {
-                candidates.Add(new PriorityCandidate
-                {
-                    Result = result,
-                    IsApplication = true,
-                    Priority = priority,
-                    NormalizedPath = SearchResultHelper.NormalizePath(result.Path)
-                });
             }
         }
 
@@ -216,13 +185,6 @@ public static class SearchResultMapper
             else if (candidate.Result != null)
             {
                 uiResults.Add(SearchResultHelper.CreateUiResult(candidate.Result, query, uiResults.Count, candidate.IsApplication, scope));
-            }
-
-            // Remove any duplicates from appResults and fileResults
-            var matchedApp = appResults.FirstOrDefault(r => SearchResultHelper.NormalizePath(r.Path).Equals(candidate.NormalizedPath, StringComparison.OrdinalIgnoreCase));
-            if (matchedApp != null)
-            {
-                appResults.Remove(matchedApp);
             }
 
             var matchedFile = fileResults?.FirstOrDefault(r => SearchResultHelper.NormalizePath(r.Path).Equals(candidate.NormalizedPath, StringComparison.OrdinalIgnoreCase));

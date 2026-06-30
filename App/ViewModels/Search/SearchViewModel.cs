@@ -151,13 +151,6 @@ public class SearchViewModel : ViewModelBase, IDisposable
             resultMapper: (response, _) =>
             {
                 var results = new List<AppSearchResult>();
-                if (response.AppResults != null)
-                {
-                    for (var i = 0; i < response.AppResults.Count; i++)
-                    {
-                        results.Add(SearchResultMapper.CreateUiResult(response.AppResults[i], query, results.Count, isApplication: true, scope: null));
-                    }
-                }
                 if (response.FileResults != null)
                 {
                     for (var i = 0; i < response.FileResults.Count; i++)
