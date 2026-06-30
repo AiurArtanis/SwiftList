@@ -68,6 +68,18 @@ public class PluginManager : PluginRegistry
         PluginSdk.Services.FavoritesService.GetFavoritesFunc = () =>
             UserSettings.Load().Favorites.Select(f => new PluginSdk.Models.FavoriteItem { Name = f.Name, Path = f.Path });
 
+        // Wire up the directory search delegate for plugins using CoreDirectoryIndexManager
+        PluginSdk.Services.DirectoryIndexerService.SearchPluginDirectoriesFunc = async (pluginId, query, token) =>
+        {
+            var results = await CoreDirectoryIndexManager.Instance.SearchPluginDirectoriesAsync(pluginId, query, token).ConfigureAwait(false);
+            return results.Select(r => (PluginSdk.Abstractions.ISearchResult)new SimpleSearchResult
+            {
+                Name = r.Name,
+                FullPath = r.Path,
+                IsDir = r.IsDir
+            }).ToList();
+        };
+
         // Trigger CoreDirectoryIndexManager singleton instantiation to bind SDK DirectoryIndexerService delegates
         _ = CoreDirectoryIndexManager.Instance;
 

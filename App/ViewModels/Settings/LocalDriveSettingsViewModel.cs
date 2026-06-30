@@ -141,7 +141,10 @@ public class LocalDriveSettingsViewModel : ViewModelBase
             DrivesPlaceholderText = TranslationManager.Instance["Local_LoadingPlaceholder"];
         }
         else if (isBusy)
-            IndexSummary = TranslationManager.Instance["Local_Rebuilding"];
+        {
+            var busyState = status.State == "indexing" ? TranslationManager.Instance["Local_StateIndexing"] : TranslationManager.Instance["Local_Rebuilding"];
+            IndexSummary = string.Format(TranslationManager.Instance["Local_SummaryTemplate"], busyState, status.Drives.Count(d => d.Enabled), status.TotalFiles + status.TotalDirs);
+        }
         else
             IndexSummary = string.Format(TranslationManager.Instance["Local_SummaryTemplate"], LocalDriveSettingsHelper.TranslateState(status.State), status.Drives.Count(d => d.Enabled), status.TotalFiles + status.TotalDirs);
     }

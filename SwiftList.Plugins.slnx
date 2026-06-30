@@ -10,4 +10,5 @@
   <Project Path="Plugins/SystemSettings/SystemSettings.csproj" />
   <Project Path="Plugins/ProcessManager/ProcessManager.csproj" />
   <Project Path="Plugins/CustomCommands/CustomCommands.csproj" />
+  <Project Path="Plugins/FileFilters/FileFilters.csproj" />
 </Solution>

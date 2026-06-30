@@ -1,0 +1,67 @@
+using System.Collections.Generic;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
+
+namespace SwiftList.Plugins.FileFilters;
+
+public class FileFiltersPlugin : IPlugin, IConfigurable
+{
+    public string Name => TranslationService.Get("FileFilters_PluginName") ?? "File Filters";
+
+    public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
+    {
+        Fields = new List<PluginConfigField>
+        {
+            new PluginConfigField
+            {
+                Key = "Filters",
+                LabelKey = "FileFilters_Config_FiltersLabel",
+                DescriptionKey = "FileFilters_Config_FiltersDesc",
+                FieldType = ConfigFieldType.Array,
+                DefaultValue = new List<object>(),
+                SubFields = new List<PluginConfigField>
+                {
+                    new PluginConfigField
+                    {
+                        Key = "Enabled",
+                        LabelKey = "FileFilters_Config_EnabledLabel",
+                        FieldType = ConfigFieldType.Boolean,
+                        DefaultValue = true
+                    },
+                    new PluginConfigField
+                    {
+                        Key = "Name",
+                        LabelKey = "FileFilters_Config_NameLabel",
+                        FieldType = ConfigFieldType.Text,
+                        DefaultValue = ""
+                    },
+                    new PluginConfigField
+                    {
+                        Key = "Keyword",
+                        LabelKey = "FileFilters_Config_KeywordLabel",
+                        DescriptionKey = "FileFilters_Config_KeywordDesc",
+                        FieldType = ConfigFieldType.Text,
+                        DefaultValue = ""
+                    },
+                    new PluginConfigField
+                    {
+                        Key = "Folders",
+                        LabelKey = "FileFilters_Config_FoldersLabel",
+                        DescriptionKey = "FileFilters_Config_FoldersDesc",
+                        FieldType = ConfigFieldType.StringList,
+                        DefaultValue = new List<string>()
+                    },
+                    new PluginConfigField
+                    {
+                        Key = "FilterPattern",
+                        LabelKey = "FileFilters_Config_FilterPatternLabel",
+                        DescriptionKey = "FileFilters_Config_FilterPatternDesc",
+                        FieldType = ConfigFieldType.Text,
+                        DefaultValue = "*"
+                    }
+                }
+            }
+        }
+    };
+}

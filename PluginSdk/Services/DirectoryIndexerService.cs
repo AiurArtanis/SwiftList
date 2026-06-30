@@ -18,6 +18,12 @@ public static class DirectoryIndexerService
     public static Action<string>? UnregisterDirectoriesAction { get; set; }
 
     /// <summary>
+    /// Delegate set by the host application to perform target directory search.
+    /// Parameters: (pluginId, query, token)
+    /// </summary>
+    public static Func<string, string, CancellationToken, Task<List<Abstractions.ISearchResult>>>? SearchPluginDirectoriesFunc { get; set; }
+
+    /// <summary>
     /// Event fired when a monitored directory's content changes.
     /// Parameters: (pluginId)
     /// </summary>
@@ -37,4 +43,13 @@ public static class DirectoryIndexerService
     /// Unregisters all directories registered by the specified plugin.
     /// </summary>
     public static void UnregisterDirectories(string pluginId) => UnregisterDirectoriesAction?.Invoke(pluginId);
+
+    /// <summary>
+    /// Searches files within all directories registered by the given plugin.
+    /// </summary>
+    public static async Task<List<Abstractions.ISearchResult>> SearchDirectoriesAsync(string pluginId, string query, CancellationToken token = default)
+    {
+        if (SearchPluginDirectoriesFunc == null) return new List<Abstractions.ISearchResult>();
+        return await SearchPluginDirectoriesFunc(pluginId, query, token);
+    }
 }

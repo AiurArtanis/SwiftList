@@ -1,3 +1,4 @@
+using System.IO;
 using SwiftList.Core;
 using SwiftList.App.Services;
 
@@ -23,8 +24,20 @@ public static class PluginSearchResultMapper
                     if (item == null)
                         continue;
 
+                    // Detect if the result represents a real file or directory to unlock native thumbnail and correct path display
+                    var isRealFile = false;
+                    var isRealDir = false;
+                    var targetPath = item.ActionArgument ?? string.Empty;
+
+                    if (item.ActionType == "Execute" && !string.IsNullOrWhiteSpace(targetPath))
+                    {
+                        if (File.Exists(targetPath)) isRealFile = true;
+                        else if (Directory.Exists(targetPath)) isRealDir = true;
+                    }
+
                     System.Windows.Media.ImageSource? iconOverride = null;
                     var iconPath = "";
+
                     if (!string.IsNullOrWhiteSpace(item.IconData))
                     {
                         if (item.IconData.StartsWith("path:", StringComparison.OrdinalIgnoreCase))
@@ -44,8 +57,9 @@ public static class PluginSearchResultMapper
                             }
                         }
                     }
-                    else
+                    else if (!isRealFile && !isRealDir)
                     {
+                        // Fallback vector icon only for custom textual action results
                         try
                         {
                             iconOverride = ShellIconHelper.CreateVectorIcon("M7 2v11h3v9l7-12h-4l3-8z", "DefaultPluginIconColor");
@@ -53,19 +67,31 @@ public static class PluginSearchResultMapper
                         catch { }
                     }
 
+                    var resultKind = isRealFile ? "File" : (isRealDir ? "Directory" : "InstantResult");
+                    var fullPath = (isRealFile || isRealDir) ? targetPath : (!string.IsNullOrEmpty(iconPath) ? iconPath : $"__INSTANT_RESULT__:{provider.Name}:{item.Title}");
+                    var parentDir = !string.IsNullOrWhiteSpace(item.Description)
+                        ? item.Description
+                        : ((isRealFile || isRealDir) ? Path.GetDirectoryName(targetPath) ?? string.Empty : string.Empty);
+
+                    // If it is a real file, but ShellIconHelper has not cached it yet, request the shell icon dynamically
+                    if ((isRealFile || isRealDir) && iconOverride == null)
+                    {
+                        iconOverride = ShellIconHelper.GetIconForPath(targetPath, isRealDir);
+                    }
+
                     uiResults.Add(new AppSearchResult
                     {
                         Name = item.Title,
-                        FullPath = !string.IsNullOrEmpty(iconPath) ? iconPath : $"__INSTANT_RESULT__:{provider.Name}:{item.Title}",
-                        ParentDir = item.Description,
-                        IsDir = false,
+                        FullPath = fullPath,
+                        ParentDir = parentDir,
+                        IsDir = isRealDir,
                         Drive = string.Empty,
-                        ResultKind = "InstantResult",
+                        ResultKind = resultKind,
                         Index = uiResults.Count,
                         SearchQuery = query,
                         IconOverride = !string.IsNullOrEmpty(iconPath) ? null : iconOverride,
                         InstantResultActionType = item.ActionType ?? "Copy",
-                        InstantResultActionArgument = item.ActionArgument ?? string.Empty,
+                        InstantResultActionArgument = targetPath,
                         TabCompletion = item.TabCompletion,
                         SourceProvider = provider
                     });
