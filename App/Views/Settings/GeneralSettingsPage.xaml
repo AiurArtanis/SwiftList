@@ -13,6 +13,34 @@
                 <ResourceDictionary Source="../../Resources/Styles/SearchWindow.xaml"/>
                 <ResourceDictionary Source="../../Resources/Styles/SettingsWindow.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <Style x:Key="SettingsTextBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="Height" Value="30"/>
+                <Setter Property="Padding" Value="8,0"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TextBox">
+                            <Border x:Name="border" CornerRadius="6" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                                <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="true">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
+                                </Trigger>
+                                <Trigger Property="IsFocused" Value="true">
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -90,6 +118,54 @@
                                   ItemsSource="{Binding General.ThemeOptions}"
                                   DisplayMemberPath="Label"
                                   SelectedItem="{Binding General.SelectedTheme, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource SettingsSectionTitle}" 
+                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutTitle]}"
+                        Margin="0,20,0,4"/>
+            <TextBlock Style="{StaticResource SettingsHintText}" 
+                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutHint]}"/>
+
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutWidth]}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.SearchBarWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                    </Grid>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutHeight]}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.SearchBarHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                    </Grid>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutCornerRadius]}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.SearchWindowCornerRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                    </Grid>
+
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutReset]}"
+                                Command="{Binding General.ResetLayoutCommand}"
+                                Style="{StaticResource SettingsButton}"
+                                Margin="0" HorizontalAlignment="Left"/>
                     </Grid>
                 </StackPanel>
             </Border>

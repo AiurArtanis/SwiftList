@@ -52,6 +52,7 @@ public class UserSettings
         ClickCount = 2
     };
     public string SelectIndexModifier { get; set; } = "Control";
+    public SearchWindowSettings SearchWindow { get; set; } = new();
 
     private static string GetDefaultSystemLanguage()
     {
@@ -251,5 +252,14 @@ public class FavoriteItemSetting
 {
     public string Name { get; set; } = string.Empty;
     public string Path { get; set; } = string.Empty;
+}
+
+public class SearchWindowSettings
+{
+    public double SearchBarWidth { get; set; } = 632;
+    public double SearchBarHeight { get; set; } = 70;
+    public double CornerRadius { get; set; } = 12;
+    public double? Left { get; set; }
+    public double? Top { get; set; }
 }
 

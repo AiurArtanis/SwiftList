@@ -96,8 +96,18 @@ public class QuickSearchWindowController
             : Screen.FromPoint(Control.MousePosition);
 
         var workingArea = screen.WorkingArea;
-        _window.Left = (workingArea.Width * dpiScaleX - _window.Width) / 2 + workingArea.Left * dpiScaleX;
-        _window.Top = workingArea.Height * dpiScaleY * 0.25 + workingArea.Top * dpiScaleY;
+        var settings = UserSettings.Load();
+        var windowWidth = settings.SearchWindow.SearchBarWidth + 48;
+        if (settings.SearchWindow.Left.HasValue && settings.SearchWindow.Top.HasValue)
+        {
+            _window.Left = settings.SearchWindow.Left.Value;
+            _window.Top = settings.SearchWindow.Top.Value;
+        }
+        else
+        {
+            _window.Left = (workingArea.Width * dpiScaleX - windowWidth) / 2 + workingArea.Left * dpiScaleX;
+            _window.Top = workingArea.Height * dpiScaleY * 0.25 + workingArea.Top * dpiScaleY;
+        }
     }
 
     public void ToggleVisibility() => _window.Dispatcher.Invoke(() =>
@@ -124,6 +134,7 @@ public class QuickSearchWindowController
         _window.ViewModel.EnsureServiceMonitoringActive();
 
         _window.ViewModel.SearchQuery = initialQuery ?? string.Empty;
+        _window.ViewModel.RefreshLayoutSettings();
         _window.UpdateLayout();
         _window.Topmost = false;
         _window.Topmost = true;

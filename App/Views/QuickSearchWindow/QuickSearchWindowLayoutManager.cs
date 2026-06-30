@@ -55,7 +55,7 @@ internal sealed class QuickSearchWindowLayoutManager
         }
 
         _window.SizeToContent = SizeToContent.Manual;
-        _window.SizeToContent = SizeToContent.Height;
+        _window.SizeToContent = SizeToContent.WidthAndHeight;
     }
 
     public void QueueResultsLayoutUpdate()
@@ -74,7 +74,7 @@ internal sealed class QuickSearchWindowLayoutManager
 
             UpdateShortcutHints();
             _window.SizeToContent = SizeToContent.Manual;
-            _window.SizeToContent = SizeToContent.Height;
+            _window.SizeToContent = SizeToContent.WidthAndHeight;
         }), DispatcherPriority.ContextIdle);
     }
 

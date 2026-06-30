@@ -7,6 +7,8 @@ namespace SwiftList.App;
 
 public partial class SettingsWindow : Window
 {
+    private int _validationErrorCount;
+
     public SettingsWindow()
     {
         InitializeComponent();
@@ -14,6 +16,20 @@ public partial class SettingsWindow : Window
         DataContext = vm;
         Loaded += (_, _) => { if (LstSections.SelectedItem == null) LstSections.SelectedIndex = 0; };
         Closed += (_, _) => vm.Cleanup();
+        this.AddHandler(Validation.ErrorEvent, new EventHandler<ValidationErrorEventArgs>(OnValidationError));
+    }
+
+    private void OnValidationError(object? sender, ValidationErrorEventArgs e)
+    {
+        if (e.Action == ValidationErrorEventAction.Added)
+            _validationErrorCount++;
+        else
+            _validationErrorCount--;
+
+        if (DataContext is SettingsViewModel vm)
+        {
+            vm.CanApply = _validationErrorCount == 0;
+        }
     }
 
     public void SelectSection(string tag)

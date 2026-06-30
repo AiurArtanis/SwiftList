@@ -19,7 +19,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- Left Icon Grid (Visible only when IsIconOnLeft is True) -->
-            <Grid Grid.Column="0" Margin="0,0,11,0">
+            <Grid Grid.Column="0" Margin="0,0,11,0" VerticalAlignment="Center">
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -100,7 +100,7 @@
             </TextBlock>
 
             <!-- Right Icon Grid (Visible only when IsIconOnLeft is False) -->
-            <Grid Grid.Column="2" Margin="11,0,0,0">
+            <Grid Grid.Column="2" Margin="11,0,0,0" VerticalAlignment="Center">
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="Visibility" Value="Visible"/>

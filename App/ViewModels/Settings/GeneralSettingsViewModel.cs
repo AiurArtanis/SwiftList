@@ -1,3 +1,5 @@
+using System.Windows.Input;
+using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.Core;
 
@@ -259,4 +261,38 @@ public class GeneralSettingsViewModel : ViewModelBase
         "Debug" => "Debug",
         _ => "Info"
     };
+
+    public double SearchBarWidth
+    {
+        get => _userSettings.SearchWindow.SearchBarWidth;
+        set { if (_userSettings.SearchWindow.SearchBarWidth != value) { _userSettings.SearchWindow.SearchBarWidth = value; _userSettings.Save(); OnPropertyChanged(); } }
+    }
+
+    public double SearchBarHeight
+    {
+        get => _userSettings.SearchWindow.SearchBarHeight;
+        set { if (_userSettings.SearchWindow.SearchBarHeight != value) { _userSettings.SearchWindow.SearchBarHeight = value; _userSettings.Save(); OnPropertyChanged(); } }
+    }
+
+    public double SearchWindowCornerRadius
+    {
+        get => _userSettings.SearchWindow.CornerRadius;
+        set { if (_userSettings.SearchWindow.CornerRadius != value) { _userSettings.SearchWindow.CornerRadius = value; _userSettings.Save(); OnPropertyChanged(); } }
+    }
+
+    public ICommand ResetLayoutCommand => new RelayCommand(ResetLayout);
+
+    private void ResetLayout()
+    {
+        _userSettings.SearchWindow.SearchBarWidth = 632;
+        _userSettings.SearchWindow.SearchBarHeight = 70;
+        _userSettings.SearchWindow.CornerRadius = 12;
+        _userSettings.SearchWindow.Left = null;
+        _userSettings.SearchWindow.Top = null;
+        _userSettings.Save();
+
+        OnPropertyChanged(nameof(SearchBarWidth));
+        OnPropertyChanged(nameof(SearchBarHeight));
+        OnPropertyChanged(nameof(SearchWindowCornerRadius));
+    }
 }

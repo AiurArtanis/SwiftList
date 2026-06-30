@@ -4,7 +4,7 @@
         xmlns:local="clr-namespace:SwiftList.App"
         xmlns:services="clr-namespace:SwiftList.App.Services"
         Title="SwiftList"
-        Width="680" SizeToContent="Height"
+        SizeToContent="WidthAndHeight"
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="NoResize"
@@ -53,13 +53,14 @@
     </Window.Resources>
 
     <Grid>
-        <Border Margin="24,40,24,24" CornerRadius="12" Background="{DynamicResource CardBackground}"
-                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1">
+        <Border Margin="24,40,24,24" CornerRadius="{Binding WindowCornerRadius}" Background="{DynamicResource CardBackground}"
+                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
+                MouseLeftButtonDown="Border_MouseLeftButtonDown">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="32" ShadowDepth="4" Opacity="0.25" Color="{DynamicResource ShadowColor}"/>
             </Border.Effect>
 
-            <Border CornerRadius="11" ClipToBounds="True">
+            <Border CornerRadius="{Binding InnerCornerRadius}" ClipToBounds="True">
                 <Grid>
             <Grid.RowDefinitions>
                 <!-- Search bar -->
@@ -73,7 +74,7 @@
             </Grid.RowDefinitions>
 
             <!-- ═══════════ 1. Search Bar ═══════════ -->
-            <local:SearchBoxControl x:Name="SearchBox" Grid.Row="0" SearchText="{Binding SearchQuery, Mode=TwoWay}"/>
+            <local:SearchBoxControl x:Name="SearchBox" Grid.Row="0" SearchText="{Binding SearchQuery, Mode=TwoWay}" Width="{Binding SearchBarWidth}" Height="{Binding SearchBarHeight}"/>
 
             <!-- ═══════════ 2. Separator ═══════════ -->
             <Rectangle x:Name="ResultsSeparator"

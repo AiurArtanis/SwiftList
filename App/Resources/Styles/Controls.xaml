@@ -217,5 +217,29 @@
         </Setter>
     </Style>
 
+    <!-- Global implicit TextBox style to styled ContextMenu & ErrorTemplate -->
+    <Style TargetType="TextBox">
+        <Setter Property="ContextMenu">
+            <Setter.Value>
+                <ContextMenu>
+                    <MenuItem Command="ApplicationCommands.Cut"/>
+                    <MenuItem Command="ApplicationCommands.Copy"/>
+                    <MenuItem Command="ApplicationCommands.Paste"/>
+                </ContextMenu>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Validation.ErrorTemplate">
+            <Setter.Value>
+                <ControlTemplate>
+                    <DockPanel>
+                        <Border BorderBrush="{DynamicResource ErrorBrush}" BorderThickness="1.5" CornerRadius="6">
+                            <AdornedElementPlaceholder/>
+                        </Border>
+                    </DockPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>
 

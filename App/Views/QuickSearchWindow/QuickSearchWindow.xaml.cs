@@ -176,6 +176,18 @@ public partial class QuickSearchWindow : Window, ISearchWindow
 
                                                                         }), DispatcherPriority.Background);
 
+    private void Border_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+        {
+            this.DragMove();
+            var settings = UserSettings.Load();
+            settings.SearchWindow.Left = this.Left;
+            settings.SearchWindow.Top = this.Top;
+            settings.Save();
+        }
+    }
+
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e) => _inputHandler.HandleWindowPreviewKeyDown(e);
 
     private void BtnOpenMore_Click(object sender, RoutedEventArgs e) => FileExecutor.OpenFileOrFolder("__SHOW_MORE__", TxtSearch.Text, HideWindowNoRestore);
