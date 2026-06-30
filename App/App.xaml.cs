@@ -126,6 +126,7 @@ public partial class App : Application
         // Force load all plugins (actions and alias providers) on startup
 
         _ = PluginManager.Instance;
+        ViewModels.Search.SearchableItemMapper.Preload();
 
         // Now that all plugins are loaded, initialize translations.
 

@@ -12,6 +12,14 @@ public static class SearchableItemMapper
     private static readonly ConcurrentDictionary<string, Task> _loadingTasks = new();
     private static readonly ConcurrentDictionary<string, bool> _subscribed = new();
 
+    public static void Preload()
+    {
+        foreach (var provider in PluginManager.Instance.SearchableItemProviders)
+        {
+            EnsureLoaded(provider);
+        }
+    }
+
     public static void AddSearchableItemResults(List<AppSearchResult> uiResults, string query, bool isInlineWindow)
     {
         if (isInlineWindow) return;
