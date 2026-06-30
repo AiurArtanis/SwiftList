@@ -83,4 +83,62 @@ public interface ITheme
     ResourceDictionary GetResources();
     double WindowOpacity => 1.0;
 }
+
+---
+
+## 6. SDK 共享系统服务 {#sdk-services}
+SDK 提供了一组静态服务类与助手包装器。插件可以调用这些服务与宿主系统进行通信、注册监听目录、读取全局配置、检索收藏夹或访问历史记录。
+
+### 6.1 `DirectoryIndexerService` (托管目录索引服务)
+允许插件注册自定义文件夹路径，由主程序进行统一的后台索引维护与实时的文件变化（USN/FileSystemWatcher）监听。
+
+```csharp
+public static class DirectoryIndexerService
+{
+    // 托管的索引目录内容发生变更时触发的事件
+    public static event Action<string>? DirectoryChanged;
+
+    // 向主程序注册一个待监控和索引的文件夹目录
+    public static void RegisterDirectory(string pluginId, string directoryPath, bool recursive = true, string filterPattern = "*");
+
+    // 取消注册该插件名下的所有监控文件夹目录
+    public static void UnregisterDirectories(string pluginId);
+
+    // 对该插件名下注册的托管目录执行特定词匹配的文件检索
+    public static Task<List<ISearchResult>> SearchDirectoriesAsync(string pluginId, string query, CancellationToken token = default);
+}
+```
+
+### 6.2 `PluginSettingsService` (插件配置读取服务)
+提供对用户在设置面板中为该插件保存的自定义表单数据的只读访问。
+
+```csharp
+public static class PluginSettingsService
+{
+    // 读取指定键的配置，并自动反序列化为对应的强类型对象
+    public static T GetSetting<T>(string pluginId, string key, T defaultValue);
+}
+```
+
+### 6.3 `FavoritesService` (系统收藏夹服务)
+向插件暴露用户在 SwiftList 中收藏的所有快捷文件夹与文件列表。
+
+```csharp
+public static class FavoritesService
+{
+    // 获取全局收藏夹目录数据的方法委托
+    public static Func<IEnumerable<FavoriteItem>>? GetFavoritesFunc { get; set; }
+}
+```
+
+### 6.4 `HistoryService` (历史记录服务)
+允许插件读取用户的历史打开记录，以便于做匹配项相关性分值上下文提权。
+
+```csharp
+public static class HistoryService
+{
+    // 获取用户最近打开历史文件的委托方法
+    public static Func<IEnumerable<string>>? GetHistoryPathsFunc { get; set; }
+}
+```
 ```

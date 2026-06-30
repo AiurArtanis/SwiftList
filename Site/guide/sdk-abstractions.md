@@ -79,4 +79,61 @@ public interface ITheme
     ResourceDictionary GetResources();
     double WindowOpacity => 1.0;
 }
+
+---
+
+## 6. Shared SDK Services {#sdk-services}
+The SDK provides a collection of static service classes helper wrappers that plugins can invoke to interact with the host system, query user directories, get system favorites, or access history.
+
+### 6.1 `DirectoryIndexerService` (Managed Indexer)
+Allows plugins to register custom directories for automatic background indexing and real-time USN / file system monitoring.
+
+```csharp
+public static class DirectoryIndexerService
+{
+    // Event triggered when indexed directory content changes
+    public static event Action<string>? DirectoryChanged;
+
+    // Registers a directory to be indexed and monitored
+    public static void RegisterDirectory(string pluginId, string directoryPath, bool recursive = true, string filterPattern = "*");
+
+    // Unregisters all directories registered by a plugin
+    public static void UnregisterDirectories(string pluginId);
+
+    // Queries files in registered directories of a plugin
+    public static Task<List<ISearchResult>> SearchDirectoriesAsync(string pluginId, string query, CancellationToken token = default);
+}
+```
+
+### 6.2 `PluginSettingsService` (Settings Access)
+Provides read-only access to custom fields defined by the plugin in the main settings window.
+
+```csharp
+public static class PluginSettingsService
+{
+    // Fetches settings value deserialized dynamically
+    public static T GetSetting<T>(string pluginId, string key, T defaultValue);
+}
+```
+
+### 6.3 `FavoritesService` (System Favorites)
+Exposes the favorite items configured by the user in the core app.
+
+```csharp
+public static class FavoritesService
+{
+    // Retrieves user favorite directory listings
+    public static Func<IEnumerable<FavoriteItem>>? GetFavoritesFunc { get; set; }
+}
+```
+
+### 6.4 `HistoryService` (Search History)
+Allows plugins to check historical run paths for context prioritization.
+
+```csharp
+public static class HistoryService
+{
+    // Retrieves list of recently ran items
+    public static Func<IEnumerable<string>>? GetHistoryPathsFunc { get; set; }
+}
 ```
