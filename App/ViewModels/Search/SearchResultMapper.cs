@@ -1,6 +1,5 @@
 using System.IO;
 using SwiftList.Core;
-using SwiftList.PluginSdk.Helpers;
 
 namespace SwiftList.App.ViewModels.Search;
 
@@ -49,37 +48,8 @@ public static class SearchResultMapper
 
         if (fileResults != null)
         {
-            var existingPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var r in uiResults)
-            {
-                var normPath = SearchResultHelper.NormalizePath(r.FullPath);
-                existingPaths.Add(normPath);
-
-                if (normPath.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
-                {
-                    var target = StartMenuShortcutResolver.ResolveShortcutTarget(normPath);
-                    if (!string.IsNullOrEmpty(target))
-                    {
-                        existingPaths.Add(SearchResultHelper.NormalizePath(target));
-                    }
-                }
-            }
-
-            fileResults.RemoveAll(r =>
-            {
-                var normPath = SearchResultHelper.NormalizePath(r.Path);
-                if (existingPaths.Contains(normPath))
-                    return true;
-
-                if (normPath.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
-                {
-                    var target = StartMenuShortcutResolver.ResolveShortcutTarget(normPath);
-                    if (!string.IsNullOrEmpty(target) && existingPaths.Contains(SearchResultHelper.NormalizePath(target)))
-                        return true;
-                }
-
-                return false;
-            });
+            var existingPaths = new HashSet<string>(uiResults.Select(r => SearchResultHelper.NormalizePath(r.FullPath)), StringComparer.OrdinalIgnoreCase);
+            fileResults.RemoveAll(r => existingPaths.Contains(SearchResultHelper.NormalizePath(r.Path)));
         }
 
         var fileResultsCount = fileResults != null ? fileResults.Count : 0;
