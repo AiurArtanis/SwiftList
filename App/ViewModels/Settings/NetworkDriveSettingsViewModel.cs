@@ -5,7 +5,9 @@ using SwiftList.App.Helpers;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.NetworkDrive;
 using SwiftList.App.Services;
+
 namespace SwiftList.App.ViewModels.Settings;
+
 public class NetworkDriveSettingsViewModel : ViewModelBase
 {
     private readonly SearchService _searchService;
@@ -20,6 +22,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
     private bool _hasPendingEdits;
     private bool _canEditRefreshModes = true;
     private bool _isBusy;
+
     public NetworkDriveSettingsViewModel(SearchService searchService, UserSettings userSettings, Action onTriggerFastRefresh)
     {
         _searchService = searchService;
@@ -38,6 +41,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
     }
 
     public ObservableCollection<NetworkDriveSettingsItem> NetworkDrives { get; } = new();
+
     public bool HasPendingEdits
     {
         get => _hasPendingEdits;
@@ -59,6 +63,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
     };
 
     public ICommand RebuildCommand { get; }
+
     public string IndexSummary
     {
         get => _indexSummary;
@@ -121,7 +126,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
                     item.IsEnabled = false;
                 TrackPendingRebuild(letter, indexStatus?.State);
 
-                item.State = drive == null ? TranslationManager.Instance["Network_StatusUnavailable"] : GetStateText(drive, indexStatus);
+                item.State = drive == null ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(drive, indexStatus);
                 item.ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-";
                 UpdateRowAction(item);
             }
@@ -146,9 +151,9 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
                     IsPresent = drive != null,
                     IsEnabled = drive != null && saved != null,
                     AppliedEnabled = drive != null && saved != null,
-                    State = drive == null ? TranslationManager.Instance["Network_StatusUnavailable"] : GetStateText(drive, indexStatus),
+                    State = drive == null ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(drive, indexStatus),
                     ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-",
-                    RefreshMode = NormalizeRefreshMode(saved?.RefreshMode)
+                    RefreshMode = NetworkDriveSettingsHelper.NormalizeRefreshMode(saved?.RefreshMode)
                 };
                 item.RowActionCommand = new RelayCommand(() => RunDriveAction(item), () => item.CanRunRowAction);
                 TrackPendingRebuild(letter, indexStatus?.State);
@@ -258,33 +263,10 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
             HasPendingEdits = true;
         }
     }
+
     private void UpdateRowAction(NetworkDriveSettingsItem item) => item.RowAction = item.AppliedEnabled
             ? NetworkDriveRowAction.Rebuild
             : _searchService.HasNetworkDriveCache(item.Drive) ? NetworkDriveRowAction.Delete : NetworkDriveRowAction.None;
-
-    private static string GetStateText(ResolvedNetworkDrive drive, NetworkIndexStatus? indexStatus)
-    {
-        if (!drive.IsReady)
-            return TranslationManager.Instance["Network_StatusUnavailable"];
-
-        return indexStatus?.State switch
-        {
-            "indexing" => TranslationManager.Instance["Network_StatusIndexing"],
-            "ready" => TranslationManager.Instance["Network_StatusReady"],
-            "cached" => TranslationManager.Instance["Network_StatusCached"],
-            "error" => TranslationManager.Instance["Network_StatusError"],
-            "pending" => TranslationManager.Instance["Network_StatusPending"],
-            _ => TranslationManager.Instance["Network_StatusConnected"]
-        };
-    }
-
-    private static string NormalizeRefreshMode(string? refreshMode) => refreshMode switch
-    {
-        "15Minutes" => "15Minutes",
-        "Hourly" => "Hourly",
-        "Daily" => "Daily",
-        _ => "Manual"
-    };
 
     private void TrackPendingRebuild(string drive, string? state)
     {
@@ -301,9 +283,4 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
             _observedRowRebuilds.Remove(drive);
         }
     }
-}
-
-public sealed record RefreshModeOption(string Value, string Label)
-{
-    public override string ToString() => Label;
 }

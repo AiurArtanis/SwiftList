@@ -6,6 +6,7 @@ using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
+
 namespace SwiftList.App.ViewModels.Settings;
 
 public class LocalDriveSettingsViewModel : ViewModelBase
@@ -19,6 +20,7 @@ public class LocalDriveSettingsViewModel : ViewModelBase
     private bool _isLocalDrivesEmpty = false;
     private string _drivesPlaceholderText = "";
     private bool _isBusy;
+    private bool _isDriveCheckboxEnabled;
 
     public LocalDriveSettingsViewModel(SearchService searchService, Action onTriggerFastRefresh)
     {
@@ -39,7 +41,6 @@ public class LocalDriveSettingsViewModel : ViewModelBase
     public bool CanRebuild
     {
         get => _canRebuild;
-
         set
         {
             if (SetProperty(ref _canRebuild, value))
@@ -60,7 +61,6 @@ public class LocalDriveSettingsViewModel : ViewModelBase
     }
 
     public bool IsUserAdmin => UpdateService.Instance.IsUserAdmin();
-    private bool _isDriveCheckboxEnabled;
 
     public bool IsDriveCheckboxEnabled
     {
@@ -71,9 +71,7 @@ public class LocalDriveSettingsViewModel : ViewModelBase
     public void UpdateStatus(UsnIndexer.IndexerStatus status, MachineSettings settings)
     {
         var enabled = settings.LocalDrives.Count == 0
-
             ? null
-
             : settings.LocalDrives.ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var drive in status.Drives.OrderBy(d => d.Drive))
         {
@@ -106,7 +104,7 @@ public class LocalDriveSettingsViewModel : ViewModelBase
             item.CachePath = drive.CachePath;
             item.Kind = drive.Kind == "LocalNtfs" ? TranslationManager.Instance["Local_KindLocalNtfs"] : drive.Kind;
             item.Strategy = appliedEnabled ? TranslationManager.Instance["Local_StrategyMftUsn"] : TranslationManager.Instance["Local_StrategyDisabled"];
-            item.State = TranslateState(drive.State);
+            item.State = LocalDriveSettingsHelper.TranslateState(drive.State);
             item.ItemCount = appliedEnabled && drive.Files + drive.Dirs > 0 ? $"{drive.Files + drive.Dirs:N0}" : "-";
         }
 
@@ -137,17 +135,15 @@ public class LocalDriveSettingsViewModel : ViewModelBase
             IndexSummary = TranslationManager.Instance["Local_ErrorDisconnected"];
             DrivesPlaceholderText = TranslationManager.Instance["Local_ErrorPlaceholder"];
         }
-
         else if (LocalDrives.Count == 0)
         {
             IndexSummary = TranslationManager.Instance["Local_LoadingInfo"];
             DrivesPlaceholderText = TranslationManager.Instance["Local_LoadingPlaceholder"];
         }
-
         else if (isBusy)
             IndexSummary = TranslationManager.Instance["Local_Rebuilding"];
         else
-            IndexSummary = string.Format(TranslationManager.Instance["Local_SummaryTemplate"], TranslateState(status.State), status.Drives.Count(d => d.Enabled), status.TotalFiles + status.TotalDirs);
+            IndexSummary = string.Format(TranslationManager.Instance["Local_SummaryTemplate"], LocalDriveSettingsHelper.TranslateState(status.State), status.Drives.Count(d => d.Enabled), status.TotalFiles + status.TotalDirs);
     }
 
     private async void Rebuild()
@@ -224,21 +220,6 @@ public class LocalDriveSettingsViewModel : ViewModelBase
             (drive.CanRunRowAction, drive.CanEditEnabled) = (!isBusy && drive.CanRunRowAction, !isBusy && drive.CanEditEnabled);
     }
 
-    private static string TranslateState(string state) => state switch
-    {
-        "ready" => TranslationManager.Instance["Local_StateReady"],
-        "indexing" => TranslationManager.Instance["Local_StateIndexing"],
-        "loading-cache" => TranslationManager.Instance["Local_StateLoadingCache"],
-        "pending" => TranslationManager.Instance["Local_StatePending"],
-        "disabled" => TranslationManager.Instance["Local_StateDisabled"],
-        "unavailable" => TranslationManager.Instance["Local_DriveUnavailable"],
-        "failed" => TranslationManager.Instance["Local_StateFailed"],
-        "error" => TranslationManager.Instance["Local_StateError"],
-        "idle" => TranslationManager.Instance["Local_StateIdle"],
-        _ => state
-
-    };
-
     private void TrackPendingRebuild(UsnIndexer.DriveIndexStatus drive)
     {
         if (!_pendingRowRebuilds.Contains(drive.Drive))
@@ -259,62 +240,4 @@ public class LocalDriveSettingsViewModel : ViewModelBase
             _observedRowRebuilds.Remove(drive.Drive);
         }
     }
-}
-
-public class LocalDriveSettingsItem : ViewModelBase
-{
-    private bool _isEnabled;
-    private string _kind = string.Empty;
-    private string _strategy = string.Empty;
-    private string _state = string.Empty;
-    private string _itemCount = string.Empty;
-    private bool _canRunRowAction;
-    private bool _canEditEnabled;
-    private LocalDriveRowAction _rowAction;
-    public string Drive { get; set; } = string.Empty;
-    public string Id { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string CachePath { get; set; } = string.Empty;
-    public ICommand RowActionCommand { get; set; } = null!;
-
-    public bool IsEnabled { get => _isEnabled; set => SetProperty(ref _isEnabled, value); }
-    public string Kind { get => _kind; set => SetProperty(ref _kind, value); }
-    public string Strategy { get => _strategy; set => SetProperty(ref _strategy, value); }
-    public string State { get => _state; set => SetProperty(ref _state, value); }
-    public string ItemCount { get => _itemCount; set => SetProperty(ref _itemCount, value); }
-    public bool CanEditEnabled { get => _canEditEnabled; set => SetProperty(ref _canEditEnabled, value); }
-    public bool CanRunRowAction
-    {
-        get => _canRunRowAction;
-        set
-        {
-            if (SetProperty(ref _canRunRowAction, value))
-                CommandManager.InvalidateRequerySuggested();
-        }
-    }
-    public LocalDriveRowAction RowAction
-    {
-        get => _rowAction;
-        set
-        {
-            if (!SetProperty(ref _rowAction, value))
-                return;
-            OnPropertyChanged(nameof(IsRowActionVisible));
-            OnPropertyChanged(nameof(RowActionText));
-        }
-    }
-    public bool IsRowActionVisible => RowAction != LocalDriveRowAction.None;
-    public string RowActionText => RowAction switch
-    {
-        LocalDriveRowAction.Rebuild => TranslationManager.Instance["Local_RowRebuildBtn"],
-        LocalDriveRowAction.Delete => TranslationManager.Instance["Local_RowDeleteBtn"],
-        _ => string.Empty
-    };
-}
-
-public enum LocalDriveRowAction
-{
-    None,
-    Rebuild,
-    Delete
 }

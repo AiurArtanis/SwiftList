@@ -1,6 +1,5 @@
 using System.IO;
 using SwiftList.Core;
-using SwiftList.App.Services;
 
 namespace SwiftList.App.ViewModels.Search;
 
@@ -21,8 +20,8 @@ public static class SearchResultMapper
                 var trimmed = query.Trim();
                 if (trimmed.EndsWith(":\\") || trimmed.EndsWith(":/") || Directory.Exists(trimmed))
                 {
-                    var normalizedQuery = NormalizePath(trimmed);
-                    fileResults.RemoveAll(x => string.Equals(NormalizePath(x.Path), normalizedQuery, StringComparison.OrdinalIgnoreCase));
+                    var normalizedQuery = SearchResultHelper.NormalizePath(trimmed);
+                    fileResults.RemoveAll(x => string.Equals(SearchResultHelper.NormalizePath(x.Path), normalizedQuery, StringComparison.OrdinalIgnoreCase));
                 }
             }
             catch { }
@@ -40,11 +39,11 @@ public static class SearchResultMapper
             appResults = new List<SearchResult>();
             if (fileResults != null)
             {
-                var normalizedScope = NormalizePath(scope);
+                var normalizedScope = SearchResultHelper.NormalizePath(scope);
                 fileResults = fileResults.FindAll(x =>
                 {
-                    var normalizedPath = NormalizePath(x.Path);
-                    return IsPathInsideScope(normalizedPath, normalizedScope)
+                    var normalizedPath = SearchResultHelper.NormalizePath(x.Path);
+                    return SearchResultHelper.IsPathInsideScope(normalizedPath, normalizedScope)
                         && !string.Equals(normalizedPath, normalizedScope, StringComparison.OrdinalIgnoreCase);
                 });
             }
@@ -66,7 +65,7 @@ public static class SearchResultMapper
         var appLimit = Math.Min(appResults.Count, Math.Max(0, 5 - uiResults.Count));
         for (var i = 0; i < appLimit; i++)
         {
-            uiResults.Add(CreateUiResult(appResults[i], query, uiResults.Count, isApplication: true, scope));
+            uiResults.Add(SearchResultHelper.CreateUiResult(appResults[i], query, uiResults.Count, isApplication: true, scope));
         }
 
         var hasMoreApps = appResults.Count > appLimit;
@@ -76,7 +75,7 @@ public static class SearchResultMapper
         {
             for (var i = 0; i < fileResultsCount; i++)
             {
-                uiResults.Add(CreateUiResult(fileResults[i], query, uiResults.Count, isApplication: false, scope));
+                uiResults.Add(SearchResultHelper.CreateUiResult(fileResults[i], query, uiResults.Count, isApplication: false, scope));
             }
 
             return uiResults;
@@ -87,13 +86,13 @@ public static class SearchResultMapper
         {
             for (var i = 0; i < firstFileCount; i++)
             {
-                uiResults.Add(CreateUiResult(fileResults[i], query, uiResults.Count, isApplication: false, scope));
+                uiResults.Add(SearchResultHelper.CreateUiResult(fileResults[i], query, uiResults.Count, isApplication: false, scope));
             }
         }
 
         if (!hasInstantResults)
         {
-            AddShowMoreResult(uiResults, query);
+            SearchResultHelper.AddShowMoreResult(uiResults, query);
         }
 
         var hasMoreAtEnd = fileResultsCount > 50;
@@ -105,14 +104,14 @@ public static class SearchResultMapper
             {
                 if (i >= firstFileCount)
                 {
-                    uiResults.Add(CreateUiResult(fileResults[i], query, uiResults.Count, isApplication: false, scope));
+                    uiResults.Add(SearchResultHelper.CreateUiResult(fileResults[i], query, uiResults.Count, isApplication: false, scope));
                 }
             }
         }
 
         if (hasMoreAtEnd && !hasInstantResults)
         {
-            AddShowMoreResult(uiResults, query);
+            SearchResultHelper.AddShowMoreResult(uiResults, query);
         }
 
         return uiResults;
@@ -156,7 +155,7 @@ public static class SearchResultMapper
                     {
                         Favorite = fav,
                         Priority = priority,
-                        NormalizedPath = NormalizePath(fav.Path)
+                        NormalizedPath = SearchResultHelper.NormalizePath(fav.Path)
                     });
                 }
             }
@@ -172,7 +171,7 @@ public static class SearchResultMapper
                     Result = result,
                     IsApplication = true,
                     Priority = priority,
-                    NormalizedPath = NormalizePath(result.Path)
+                    NormalizedPath = SearchResultHelper.NormalizePath(result.Path)
                 });
             }
         }
@@ -189,7 +188,7 @@ public static class SearchResultMapper
                         Result = result,
                         IsApplication = false,
                         Priority = priority,
-                        NormalizedPath = NormalizePath(result.Path)
+                        NormalizedPath = SearchResultHelper.NormalizePath(result.Path)
                     });
                 }
             }
@@ -216,17 +215,17 @@ public static class SearchResultMapper
             }
             else if (candidate.Result != null)
             {
-                uiResults.Add(CreateUiResult(candidate.Result, query, uiResults.Count, candidate.IsApplication, scope));
+                uiResults.Add(SearchResultHelper.CreateUiResult(candidate.Result, query, uiResults.Count, candidate.IsApplication, scope));
             }
 
             // Remove any duplicates from appResults and fileResults
-            var matchedApp = appResults.FirstOrDefault(r => NormalizePath(r.Path).Equals(candidate.NormalizedPath, StringComparison.OrdinalIgnoreCase));
+            var matchedApp = appResults.FirstOrDefault(r => SearchResultHelper.NormalizePath(r.Path).Equals(candidate.NormalizedPath, StringComparison.OrdinalIgnoreCase));
             if (matchedApp != null)
             {
                 appResults.Remove(matchedApp);
             }
 
-            var matchedFile = fileResults?.FirstOrDefault(r => NormalizePath(r.Path).Equals(candidate.NormalizedPath, StringComparison.OrdinalIgnoreCase));
+            var matchedFile = fileResults?.FirstOrDefault(r => SearchResultHelper.NormalizePath(r.Path).Equals(candidate.NormalizedPath, StringComparison.OrdinalIgnoreCase));
             if (matchedFile != null && fileResults != null)
             {
                 fileResults.Remove(matchedFile);
@@ -234,107 +233,15 @@ public static class SearchResultMapper
         }
     }
 
-    public static void AddSectionHeader(List<AppSearchResult> uiResults, string title, string query) => uiResults.Add(new AppSearchResult
-    {
-        Name = title,
-        FullPath = "__SECTION_HEADER__",
-        ParentDir = string.Empty,
-        IsDir = false,
-        Drive = string.Empty,
-        ResultKind = "SectionHeader",
-        Index = uiResults.Count,
-        SearchQuery = query
-    });
-
     public static AppSearchResult CreateUiResult(SearchResult item, string query, int index, bool isApplication, string? scope)
-    {
-        var parentDir = Path.GetDirectoryName(item.Path);
-        return new AppSearchResult
-        {
-            Name = string.IsNullOrWhiteSpace(item.Name) ? item.Path : item.Name,
-            FullPath = item.Path,
-            ParentDir = GetParentDisplayText(item, isApplication, scope),
-            ContextDirectory = item.IsDir ? item.Path : (parentDir ?? item.Drive + ":\\"),
-            IsDir = item.IsDir,
-            Drive = item.Drive.ToString(),
-            ResultKind = isApplication ? "Application" : "File",
-            Index = index,
-            SearchQuery = query
-        };
-    }
+        => SearchResultHelper.CreateUiResult(item, query, index, isApplication, scope);
 
-    public static AppSearchResult CreateNoResultsResult(string query) => new AppSearchResult
-    {
-        Name = TranslationManager.Instance["Search_NoResult"],
-        FullPath = "__NO_RESULTS__",
-        ParentDir = string.Empty,
-        IsDir = false,
-        Drive = string.Empty,
-        ResultKind = "Empty",
-        Index = 0,
-        SearchQuery = string.Empty
-    };
-
-    public static string GetParentDisplayText(SearchResult item, bool isApplication, string? scope)
-    {
-        var parentDir = Path.GetDirectoryName(item.Path);
-        if (isApplication)
-        {
-            return string.IsNullOrWhiteSpace(parentDir)
-                ? TranslationManager.Instance["Search_ResultApp"]
-                : string.Format(TranslationManager.Instance["Search_ResultAppDir"], parentDir);
-        }
-
-        if (!string.IsNullOrWhiteSpace(scope) && !string.IsNullOrWhiteSpace(parentDir))
-        {
-            return FormatRelativeParentPath(parentDir, scope);
-        }
-
-        return parentDir ?? string.Empty;
-    }
-
-    public static string FormatRelativeParentPath(string parentDir, string scope)
-    {
-        var relativePath = Path.GetRelativePath(scope, parentDir);
-        if (string.IsNullOrWhiteSpace(relativePath) || relativePath == ".")
-        {
-            return string.Empty;
-        }
-
-        return relativePath.StartsWith(".\\", StringComparison.Ordinal)
-            ? relativePath[2..]
-            : relativePath;
-    }
-
-    public static string NormalizePath(string path) => Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-    public static bool IsPathInsideScope(string normalizedPath, string normalizedScope) => normalizedPath.StartsWith(normalizedScope + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-            || normalizedPath.StartsWith(normalizedScope + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
-
-    public static void AddShowMoreResult(List<AppSearchResult> uiResults, string query) => uiResults.Add(new AppSearchResult
-    {
-        Name = string.Format(TranslationManager.Instance["Search_ShowMoreTitle"], query),
-        FullPath = "__SHOW_MORE__",
-        ParentDir = TranslationManager.Instance["Search_ShowMoreDesc"],
-        IsDir = false,
-        Drive = "",
-        ResultKind = "Action",
-        Index = uiResults.Count,
-        SearchQuery = query
-    });
+    public static AppSearchResult CreateNoResultsResult(string query)
+        => SearchResultHelper.CreateNoResultsResult(query);
 
     public static string FormatSearchStatus(int appCount, int fileCount)
-    {
-        if (appCount > 0 && fileCount > 0)
-        {
-            return string.Format(TranslationManager.Instance["Search_StatsAppsAndFiles"], appCount, fileCount);
-        }
+        => SearchResultHelper.FormatSearchStatus(appCount, fileCount);
 
-        if (appCount > 0)
-        {
-            return string.Format(TranslationManager.Instance["Search_StatsAppsOnly"], appCount);
-        }
-
-        return string.Format(TranslationManager.Instance["Search_StatsFilesOnly"], fileCount);
-    }
+    public static void AddSectionHeader(List<AppSearchResult> uiResults, string title, string query)
+        => SearchResultHelper.AddSectionHeader(uiResults, title, query);
 }

@@ -226,13 +226,7 @@ public class ServiceConnectionHandler : IDisposable
         });
     }
 
-    private static bool RequiresDetailedStatus()
-    {
-        lock (GlobalMonitorLock)
-        {
-            return ActiveSubscribers.Any(subscriber => subscriber._needsDetailedStatus);
-        }
-    }
+    private static bool RequiresDetailedStatus() { lock (GlobalMonitorLock) return ActiveSubscribers.Any(s => s._needsDetailedStatus); }
 
     private void ProcessStatus(UsnIndexer.IndexerStatus status)
     {
@@ -292,13 +286,8 @@ public class ServiceConnectionHandler : IDisposable
 
     private static void NotifySubscribers(Action<ServiceConnectionHandler> action)
     {
-        ServiceConnectionHandler[] subscribers;
-        lock (GlobalMonitorLock)
-        {
-            subscribers = ActiveSubscribers.ToArray();
-        }
-
-        foreach (var subscriber in subscribers)
-            action(subscriber);
+        ServiceConnectionHandler[] subs;
+        lock (GlobalMonitorLock) subs = ActiveSubscribers.ToArray();
+        foreach (var sub in subs) action(sub);
     }
 }

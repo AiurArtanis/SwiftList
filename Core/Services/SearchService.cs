@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using SwiftList.Core.Indexer.Usn;
 using SwiftList.Core.Indexer.NetworkDrive;
+
 namespace SwiftList.Core;
 
 public class SearchService : IDisposable
@@ -33,12 +34,13 @@ public class SearchService : IDisposable
         var exclusionRules = ExclusionRuleSet.From(UserSettings.Load());
         var fileCandidateLimit = Math.Clamp(maxResults * 4, maxResults, 2000);
 
+        var isSearchDir = !string.IsNullOrEmpty(directoryFilter);
         var msg = new SearchRequestMessage
         {
-            Id = !string.IsNullOrEmpty(directoryFilter) ? SearchRequestId.SearchDir : SearchRequestId.Search,
+            Id = isSearchDir ? SearchRequestId.SearchDir : SearchRequestId.Search,
             Limit = fileCandidateLimit,
             AppLimit = maxAppResults,
-            DirectoryFilter = directoryFilter,
+            DirectoryFilter = isSearchDir ? directoryFilter : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             Query = query,
             DisabledAliasComponents = UserSettings.Load().DisabledPluginComponents
                 .Where(c => c.Contains("::AliasProvider::", StringComparison.OrdinalIgnoreCase))
@@ -107,7 +109,7 @@ public class SearchService : IDisposable
         {
             try
             {
-                return SearchNetworkDrives(query, fileCandidateLimit, directoryFilter, exclusionRules, uniqueOnResult, token);
+                return SearchServiceHelper.SearchNetworkDrives(query, fileCandidateLimit, directoryFilter, exclusionRules, uniqueOnResult, token);
             }
             catch (OperationCanceledException)
             {
@@ -127,14 +129,14 @@ public class SearchService : IDisposable
         if (parsed.IsPathMode && !string.IsNullOrEmpty(parsed.ExactPathLower))
         {
             var resolved = LiveDirectorySearcher.ResolvePathModeSearch(parsed.ExactPathLower);
-            if (!string.IsNullOrEmpty(resolved.DirectoryToScan) && CheckNeedsLiveSearch(resolved.DirectoryToScan, exclusionRules))
+            if (!string.IsNullOrEmpty(resolved.DirectoryToScan) && SearchServiceHelper.CheckNeedsLiveSearch(resolved.DirectoryToScan, exclusionRules))
             {
                 needsLiveSearch = true;
                 liveScanDir = resolved.DirectoryToScan;
                 liveScanFilter = resolved.FilterQuery;
             }
         }
-        else if (!string.IsNullOrEmpty(directoryFilter) && Directory.Exists(directoryFilter) && CheckNeedsLiveSearch(directoryFilter, exclusionRules))
+        else if (!string.IsNullOrEmpty(directoryFilter) && Directory.Exists(directoryFilter) && SearchServiceHelper.CheckNeedsLiveSearch(directoryFilter, exclusionRules))
         {
             needsLiveSearch = true;
             liveScanDir = directoryFilter;
@@ -240,7 +242,6 @@ public class SearchService : IDisposable
                 Logger.Log($"[PipeClient] Response received: {resp.Kind}.", LogLevel.Debug);
             return resp;
         }
-
         catch (Exception ex)
         {
             Logger.Log($"[PipeClient] SendPipeCommand failed for {msg.Id}: {ex.Message}", LogLevel.Error);
@@ -258,55 +259,6 @@ public class SearchService : IDisposable
             token.ThrowIfCancellationRequested();
             onResult(result, isApp);
         }, token).ConfigureAwait(false);
-    }
-
-    private static bool SearchNetworkDrives(string query, int maxResults, string? directoryFilter, ExclusionRuleSet exclusionRules, Action<SearchResult, bool> onResult, CancellationToken token)
-    {
-        try
-        {
-            var parsed = SearchQueryParser.Parse(query);
-            var queryExemptRoot = parsed.IsPathMode ? parsed.ExactPathLower : null;
-            var found = 0;
-            UserNetworkDriveSearch.SearchStreaming(query, maxResults, result =>
-            {
-                token.ThrowIfCancellationRequested();
-                if (!exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
-                {
-                    Interlocked.Increment(ref found);
-                    onResult(result, false);
-                }
-            }, token, directoryFilter);
-
-            return found > 0;
-        }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
-        {
-            Logger.Log($"[SearchService] Network drive search failed: {ex.Message}", LogLevel.Error);
-            return false;
-        }
-    }
-
-    private static bool CheckNeedsLiveSearch(string dir, ExclusionRuleSet exclusionRules)
-    {
-        try
-        {
-            var driveInfo = new DriveInfo(dir);
-            if (driveInfo.DriveType == DriveType.Network)
-            {
-                var letter = dir.Substring(0, 1);
-                var id = NetworkDriveResolver.GetNetworkId(letter);
-                return string.IsNullOrWhiteSpace(id) || !UserSettings.Load().NetworkDrives.Any(d => string.Equals(d.Id, id, StringComparison.OrdinalIgnoreCase));
-            }
-            // Both NTFS and ReFS are indexed by the USN journal indexer.
-            var fs = driveInfo.DriveFormat;
-            var isIndexed = string.Equals(fs, "NTFS", StringComparison.OrdinalIgnoreCase)
-                         || string.Equals(fs, "ReFS", StringComparison.OrdinalIgnoreCase);
-            return !isIndexed
-                || exclusionRules.IsExcludedPath(dir, true)
-                || exclusionRules.IsExcludedPath(Path.Combine(dir, "_live_search_dummy.txt"), false);
-        }
-        catch { return true; }
     }
 
     public void Dispose() => GC.SuppressFinalize(this);

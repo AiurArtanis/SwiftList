@@ -50,7 +50,7 @@ internal sealed class SearchEngineDriveMaintenance
                 var current = _indexer.Status.Drives.ToDictionary(d => d.Drive, StringComparer.OrdinalIgnoreCase);
                 var next = new List<UsnIndexer.DriveIndexStatus>();
                 foreach (var drive in visible)
-                    next.Add(UpdateStatus(drive, detectedSet.Contains(drive), enabled.Contains(drive), current, drivesToBuild));
+                    next.Add(DriveMaintenanceHelper.UpdateStatus(drive, detectedSet.Contains(drive), enabled.Contains(drive), IndexCacheDir, current, drivesToBuild));
                 _indexer.Status.Drives = next;
             }
 
@@ -73,7 +73,7 @@ internal sealed class SearchEngineDriveMaintenance
 
     public bool RebuildDriveIndex(string drive)
     {
-        drive = NormalizeDrive(drive);
+        drive = DriveMaintenanceHelper.NormalizeDrive(drive);
         if (drive.Length == 0)
             return false;
 
@@ -87,7 +87,7 @@ internal sealed class SearchEngineDriveMaintenance
 
     public bool DeleteDriveIndex(string drive)
     {
-        drive = NormalizeDrive(drive);
+        drive = DriveMaintenanceHelper.NormalizeDrive(drive);
         if (drive.Length == 0)
             return false;
 
@@ -136,46 +136,6 @@ internal sealed class SearchEngineDriveMaintenance
         _indexer.SetDriveState(drive, "indexing", resetCounts: true);
         Task.Run(() => RebuildDrive(drive, forceRebuild));
         return true;
-    }
-
-    private UsnIndexer.DriveIndexStatus UpdateStatus(
-        string drive,
-        bool isPresent,
-        bool isEnabled,
-        Dictionary<string, UsnIndexer.DriveIndexStatus> current,
-        List<string> drivesToBuild)
-    {
-        if (current.TryGetValue(drive, out var existing))
-        {
-            var wasEnabled = existing.Enabled;
-            var hasCache = LocalDriveCacheLocator.HasCache(IndexCacheDir, drive);
-            existing.Enabled = isPresent && isEnabled;
-            existing.Kind = isPresent ? VolumeHelper.GetDisplayFileSystemType(drive) : "-";
-            existing.State = isPresent ? existing.State : "unavailable";
-            if (!isPresent)
-            {
-                existing.Files = 0;
-                existing.Dirs = 0;
-            }
-            else if (!wasEnabled && isEnabled && !hasCache && existing.State is not "indexing" and not "pending")
-            {
-                existing.State = "pending";
-                drivesToBuild.Add(drive);
-            }
-            return existing;
-        }
-
-        var shouldBuild = isPresent && isEnabled && !LocalDriveCacheLocator.HasCache(IndexCacheDir, drive);
-        if (shouldBuild)
-            drivesToBuild.Add(drive);
-        return new UsnIndexer.DriveIndexStatus
-        {
-            Drive = drive,
-            Enabled = isPresent && isEnabled,
-            Kind = isPresent ? VolumeHelper.GetDisplayFileSystemType(drive) : "-",
-            State = shouldBuild ? "pending" : isPresent && isEnabled ? "ready" : isPresent ? "disabled" : "unavailable",
-            CachePath = isPresent ? LocalDriveCacheLocator.GetCachePath(IndexCacheDir, drive) : string.Empty
-        };
     }
 
     private void RebuildDrive(string drive, bool forceRebuild)
@@ -234,10 +194,6 @@ internal sealed class SearchEngineDriveMaintenance
         monitor.Start();
         _addMonitor(monitor);
     }
-
-    private static string NormalizeDrive(string drive) => string.IsNullOrWhiteSpace(drive)
-        ? string.Empty
-        : drive.Trim().TrimEnd(':', '\\').ToUpperInvariant();
 
     private void PopulateCountsFromCache()
     {

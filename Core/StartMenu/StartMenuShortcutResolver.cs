@@ -35,18 +35,15 @@ internal static class StartMenuShortcutResolver
         var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         AddIfDirectory(roots, Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu));
-        AddIfDirectory(roots, Environment.GetFolderPath(Environment.SpecialFolder.StartMenu));
+        AddIfDirectory(roots, Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory));
 
         var programData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
         AddIfDirectory(roots, Path.Combine(programData, "Microsoft", "Windows", "Start Menu"));
 
-        var usersRoot = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Users");
-        if (Directory.Exists(usersRoot))
+        foreach (var userDir in Services.UserProfileHelper.GetAllUserProfilePaths())
         {
-            foreach (var userDir in EnumerateDirectoriesSafe(usersRoot))
-            {
-                AddIfDirectory(roots, Path.Combine(userDir, "AppData", "Roaming", "Microsoft", "Windows", "Start Menu"));
-            }
+            AddIfDirectory(roots, Services.UserProfileHelper.GetStartMenuPath(userDir));
+            AddIfDirectory(roots, Services.UserProfileHelper.GetDesktopPath(userDir));
         }
 
         return roots;

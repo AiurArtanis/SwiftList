@@ -60,7 +60,7 @@ public sealed class NetworkIndexer : IDisposable
         var enabledSettings = driveSettings
             .Select(d => new
             {
-                Drive = ResolveDriveFromId(d.Id),
+                Drive = NetworkIndexerHelper.ResolveDriveFromId(d.Id),
                 RefreshMode = IndexerHelper.NormalizeRefreshMode(d.RefreshMode)
             })
             .Where(d => d.Drive.Length == 1)
@@ -100,14 +100,7 @@ public sealed class NetworkIndexer : IDisposable
                     if (IndexerHelper.TryLoad(drive, out var index))
                     {
                         _indexes[drive] = index;
-                        _statuses[drive] = new NetworkIndexStatus
-                        {
-                            Drive = drive,
-                            State = "cached",
-                            Items = index.Count,
-                            CachePath = IndexerHelper.GetCachePath(drive),
-                            LastUpdated = index.LastUpdated
-                        };
+                        _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "cached", index.Count, index, null);
                         cachedDrives.Add(drive);
                         lastUpdatedTimes[drive] = index.LastUpdated;
                     }
@@ -166,28 +159,13 @@ public sealed class NetworkIndexer : IDisposable
         PublishStatusesChanged();
     }
 
-
-
     private void SetStatus(string drive, string state, int? items, string? error)
     {
         lock (_gate)
         {
             _statuses.TryGetValue(drive, out var current);
-            _statuses[drive] = new NetworkIndexStatus
-            {
-                Drive = drive,
-                State = state,
-                Items = items ?? current?.Items ?? 0,
-                Skipped = current?.Skipped ?? 0,
-                Errors = current?.Errors ?? 0,
-                EnumerateErrors = current?.EnumerateErrors ?? 0,
-                AttributeErrors = current?.AttributeErrors ?? 0,
-                ReparseSkipped = current?.ReparseSkipped ?? 0,
-                SlowDirectories = current?.SlowDirectories ?? 0,
-                CachePath = IndexerHelper.GetCachePath(drive),
-                LastUpdated = current?.LastUpdated,
-                Error = error ?? string.Empty
-            };
+            _statuses[drive] = NetworkIndexerHelper.CreateStatus(
+                drive, state, items ?? current?.Items ?? 0, null, current, error ?? string.Empty);
         }
         PublishStatusesChanged();
     }
@@ -197,23 +175,8 @@ public sealed class NetworkIndexer : IDisposable
         lock (_gate)
         {
             _indexes[drive] = index;
-            _statuses[drive] = new NetworkIndexStatus
-            {
-                Drive = drive,
-                State = "ready",
-                Items = index.Count,
-                Skipped = index.Skipped,
-                Errors = index.Errors,
-                EnumerateErrors = index.EnumerateErrors,
-                AttributeErrors = index.AttributeErrors,
-                ReparseSkipped = index.ReparseSkipped,
-                SlowDirectories = index.SlowDirectories,
-                CachePath = IndexerHelper.GetCachePath(drive),
-                LastUpdated = index.LastUpdated
-            };
+            _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "ready", index.Count, index, null);
         }
-
-        // Re-establish watcher in case it was evicted due to a prior error.
         _watcherManager?.EnsureWatcher(drive);
         PublishStatusesChanged();
     }
@@ -224,21 +187,7 @@ public sealed class NetworkIndexer : IDisposable
         lock (_gate)
         {
             _statuses.TryGetValue(drive, out var current);
-            _statuses[drive] = new NetworkIndexStatus
-            {
-                Drive = drive,
-                State = "ready",
-                Items = index.Count,
-                Skipped = index.Skipped,
-                Errors = index.Errors,
-                EnumerateErrors = index.EnumerateErrors,
-                AttributeErrors = index.AttributeErrors,
-                ReparseSkipped = index.ReparseSkipped,
-                SlowDirectories = index.SlowDirectories,
-                CachePath = current?.CachePath ?? IndexerHelper.GetCachePath(drive),
-                LastUpdated = index.LastUpdated,
-                Error = string.Empty,
-            };
+            _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "ready", index.Count, index, current);
         }
         PublishStatusesChanged();
     }
@@ -255,20 +204,7 @@ public sealed class NetworkIndexer : IDisposable
             lock (_gate)
             {
                 _indexes[drive] = index;
-                _statuses[drive] = new NetworkIndexStatus
-                {
-                    Drive = drive,
-                    State = "indexing",
-                    Items = index.Count,
-                    Skipped = index.Skipped,
-                    Errors = index.Errors,
-                    EnumerateErrors = index.EnumerateErrors,
-                    AttributeErrors = index.AttributeErrors,
-                    ReparseSkipped = index.ReparseSkipped,
-                    SlowDirectories = index.SlowDirectories,
-                    CachePath = IndexerHelper.GetCachePath(drive),
-                    LastUpdated = index.LastUpdated
-                };
+                _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "indexing", index.Count, index, null);
             }
             PublishStatusesChanged();
         }
@@ -282,8 +218,6 @@ public sealed class NetworkIndexer : IDisposable
         }
     }
 
-
-
     public void Dispose()
     {
         _scheduler?.Dispose();
@@ -291,16 +225,6 @@ public sealed class NetworkIndexer : IDisposable
 
         _watcherManager?.Dispose();
         _watcherManager = null;
-    }
-
-    private static string ResolveDriveFromId(string id)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-            return string.Empty;
-
-        return NetworkDriveResolver.GetNetworkDrives()
-            .FirstOrDefault(d => string.Equals(NetworkDriveResolver.GetNetworkId(d.Letter), id, StringComparison.OrdinalIgnoreCase))
-            ?.Letter ?? string.Empty;
     }
 
     private void PublishStatusesChanged()
