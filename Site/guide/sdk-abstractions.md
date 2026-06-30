@@ -137,3 +137,46 @@ public static class HistoryService
     public static Func<IEnumerable<string>>? GetHistoryPathsFunc { get; set; }
 }
 ```
+
+### 6.5 `IconService` (Shell Icons)
+Provides cached shell icon extraction for files and directories (returning a WPF `ImageSource`).
+
+```csharp
+public static class IconService
+{
+    // Retrieves cached shell icon for a path
+    public static ImageSource? GetIcon(string path, bool isDir);
+}
+```
+
+### 6.6 `TranslationService` (Dynamic Translations)
+A helper utility to load embedded translation JSON dictionaries and resolve localized strings at runtime.
+
+```csharp
+public static class TranslationService
+{
+    // Gets translation by key
+    public static string Get(string key);
+
+    // Gets formatted translation by key
+    public static string Format(string key, params object[] args);
+
+    // Scans assembly for embedded translations
+    public static IReadOnlyList<string> GetSupportedCultures(Assembly assembly);
+
+    // Deserializes and loads embedded JSON translations
+    public static Dictionary<string, string> LoadEmbeddedTranslations(Assembly assembly, string cultureKey, string typeName);
+}
+```
+
+### 6.7 `Logger` (System Logging)
+Allows plugins to log structured diagnostics back to the host application window and logs.
+
+```csharp
+public static class Logger
+{
+    // Logs a message with specific LogLevel (Error, Warn, Info, Debug)
+    public static void Log(string message, LogLevel level = LogLevel.Info);
+}
+```
+

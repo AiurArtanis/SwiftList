@@ -61,6 +61,7 @@ export default defineConfig({
                       link: '/guide/sdk-plugins-core',
                       collapsed: true,
                       items: [
+                        { text: 'IPlugin & IActionProvider (Base)', link: '/guide/sdk-plugins-core#iplugin' },
                         { text: 'IAction (Actions)', link: '/guide/sdk-plugins-core#iaction' },
                         { text: 'IAliasProvider (Aliases)', link: '/guide/sdk-plugins-core#ialiasprovider' },
                         { text: 'IInstantResultProvider (Instant Results)', link: '/guide/sdk-plugins-core#iinstantresultprovider' },
@@ -87,6 +88,7 @@ export default defineConfig({
                         { text: 'ISidebarFilterProvider (Sidebar Filters)', link: '/guide/sdk-plugins-ui#isidebarfilterprovider' },
                         { text: 'IResultColumnProvider (Grid Columns)', link: '/guide/sdk-plugins-ui#iresultcolumnprovider' },
                         { text: 'IFilePreviewProvider (File Previews)', link: '/guide/sdk-plugins-ui#ifilepreviewprovider' },
+                        { text: 'IThumbnailProvider (Thumbnails)', link: '/guide/sdk-plugins-ui#ithumbnailprovider' },
                         { text: 'ITranslationProvider (Translations)', link: '/guide/sdk-plugins-ui#itranslationprovider' },
                         { text: 'IThemeProvider (Style Sheets)', link: '/guide/sdk-plugins-ui#ithemeprovider' }
                       ]
@@ -172,6 +174,7 @@ export default defineConfig({
                       link: '/zh-CN/guide/sdk-plugins-core',
                       collapsed: true,
                       items: [
+                        { text: 'IPlugin & IActionProvider (基础)', link: '/zh-CN/guide/sdk-plugins-core#iplugin' },
                         { text: 'IAction (动作)', link: '/zh-CN/guide/sdk-plugins-core#iaction' },
                         { text: 'IAliasProvider (别名)', link: '/zh-CN/guide/sdk-plugins-core#ialiasprovider' },
                         { text: 'IInstantResultProvider (即时结果)', link: '/zh-CN/guide/sdk-plugins-core#iinstantresultprovider' },
@@ -198,6 +201,7 @@ export default defineConfig({
                         { text: 'ISidebarFilterProvider (侧栏过滤)', link: '/zh-CN/guide/sdk-plugins-ui#isidebarfilterprovider' },
                         { text: 'IResultColumnProvider (结果表格列)', link: '/zh-CN/guide/sdk-plugins-ui#iresultcolumnprovider' },
                         { text: 'IFilePreviewProvider (文件预览)', link: '/zh-CN/guide/sdk-plugins-ui#ifilepreviewprovider' },
+                        { text: 'IThumbnailProvider (缩略图提供器)', link: '/zh-CN/guide/sdk-plugins-ui#ithumbnailprovider' },
                         { text: 'ITranslationProvider (语言包)', link: '/zh-CN/guide/sdk-plugins-ui#itranslationprovider' },
                         { text: 'IThemeProvider (主题包)', link: '/zh-CN/guide/sdk-plugins-ui#ithemeprovider' }
                       ]

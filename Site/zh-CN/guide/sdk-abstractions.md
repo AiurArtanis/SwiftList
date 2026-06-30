@@ -141,3 +141,46 @@ public static class HistoryService
     public static Func<IEnumerable<string>>? GetHistoryPathsFunc { get; set; }
 }
 ```
+
+### 6.5 `IconService` (图标提取服务)
+允许插件动态获取系统外壳缓存中的文件或文件夹图标（返回 WPF `ImageSource`）。
+
+```csharp
+public static class IconService
+{
+    // 获取指定路径的文件/文件夹的系统图标
+    public static ImageSource? GetIcon(string path, bool isDir);
+}
+```
+
+### 6.6 `TranslationService` (多语言辅助服务)
+一个解耦的辅助工具，用于方便插件在运行时自动加载嵌入程序集的 JSON 翻译字典。
+
+```csharp
+public static class TranslationService
+{
+    // 根据键值查找翻译
+    public static string Get(string key);
+
+    // 获取格式化的翻译文本
+    public static string Format(string key, params object[] args);
+
+    // 扫描程序集获取支持的语言文化代码
+    public static IReadOnlyList<string> GetSupportedCultures(Assembly assembly);
+
+    // 加载嵌入程序集的 JSON 翻译文件并反序列化为字典
+    public static Dictionary<string, string> LoadEmbeddedTranslations(Assembly assembly, string cultureKey, string typeName);
+}
+```
+
+### 6.7 `Logger` (系统日志服务)
+提供给插件输出日志的静态工具，主程序会自动收集并打印至调试窗口或日志文件中。
+
+```csharp
+public static class Logger
+{
+    // 打印特定等级的日志 (LogLevel 包括 Error, Warn, Info, Debug)
+    public static void Log(string message, LogLevel level = LogLevel.Info);
+}
+```
+
