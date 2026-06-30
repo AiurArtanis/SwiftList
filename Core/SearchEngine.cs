@@ -120,7 +120,7 @@ public class SearchEngine : IDisposable
         int fileLimit,
         int appLimit,
         string? directoryFilter,
-        Action<SearchResult, bool> onResult,
+        Action<SearchResult> onResult,
         CancellationToken requestToken = default)
     {
         RecordSearchActivity();
@@ -157,7 +157,7 @@ public class SearchEngine : IDisposable
         _indexer.SearchStreaming(query, fileLimit, result =>
         {
             searchToken.ThrowIfCancellationRequested();
-            onResult(result, false);
+            onResult(result);
         }, searchToken, directoryFilter);
 
         return true;

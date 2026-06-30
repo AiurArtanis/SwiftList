@@ -39,7 +39,7 @@ public static class SearchStreamPump
                 var directory = msg.Id == SearchRequestId.SearchDir ? msg.DirectoryFilter : null;
 
                 engine?.SearchStreaming(msg.Query ?? string.Empty, msg.Limit, msg.AppLimit, directory,
-                    (result, _) => channel.Writer.TryWrite(result), queryToken);
+                    result => channel.Writer.TryWrite(result), queryToken);
                 channel.Writer.TryComplete();
             }
             catch (Exception ex)

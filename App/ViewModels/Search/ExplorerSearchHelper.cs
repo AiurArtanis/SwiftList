@@ -18,15 +18,12 @@ public static class ExplorerSearchHelper
         var matchCount = 0;
         try
         {
-            await searchService.SearchStreamingAsync(query, fileLimit, appLimit, contextDirectory, (result, isApp) =>
+            await searchService.SearchStreamingAsync(query, fileLimit, appLimit, contextDirectory, result =>
             {
-                if (!isApp)
+                lock (localMatches)
                 {
-                    lock (localMatches)
-                    {
-                        localMatches.Add(SearchResultMapper.CreateUiResult(result, query, localMatches.Count, isApplication: false, contextDirectory));
-                        matchCount++;
-                    }
+                    localMatches.Add(SearchResultMapper.CreateUiResult(result, query, localMatches.Count, isApplication: false, contextDirectory));
+                    matchCount++;
                 }
             }, token);
             Logger.Log($"[ExplorerSearchHelper] Local search completed. Matches count: {matchCount}", LogLevel.Debug);

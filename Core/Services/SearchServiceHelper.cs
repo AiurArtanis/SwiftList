@@ -7,7 +7,7 @@ internal static class SearchServiceHelper
         int maxResults,
         string? directoryFilter,
         ExclusionRuleSet exclusionRules,
-        Action<SearchResult, bool> onResult,
+        Action<SearchResult> onResult,
         CancellationToken token)
     {
         try
@@ -21,7 +21,7 @@ internal static class SearchServiceHelper
                 if (!exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
                 {
                     Interlocked.Increment(ref found);
-                    onResult(result, false);
+                    onResult(result);
                 }
             }, token, directoryFilter);
 

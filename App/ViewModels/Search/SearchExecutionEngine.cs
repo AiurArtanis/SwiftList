@@ -18,7 +18,7 @@ internal sealed class SearchExecutionEngine : IDisposable
         bool isInlineSearchContext,
         int fileLimit,
         int appLimit,
-        Func<SearchResponse, string?, List<AppSearchResult>> resultMapper,
+        Func<List<SearchResult>?, string?, List<AppSearchResult>> resultMapper,
         Action<bool> onSearchStateChanged,
         Action<List<AppSearchResult>, string, bool> onResultsUpdated,
         Action? onLocalServiceUnavailable = null)
@@ -50,7 +50,7 @@ internal sealed class SearchExecutionEngine : IDisposable
         bool isInlineSearchContext,
         int fileLimit,
         int appLimit,
-        Func<SearchResponse, string?, List<AppSearchResult>> resultMapper,
+        Func<List<SearchResult>?, string?, List<AppSearchResult>> resultMapper,
         Action<bool> onSearchStateChanged,
         Action<List<AppSearchResult>, string, bool> onResultsUpdated,
         Action? onLocalServiceUnavailable = null)
@@ -139,7 +139,7 @@ internal sealed class SearchExecutionEngine : IDisposable
         bool isInlineSearchContext,
         int fileLimit,
         int appLimit,
-        Func<SearchResponse, string?, List<AppSearchResult>> resultMapper,
+        Func<List<SearchResult>?, string?, List<AppSearchResult>> resultMapper,
         int searchVersion,
         Action<List<AppSearchResult>, string, bool> onResultsUpdated,
         CancellationToken token,
@@ -147,7 +147,7 @@ internal sealed class SearchExecutionEngine : IDisposable
         Task? localSearchTask = null,
         Action? onLocalServiceUnavailable = null)
     {
-        var streamedResponse = new SearchResponse();
+        var streamedResponse = new List<SearchResult>();
         object responseLock = new();
         var streamedCount = 0;
         var renderState = 0;
@@ -159,14 +159,10 @@ internal sealed class SearchExecutionEngine : IDisposable
             {
                 if (searchVersion != Volatile.Read(ref _searchVersion) || token.IsCancellationRequested)
                     return;
-                SearchResponse snapshot;
-
+                List<SearchResult> snapshot;
                 lock (responseLock)
                 {
-                    snapshot = new SearchResponse
-                    {
-                        FileResults = new List<SearchResult>(streamedResponse.FileResults)
-                    };
+                    snapshot = new List<SearchResult>(streamedResponse);
                 }
 
                 var uiResults = resultMapper(snapshot, contextDirectory);
@@ -193,7 +189,7 @@ internal sealed class SearchExecutionEngine : IDisposable
                     uiResults.Add(SearchResultMapper.CreateNoResultsResult(query));
                 var statusText = "";
                 if (uiResults.Count > 0)
-                    statusText = SearchResultMapper.FormatSearchStatus(0, snapshot.FileResults.Count);
+                    statusText = SearchResultMapper.FormatSearchStatus(0, snapshot.Count);
                 else if (final)
                     statusText = "No matching results";
                 onResultsUpdated(uiResults, statusText, final);
@@ -205,17 +201,14 @@ internal sealed class SearchExecutionEngine : IDisposable
                 _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplySnapshot));
         }
 
-        await _searchService.SearchStreamingAsync(query, fileLimit, appLimit, searchScope, (result, isApplication) =>
+        await _searchService.SearchStreamingAsync(query, fileLimit, appLimit, searchScope, result =>
         {
             token.ThrowIfCancellationRequested();
 
             lock (responseLock)
             {
-                if (!isApplication)
-                {
-                    streamedResponse.FileResults.Add(result);
-                    streamedCount++;
-                }
+                streamedResponse.Add(result);
+                streamedCount++;
             }
 
             if (Volatile.Read(ref renderState) == 0 && Volatile.Read(ref streamedCount) < 9)

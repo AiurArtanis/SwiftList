@@ -148,14 +148,14 @@ public class SearchViewModel : ViewModelBase, IDisposable
             isInlineSearchContext: false,
             fileLimit: FullSearchFileLimit,
             appLimit: FullSearchAppLimit,
-            resultMapper: (response, _) =>
+            resultMapper: (fileResults, _) =>
             {
                 var results = new List<AppSearchResult>();
-                if (response.FileResults != null)
+                if (fileResults != null)
                 {
-                    for (var i = 0; i < response.FileResults.Count; i++)
+                    for (var i = 0; i < fileResults.Count; i++)
                     {
-                        results.Add(SearchResultMapper.CreateUiResult(response.FileResults[i], query, results.Count, isApplication: false, scope: null));
+                        results.Add(SearchResultMapper.CreateUiResult(fileResults[i], query, results.Count, isApplication: false, scope: null));
                     }
                 }
                 return results;

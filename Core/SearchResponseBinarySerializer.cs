@@ -32,8 +32,7 @@ public static class SearchResponseBinarySerializer
         }
     }
 
-    public static Task WriteAppResultAsync(Stream stream, SearchResult result, CancellationToken token = default)
-        => WriteResultAsync(stream, AppResultFrame, result, token);
+
 
     public static Task WriteFileResultAsync(Stream stream, SearchResult result, CancellationToken token = default)
         => WriteResultAsync(stream, FileResultFrame, result, token);
@@ -56,7 +55,7 @@ public static class SearchResponseBinarySerializer
         }
     }
 
-    public static async Task ReadAsync(Stream stream, Action<SearchResult, bool> onResult, CancellationToken token = default)
+    public static async Task ReadAsync(Stream stream, Action<SearchResult> onResult, CancellationToken token = default)
     {
         try
         {
@@ -94,7 +93,7 @@ public static class SearchResponseBinarySerializer
                 if (frameType == FileResultFrame || frameType == AppResultFrame)
                 {
                     var result = ReadResult(payload);
-                    onResult(result, frameType == AppResultFrame);
+                    onResult(result);
                     continue;
                 }
 

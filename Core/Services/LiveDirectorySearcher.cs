@@ -63,7 +63,7 @@ public static class LiveDirectorySearcher
     public static bool MatchAndStream(
         List<SearchResult> entries,
         string query,
-        Action<SearchResult, bool> onResult,
+        Action<SearchResult> onResult,
         CancellationToken token,
         bool onlyDirectChildren = false,
         string? parentPath = null)
@@ -135,7 +135,7 @@ public static class LiveDirectorySearcher
 
             if (matched)
             {
-                onResult(entry, false);
+                onResult(entry);
                 foundCount++;
             }
         }

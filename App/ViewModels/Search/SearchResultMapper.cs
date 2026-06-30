@@ -5,12 +5,10 @@ namespace SwiftList.App.ViewModels.Search;
 
 public static class SearchResultMapper
 {
-    public static List<AppSearchResult> BuildQuickResults(SearchResponse response, string query, string? scope, string? contextDirectory, bool isInlineWindow)
+    public static List<AppSearchResult> BuildQuickResults(List<SearchResult>? fileResults, string query, string? scope, string? contextDirectory, bool isInlineWindow)
     {
         var uiResults = new List<AppSearchResult>();
         PluginSearchResultMapper.AddInstantResults(uiResults, query, isInlineWindow);
-
-        var fileResults = response.FileResults;
 
         if (fileResults != null && !string.IsNullOrWhiteSpace(query))
         {

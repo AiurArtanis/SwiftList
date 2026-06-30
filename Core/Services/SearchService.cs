@@ -29,7 +29,7 @@ public class SearchService : IDisposable
         return resp.Kind == PipeResponseKind.Ok;
     }
 
-    public async Task<bool> SearchStreamingAsync(string query, int maxResults, int maxAppResults, string? directoryFilter, Action<SearchResult, bool> onResult, CancellationToken token = default, Action? onLocalSearchFailed = null)
+    public async Task<bool> SearchStreamingAsync(string query, int maxResults, int maxAppResults, string? directoryFilter, Action<SearchResult> onResult, CancellationToken token = default, Action? onLocalSearchFailed = null)
     {
         var exclusionRules = ExclusionRuleSet.From(UserSettings.Load());
         var fileCandidateLimit = Math.Clamp(maxResults * 4, maxResults, 2000);
@@ -69,9 +69,9 @@ public class SearchService : IDisposable
         }
 
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var uniqueOnResult = new Action<SearchResult, bool>((result, isApp) =>
+        var uniqueOnResult = new Action<SearchResult>(result =>
         {
-            if (!isApp && FileSystemItemFilter.IsHiddenOrSystem(result.Path))
+            if (FileSystemItemFilter.IsHiddenOrSystem(result.Path))
                 return;
 
             lock (seenPaths)
@@ -79,17 +79,17 @@ public class SearchService : IDisposable
                 if (!seenPaths.Add(result.Path))
                     return;
             }
-            onResult(result, isApp);
+            onResult(result);
         });
 
         var localTask = Task.Run(async () =>
         {
             try
             {
-                await SendSearchPipeCommandAsync(msg, (result, isApp) =>
+                await SendSearchPipeCommandAsync(msg, result =>
                 {
-                    if (isApp || !exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
-                        uniqueOnResult(result, isApp);
+                    if (!exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
+                        uniqueOnResult(result);
                 }, token).ConfigureAwait(false);
                 return true;
             }
@@ -249,15 +249,15 @@ public class SearchService : IDisposable
         }
     }
 
-    private static async Task SendSearchPipeCommandAsync(SearchRequestMessage msg, Action<SearchResult, bool> onResult, CancellationToken token)
+    private static async Task SendSearchPipeCommandAsync(SearchRequestMessage msg, Action<SearchResult> onResult, CancellationToken token)
     {
         using var pipe = await GetPipeAsync(token).ConfigureAwait(false);
         await SearchRequestBinarySerializer.WriteSearchRequestAsync(pipe, msg, token).ConfigureAwait(false);
 
-        await SearchResponseBinarySerializer.ReadAsync(pipe, (result, isApp) =>
+        await SearchResponseBinarySerializer.ReadAsync(pipe, result =>
         {
             token.ThrowIfCancellationRequested();
-            onResult(result, isApp);
+            onResult(result);
         }, token).ConfigureAwait(false);
     }
 
