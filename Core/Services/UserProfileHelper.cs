@@ -5,11 +5,47 @@ public static class UserProfileHelper
     public static List<string> GetAllUserProfilePaths()
     {
         var paths = new List<string>();
+        string? profilesDir = null;
+
         try
         {
             using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList");
             if (key != null)
             {
+                // Read global Public profile path configured in registry
+                var publicPath = key.GetValue("Public") as string;
+                if (!string.IsNullOrEmpty(publicPath))
+                {
+                    var fullPublic = Environment.ExpandEnvironmentVariables(publicPath);
+                    if (Directory.Exists(fullPublic))
+                    {
+                        paths.Add(Path.GetFullPath(fullPublic));
+                    }
+                }
+
+                // Read global Default profile path configured in registry
+                var defaultPath = key.GetValue("Default") as string;
+                if (!string.IsNullOrEmpty(defaultPath))
+                {
+                    var fullDefault = Environment.ExpandEnvironmentVariables(defaultPath);
+                    if (Directory.Exists(fullDefault))
+                    {
+                        var resolvedDefault = Path.GetFullPath(fullDefault);
+                        if (!paths.Contains(resolvedDefault, StringComparer.OrdinalIgnoreCase))
+                        {
+                            paths.Add(resolvedDefault);
+                        }
+                    }
+                }
+
+                // Read ProfilesDirectory for fallback use
+                var profilesDirVal = key.GetValue("ProfilesDirectory") as string;
+                if (!string.IsNullOrEmpty(profilesDirVal))
+                {
+                    profilesDir = Environment.ExpandEnvironmentVariables(profilesDirVal);
+                }
+
+                // Enumerate user SID profiles
                 foreach (var subkeyName in key.GetSubKeyNames())
                 {
                     using var subkey = key.OpenSubKey(subkeyName);
@@ -21,7 +57,11 @@ public static class UserProfileHelper
                             var fullPath = Environment.ExpandEnvironmentVariables(path);
                             if (Directory.Exists(fullPath))
                             {
-                                paths.Add(Path.GetFullPath(fullPath));
+                                var resolved = Path.GetFullPath(fullPath);
+                                if (!paths.Contains(resolved, StringComparer.OrdinalIgnoreCase))
+                                {
+                                    paths.Add(resolved);
+                                }
                             }
                         }
                     }
@@ -33,10 +73,15 @@ public static class UserProfileHelper
             Logger.Log($"[UserProfileHelper] Failed to read ProfileList from registry: {ex.Message}", LogLevel.Warn);
         }
 
-        // Fallback to C:\Users if registry query fails
+        // Fallback to user profiles directory if registry query returned nothing
         if (paths.Count == 0)
         {
-            var usersRoot = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Users");
+            var usersRoot = profilesDir;
+            if (string.IsNullOrEmpty(usersRoot))
+            {
+                usersRoot = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Users");
+            }
+
             if (Directory.Exists(usersRoot))
             {
                 try
@@ -47,16 +92,6 @@ public static class UserProfileHelper
                     }
                 }
                 catch { }
-            }
-        }
-
-        var publicProfile = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\", "Users", "Public");
-        if (Directory.Exists(publicProfile))
-        {
-            var resolvedPublic = Path.GetFullPath(publicProfile);
-            if (!paths.Contains(resolvedPublic, StringComparer.OrdinalIgnoreCase))
-            {
-                paths.Add(resolvedPublic);
             }
         }
 
