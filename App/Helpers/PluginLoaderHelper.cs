@@ -215,6 +215,11 @@ public static class PluginLoaderHelper
             var id = MakeId(dllName, PluginComponentType.FilePreviewProvider, prov.GetType().Name);
             components.Add(new PluginComponentViewModel(id, PluginComponentType.FilePreviewProvider, prov.Name, !disabledSet.Contains(id)));
         }
+        foreach (var prov in manager.AllThumbnailProviders.Where(p => p.GetType().Assembly == assembly))
+        {
+            var id = MakeId(dllName, PluginComponentType.ThumbnailProvider, prov.GetType().Name);
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.ThumbnailProvider, prov.Name, !disabledSet.Contains(id)));
+        }
         foreach (var prov in manager.AllTranslationProviders.Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.TranslationProvider, prov.GetType().Name);

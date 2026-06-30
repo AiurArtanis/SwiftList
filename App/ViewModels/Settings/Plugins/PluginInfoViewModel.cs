@@ -20,6 +20,7 @@ public enum PluginComponentType
     InlineSearchAdapter,
     FilePreviewProvider,
     QuickNavigationProvider,
+    ThumbnailProvider,
     /// <summary>Translation providers are displayed read-only; they cannot be disabled.</summary>
     TranslationProvider,
     /// <summary>Theme providers are displayed read-only; they cannot be disabled.</summary>

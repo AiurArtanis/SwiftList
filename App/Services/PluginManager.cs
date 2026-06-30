@@ -31,6 +31,7 @@ public class PluginManager : PluginRegistry
     private readonly List<PluginSdk.Abstractions.Plugins.IActivePathCollector> _pathCollectors = new();
     private readonly List<PluginSdk.Abstractions.Plugins.IFilePreviewProvider> _previewProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.IQuickNavigationProvider> _quickNavigationProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IThumbnailProvider> _thumbnailProviders = new();
     private uint _nextRuntimeActionId = 0x80000000;
 
     private readonly ComponentFilter _filter = new();
@@ -87,6 +88,7 @@ public class PluginManager : PluginRegistry
     }
     void PluginRegistry.AddFilePreviewProvider(PluginSdk.Abstractions.Plugins.IFilePreviewProvider p) => _previewProviders.Add(p);
     void PluginRegistry.AddQuickNavigationProvider(PluginSdk.Abstractions.Plugins.IQuickNavigationProvider p) => _quickNavigationProviders.Add(p);
+    void PluginRegistry.AddThumbnailProvider(PluginSdk.Abstractions.Plugins.IThumbnailProvider p) => _thumbnailProviders.Add(p);
 
     // ── Public API ────────────────────────────────────────────────────────
 
@@ -156,9 +158,14 @@ public class PluginManager : PluginRegistry
             .Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.FilePreviewProvider, p.GetType().Name))
             .OrderByDescending(p => p.Priority);
 
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IThumbnailProvider> ThumbnailProviders
+        => _thumbnailProviders
+            .Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.ThumbnailProvider, p.GetType().Name));
+
     // ── Unfiltered collections (settings UI ?show disabled as unchecked) ─
 
     public IEnumerable<PluginSdk.Abstractions.Plugins.IFilePreviewProvider> AllFilePreviewProviders => _previewProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IThumbnailProvider> AllThumbnailProviders => _thumbnailProviders;
 
     public IEnumerable<PluginActionRegistration> AllActions => _actions;
     public IEnumerable<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> AllDynamicProviders => _dynamicProviders;

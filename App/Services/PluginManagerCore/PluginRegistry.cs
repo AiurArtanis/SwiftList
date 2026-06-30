@@ -18,4 +18,5 @@ internal interface PluginRegistry
     void AddActivePathCollector(IActivePathCollector provider);
     void AddFilePreviewProvider(IFilePreviewProvider provider);
     void AddQuickNavigationProvider(IQuickNavigationProvider provider);
+    void AddThumbnailProvider(IThumbnailProvider provider);
 }

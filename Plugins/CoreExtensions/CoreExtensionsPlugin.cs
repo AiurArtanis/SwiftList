@@ -5,7 +5,7 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 namespace SwiftList.Plugins.CoreExtensions;
 
-public class CoreExtensionsPlugin : IPlugin, IActionProvider
+public class CoreExtensionsPlugin : IPlugin, IActionProvider, IConfigurable
 {
     public string Name => TranslationService.Get("Plugins_CoreActionPluginName");
 
@@ -21,11 +21,38 @@ public class CoreExtensionsPlugin : IPlugin, IActionProvider
             new OpenAdminCommandPromptAction(),
             new TouchAction(),
             new MkdirAction()
-
         };
 
     public IEnumerable<IDynamicActionProvider> GetDynamicProviders() => new IDynamicActionProvider[]
         {
             new ShellMenuActionProvider()
         };
+
+    public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
+    {
+        Fields = new List<PluginConfigField>
+        {
+            new PluginConfigField
+            {
+                Key = "ThumbnailGroup",
+                LabelKey = "CoreExtensions_Config_ThumbnailGroupLabel",
+                FieldType = ConfigFieldType.Group,
+                SubFields = new List<PluginConfigField>
+                {
+                    new PluginConfigField
+                    {
+                        Key = "ThumbnailExtensions",
+                        LabelKey = "CoreExtensions_Config_ThumbnailExtensionsLabel",
+                        DescriptionKey = "CoreExtensions_Config_ThumbnailExtensionsDesc",
+                        FieldType = ConfigFieldType.StringList,
+                        DefaultValue = new List<string>
+                        {
+                            ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".ico", ".tiff", ".tif",
+                            ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".m4v"
+                        }
+                    }
+                }
+            }
+        }
+    };
 }

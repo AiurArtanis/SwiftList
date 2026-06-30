@@ -140,6 +140,13 @@ internal static class PluginLoader
                     registry.AddQuickNavigationProvider(provider);
                     Logger.Log($"[PluginManager] Loaded quick navigation provider: '{type.Name}' from {fileName}");
                 }
+
+                if (typeof(PluginSdk.Abstractions.Plugins.IThumbnailProvider).IsAssignableFrom(type))
+                {
+                    var provider = (PluginSdk.Abstractions.Plugins.IThumbnailProvider)Activator.CreateInstance(type)!;
+                    registry.AddThumbnailProvider(provider);
+                    Logger.Log($"[PluginManager] Loaded thumbnail provider: '{type.Name}' from {fileName}");
+                }
             }
         }
         catch (Exception ex)

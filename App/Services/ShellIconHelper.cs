@@ -26,12 +26,13 @@ public static class ShellIconHelper
             ext = "::unknown::";
         }
 
+        var hasThumbnailProvider = !isDir && Services.PluginManager.Instance.ThumbnailProviders.Any(p => p.CanProvideThumbnail(path, isDir));
         // Determine if it is a unique icon type
         var isUniqueIconType = (!isDir && (
             ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) ||
             ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase) ||
             ext.Equals(".ico", StringComparison.OrdinalIgnoreCase)
-        )) || isDir;
+        )) || isDir || hasThumbnailProvider;
 
         var cacheKey = isUniqueIconType ? path : ext;
 
@@ -43,6 +44,22 @@ public static class ShellIconHelper
         if (isUniqueIconType)
         {
             needsLoad = true;
+
+            if (!isDir && hasThumbnailProvider)
+            {
+                // Return specific file type icon as placeholder instead of generic unknown icon
+                var extPlaceholderKey = $"::placeholder:{ext}::";
+                if (_iconCache.TryGetValue(extPlaceholderKey, out var extPlaceholder))
+                {
+                    return extPlaceholder;
+                }
+                var fetchedExtPlaceholder = GetIconForPath("dummy" + ext, false);
+                if (fetchedExtPlaceholder != null)
+                {
+                    _iconCache[extPlaceholderKey] = fetchedExtPlaceholder;
+                    return fetchedExtPlaceholder;
+                }
+            }
 
             // Return generic placeholder icon instantly
             var placeholderKey = isDir ? "::directory::" : "::unknown::";
@@ -87,17 +104,37 @@ public static class ShellIconHelper
         // Also treat existing directories as unique icon types to extract their customized folder icons.
         var checkPath = path;
         var isVirtualFolder = isDir && (checkPath.StartsWith("::") || checkPath.StartsWith("shell:"));
+        var hasThumbnailProvider = !isDir && Services.PluginManager.Instance.ThumbnailProviders.Any(p => p.CanProvideThumbnail(path, isDir));
         var isUniqueIconType = (!isDir && (
             ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) ||
             ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase) ||
             ext.Equals(".ico", StringComparison.OrdinalIgnoreCase)
-        )) || (isDir && (Directory.Exists(checkPath) || isVirtualFolder));
+        )) || (isDir && (Directory.Exists(checkPath) || isVirtualFolder)) || hasThumbnailProvider;
 
         var cacheKey = isUniqueIconType ? path : ext;
 
         if (_iconCache.TryGetValue(cacheKey, out var cachedIcon))
         {
             return cachedIcon;
+        }
+
+        // Check custom plugin thumbnail providers first
+        var thumbnailProvider = Services.PluginManager.Instance.ThumbnailProviders.FirstOrDefault(p => p.CanProvideThumbnail(path, isDir));
+        if (thumbnailProvider != null)
+        {
+            try
+            {
+                var thumb = thumbnailProvider.GetThumbnail(path, 48);
+                if (thumb != null)
+                {
+                    _iconCache[cacheKey] = thumb;
+                    return thumb;
+                }
+            }
+            catch (Exception ex)
+            {
+                Core.Logger.Log($"[ShellIconHelper] Thumbnail provider '{thumbnailProvider.Name}' failed: {ex.Message}", Core.LogLevel.Error);
+            }
         }
 
         try
@@ -229,36 +266,16 @@ public static class ShellIconHelper
     {
         var geometry = Geometry.Parse(pathData);
         var group = new DrawingGroup();
-
-        System.Windows.Media.Brush? brush = null;
-        if (!string.IsNullOrEmpty(colorHexOrKey))
+        var brush = System.Windows.Application.Current?.TryFindResource(colorHexOrKey) as System.Windows.Media.Brush;
+        if (brush == null && !string.IsNullOrEmpty(colorHexOrKey))
         {
-            brush = System.Windows.Application.Current?.TryFindResource(colorHexOrKey) as System.Windows.Media.Brush;
-            if (brush == null)
-            {
-                try
-                {
-                    brush = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHexOrKey));
-                }
-                catch
-                {
-                    // Fallback if not a valid hex and not found in resources
-                }
-            }
+            try { brush = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHexOrKey)); }
+            catch { }
         }
-        if (brush == null)
-        {
-            brush = System.Windows.Application.Current?.TryFindResource("TextPrimary") as System.Windows.Media.Brush
-                    ?? System.Windows.Media.Brushes.Gray;
-        }
-
+        brush ??= System.Windows.Application.Current?.TryFindResource("TextPrimary") as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Gray;
         group.Children.Add(new GeometryDrawing(brush, null, geometry));
         var image = new DrawingImage(group);
-        try
-        {
-            image.Freeze();
-        }
-        catch { }
+        try { image.Freeze(); } catch { }
         return image;
     }
 }
