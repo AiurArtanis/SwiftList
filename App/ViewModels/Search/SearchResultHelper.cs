@@ -69,6 +69,12 @@ internal static class SearchResultHelper
             var firstSlash = suffix.IndexOf('/');
             return firstSlash < 0 ? $"WSL-{suffix}:/" : $"WSL-{suffix.Substring(0, firstSlash)}:{suffix.Substring(firstSlash)}";
         }
+        if (path.StartsWith(@"\\wsl$\", StringComparison.OrdinalIgnoreCase))
+        {
+            var suffix = path.Substring(@"\\wsl$\".Length).Replace('\\', '/');
+            var firstSlash = suffix.IndexOf('/');
+            return firstSlash < 0 ? $"WSL-{suffix}:/" : $"WSL-{suffix.Substring(0, firstSlash)}:{suffix.Substring(firstSlash)}";
+        }
         return path;
     }
 

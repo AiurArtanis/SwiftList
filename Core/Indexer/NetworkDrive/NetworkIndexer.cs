@@ -57,6 +57,7 @@ public sealed class NetworkIndexer : IDisposable
 
     public void Configure(IEnumerable<NetworkDriveSetting> driveSettings, IEnumerable<WslSetting> wslSettings, bool forceRefresh = false)
     {
+        var wslPrefix = Directory.Exists(@"\\wsl.localhost") ? @"\\wsl.localhost" : @"\\wsl$";
         var enabledSettings = driveSettings
             .Select(d => new
             {
@@ -66,7 +67,7 @@ public sealed class NetworkIndexer : IDisposable
             .Where(d => d.Drive.Length == 1)
             .Concat(wslSettings.Select(w => new
             {
-                Drive = $@"\\wsl.localhost\{w.Id}",
+                Drive = $@"{wslPrefix}\{w.Id}",
                 RefreshMode = IndexerHelper.NormalizeRefreshMode(w.RefreshMode)
             }))
             .Where(d => !string.IsNullOrEmpty(d.Drive))

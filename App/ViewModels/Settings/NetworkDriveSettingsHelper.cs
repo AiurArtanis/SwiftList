@@ -27,14 +27,19 @@ internal static class NetworkDriveSettingsHelper
         };
     }
 
+    public static string GetWslUncPrefix()
+    {
+        if (System.IO.Directory.Exists(@"\\wsl.localhost"))
+            return @"\\wsl.localhost";
+        return @"\\wsl$";
+    }
+
     public static List<string> GetWslDistros()
     {
         var distros = new List<string>();
         try
         {
-            string? searchPath = null;
-            if (System.IO.Directory.Exists(@"\\wsl.localhost"))
-                searchPath = @"\\wsl.localhost";
+            var searchPath = GetWslUncPrefix();
 
             if (searchPath != null)
             {

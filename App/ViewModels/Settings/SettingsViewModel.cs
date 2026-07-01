@@ -180,7 +180,7 @@ public class SettingsViewModel : ViewModelBase
                 {
                     if (!previousWslDrives.Any(w => w.Id.Equals(wsl.Id, StringComparison.OrdinalIgnoreCase)))
                     {
-                        var unc = $@"\\wsl.localhost\{wsl.Id}";
+                        var unc = $@"{NetworkDriveSettingsHelper.GetWslUncPrefix()}\{wsl.Id}";
                         _searchService.RefreshNetworkDriveIndex(unc);
                     }
                 }

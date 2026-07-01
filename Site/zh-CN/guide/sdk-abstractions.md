@@ -83,6 +83,7 @@ public interface ITheme
     ResourceDictionary GetResources();
     double WindowOpacity => 1.0;
 }
+```
 
 ---
 
@@ -183,4 +184,110 @@ public static class Logger
     public static void Log(string message, LogLevel level = LogLevel.Info);
 }
 ```
+
+---
+
+## 7. SDK 注册表 (Registries) {#sdk-registries}
+SDK 提供了一组静态注册表类，用于在运行时存取和过滤加载的插件适配器与搜集器。
+
+### 7.1 `ActivePathCollectorRegistry`
+管理所有已加载的活动路径搜集器（`IActivePathCollector`）。
+
+```csharp
+public static class ActivePathCollectorRegistry
+{
+    // 用于判定搜集器是否启用的过滤委托
+    public static Func<IActivePathCollector, bool> FilterFunc { get; set; }
+
+    // 注册一个新的路径搜集器实例
+    public static void Register(IActivePathCollector collector);
+
+    // 获取所有当前启用的搜集器列表
+    public static IReadOnlyList<IActivePathCollector> GetCollectors();
+
+    // 获取所有注册的搜集器（包含已被禁用的）
+    public static IReadOnlyList<IActivePathCollector> GetAllCollectors();
+}
+```
+
+### 7.2 `FileDialogAdapterRegistry`
+管理所有已加载的文件对话框适配器（`IFileDialogAdapter`）。
+
+```csharp
+public static class FileDialogAdapterRegistry
+{
+    public static Func<IFileDialogAdapter, bool> FilterFunc { get; set; }
+    public static void Register(IFileDialogAdapter adapter);
+    public static IReadOnlyList<IFileDialogAdapter> GetAdapters();
+    public static IReadOnlyList<IFileDialogAdapter> GetAllAdapters();
+}
+```
+
+### 7.3 `InlineSearchAdapterRegistry`
+管理所有已加载的嵌入式搜索适配器（`IInlineSearchAdapter`）。
+
+```csharp
+public static class InlineSearchAdapterRegistry
+{
+    public static Func<IInlineSearchAdapter, bool> FilterFunc { get; set; }
+    public static void Register(IInlineSearchAdapter adapter);
+    public static IReadOnlyList<IInlineSearchAdapter> GetAdapters();
+    public static IReadOnlyList<IInlineSearchAdapter> GetAllAdapters();
+}
+```
+
+---
+
+## 8. SDK 数据模型 (Models) {#sdk-models}
+
+### 8.1 `FavoriteItem`
+代表用户收藏的项模型。
+
+```csharp
+public class FavoriteItem
+{
+    public string Name { get; set; }
+    public string Path { get; set; }
+}
+```
+
+### 8.2 `ListControlIpcBridge`
+用于在插件与宿主窗口列表控件之间进行跨进程或跨组件交互的静态桥梁。
+
+```csharp
+public static class ListControlIpcBridge
+{
+    public static Func<IntPtr, IEnumerable<string>>? GetListItemsFunc { get; set; }
+    public static Func<IntPtr, string, IEnumerable<int>>? GetSelectedIndicesFunc { get; set; }
+    public static Action<IntPtr, string, int, bool, bool>? SelectItemAction { get; set; }
+    public static Action<IntPtr, string>? ClearSelectionAction { get; set; }
+}
+```
+
+---
+
+## 9. SDK 实用工具与助手类 (Helpers) {#sdk-helpers}
+
+### 9.1 `ShellInvokeHelper`
+用于执行 Windows Shell 命名空间动作的辅助类，特别是对于控制面板或 GodMode 等无法直接使用 Process 启动的虚拟项。
+
+```csharp
+public static class ShellInvokeHelper
+{
+    public static void InvokeShellItem(string parentShellPath, string itemPath);
+}
+```
+
+### 9.2 `ShellPathHelper`
+封装了 Windows Shell 文件路径、UNC 路径、回收站路径、虚拟文件夹解析与转换相关的复杂 Win32 互操作 API。
+
+### 9.3 `StartMenuShortcutResolver`
+用于解析 Windows 开始菜单中的快捷方式（.lnk / .url）实际指向的物理路径和图标配置。
+
+### 9.4 `UserProfileHelper`
+快速获取或解析当前 Windows 用户配置路径（如 `%USERPROFILE%`、AppData 目录等）的辅助工具。
+
+### 9.5 `VectorIconHelper`
+帮助解析和转换 WPF 矢量图形路径数据以作为图标渲染的工具类。
+
 

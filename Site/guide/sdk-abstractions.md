@@ -79,6 +79,7 @@ public interface ITheme
     ResourceDictionary GetResources();
     double WindowOpacity => 1.0;
 }
+```
 
 ---
 
@@ -179,4 +180,110 @@ public static class Logger
     public static void Log(string message, LogLevel level = LogLevel.Info);
 }
 ```
+
+---
+
+## 7. SDK Registries (Registries) {#sdk-registries}
+The SDK provides a collection of static registry classes to register, retrieve, and filter loaded plugin adapters and collectors at runtime.
+
+### 7.1 `ActivePathCollectorRegistry`
+Manages all loaded active path collectors (`IActivePathCollector`).
+
+```csharp
+public static class ActivePathCollectorRegistry
+{
+    // Filter delegate to check if a collector is enabled
+    public static Func<IActivePathCollector, bool> FilterFunc { get; set; }
+
+    // Registers a new active path collector
+    public static void Register(IActivePathCollector collector);
+
+    // Retrieves all currently enabled active path collectors
+    public static IReadOnlyList<IActivePathCollector> GetCollectors();
+
+    // Retrieves all registered collectors regardless of whether they are enabled
+    public static IReadOnlyList<IActivePathCollector> GetAllCollectors();
+}
+```
+
+### 7.2 `FileDialogAdapterRegistry`
+Manages all loaded file dialog adapters (`IFileDialogAdapter`).
+
+```csharp
+public static class FileDialogAdapterRegistry
+{
+    public static Func<IFileDialogAdapter, bool> FilterFunc { get; set; }
+    public static void Register(IFileDialogAdapter adapter);
+    public static IReadOnlyList<IFileDialogAdapter> GetAdapters();
+    public static IReadOnlyList<IFileDialogAdapter> GetAllAdapters();
+}
+```
+
+### 7.3 `InlineSearchAdapterRegistry`
+Manages all loaded inline search adapters (`IInlineSearchAdapter`).
+
+```csharp
+public static class InlineSearchAdapterRegistry
+{
+    public static Func<IInlineSearchAdapter, bool> FilterFunc { get; set; }
+    public static void Register(IInlineSearchAdapter adapter);
+    public static IReadOnlyList<IInlineSearchAdapter> GetAdapters();
+    public static IReadOnlyList<IInlineSearchAdapter> GetAllAdapters();
+}
+```
+
+---
+
+## 8. SDK Models (Models) {#sdk-models}
+
+### 8.1 `FavoriteItem`
+Represents a user's favorite shortcut item.
+
+```csharp
+public class FavoriteItem
+{
+    public string Name { get; set; }
+    public string Path { get; set; }
+}
+```
+
+### 8.2 `ListControlIpcBridge`
+A static bridge class to communicate selection/item state between plugin hooks and host window lists.
+
+```csharp
+public static class ListControlIpcBridge
+{
+    public static Func<IntPtr, IEnumerable<string>>? GetListItemsFunc { get; set; }
+    public static Func<IntPtr, string, IEnumerable<int>>? GetSelectedIndicesFunc { get; set; }
+    public static Action<IntPtr, string, int, bool, bool>? SelectItemAction { get; set; }
+    public static Action<IntPtr, string>? ClearSelectionAction { get; set; }
+}
+```
+
+---
+
+## 9. SDK Utility and Helper Classes (Helpers) {#sdk-helpers}
+
+### 9.1 `ShellInvokeHelper`
+SDK-level helper to execute Shell Namespace actions, especially virtual items like GodMode/Control Panel that cannot be launched directly via Process.Start.
+
+```csharp
+public static class ShellInvokeHelper
+{
+    public static void InvokeShellItem(string parentShellPath, string itemPath);
+}
+```
+
+### 9.2 `ShellPathHelper`
+Encapsulates Win32 Shell API invocations to resolve, convert, and inspect virtual shell folder paths, UNC paths, and Recycle Bin items.
+
+### 9.3 `StartMenuShortcutResolver`
+Helper class to resolve start menu shortcut link properties (.lnk / .url) including their actual target physical files and icons.
+
+### 9.4 `UserProfileHelper`
+A utility to retrieve and expand Windows user profile directories like `%USERPROFILE%` or app data folders.
+
+### 9.5 `VectorIconHelper`
+Helper to parse and transform WPF vector paths to render icons.
+
 
