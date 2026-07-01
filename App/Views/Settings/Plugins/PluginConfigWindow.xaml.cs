@@ -35,6 +35,7 @@ public partial class PluginConfigWindow : Window
             if (vm.ConfigFields.Count > 0)
             {
                 vm.ConfigFields[0].Settings.Save();
+                App.HookClient?.SendMessage(new Core.IpcMessage { Id = Core.IpcMessageId.ReloadSettings });
             }
         }
         IsSaved = true;

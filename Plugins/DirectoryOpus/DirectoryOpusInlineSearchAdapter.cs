@@ -1,4 +1,3 @@
-using System.IO;
 using System.Runtime.InteropServices;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
@@ -30,7 +29,7 @@ public class DirectoryOpusInlineSearchAdapter : IInlineSearchAdapter
 
     public bool CanHandle(IntPtr hwnd, string className, string processName)
     {
-        if (!PluginSettingsService.GetSetting("DirectoryOpus", "EnableInlineSearch", true))
+        if (!PluginSettingsService.GetSetting("SwiftList.Plugins.DirectoryOpus", "EnableInlineSearch", true))
             return false;
 
         if (string.IsNullOrEmpty(className) || string.IsNullOrEmpty(processName))
@@ -117,9 +116,9 @@ public class DirectoryOpusInlineSearchAdapter : IInlineSearchAdapter
                     {
                         if (RunDopusCommandViaCopyData($"Go \"{parent}\""))
                         {
-                            _ = System.Threading.Tasks.Task.Run(async () =>
+                            _ = Task.Run(async () =>
                             {
-                                await System.Threading.Tasks.Task.Delay(200);
+                                await Task.Delay(200);
                                 RunDopusCommandViaCopyData($"Select \"{filename}\" DESELECTNOMATCH SETFOCUS");
                             });
                             return true;

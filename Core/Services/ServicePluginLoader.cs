@@ -110,6 +110,29 @@ public static class ServicePluginLoader
 
             TranslationService.LookupFunc = key => translations.TryGetValue(key, out var val) ? val : $"[{key}]";
 
+            PluginSettingsService.GetSettingFunc = (pluginId, key, defVal) =>
+            {
+                try
+                {
+                    var settings = UserSettings.Load();
+                    if (settings.PluginSettings.TryGetValue(pluginId, out var dict))
+                    {
+                        if (dict.TryGetValue(key, out var val))
+                        {
+                            if (val is System.Text.Json.JsonElement element)
+                            {
+                                if (element.ValueKind == System.Text.Json.JsonValueKind.True) return true;
+                                if (element.ValueKind == System.Text.Json.JsonValueKind.False) return false;
+                                if (element.ValueKind == System.Text.Json.JsonValueKind.String) return element.GetString();
+                            }
+                            return val;
+                        }
+                    }
+                }
+                catch { }
+                return defVal;
+            };
+
             if (loadHookPlugins)
             {
                 // Wire up FilterFuncs so the hook process respects enabled/disabled state.
