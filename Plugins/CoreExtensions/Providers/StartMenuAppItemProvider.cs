@@ -60,8 +60,28 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
         var indexedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var entriesByName = new Dictionary<string, List<(string Name, string Path)>>(StringComparer.OrdinalIgnoreCase);
 
-        // 1. Gather all unique shortcut files from Start Menu and Desktop
-        foreach (var root in StartMenuShortcutResolver.GetStartMenuRoots())
+        // 1. Collect scan roots: built-in Start Menu/Desktop + user-configured custom folders
+        var roots = StartMenuShortcutResolver.GetStartMenuRoots().ToList();
+        try
+        {
+            var customFolders = PluginSettingsService.GetSetting<List<string>>("SwiftList.Plugins.CoreExtensions", "CustomFolders", null!);
+            if (customFolders != null)
+            {
+                foreach (var p in customFolders)
+                {
+                    if (string.IsNullOrWhiteSpace(p)) continue;
+                    var expanded = Environment.ExpandEnvironmentVariables(p.Trim());
+                    if (Directory.Exists(expanded)) roots.Add(expanded);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            PluginSdk.Logger.Log($"[StartMenuAppItemProvider] Failed to load custom folders config: {ex.Message}", PluginSdk.LogLevel.Warn);
+        }
+
+        // 2. Gather all unique shortcut files from all roots
+        foreach (var root in roots)
         {
             foreach (var path in StartMenuShortcutResolver.EnumerateFilesSafe(root))
             {
@@ -81,7 +101,7 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
             }
         }
 
-        // 2. Deduplicate entries that have the same name by target executable path
+        // 3. Deduplicate entries that have the same name by target executable path
         var deduped = new List<(string Name, string Path)>();
         foreach (var group in entriesByName.Values)
         {
@@ -102,7 +122,7 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
             }
         }
 
-        // 3. Map to SearchableItem list with dynamic icon loading
+        // 4. Map to SearchableItem list with dynamic icon loading
         var descTemplate = TranslationService.Get("Search_ResultAppDir") ?? "Application · {0}";
         foreach (var entry in deduped)
         {
@@ -113,7 +133,6 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
                 ? (TranslationService.Get("Search_ResultApp") ?? "Application")
                 : string.Format(descTemplate, parentDir);
 
-            // Fetch HBITMAP icon for this application (use targetPath to avoid shortcut arrow overlay)
             var hBitmap = ShellPathHelper.GetIconHBitmapForPath(targetPath, 32);
             if (hBitmap == IntPtr.Zero && targetPath != capturedPath)
             {
@@ -124,7 +143,7 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
             {
                 Title = entry.Name,
                 Description = desc,
-                ResultKind = "Application", // Mark as Application kind for UI rendering
+                ResultKind = "Application",
                 HBitmapIcon = hBitmap,
                 ActionType = "None",
                 ActionArgument = capturedPath,
@@ -132,16 +151,15 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
                 {
                     try
                     {
-                        var psi = new System.Diagnostics.ProcessStartInfo
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                         {
                             FileName = capturedPath,
                             UseShellExecute = true
-                        };
-                        System.Diagnostics.Process.Start(psi);
+                        });
                     }
                     catch (Exception ex)
                     {
-                        PluginSdk.Logger.Log($"[StartMenuAppItemProvider] Failed to launch application '{entry.Name}': {ex.Message}", PluginSdk.LogLevel.Error);
+                        PluginSdk.Logger.Log($"[StartMenuAppItemProvider] Failed to launch '{entry.Name}': {ex.Message}", PluginSdk.LogLevel.Error);
                     }
                 }
             });

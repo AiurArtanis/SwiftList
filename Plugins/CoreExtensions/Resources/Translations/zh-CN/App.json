@@ -367,5 +367,8 @@
   "About_TutorialTitle": "新手引导教程",
   "About_TutorialHint": "通过一步步的交互引导，快速掌握 SwiftList 的核心效率特性",
   "About_TutorialBtn": "开始引导",
-  "Search_WelcomeTitle": "开始输入以检索文件或应用"
+  "Search_WelcomeTitle": "开始输入以检索文件或应用",
+  "CoreExtensions_Config_CustomFoldersGroupLabel": "自定义应用搜索文件夹",
+  "CoreExtensions_Config_CustomFoldersLabel": "快捷方式文件夹列表",
+  "CoreExtensions_Config_CustomFoldersDesc": "添加包含快捷方式或应用程序的自定义文件夹，一行一个，其中的内容将加入应用搜索结果列表。"
 }

@@ -52,6 +52,23 @@ public class CoreExtensionsPlugin : IPlugin, IActionProvider, IConfigurable
                         }
                     }
                 }
+            },
+            new PluginConfigField
+            {
+                Key = "CustomFoldersGroup",
+                LabelKey = "CoreExtensions_Config_CustomFoldersGroupLabel",
+                FieldType = ConfigFieldType.Group,
+                SubFields = new List<PluginConfigField>
+                {
+                    new PluginConfigField
+                    {
+                        Key = "CustomFolders",
+                        LabelKey = "CoreExtensions_Config_CustomFoldersLabel",
+                        DescriptionKey = "CoreExtensions_Config_CustomFoldersDesc",
+                        FieldType = ConfigFieldType.StringList,
+                        DefaultValue = new List<string>()
+                    }
+                }
             }
         }
     };

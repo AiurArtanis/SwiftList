@@ -23,6 +23,7 @@ public static class SearchableItemMapper
     }
 
     private static string _lastFileFiltersSignature = string.Empty;
+    private static string _lastCustomFoldersSignature = string.Empty;
 
     public static void AddSearchableItemResults(List<AppSearchResult> uiResults, string query, bool isInlineWindow)
     {
@@ -43,6 +44,17 @@ public static class SearchableItemMapper
             // Config changed: Evict FileFiltersSearchableItemProvider cache to force settings reload and directory scanning
             _cache.TryRemove("FileFiltersSearchableItemProvider", out _);
             _loadingTasks.TryRemove("FileFiltersSearchableItemProvider", out _);
+        }
+
+        var currentCustomFolders = PluginSettingsService.GetSettingFunc?.Invoke("SwiftList.Plugins.CoreExtensions", "CustomFolders", null);
+        var customFoldersSig = currentCustomFolders != null
+            ? System.Text.Json.JsonSerializer.Serialize(currentCustomFolders)
+            : string.Empty;
+        if (customFoldersSig != _lastCustomFoldersSignature)
+        {
+            _lastCustomFoldersSignature = customFoldersSig;
+            _cache.TryRemove("StartMenuAppItemProvider", out _);
+            _loadingTasks.TryRemove("StartMenuAppItemProvider", out _);
         }
 
         // Parse prefix keyword (e.g. "tf avsa") -> keyword = "tf", subQuery = "avsa"
