@@ -42,4 +42,15 @@ public partial class SearchBoxControl : UserControl
         set => SetValue(IsIconOnLeftProperty, value);
     }
 
+    // IsInActionsMode DependencyProperty
+    public static readonly DependencyProperty IsInActionsModeProperty = DependencyProperty.Register(
+        nameof(IsInActionsMode), typeof(bool), typeof(SearchBoxControl),
+        new PropertyMetadata(false));
+
+    public bool IsInActionsMode
+    {
+        get => (bool)GetValue(IsInActionsModeProperty);
+        set => SetValue(IsInActionsModeProperty, value);
+    }
+
 }

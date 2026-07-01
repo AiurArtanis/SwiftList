@@ -76,6 +76,16 @@ public class QuickSearchWindowInputHandler
         var selectIndexMod = UserSettings.Load().SelectIndexModifier;
         if (Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(selectIndexMod))
         {
+            if (e.Key == Key.O)
+            {
+                if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
+                {
+                    _window.MenuPresenter?.EnterActionsMode(result);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
             var num = -1;
             if (e.Key >= Key.D1 && e.Key <= Key.D9)
                 num = e.Key - Key.D1;

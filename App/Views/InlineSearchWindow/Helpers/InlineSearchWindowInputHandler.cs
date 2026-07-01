@@ -93,6 +93,16 @@ public class InlineSearchWindowInputHandler
         var selectIndexMod = UserSettings.Load().SelectIndexModifier;
         if (Keyboard.Modifiers == GetWpfModifier(selectIndexMod))
         {
+            if (e.Key == Key.O)
+            {
+                if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
+                {
+                    e.Handled = true;
+                    _window.MenuPresenter.EnterActionsMode(result);
+                    return;
+                }
+            }
+
             var num = -1;
             if (e.Key >= Key.D1 && e.Key <= Key.D9)
                 num = (int)e.Key - (int)Key.D1 + 1;

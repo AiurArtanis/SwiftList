@@ -46,6 +46,16 @@ public partial class QuickSearchWindow : Window, ISearchWindow
     public QuickSearchViewModel ViewModel => _viewModel;
     public string SearchText => TxtSearch.Text;
 
+    public bool IsInActionsMode
+    {
+        get => SearchBox.IsInActionsMode;
+        set
+        {
+            SearchBox.IsInActionsMode = value;
+            _viewModel.Search.IsActionsMode = value;
+        }
+    }
+
     // ==========================================
 
     // Child Control Properties
@@ -53,6 +63,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow
     // ==========================================
 
     public TextBox TxtSearch => SearchBox.SearchTextBox;
+    public TextBox SearchTextBox => SearchBox.SearchTextBox;
     public TextBlock TxtPlaceholder => SearchBox.PlaceholderTextBlock;
     public UIElement ResultsPanel => ResultsPanelControl;
     public Border GridLoading => ResultsPanelControl.LoadingBorder;

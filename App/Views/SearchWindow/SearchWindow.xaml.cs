@@ -88,6 +88,18 @@ public partial class SearchWindow : Window, ISearchWindow
     TextBlock ISearchWindow.TxtActionsTarget => ResultsPanelControl.ActionsTargetTextBlock;
     ListBox ISearchWindow.LstActions => ResultsPanelControl.ActionsListBox;
     public string SearchText => SearchBox.SearchTextBox.Text;
+    public TextBox SearchTextBox => SearchBox.SearchTextBox;
+
+    public bool IsInActionsMode
+    {
+        get => SearchBox.IsInActionsMode;
+        set
+        {
+            SearchBox.IsInActionsMode = value;
+            var vm = this.DataContext as SearchExecutionViewModel;
+            vm?.IsActionsMode = value;
+        }
+    }
 
     public void UpdateActionsLayout() { /* Fixed-size window, no dynamic resizing needed */ }
 

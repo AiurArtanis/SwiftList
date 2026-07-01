@@ -35,7 +35,7 @@ public static class SearchInputHelper
             return true;
         }
 
-        if (e.Key == Key.Left || e.Key == Key.Back)
+        if (e.Key == Key.Left)
         {
             menuPresenter.GoBackMenuOrExit();
             e.Handled = true;
@@ -66,12 +66,6 @@ public static class SearchInputHelper
         if (e.Key == Key.Enter)
         {
             menuPresenter.ExecuteSelectedAction();
-            e.Handled = true;
-            return true;
-        }
-
-        if (e.Key != Key.System && e.Key != Key.LeftAlt && e.Key != Key.RightAlt)
-        {
             e.Handled = true;
             return true;
         }

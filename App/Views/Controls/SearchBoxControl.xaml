@@ -12,6 +12,8 @@
             <Grid.ColumnDefinitions>
                 <!-- Left Icon Column -->
                 <ColumnDefinition Width="Auto"/>
+                <!-- Actions Label Column -->
+                <ColumnDefinition Width="Auto"/>
                 <!-- TextBox Column -->
                 <ColumnDefinition Width="*"/>
                 <!-- Right Icon Column -->
@@ -26,6 +28,9 @@
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsIconOnLeft, ElementName=root}" Value="True">
                                 <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsInActionsMode, ElementName=root}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -64,9 +69,27 @@
                 </Control>
             </Grid>
 
+            <!-- Actions Label -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,11,0">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsInActionsMode, ElementName=root}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_ActionsTitle]}" 
+                           FontWeight="SemiBold" Foreground="{DynamicResource AccentBlue}" FontSize="{Binding FontSize, ElementName=root}"/>
+                <!-- Vertical divider line -->
+                <Border Width="1" Height="16" Margin="11,0,0,0" Background="{DynamicResource SeparatorBrush}" SnapsToDevicePixels="True"/>
+            </StackPanel>
+
             <!-- TextBox -->
             <TextBox x:Name="TxtSearch"
-                     Grid.Column="1"
+                     Grid.Column="2"
                      Text="{Binding SearchText, ElementName=root, UpdateSourceTrigger=PropertyChanged}"
                      FontSize="{Binding FontSize, ElementName=root}"
                      
@@ -78,14 +101,14 @@
 
             <!-- Placeholder -->
             <TextBlock x:Name="TxtPlaceholder"
-                       Grid.Column="1"
-                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[QuickSearch_Placeholder]}"
+                       Grid.Column="2"
                        FontSize="{Binding FontSize, ElementName=root}"
                        Foreground="{DynamicResource TextSecondary}"
                        VerticalAlignment="Center"
                        IsHitTestVisible="False">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
+                        <Setter Property="Text" Value="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[QuickSearch_Placeholder]}"/>
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding Text, ElementName=TxtSearch}" Value="">
@@ -94,19 +117,25 @@
                             <DataTrigger Binding="{Binding Text, ElementName=TxtSearch}" Value="{x:Null}">
                                 <Setter Property="Visibility" Value="Visible"/>
                             </DataTrigger>
+                            <DataTrigger Binding="{Binding IsInActionsMode, ElementName=root}" Value="True">
+                                <Setter Property="Text" Value="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_ActionsSearchPlaceholder]}"/>
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
 
             <!-- Right Icon Grid (Visible only when IsIconOnLeft is False) -->
-            <Grid Grid.Column="2" Margin="11,0,0,0" VerticalAlignment="Center">
+            <Grid Grid.Column="3" Margin="11,0,0,0" VerticalAlignment="Center">
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="Visibility" Value="Visible"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsIconOnLeft, ElementName=root}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsInActionsMode, ElementName=root}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>

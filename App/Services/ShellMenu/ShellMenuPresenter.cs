@@ -26,10 +26,20 @@ public class ShellMenuPresenter : IDisposable
     private readonly Dictionary<uint, IDynamicActionProvider> _commandToProviderMap = new();
     private readonly Dictionary<IntPtr, IDynamicActionProvider> _subMenuToProviderMap = new();
 
+    private string _savedSearchQuery = string.Empty;
+    private List<ActionMenuItem> _currentRawItems = new();
+
     public ShellMenuPresenter(ISearchWindow view)
     {
         _view = view;
         _mouseHandler = new ShellMenuMouseInputHandler(this, view);
+        _view.SearchTextBox.TextChanged += (s, e) =>
+        {
+            if (_isInActionsMode)
+            {
+                ApplyFilter(_view.SearchTextBox.Text);
+            }
+        };
     }
 
     public bool IsInActionsMode => _isInActionsMode;
@@ -60,6 +70,7 @@ public class ShellMenuPresenter : IDisposable
             return;
         }
 
+        _savedSearchQuery = _view.SearchTextBox.Text;
         _activeResult = result;
         _menuStack.Clear();
         _menuSelectedIndexStack.Clear();
@@ -75,12 +86,14 @@ public class ShellMenuPresenter : IDisposable
         }
 
         _isInActionsMode = true;
+        _view.IsInActionsMode = true;
 
         // Transition UI
 
         _view.GridSearchResults.Visibility = Visibility.Collapsed;
         _view.GridActions.Visibility = Visibility.Visible;
         _view.TxtActionsTarget.Text = Path.GetFileName(result.FullPath);
+        _view.SearchTextBox.Clear();
         LoadMenuItems(IntPtr.Zero);
     }
 
@@ -106,11 +119,24 @@ public class ShellMenuPresenter : IDisposable
             _commandToProviderMap,
             _subMenuToProviderMap
         );
-        _view.LstActions.ItemsSource = finalItems;
+        _currentRawItems = finalItems;
+        ApplyFilter(_view.SearchTextBox.Text);
         _view.UpdateActionsLayout();
-        if (finalItems.Count > 0)
+    }
+
+    private void ApplyFilter(string filter)
+    {
+        if (!_isInActionsMode) return;
+        var cleanItems = ShellMenuFilter.Apply(_currentRawItems, filter);
+        foreach (var item in cleanItems)
         {
-            var firstSelectable = finalItems.FindIndex(i => !i.IsSeparator && !i.IsSectionHeader && !i.IsDisabled);
+            item.SearchQuery = filter;
+        }
+        _view.LstActions.ItemsSource = cleanItems;
+
+        if (cleanItems.Count > 0)
+        {
+            var firstSelectable = cleanItems.FindIndex(i => !i.IsSeparator && !i.IsSectionHeader && !i.IsDisabled);
             _view.LstActions.SelectedIndex = firstSelectable >= 0 ? firstSelectable : 0;
             _view.LstActions.ScrollIntoView(_view.LstActions.SelectedItem);
         }
@@ -153,11 +179,7 @@ public class ShellMenuPresenter : IDisposable
         if (_menuStack.Count > 0)
         {
             _menuStack.Pop();
-            if (_menuTitleStack.Count > 0)
-            {
-                _menuTitleStack.Pop();
-            }
-
+            if (_menuTitleStack.Count > 0) _menuTitleStack.Pop();
             var parentMenu = _menuStack.Count > 0 ? _menuStack.Peek() : IntPtr.Zero;
             LoadMenuItems(parentMenu);
             if (_menuSelectedIndexStack.Count > 0)
@@ -170,16 +192,13 @@ public class ShellMenuPresenter : IDisposable
                 }
             }
         }
-
-        else
-        {
-            ExitActionsMode();
-        }
+        else ExitActionsMode();
     }
 
     public void ExitActionsMode()
     {
         _isInActionsMode = false;
+        _view.IsInActionsMode = false;
         _activeResult = null;
         foreach (var provider in PluginManager.Instance.DynamicProviders)
         {
@@ -194,6 +213,8 @@ public class ShellMenuPresenter : IDisposable
         _view.GridActions.Visibility = Visibility.Collapsed;
         _view.GridSearchResults.Visibility = Visibility.Visible;
         _view.UpdateActionsLayout();
+        _view.SearchTextBox.Text = _savedSearchQuery;
+        _view.SearchTextBox.SelectAll();
         if (_view.LstResults.SelectedItem != null)
         {
             _view.LstResults.ScrollIntoView(_view.LstResults.SelectedItem);
@@ -260,21 +281,16 @@ public class ShellMenuPresenter : IDisposable
 
     public void Dispose()
     {
-        foreach (var provider in PluginManager.Instance.DynamicProviders)
-        {
-            provider.ClearSession();
-        }
+        foreach (var p in PluginManager.Instance.DynamicProviders) p.ClearSession();
     }
 
-    private SearchWindowType GetWindowType()
-    {
-        var typeName = _view.GetType().Name;
-        if (typeName.Equals("InlineSearchWindow", StringComparison.Ordinal))
-            return SearchWindowType.Inline;
-        if (typeName.Equals("QuickSearchWindow", StringComparison.Ordinal))
-            return SearchWindowType.Quick;
-        return SearchWindowType.Main;
-    }
+    private SearchWindowType GetWindowType() =>
+        _view.GetType().Name switch
+        {
+            "InlineSearchWindow" => SearchWindowType.Inline,
+            "QuickSearchWindow" => SearchWindowType.Quick,
+            _ => SearchWindowType.Main
+        };
 
     private bool IsInlineFileDialog() => GetWindowType() == SearchWindowType.Inline && InlineSearchManager.Instance.ExplorerTracker.IsActiveWindowDialog;
 }

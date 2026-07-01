@@ -53,6 +53,20 @@ public class SearchWindowInputHandler
                 return;
             }
         }
+
+        var selectIndexMod = UserSettings.Load().SelectIndexModifier;
+        if (Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(selectIndexMod))
+        {
+            if (e.Key == Key.O)
+            {
+                if (_window.LstGridResultsControl.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
+                {
+                    _window.MenuPresenter?.EnterActionsMode(result);
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
     }
 
     public void HandleTxtSearchBoxKeyDown(KeyEventArgs e)

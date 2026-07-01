@@ -199,6 +199,17 @@ public partial class InlineSearchWindow : Window, ISearchWindow
     public TextBlock TxtActionsTarget => ResultsPanelControl.ActionsTargetTextBlock;
     public ListBox LstActions => ResultsPanelControl.LstActions;
     public string SearchText => _searchText;
+    public System.Windows.Controls.TextBox SearchTextBox => SearchBox.SearchTextBox;
+
+    public bool IsInActionsMode
+    {
+        get => SearchBox.IsInActionsMode;
+        set
+        {
+            SearchBox.IsInActionsMode = value;
+            _viewModel.Search.IsActionsMode = value;
+        }
+    }
 
     public bool ActivateAndFocusSearchBox()
     {

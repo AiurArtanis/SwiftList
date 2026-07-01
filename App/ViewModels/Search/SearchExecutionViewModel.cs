@@ -48,6 +48,13 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _isInlineSearchContext, value);
     }
 
+    private bool _isActionsMode;
+    public bool IsActionsMode
+    {
+        get => _isActionsMode;
+        set => SetProperty(ref _isActionsMode, value);
+    }
+
     public string SearchQuery
     {
         get => _searchQuery;
@@ -55,6 +62,10 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
         {
             if (SetProperty(ref _searchQuery, value))
             {
+                if (IsActionsMode)
+                {
+                    return;
+                }
                 if (string.IsNullOrWhiteSpace(value))
                 {
                     _engine.CancelPendingSearch();

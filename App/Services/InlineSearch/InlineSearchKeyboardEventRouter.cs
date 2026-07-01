@@ -31,7 +31,10 @@ internal sealed class InlineSearchKeyboardEventRouter
             {
                 var window = _getWindow();
                 if (window != null && window.MenuPresenter.IsInActionsMode)
+                {
+                    window.SearchTextBox.AppendText(ch.ToString());
                     return;
+                }
                 _onCharacterTyped(ch);
             }));
 
@@ -41,7 +44,15 @@ internal sealed class InlineSearchKeyboardEventRouter
             {
                 var window = _getWindow();
                 if (window != null && window.MenuPresenter.IsInActionsMode)
+                {
+                    var text = window.SearchTextBox.Text;
+                    if (text.Length > 0)
+                    {
+                        window.SearchTextBox.Text = text.Substring(0, text.Length - 1);
+                        window.SearchTextBox.CaretIndex = window.SearchTextBox.Text.Length;
+                    }
                     return;
+                }
                 _onBackspacePressed();
             }));
 

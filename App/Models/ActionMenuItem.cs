@@ -6,6 +6,7 @@ namespace SwiftList.App;
 public class ActionMenuItem
 {
     public string Text { get; set; } = string.Empty;
+    public string SearchQuery { get; set; } = string.Empty;
     public uint CommandId { get; set; }
     public bool IsSeparator { get; set; }
     public bool IsSectionHeader { get; set; }

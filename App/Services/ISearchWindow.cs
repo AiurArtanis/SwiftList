@@ -18,6 +18,8 @@ public interface ISearchWindow : IPluginSearchWindow
     TextBlock TxtActionsTarget { get; }
     ListBox LstActions { get; }
     string SearchText { get; }
+    System.Windows.Controls.TextBox SearchTextBox { get; }
+    bool IsInActionsMode { get; set; }
     void UpdateActionsLayout();
     void FocusSearch();
 }
