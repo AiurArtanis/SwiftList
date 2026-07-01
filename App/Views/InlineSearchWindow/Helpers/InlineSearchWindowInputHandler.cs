@@ -129,7 +129,7 @@ public class InlineSearchWindowInputHandler
             {
                 if (shortcutIndex == num)
                 {
-                    _window.ExecuteSearchResultAsAdmin(item);
+                    _window.ExecuteSearchResult(item);
                     return;
                 }
 

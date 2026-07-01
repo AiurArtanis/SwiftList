@@ -92,7 +92,7 @@ public class QuickSearchWindowInputHandler
                     {
                         if (shortcutIndex == num)
                         {
-                            ExecuteResult(item, asAdmin: true);
+                            ExecuteResult(item, asAdmin: false);
                             e.Handled = true;
                             break;
                         }
