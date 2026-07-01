@@ -11,7 +11,7 @@ public class SearchService : IDisposable
     private static async Task<NamedPipeClientStream> GetPipeAsync(CancellationToken token)
     {
         var pipe = new NamedPipeClientStream(".", "SwiftListPipe", PipeDirection.InOut, PipeOptions.Asynchronous);
-        await pipe.ConnectAsync(10, token).ConfigureAwait(false);
+        await pipe.ConnectAsync(2000, token).ConfigureAwait(false);
         return pipe;
     }
 
@@ -231,7 +231,7 @@ public class SearchService : IDisposable
                 Logger.Log($"[PipeClient] Connecting to pipe for command: {msg.Id}...", LogLevel.Debug);
             using var pipe = new NamedPipeClientStream(".", "SwiftListPipe", PipeDirection.InOut, PipeOptions.Asynchronous);
 
-            await pipe.ConnectAsync(10, token).ConfigureAwait(false);
+            await pipe.ConnectAsync(2000, token).ConfigureAwait(false);
             if (verboseLog)
                 Logger.Log("[PipeClient] Connected. Writing command...", LogLevel.Debug);
             await SearchRequestBinarySerializer.WriteSearchRequestAsync(pipe, msg, token).ConfigureAwait(false);
