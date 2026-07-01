@@ -48,6 +48,52 @@ internal sealed class FzfPattern
 
     public bool TryMatch(string text, out FzfPatternResult result, FzfScoringScheme scheme, FzfSlab? slab = null)
     {
+        if (text.Contains('|'))
+        {
+            // ponytail: handle polyphonic aliases by matching each segment independently to prevent incorrect cross-boundary match failure
+            var bestResult = default(FzfPatternResult);
+            var matchedAny = false;
+            var span = text.AsSpan();
+            var start = 0;
+            while (start < span.Length)
+            {
+                var len = span.Slice(start).IndexOf('|');
+                if (len < 0)
+                    len = span.Length - start;
+
+                var segment = text.Substring(start, len);
+                if (TryMatchSingle(segment, out var segmentResult, scheme, slab))
+                {
+                    if (segmentResult.ValidOffsetFound)
+                    {
+                        segmentResult = new FzfPatternResult(
+                            segmentResult.Score,
+                            segmentResult.MinBegin + start,
+                            segmentResult.MinEnd + start,
+                            segmentResult.MaxEnd + start,
+                            true
+                        );
+                    }
+
+                    if (!matchedAny || segmentResult.Score > bestResult.Score)
+                    {
+                        bestResult = segmentResult;
+                        matchedAny = true;
+                    }
+                }
+
+                start += len + 1;
+            }
+
+            result = bestResult;
+            return matchedAny;
+        }
+
+        return TryMatchSingle(text, out result, scheme, slab);
+    }
+
+    private bool TryMatchSingle(string text, out FzfPatternResult result, FzfScoringScheme scheme, FzfSlab? slab = null)
+    {
         var totalScore = 0;
         var minBegin = int.MaxValue;
         var minEnd = int.MaxValue;

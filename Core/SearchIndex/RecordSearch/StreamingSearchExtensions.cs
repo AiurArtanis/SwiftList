@@ -119,6 +119,11 @@ internal static class StreamingSearchExtensions
         searcher.CacheManager.StoreCandidateCache(index, cacheTerm, matchedCandidates);
         var finishedRanks = matches.Finish(keep);
         searcher.StoreRankCache(index, cacheTerm, finishedRanks, limit);
+        foreach (var r in index.Finish(finishedRanks, limit))
+        {
+            token.ThrowIfCancellationRequested();
+            onResult(r);
+        }
     }
 
     private static void SearchNameCandidatesStreaming(
