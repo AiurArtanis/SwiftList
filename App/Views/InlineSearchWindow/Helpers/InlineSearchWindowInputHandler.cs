@@ -42,7 +42,8 @@ public class InlineSearchWindowInputHandler
         }
 
         // Enter key
-        if (e.Key == Key.Enter)
+        var actualKey = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (actualKey == Key.Enter)
         {
             e.Handled = true;
             var selectModifier = GetWpfModifier(UserSettings.Load().SelectIndexModifier);
@@ -83,7 +84,7 @@ public class InlineSearchWindowInputHandler
         }
 
         // Up arrow
-        if (e.Key == Key.Up)
+        if (actualKey == Key.Up)
         {
             e.Handled = true;
             MoveResultSelection(-1);
@@ -91,7 +92,7 @@ public class InlineSearchWindowInputHandler
         }
 
         // Down arrow
-        if (e.Key == Key.Down)
+        if (actualKey == Key.Down)
         {
             e.Handled = true;
             MoveResultSelection(1);
@@ -114,7 +115,7 @@ public class InlineSearchWindowInputHandler
         var selectIndexMod = UserSettings.Load().SelectIndexModifier;
         if (Keyboard.Modifiers == GetWpfModifier(selectIndexMod))
         {
-            if (e.Key == Key.O)
+            if (actualKey == Key.O)
             {
                 if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
                 {
@@ -125,10 +126,10 @@ public class InlineSearchWindowInputHandler
             }
 
             var num = -1;
-            if (e.Key >= Key.D1 && e.Key <= Key.D9)
-                num = (int)e.Key - (int)Key.D1 + 1;
-            else if (e.Key >= Key.NumPad1 && e.Key <= Key.NumPad9)
-                num = (int)e.Key - (int)Key.NumPad1 + 1;
+            if (actualKey >= Key.D1 && actualKey <= Key.D9)
+                num = (int)actualKey - (int)Key.D1 + 1;
+            else if (actualKey >= Key.NumPad1 && actualKey <= Key.NumPad9)
+                num = (int)actualKey - (int)Key.NumPad1 + 1;
             if (num >= 1 && num <= 9)
             {
                 e.Handled = true;

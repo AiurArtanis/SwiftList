@@ -43,7 +43,8 @@ public class QuickSearchWindowInputHandler
                 return;
             }
         }
-        if (e.Key == Key.Enter)
+        var actualKey = WpfUiHelper.GetActualKey(e);
+        if (actualKey == Key.Enter)
         {
             var selectModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
             var currentModifiers = Keyboard.Modifiers;
@@ -92,7 +93,7 @@ public class QuickSearchWindowInputHandler
         var selectIndexMod = UserSettings.Load().SelectIndexModifier;
         if (Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(selectIndexMod))
         {
-            if (e.Key == Key.O)
+            if (actualKey == Key.O)
             {
                 if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
                 {
@@ -103,10 +104,10 @@ public class QuickSearchWindowInputHandler
             }
 
             var num = -1;
-            if (e.Key >= Key.D1 && e.Key <= Key.D9)
-                num = e.Key - Key.D1;
-            else if (e.Key >= Key.NumPad1 && e.Key <= Key.NumPad9)
-                num = e.Key - Key.NumPad1;
+            if (actualKey >= Key.D1 && actualKey <= Key.D9)
+                num = actualKey - Key.D1;
+            else if (actualKey >= Key.NumPad1 && actualKey <= Key.NumPad9)
+                num = actualKey - Key.NumPad1;
             if (num >= 0)
             {
                 var scrollViewer = WpfUiHelper.GetScrollViewer(_window.LstResults);

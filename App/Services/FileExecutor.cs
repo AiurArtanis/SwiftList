@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using SwiftList.Core;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
@@ -119,15 +120,34 @@ public static class FileExecutor
     {
         try
         {
+            // SHOpenFolderAndSelectItems routes through the shell so it respects the user's
+            // default file manager (e.g. Directory Opus) rather than always opening explorer.exe.
+            if (SHParseDisplayName(path, IntPtr.Zero, out var pidl, 0, out _) == 0)
+            {
+                SHOpenFolderAndSelectItems(pidl, 0, null, 0);
+                Marshal.FreeCoTaskMem(pidl);
+                return;
+            }
+        }
+        catch { }
+
+        // Fallback
+        try
+        {
             Process.Start("explorer.exe", $"/select,\"{path}\"");
         }
-
         catch (Exception ex)
         {
             Logger.Log($"[FileExecutor] Locate in explorer failed for '{path}': {ex.Message}", LogLevel.Error);
             MessageBox.Show(string.Format(TranslationManager.Instance["Executor_LocateFailed"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern int SHParseDisplayName(string name, IntPtr bindingContext, out IntPtr pidl, uint sfgaoIn, out uint psfgaoOut);
+
+    [DllImport("shell32.dll")]
+    private static extern int SHOpenFolderAndSelectItems(IntPtr pidlFolder, uint cidl, IntPtr[]? apidl, uint dwFlags);
 
     public static bool TryLocateInExistingExplorer(string path, IntPtr explorerHwnd)
     {

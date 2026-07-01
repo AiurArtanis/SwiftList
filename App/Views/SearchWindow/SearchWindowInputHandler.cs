@@ -57,7 +57,8 @@ public class SearchWindowInputHandler
         var selectIndexMod = UserSettings.Load().SelectIndexModifier;
         if (Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(selectIndexMod))
         {
-            if (e.Key == Key.O)
+            var actualKey = WpfUiHelper.GetActualKey(e);
+            if (actualKey == Key.O)
             {
                 if (_window.LstGridResultsControl.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
                 {
@@ -71,19 +72,20 @@ public class SearchWindowInputHandler
 
     public void HandleTxtSearchBoxKeyDown(KeyEventArgs e)
     {
-        if (e.Key == Key.Down)
+        var actualKey = WpfUiHelper.GetActualKey(e);
+        if (actualKey == Key.Down)
         {
             MoveSelection(1);
             e.Handled = true;
         }
 
-        else if (e.Key == Key.Up)
+        else if (actualKey == Key.Up)
         {
             MoveSelection(-1);
             e.Handled = true;
         }
 
-        else if (e.Key == Key.Enter)
+        else if (actualKey == Key.Enter)
         {
             var selectModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
             var currentModifiers = Keyboard.Modifiers;
@@ -149,7 +151,8 @@ public class SearchWindowInputHandler
 
     public void HandleLstGridResultsKeyDown(KeyEventArgs e)
     {
-        if (e.Key == Key.Enter)
+        var actualKey2 = WpfUiHelper.GetActualKey(e);
+        if (actualKey2 == Key.Enter)
         {
             var selectModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
             var currentModifiers = Keyboard.Modifiers;

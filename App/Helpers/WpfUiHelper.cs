@@ -20,6 +20,10 @@ public static class WpfUiHelper
         };
     }
 
+    /// <summary>When Alt is held, WPF sets e.Key = Key.System and e.SystemKey = the real key. Normalize it.</summary>
+    public static Key GetActualKey(System.Windows.Input.KeyEventArgs e) => e.Key == Key.System ? e.SystemKey : e.Key;
+
+
     public static ScrollViewer? GetScrollViewer(DependencyObject depObj)
     {
         if (depObj is ScrollViewer viewer) return viewer;
