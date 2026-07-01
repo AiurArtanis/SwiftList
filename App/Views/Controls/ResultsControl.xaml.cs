@@ -113,6 +113,9 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
 
     private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => Dispatcher.BeginInvoke(new Action(() =>
                                                                                                  {
+                                                                                                     if (GridActions != null && GridActions.Visibility == Visibility.Visible)
+                                                                                                         return;
+
                                                                                                      var list = ActiveListBox;
                                                                                                      if (list != null && list.Items.Count > 0)
                                                                                                      {

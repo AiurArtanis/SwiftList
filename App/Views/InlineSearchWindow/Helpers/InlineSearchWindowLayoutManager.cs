@@ -93,14 +93,23 @@ public sealed class InlineSearchWindowLayoutManager
                     actionsHeaderHeight = selectedResult.ActionsHeaderHeight;
                 }
 
-                var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7);
-                var actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight - actionsHeaderHeight));
+                double actualActionsHeight;
+                if (items.Count == 0)
+                {
+                    actualActionsHeight = 40;
+                }
+                else
+                {
+                    var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7);
+                    actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight - actionsHeaderHeight));
+                }
                 _window.LstActions.Height = actualActionsHeight;
                 _window.ResultsPanelControl.Height = actualActionsHeight + actionsHeaderHeight;
             }
             else
             {
-                _window.ResultsPanelControl.Height = 0;
+                _window.LstActions.Height = 40;
+                _window.ResultsPanelControl.Height = 40 + 28;
             }
         }
         else

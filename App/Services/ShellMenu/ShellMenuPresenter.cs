@@ -38,11 +38,13 @@ public class ShellMenuPresenter : IDisposable
             if (_isInActionsMode)
             {
                 ApplyFilter(_view.SearchTextBox.Text);
+                _view.UpdateActionsLayout();
             }
         };
     }
 
     public bool IsInActionsMode => _isInActionsMode;
+    public string SavedSearchQuery => _savedSearchQuery;
 
     public void EnterActionsMode(AppSearchResult result)
     {

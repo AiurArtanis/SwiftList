@@ -138,6 +138,25 @@
                      ItemContainerStyle="{StaticResource ActionItemStyle}"
                      ItemTemplate="{StaticResource ActionMenuItemTemplate}"
                      SelectionMode="Single"/>
+            
+            <!-- Actions No Results Hint -->
+            <TextBlock Grid.Row="1"
+                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_NoResult]}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontSize="13"
+                       Foreground="{DynamicResource TextSecondary2}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Items.Count, ElementName=LstActions}" Value="0">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
         </Grid>
     </Grid>
 </UserControl>

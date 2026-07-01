@@ -61,7 +61,7 @@
         <Setter Property="helpers:RippleAdorner.EnableRipple" Value="True"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Margin" Value="0"/>
-        <Setter Property="Height" Value="Auto"/>
+        <Setter Property="Height" Value="{Binding ItemHeight}"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="Template">

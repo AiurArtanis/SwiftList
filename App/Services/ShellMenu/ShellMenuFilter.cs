@@ -45,7 +45,7 @@ public static class ShellMenuFilter
                 }
                 else
                 {
-                    // 2. Alias Fuzzy Match
+                    // 2. Alias Match (enforce a cleaner substring match on concatenated pinyin aliases to prevent subsequence leaking)
                     foreach (var provider in activeProviders)
                     {
                         try
@@ -54,7 +54,7 @@ public static class ShellMenuFilter
                             {
                                 foreach (var alias in provider.GetAliases(item.Text))
                                 {
-                                    if (!string.IsNullOrEmpty(alias) && IsFuzzyMatch(alias, keyword))
+                                    if (!string.IsNullOrEmpty(alias) && alias.Contains(keyword, StringComparison.OrdinalIgnoreCase))
                                     {
                                         isKeywordMatch = true;
                                         break;
@@ -101,7 +101,7 @@ public static class ShellMenuFilter
                 for (var j = i + 1; j < filtered.Count; j++)
                 {
                     if (filtered[j].IsSectionHeader) break;
-                    if (!filtered[j].IsSeparator && !filtered[j].IsDisabled)
+                    if (!filtered[j].IsSeparator && !filtered[j].IsDisabled && !filtered[j].IsSectionHeader)
                     {
                         hasItems = true;
                         break;
@@ -114,19 +114,26 @@ public static class ShellMenuFilter
                 cleanItems.Add(current);
             }
         }
-        if (cleanItems.Count > 0 && cleanItems[^1].IsSeparator)
+        
+        while (cleanItems.Count > 0 && (cleanItems[^1].IsSeparator || cleanItems[^1].IsSectionHeader))
         {
             cleanItems.RemoveAt(cleanItems.Count - 1);
+        }
+
+        while (cleanItems.Count > 0 && (cleanItems[0].IsSeparator || cleanItems[0].IsSectionHeader))
+        {
+            cleanItems.RemoveAt(0);
+        }
+
+        // Return empty list if no actual items were matched
+        if (cleanItems.Count == 0 || cleanItems.All(x => x.IsSeparator || x.IsSectionHeader))
+        {
+            return new List<ActionMenuItem>();
         }
 
         return cleanItems;
     }
 
-    /// <summary>
-    /// Performs a lightweight character-subsequence fuzzy match, equivalent to the core logic of FZF.
-    /// Returns true if characters in the 'query' appear in the 'target' in the same order.
-    /// Case-insensitive.
-    /// </summary>
     private static bool IsFuzzyMatch(string target, string query)
     {
         if (string.IsNullOrEmpty(query)) return true;

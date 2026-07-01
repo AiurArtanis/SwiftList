@@ -38,14 +38,25 @@ internal sealed class QuickSearchWindowLayoutManager
                     actionsHeaderHeight = selectedResult.ActionsHeaderHeight;
                 }
 
-                var maxAvailableHeight = 9 * UiMetrics.SearchResultItemHeight;
-                var actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight - actionsHeaderHeight));
+                double actualActionsHeight;
+                if (items.Count == 0)
+                {
+                    // Collapse to a small neat height for "No Search Results"
+                    actualActionsHeight = 40;
+                }
+                else
+                {
+                    var maxAvailableHeight = 9 * UiMetrics.SearchResultItemHeight;
+                    // Let the height naturally fit the items count (free size dynamic resize)
+                    actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight - actionsHeaderHeight));
+                }
                 _window.LstActions.Height = actualActionsHeight;
                 _window.ResultsPanelControl.Height = actualActionsHeight + actionsHeaderHeight;
             }
             else
             {
-                _window.ResultsPanelControl.Height = 0;
+                _window.LstActions.Height = 40;
+                _window.ResultsPanelControl.Height = 40 + 28;
             }
         }
         else

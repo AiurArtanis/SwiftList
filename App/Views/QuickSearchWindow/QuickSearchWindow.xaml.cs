@@ -201,7 +201,11 @@ public partial class QuickSearchWindow : Window, ISearchWindow
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e) => _inputHandler.HandleWindowPreviewKeyDown(e);
 
-    private void BtnOpenMore_Click(object sender, RoutedEventArgs e) => FileExecutor.OpenFileOrFolder("__SHOW_MORE__", TxtSearch.Text, HideWindowNoRestore);
+    private void BtnOpenMore_Click(object sender, RoutedEventArgs e)
+    {
+        var queryText = (IsInActionsMode && _menuPresenter != null) ? _menuPresenter.SavedSearchQuery : TxtSearch.Text;
+        FileExecutor.OpenFileOrFolder("__SHOW_MORE__", queryText, HideWindowNoRestore);
+    }
 
     private void LstResults_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {

@@ -23,13 +23,19 @@ public static class SearchInputHelper
                (checkKey == Key.Space && Keyboard.Modifiers == quickLookModifier);
     }
 
-    public static bool HandleActionsModeKeys(System.Windows.Input.KeyEventArgs e, ShellMenuPresenter? menuPresenter)
+    public static bool HandleActionsModeKeys(System.Windows.Input.KeyEventArgs e, ISearchWindow? window, ShellMenuPresenter? menuPresenter)
     {
         if (menuPresenter == null || !menuPresenter.IsInActionsMode)
             return false;
 
         if (e.Key == Key.Escape)
         {
+            if (window != null && !string.IsNullOrEmpty(window.SearchTextBox.Text))
+            {
+                window.SearchTextBox.Clear();
+                e.Handled = true;
+                return true;
+            }
             menuPresenter.ExitActionsMode();
             e.Handled = true;
             return true;
@@ -70,13 +76,23 @@ public static class SearchInputHelper
             return true;
         }
 
+        if (e.Key == Key.Back)
+        {
+            if (window != null && string.IsNullOrEmpty(window.SearchTextBox.Text))
+            {
+                menuPresenter.GoBackMenuOrExit();
+                e.Handled = true;
+                return true;
+            }
+        }
+
         return false;
     }
 
     public static bool HandleCommonSearchKeys(System.Windows.Input.KeyEventArgs e, ISearchWindow window, ShellMenuPresenter? menuPresenter)
     {
         // 1. Actions Mode keys
-        if (HandleActionsModeKeys(e, menuPresenter))
+        if (HandleActionsModeKeys(e, window, menuPresenter))
             return true;
 
         // 2. Clipboard Copy (Ctrl+C)

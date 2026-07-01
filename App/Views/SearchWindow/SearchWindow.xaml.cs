@@ -96,8 +96,7 @@ public partial class SearchWindow : Window, ISearchWindow
         set
         {
             SearchBox.IsInActionsMode = value;
-            var vm = this.DataContext as SearchExecutionViewModel;
-            vm?.IsActionsMode = value;
+            _viewModel?.IsActionsMode = value;
         }
     }
 

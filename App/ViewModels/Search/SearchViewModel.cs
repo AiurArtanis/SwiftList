@@ -235,8 +235,22 @@ public class SearchViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(ShowWelcomeHint));
     }
 
-    public bool ShowNoResultsHint => FilteredResults.Count == 0 && !string.IsNullOrWhiteSpace(AdvancedQuery);
-    public bool ShowWelcomeHint => string.IsNullOrWhiteSpace(AdvancedQuery);
+    private bool _isActionsMode;
+    public bool IsActionsMode
+    {
+        get => _isActionsMode;
+        set
+        {
+            if (SetProperty(ref _isActionsMode, value))
+            {
+                OnPropertyChanged(nameof(ShowNoResultsHint));
+                OnPropertyChanged(nameof(ShowWelcomeHint));
+            }
+        }
+    }
+
+    public bool ShowNoResultsHint => !IsActionsMode && FilteredResults.Count == 0 && !string.IsNullOrWhiteSpace(AdvancedQuery);
+    public bool ShowWelcomeHint => !IsActionsMode && string.IsNullOrWhiteSpace(AdvancedQuery);
 
     public void Dispose()
     {
