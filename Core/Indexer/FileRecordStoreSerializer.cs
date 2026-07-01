@@ -28,7 +28,7 @@ public static class FileRecordStoreSerializer
     private const string MetaMagic = "SLRCMETA";
     private const string RecordsMagic = "SLRCREC";
     private const string NamesMagic = "SLRCNAME";
-    private const int Version = 8;
+    public const int Version = 8;
 
     public static string GetBasePath(string cacheDir, string sourceKey) => Path.Combine(cacheDir, sourceKey.ToLowerInvariant());
 

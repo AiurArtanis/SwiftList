@@ -23,7 +23,7 @@ internal static class RuntimeIndexCacheExtensions
             using var reader = new BinaryReader(meta, Encoding.UTF8);
             var magic = reader.ReadString();
             var ver = reader.ReadInt32();
-            if (magic != "SLRCMETA" || ver != 7)
+            if (magic != "SLRCMETA" || ver != FileRecordStoreSerializer.Version)
             {
                 Logger.Log($"[RuntimeIndex] Meta magic/version mismatch. Magic: {magic}, Ver: {ver}", LogLevel.Error);
                 return null;
@@ -80,7 +80,7 @@ internal static class RuntimeIndexCacheExtensions
             using var recordReader = new BinaryReader(recordStream, Encoding.UTF8);
             var nameMagic = nameReader.ReadString();
             var nameVer = nameReader.ReadInt32();
-            if (nameMagic != "SLRCNAME" || nameVer != 7)
+            if (nameMagic != "SLRCNAME" || nameVer != FileRecordStoreSerializer.Version)
             {
                 Logger.Log($"[RuntimeIndex] Names magic/version mismatch. Magic: {nameMagic}, Ver: {nameVer}", LogLevel.Error);
                 return null;
@@ -88,7 +88,7 @@ internal static class RuntimeIndexCacheExtensions
 
             var recMagic = recordReader.ReadString();
             var recVer = recordReader.ReadInt32();
-            if (recMagic != "SLRCREC" || recVer != 7)
+            if (recMagic != "SLRCREC" || recVer != FileRecordStoreSerializer.Version)
             {
                 Logger.Log($"[RuntimeIndex] Records magic/version mismatch. Magic: {recMagic}, Ver: {recVer}", LogLevel.Error);
                 return null;
