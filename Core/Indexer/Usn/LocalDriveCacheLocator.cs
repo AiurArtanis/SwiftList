@@ -14,7 +14,14 @@ internal static class LocalDriveCacheLocator
     public static FileRecordStoreSummary? TryLoadSummary(string cacheDir, string drive)
     {
         var key = GetCacheKey(drive);
-        return key == null ? null : FileRecordStoreSerializer.LoadSummary(cacheDir, key);
+        if (key == null) return null;
+        var summary = FileRecordStoreSerializer.LoadSummary(cacheDir, key);
+        if (!summary.HasValue)
+        {
+            FileRecordStoreSerializer.Delete(cacheDir, key);
+            return null;
+        }
+        return summary;
     }
 
     public static void Save(string cacheDir, string drive, FileRecordStore store)
@@ -32,16 +39,28 @@ internal static class LocalDriveCacheLocator
         if (!Directory.Exists(cacheDir))
             return Array.Empty<string>();
 
-        return Directory.EnumerateFiles(cacheDir, "*.meta")
-            .Select(Path.GetFileNameWithoutExtension)
-            .OfType<string>()
-            .Select(key => FileRecordStoreSerializer.LoadSummary(cacheDir, key))
-            .Where(summary => summary?.SourceKind == FileRecordSourceKind.LocalMft)
-            .Select(summary => NormalizeDrive(summary!.Value.SourceKey))
-            .Where(drive => drive.Length == 1)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(drive => drive, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var drives = new List<string>();
+        foreach (var path in Directory.EnumerateFiles(cacheDir, "*.meta"))
+        {
+            var key = Path.GetFileNameWithoutExtension(path);
+            if (string.IsNullOrWhiteSpace(key))
+                continue;
+
+            var summary = FileRecordStoreSerializer.LoadSummary(cacheDir, key);
+            if (!summary.HasValue)
+            {
+                FileRecordStoreSerializer.Delete(cacheDir, key);
+                continue;
+            }
+
+            if (summary.Value.SourceKind == FileRecordSourceKind.LocalMft)
+            {
+                var drive = NormalizeDrive(summary.Value.SourceKey);
+                if (drive.Length == 1)
+                    drives.Add(drive);
+            }
+        }
+        return drives.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(d => d, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     private static string GetRequiredCacheKey(string drive)

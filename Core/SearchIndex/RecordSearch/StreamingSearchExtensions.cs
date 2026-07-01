@@ -88,12 +88,14 @@ internal static class StreamingSearchExtensions
             {
                 if (streamedCount >= limit) return;
                 streamedCount++;
+                var flags = (FileRecordFlags)index.Flags[entryIndex];
                 var res = new SearchResult
                 {
                     Name = name,
                     Path = index.GetFullPath(entryIndex),
                     IsDir = index.IsDirectory(entryIndex),
                     Drive = index.SourceKey,
+                    Attributes = FileRecordFlagsHelper.ToAttributes(flags),
                     RankSortKey = FzfResultRank.ForDefaultScheme(entryIndex, name, match).SortKey
                 };
                 onResult(res);

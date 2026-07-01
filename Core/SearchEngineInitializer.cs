@@ -142,6 +142,11 @@ internal class SearchEngineInitializer
                 Logger.Log("[SearchEngineInitializer] Building new index from scratch...");
                 var newMetadata = _indexer.BuildDrives(supportedDrives, clearExisting: true, cacheDir: _indexCacheDir);
                 monitorsToStart = newMetadata;
+                lock (_indexer.LockObj)
+                {
+                    _indexer.Status.State = "ready";
+                    _indexer.Status.Progress = 100;
+                }
             }
 
             _indexer.CompactMemory();

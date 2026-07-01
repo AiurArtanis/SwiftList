@@ -86,12 +86,14 @@ internal static class NetworkDriveCacheLocator
         if (!string.IsNullOrWhiteSpace(unc))
             return BuildStorageKey(unc);
 
-        var fallback = EnumerateNetworkStores().FirstOrDefault(store =>
-            store.SourceKey.TrimEnd(':').Equals(normalizedDrive.TrimEnd(':'), StringComparison.OrdinalIgnoreCase));
-        return fallback == null ? null : BuildStorageKey(fallback.FileSystemType);
+        var fallback = EnumerateNetworkStores()
+            .Cast<FileRecordStoreSummary?>()
+            .FirstOrDefault(store => store.HasValue && store.Value.SourceKey.TrimEnd(':')
+                .Equals(normalizedDrive.TrimEnd(':'), StringComparison.OrdinalIgnoreCase));
+        return !fallback.HasValue ? null : BuildStorageKey(fallback.Value.FileSystemType);
     }
 
-    private static IEnumerable<FileRecordStore> EnumerateNetworkStores()
+    private static IEnumerable<FileRecordStoreSummary> EnumerateNetworkStores()
     {
         var cacheDir = Path.Combine(Logger.UserDataDir, "indexes");
         if (!Directory.Exists(cacheDir))
@@ -104,9 +106,17 @@ internal static class NetworkDriveCacheLocator
                 continue;
 
             var storageKey = name;
-            var store = FileRecordStoreSerializer.Load(cacheDir, storageKey);
-            if (store?.SourceKind == FileRecordSourceKind.NetworkMappedDrive)
-                yield return store;
+            var summary = FileRecordStoreSerializer.LoadSummary(cacheDir, storageKey);
+            if (!summary.HasValue)
+            {
+                // Delete outdated or corrupted caches immediately to prevent infinite retry loops and CPU spikes
+                FileRecordStoreSerializer.Delete(cacheDir, storageKey);
+                continue;
+            }
+
+            var val = summary.Value;
+            if (val.SourceKind == FileRecordSourceKind.NetworkMappedDrive)
+                yield return val;
         }
     }
 

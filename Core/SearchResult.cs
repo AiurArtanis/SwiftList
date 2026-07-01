@@ -7,6 +7,7 @@ public class SearchResult
     public string Path { get; set; } = string.Empty;
     public bool IsDir { get; set; }
     public string Drive { get; set; } = string.Empty;
+    public FileAttributes Attributes { get; set; }
     internal ulong RankSortKey { get; set; }
 }
 

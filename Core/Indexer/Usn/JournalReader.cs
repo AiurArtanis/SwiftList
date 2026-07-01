@@ -151,8 +151,8 @@ public class JournalReader
                 try
                 {
                     var record = UsnRecordParser.ParseRecord(recordSpan);
-                    var flags = record.IsDirectory ? FileRecordFlags.Directory : FileRecordFlags.None;
-
+                    var flags = FileRecordFlagsHelper.FromAttributes((FileAttributes)record.FileAttributes);
+ 
                     store.Records.Add(new FileRecord(
                         record.FileReferenceNumber,
                         record.ParentFileReferenceNumber,

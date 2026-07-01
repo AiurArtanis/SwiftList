@@ -71,7 +71,7 @@ public class SearchService : IDisposable
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var uniqueOnResult = new Action<SearchResult>(result =>
         {
-            if (FileSystemItemFilter.IsHiddenOrSystem(result.Path))
+            if (FileSystemItemFilter.IsHiddenOrSystem(result))
                 return;
 
             lock (seenPaths)

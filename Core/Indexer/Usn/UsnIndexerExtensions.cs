@@ -39,7 +39,7 @@ public static class UsnIndexerExtensions
                 if ((record.Reason & (Win32Api.USN_REASON_FILE_CREATE | Win32Api.USN_REASON_RENAME_NEW_NAME)) == 0)
                     continue;
 
-                var flags = record.IsDirectory ? FileRecordFlags.Directory : FileRecordFlags.None;
+                var flags = FileRecordFlagsHelper.FromAttributes((FileAttributes)record.FileAttributes);
                 var fileRecord = new FileRecord(
                     record.FileReferenceNumber,
                     record.ParentFileReferenceNumber,

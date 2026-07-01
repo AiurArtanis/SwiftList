@@ -198,12 +198,14 @@ internal static class PathExtensions
         {
             if (index.TryGetIndexById(parentId, out var parentIndex))
             {
+                var flags = (FileRecordFlags)index.Flags[parentIndex];
                 results.Add(new SearchResult
                 {
                     Name = index.GetName(parentIndex),
                     Path = index.GetFullPath(parentIndex),
                     IsDir = index.IsDirectory(parentIndex),
                     Drive = index.SourceKey,
+                    Attributes = FileRecordFlagsHelper.ToAttributes(flags),
                     RankSortKey = 0
                 });
             }

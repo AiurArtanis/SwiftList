@@ -57,7 +57,8 @@ internal static class FolderDriveScanner
                 continue;
 
             var id = (UInt128)PathHelpers.HashPath64(logicalPath);
-            store.Records.Add(new FileRecord(id, parentId, name, isDir ? FileRecordFlags.Directory : FileRecordFlags.None));
+            var flags = FileRecordFlagsHelper.FromAttributes(attrs);
+            store.Records.Add(new FileRecord(id, parentId, name, flags));
             if (isDir) dirs++;
             else files++;
             if (((files + dirs) & 4095) == 0)

@@ -89,12 +89,14 @@ internal static class Helpers
     public static SearchResult ToResult(this RuntimeIndex index, FzfRank rank)
     {
         var entryIndex = rank.EntryIndex;
+        var flags = (FileRecordFlags)index.Flags[entryIndex];
         return new SearchResult
         {
             Name = index.GetName(entryIndex),
             Path = index.GetFullPath(entryIndex),
             IsDir = index.IsDirectory(entryIndex),
             Drive = index.SourceKey,
+            Attributes = FileRecordFlagsHelper.ToAttributes(flags),
             RankSortKey = rank.SortKey
         };
     }

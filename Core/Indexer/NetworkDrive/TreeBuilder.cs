@@ -170,11 +170,12 @@ internal sealed class TreeBuilder
         var logicalPath = Path.Combine(logicalParentPath, name);
         fullPath = PathHelpers.NormalizePath(logicalPath, isDirectory);
         var id = PathHelpers.HashPath64(fullPath);
+        var flags = FileRecordFlagsHelper.FromAttributes(attributes);
         var fileRecord = new FileRecord(
             id,
             parentId,
             _namePool.Get(name),
-            isDirectory ? FileRecordFlags.Directory : FileRecordFlags.None);
+            flags);
         record = new NetworkWalkRecord(fileRecord, attributes);
         return WalkRecordResult.Success;
     }
