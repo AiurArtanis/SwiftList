@@ -221,10 +221,10 @@ public sealed class InlineSearchWindowLayoutManager
                                                           var targetVisibility = shouldShow ? Visibility.Visible : Visibility.Collapsed;
                                                           if (_window.PathPreviewBorder != null)
                                                           {
-                                                              if (shouldShow)
-                                                              {
-                                                                  _window.PathPreviewTextBlock.Text = isShowMore ? activeResult.Name : activeResult.FullPath;
-                                                              }
+                                                               if (shouldShow)
+                                                               {
+                                                                   _window.PathPreviewTextBlock.Text = isShowMore ? activeResult.Name : ViewModels.Search.SearchResultHelper.FormatWslPath(activeResult.FullPath);
+                                                               }
 
                                                               if (_window.PathPreviewBorder.Visibility != targetVisibility)
                                                               {

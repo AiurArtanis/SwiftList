@@ -63,6 +63,12 @@ internal static class SearchResultHelper
         }
 
         var path = parentDir ?? string.Empty;
+        return FormatWslPath(path);
+    }
+
+    public static string FormatWslPath(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return path;
         if (path.StartsWith(@"\\wsl$\", StringComparison.OrdinalIgnoreCase))
         {
             var suffix = path.Substring(@"\\wsl$\".Length).Replace('\\', '/');
