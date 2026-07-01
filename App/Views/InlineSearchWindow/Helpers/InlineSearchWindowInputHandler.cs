@@ -45,17 +45,38 @@ public class InlineSearchWindowInputHandler
         if (e.Key == Key.Enter)
         {
             e.Handled = true;
-            var asAdmin = Keyboard.Modifiers == GetWpfModifier(UserSettings.Load().SelectIndexModifier);
-            if (_window.LstResults.SelectedItem is AppSearchResult result)
-            {
-                ExecuteResult(result, asAdmin);
-            }
-            else if (_window.LstResults.Items.Count > 0)
+            var selectModifier = GetWpfModifier(UserSettings.Load().SelectIndexModifier);
+            var currentModifiers = Keyboard.Modifiers;
+
+            var result = _window.LstResults.SelectedItem as AppSearchResult;
+            if (result == null && _window.LstResults.Items.Count > 0)
             {
                 _window.LstResults.SelectedIndex = 0;
-                if (_window.LstResults.SelectedItem is AppSearchResult firstResult)
+                result = _window.LstResults.SelectedItem as AppSearchResult;
+            }
+
+            if (result != null)
+            {
+                var isFileOrFolder = !result.IsSearchSectionHeader && !result.IsEmptyResult &&
+                    (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath));
+
+                if (currentModifiers == selectModifier && isFileOrFolder)
                 {
-                    ExecuteResult(firstResult, asAdmin);
+                    var parentPath = System.IO.Path.GetDirectoryName(result.FullPath);
+                    if (!string.IsNullOrEmpty(parentPath))
+                    {
+                        var parentResult = new AppSearchResult
+                        {
+                            FullPath = parentPath,
+                            IsDir = true,
+                            ResultKind = "Folder"
+                        };
+                        ExecuteResult(parentResult, asAdmin: false);
+                    }
+                }
+                else
+                {
+                    ExecuteResult(result, asAdmin: false);
                 }
             }
             return;

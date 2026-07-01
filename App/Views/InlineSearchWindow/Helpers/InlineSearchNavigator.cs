@@ -33,7 +33,7 @@ public static class InlineSearchNavigator
             return;
         if (result.IsPluginSearchAction)
         {
-            if (PluginManager.Instance.TryExecuteSearchAction(result, window))
+            if (PluginManager.Instance.TryExecuteSearchAction(result, window, asAdmin))
             {
                 window.HideWindow();
             }
@@ -41,7 +41,7 @@ public static class InlineSearchNavigator
             return;
         }
 
-        if (PluginManager.Instance.TryExecuteSearchAction(result, window))
+        if (PluginManager.Instance.TryExecuteSearchAction(result, window, asAdmin))
         {
             window.HideWindow();
             return;

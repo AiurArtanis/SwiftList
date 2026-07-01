@@ -45,17 +45,33 @@ public class QuickSearchWindowInputHandler
         }
         if (e.Key == Key.Enter)
         {
-            var asAdmin = Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
-            if (_window.LstResults.SelectedItem is AppSearchResult result)
-            {
-                ExecuteResult(result, asAdmin);
-            }
-            else if (_window.LstResults.Items.Count > 0)
+            var selectModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
+            var currentModifiers = Keyboard.Modifiers;
+            
+            var result = _window.LstResults.SelectedItem as AppSearchResult;
+            if (result == null && _window.LstResults.Items.Count > 0)
             {
                 _window.LstResults.SelectedIndex = 0;
-                if (_window.LstResults.SelectedItem is AppSearchResult firstResult)
+                result = _window.LstResults.SelectedItem as AppSearchResult;
+            }
+
+            if (result != null)
+            {
+                var isFileOrFolder = !result.IsSearchSectionHeader && !result.IsEmptyResult &&
+                    (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath));
+
+                if (currentModifiers == selectModifier && isFileOrFolder)
                 {
-                    ExecuteResult(firstResult, asAdmin);
+                    FileExecutor.LocateInExplorer(result.FullPath);
+                    _window.HideWindow();
+                }
+                else if (currentModifiers == (selectModifier | ModifierKeys.Shift))
+                {
+                    ExecuteResult(result, asAdmin: true);
+                }
+                else
+                {
+                    ExecuteResult(result, asAdmin: false);
                 }
             }
             e.Handled = true;
@@ -143,12 +159,12 @@ public class QuickSearchWindowInputHandler
         if (result.IsPluginSearchAction)
         {
             _window.HideWindow();
-            if (PluginManager.Instance.TryExecuteSearchAction(result, _window))
+            if (PluginManager.Instance.TryExecuteSearchAction(result, _window, asAdmin))
             {
             }
             return;
         }
-        if (PluginManager.Instance.TryExecuteSearchAction(result, _window))
+        if (PluginManager.Instance.TryExecuteSearchAction(result, _window, asAdmin))
         {
             _window.HideWindow();
             return;

@@ -116,7 +116,7 @@ public static class SearchInputHelper
         }
 
         // 3. QuickLook
-        if (IsQuickLookKey(e))
+        if (window.GetType().Name != "InlineSearchWindow" && IsQuickLookKey(e))
         {
             if (window.LstResults.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult && !result.IsApplication && result.FullPath != "__SHOW_MORE__")
             {

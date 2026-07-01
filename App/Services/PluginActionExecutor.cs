@@ -4,7 +4,7 @@ namespace SwiftList.App.Services;
 
 public static class PluginActionExecutor
 {
-    public static bool TryExecute(AppSearchResult result, PluginSdk.Abstractions.IPluginSearchWindow view)
+    public static bool TryExecute(AppSearchResult result, PluginSdk.Abstractions.IPluginSearchWindow view, bool asAdmin = false)
     {
         if (result.IsInstantResult)
         {
@@ -12,7 +12,10 @@ public static class PluginActionExecutor
             {
                 if (result.InstantResultOnExecute != null)
                 {
-                    result.InstantResultOnExecute();
+                    if (asAdmin && !string.IsNullOrWhiteSpace(result.InstantResultActionArgument))
+                        FileExecutor.OpenFileOrFolderAsAdmin(result.InstantResultActionArgument);
+                    else
+                        result.InstantResultOnExecute();
                 }
                 else if (result.InstantResultActionType == "Copy")
                 {

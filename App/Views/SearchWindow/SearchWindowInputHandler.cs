@@ -85,8 +85,27 @@ public class SearchWindowInputHandler
 
         else if (e.Key == Key.Enter)
         {
-            var asAdmin = Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
-            OpenSelectedResult(asAdmin: asAdmin);
+            var selectModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
+            var currentModifiers = Keyboard.Modifiers;
+            if (_window.LstGridResultsControl.SelectedItem is AppSearchResult selected)
+            {
+                var isFileOrFolder = !selected.IsSearchSectionHeader && !selected.IsEmptyResult &&
+                    (selected.ResultKind == "File" || selected.ResultKind == "Folder" || System.IO.File.Exists(selected.FullPath) || System.IO.Directory.Exists(selected.FullPath));
+
+                if (currentModifiers == selectModifier && isFileOrFolder)
+                {
+                    FileExecutor.LocateInExplorer(selected.FullPath);
+                    _window.Close();
+                }
+                else if (currentModifiers == (selectModifier | ModifierKeys.Shift))
+                {
+                    OpenSelectedResult(asAdmin: true);
+                }
+                else
+                {
+                    OpenSelectedResult(asAdmin: false);
+                }
+            }
             e.Handled = true;
         }
     }
@@ -107,8 +126,17 @@ public class SearchWindowInputHandler
         if (depObj is ListViewItem item && item.Content is AppSearchResult result)
         {
             e.Handled = true;
-            var asAdmin = Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
-            if (asAdmin)
+            var selectModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
+            var currentModifiers = Keyboard.Modifiers;
+            var isFileOrFolder = !result.IsSearchSectionHeader && !result.IsEmptyResult &&
+                (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath));
+
+            if (currentModifiers == selectModifier && isFileOrFolder)
+            {
+                FileExecutor.LocateInExplorer(result.FullPath);
+                _window.Close();
+            }
+            else if (currentModifiers == (selectModifier | ModifierKeys.Shift))
             {
                 FileExecutor.OpenFileOrFolderAsAdmin(result.FullPath);
             }
@@ -123,8 +151,27 @@ public class SearchWindowInputHandler
     {
         if (e.Key == Key.Enter)
         {
-            var asAdmin = Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
-            OpenSelectedResult(asAdmin: asAdmin);
+            var selectModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
+            var currentModifiers = Keyboard.Modifiers;
+            if (_window.LstGridResultsControl.SelectedItem is AppSearchResult selected)
+            {
+                var isFileOrFolder = !selected.IsSearchSectionHeader && !selected.IsEmptyResult &&
+                    (selected.ResultKind == "File" || selected.ResultKind == "Folder" || System.IO.File.Exists(selected.FullPath) || System.IO.Directory.Exists(selected.FullPath));
+
+                if (currentModifiers == selectModifier && isFileOrFolder)
+                {
+                    FileExecutor.LocateInExplorer(selected.FullPath);
+                    _window.Close();
+                }
+                else if (currentModifiers == (selectModifier | ModifierKeys.Shift))
+                {
+                    OpenSelectedResult(asAdmin: true);
+                }
+                else
+                {
+                    OpenSelectedResult(asAdmin: false);
+                }
+            }
             e.Handled = true;
         }
     }

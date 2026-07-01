@@ -260,14 +260,14 @@ public partial class QuickSearchWindow : Window, ISearchWindow
         if (result.IsPluginSearchAction)
         {
             HideWindow();
-            if (PluginManager.Instance.TryExecuteSearchAction(result, this))
+            if (PluginManager.Instance.TryExecuteSearchAction(result, this, asAdmin))
             {
             }
 
             return;
         }
 
-        if (PluginManager.Instance.TryExecuteSearchAction(result, this))
+        if (PluginManager.Instance.TryExecuteSearchAction(result, this, asAdmin))
         {
             HideWindow();
             return;

@@ -219,8 +219,8 @@ public class PluginManager : PluginRegistry
         }
     }
 
-    public bool TryExecuteSearchAction(AppSearchResult result, PluginSdk.Abstractions.IPluginSearchWindow view)
-        => PluginActionExecutor.TryExecute(result, view);
+    public bool TryExecuteSearchAction(AppSearchResult result, PluginSdk.Abstractions.IPluginSearchWindow view, bool asAdmin = false)
+        => PluginActionExecutor.TryExecute(result, view, asAdmin);
 
     public PluginActionRegistration? GetActionByRuntimeId(uint runtimeActionId)
         => _actions.FirstOrDefault(x => x.RuntimeActionId == runtimeActionId);
