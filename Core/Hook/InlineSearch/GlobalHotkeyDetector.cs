@@ -8,15 +8,33 @@ public sealed class GlobalHotkeyDetector
     private uint _lastModifierDownTime;
     private int _lastModifierVkCode;
     private int _modifierClickCount;
+    private bool _modifierWasReleased = true;
 
     private uint _lastQuickSwitchModifierTime;
     private int _lastQuickSwitchModifierVkCode;
     private int _quickSwitchModifierClickCount;
+    private bool _quickSwitchModifierWasReleased = true;
 
     public GlobalHotkeyDetector(UserSettings settings, ExplorerTracker explorerTracker)
     {
         _settings = settings;
         _explorerTracker = explorerTracker;
+    }
+
+    /// <summary>Call on WM_KEYUP / WM_SYSKEYUP to reset the "was released" flags.</summary>
+    public void OnKeyUp(int vkCode)
+    {
+        if (_settings.ToggleWindowHotkey?.Type == "ModifierClick" &&
+            KeyboardUtils.IsModifierKey(vkCode, _settings.ToggleWindowHotkey.ClickModifier))
+        {
+            _modifierWasReleased = true;
+        }
+
+        if (_settings.QuickSwitchHotkey?.Type == "ModifierClick" &&
+            KeyboardUtils.IsModifierKey(vkCode, _settings.QuickSwitchHotkey.ClickModifier))
+        {
+            _quickSwitchModifierWasReleased = true;
+        }
     }
 
     public bool CheckToggleWindowHotkey(int vkCode, uint time, out bool consumeKey, Action? onDoubleCtrl)
@@ -27,6 +45,11 @@ public sealed class GlobalHotkeyDetector
         {
             if (KeyboardUtils.IsModifierKey(vkCode, _settings.ToggleWindowHotkey.ClickModifier))
             {
+                // Key-repeat: the key was never released since last press — ignore
+                if (!_modifierWasReleased)
+                    return false;
+                _modifierWasReleased = false;
+
                 var elapsed = time - _lastModifierDownTime;
                 if (vkCode == _lastModifierVkCode && elapsed > 100 && elapsed < 500)
                 {
@@ -85,6 +108,11 @@ public sealed class GlobalHotkeyDetector
         {
             if (KeyboardUtils.IsModifierKey(vkCode, _settings.QuickSwitchHotkey.ClickModifier))
             {
+                // Key-repeat: the key was never released since last press — ignore
+                if (!_quickSwitchModifierWasReleased)
+                    return false;
+                _quickSwitchModifierWasReleased = false;
+
                 var elapsed = time - _lastQuickSwitchModifierTime;
                 if (vkCode == _lastQuickSwitchModifierVkCode && elapsed > 100 && elapsed < 500)
                 {
@@ -130,7 +158,7 @@ public sealed class GlobalHotkeyDetector
         if (_explorerTracker.IsActiveWindowDialog && triggered && _explorerTracker.ActiveAdapter != null)
         {
             var lastExplorerPath = _explorerTracker.LastActiveExplorerPath;
-            var isValid = !string.IsNullOrEmpty(lastExplorerPath) && 
+            var isValid = !string.IsNullOrEmpty(lastExplorerPath) &&
                           (Directory.Exists(lastExplorerPath) ||
                            (lastExplorerPath.Length >= 3 && lastExplorerPath[1] == ':' && lastExplorerPath[2] == '\\' && char.IsLetter(lastExplorerPath[0])));
 

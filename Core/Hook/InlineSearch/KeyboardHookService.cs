@@ -64,6 +64,11 @@ public class KeyboardHookService : IDisposable
         {
             return KeyboardNativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
         }
+        if (nCode >= 0 && (wParam == (IntPtr)KeyboardNativeMethods.WM_KEYUP || wParam == (IntPtr)KeyboardNativeMethods.WM_SYSKEYUP))
+        {
+            var hookStruct = Marshal.PtrToStructure<KeyboardNativeMethods.KBDLLHOOKSTRUCT>(lParam);
+            _hotkeyDetector.OnKeyUp((int)hookStruct.vkCode);
+        }
         if (nCode >= 0 && (wParam == (IntPtr)KeyboardNativeMethods.WM_KEYDOWN || wParam == (IntPtr)KeyboardNativeMethods.WM_SYSKEYDOWN))
         {
             var hookStruct = Marshal.PtrToStructure<KeyboardNativeMethods.KBDLLHOOKSTRUCT>(lParam);
