@@ -59,7 +59,7 @@ By directly parsing NTFS **USN Journal (Update Sequence Number)** logs and inter
 
 ### 9. 🧩 Fully Decoupled Plugin Ecosystem
 Features a lightweight, reusable **Plugin SDK** that enables seamless third-party extensions. The core project currently ships with five built-in extension groups:
-* **`ISearchResultAction` (Actions Menu)**: Defines right-click/Tab actions for search results, such as "Open File Location" or "Copy Path". It also registers dedicated context-aware commands inside the inline docked window.
+* **`ISearchResultAction` (Actions Menu)**: Defines right-click or Right Arrow key actions for search results, such as "Open File Location" or "Copy Path". It also registers dedicated context-aware commands inside the inline docked window.
 * **`IDynamicActionProvider` (Dynamic Menu)**: Interacts with the native Windows shell to reproduce Windows Right-Click Context Menus with pixel-perfection.
 * **`IInstantResultProvider` (Instant Evaluations)**:
   * **Scientific Calculator**: Parses arithmetic expressions in real-time, supporting nested brackets, scientific functions, and base conversions (e.g., `255 to hex` 👉 `0xFF`). Press `Tab` to autocomplete the result.
@@ -79,7 +79,7 @@ Features a lightweight, reusable **Plugin SDK** that enables seamless third-part
   * Instead of reaching for your mouse, simply press `Ctrl+number` to instantly open/trigger the corresponding result.
 * **Copy File/Folder Entity (Ctrl+C)**: Select a file or folder in any search result list, press `Ctrl+C` to copy the actual file/folder entity directly to the clipboard and **automatically close the search window**, allowing you to paste it (`Ctrl+V`) directly inside Windows File Explorer.
 * **Actions Menu**:
-  * Select a search result and press `Tab` (or right-click) to open the actions menu.
+  * Select a search result and press the `Right Arrow` key (or right-click) to open the actions menu.
   * Features high-frequency actions such as "Open", "Open Folder", "Run as Administrator", "Copy Path", and "Copy File".
 
 ### 2. Inline Explorer Overlay & Directory Navigation (Inline Search)
