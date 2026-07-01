@@ -63,12 +63,6 @@ internal static class SearchResultHelper
         }
 
         var path = parentDir ?? string.Empty;
-        if (path.StartsWith(@"\\wsl.localhost\", StringComparison.OrdinalIgnoreCase))
-        {
-            var suffix = path.Substring(@"\\wsl.localhost\".Length).Replace('\\', '/');
-            var firstSlash = suffix.IndexOf('/');
-            return firstSlash < 0 ? $"WSL-{suffix}:/" : $"WSL-{suffix.Substring(0, firstSlash)}:{suffix.Substring(firstSlash)}";
-        }
         if (path.StartsWith(@"\\wsl$\", StringComparison.OrdinalIgnoreCase))
         {
             var suffix = path.Substring(@"\\wsl$\".Length).Replace('\\', '/');

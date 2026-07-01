@@ -128,7 +128,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
                 var item = WslDrives.FirstOrDefault(d => d.DistroName.Equals(name, StringComparison.OrdinalIgnoreCase));
                 if (item != null)
                 {
-                    var unc = $@"{NetworkDriveSettingsHelper.GetWslUncPrefix()}\{name}";
+                    var unc = $@"\\wsl$\{name}";
                     statuses.TryGetValue(unc, out var indexStatus);
                     var isPresent = wslDistros.Contains(name, StringComparer.OrdinalIgnoreCase);
                     item.IsPresent = isPresent;
@@ -172,7 +172,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
             WslDrives.Clear();
             foreach (var name in visibleWsl)
             {
-                var unc = $@"{NetworkDriveSettingsHelper.GetWslUncPrefix()}\{name}";
+                var unc = $@"\\wsl$\{name}";
                 statuses.TryGetValue(unc, out var indexStatus);
                 var isPresent = wslDistros.Contains(name, StringComparer.OrdinalIgnoreCase);
                 configuredWsl.TryGetValue(name, out var saved);

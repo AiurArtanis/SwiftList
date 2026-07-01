@@ -141,7 +141,12 @@ internal sealed class Scheduler : IDisposable
             _debounceCts[drive] = debounce;
         }
 
-        oldDebounce?.Dispose();
+        try
+        {
+            oldDebounce?.Dispose();
+        }
+        catch { }
+
         _ = Task.Run(async () =>
         {
             try
@@ -152,6 +157,10 @@ internal sealed class Scheduler : IDisposable
             catch (OperationCanceledException)
             {
             }
+            catch (ObjectDisposedException)
+            {
+                // Swallow exception caused by CancellationTokenSource being disposed to prevent UnobservedTaskException crash
+            }
             finally
             {
                 lock (_gate)
@@ -160,7 +169,11 @@ internal sealed class Scheduler : IDisposable
                         _debounceCts.Remove(drive);
                 }
 
-                debounce.Dispose();
+                try
+                {
+                    debounce.Dispose();
+                }
+                catch { }
             }
         }, CancellationToken.None);
     }

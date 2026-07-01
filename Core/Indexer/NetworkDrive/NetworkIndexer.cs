@@ -57,7 +57,7 @@ public sealed class NetworkIndexer : IDisposable
 
     public void Configure(IEnumerable<NetworkDriveSetting> driveSettings, IEnumerable<WslSetting> wslSettings, bool forceRefresh = false)
     {
-        var wslPrefix = Directory.Exists(@"\\wsl.localhost") ? @"\\wsl.localhost" : @"\\wsl$";
+        var wslPrefix = @"\\wsl$";
         var enabledSettings = driveSettings
             .Select(d => new
             {

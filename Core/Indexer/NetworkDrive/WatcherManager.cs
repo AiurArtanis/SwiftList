@@ -20,6 +20,10 @@ internal class WatcherManager : IDisposable
 
     public void EnsureWatcher(string drive)
     {
+        // WSL UNC paths do not support ReadDirectoryChangesW/FileSystemWatcher (raises "Function incorrect" / ERROR_INVALID_FUNCTION)
+        if (drive.StartsWith(@"\\wsl", StringComparison.OrdinalIgnoreCase))
+            return;
+
         lock (_watchers)
         {
             if (_watchers.ContainsKey(drive))

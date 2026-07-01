@@ -106,6 +106,7 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
     }
 
     public void ResetAutoInstallFlag() => _connectionHandler.ResetAutoInstallFlag();
+    public void ClearReconnectState() => _connectionHandler.ClearServiceReconnectState();
 
     private void OnServiceReady()
     {

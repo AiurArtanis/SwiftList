@@ -27,31 +27,34 @@ internal static class NetworkDriveSettingsHelper
         };
     }
 
-    public static string GetWslUncPrefix()
-    {
-        if (System.IO.Directory.Exists(@"\\wsl.localhost"))
-            return @"\\wsl.localhost";
-        return @"\\wsl$";
-    }
 
     public static List<string> GetWslDistros()
     {
         var distros = new List<string>();
         try
         {
-            var searchPath = GetWslUncPrefix();
-
-            if (searchPath != null)
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Lxss");
+            if (key != null)
             {
-                foreach (var dir in System.IO.Directory.GetDirectories(searchPath))
+                foreach (var subKeyName in key.GetSubKeyNames())
                 {
-                    distros.Add(System.IO.Path.GetFileName(dir));
+                    using var subKey = key.OpenSubKey(subKeyName);
+                    var distroName = subKey?.GetValue("DistributionName") as string;
+                    if (!string.IsNullOrEmpty(distroName))
+                    {
+                        // Verify that the network path for the distro is actually accessible via \\wsl$
+                        var targetPath = $@"\\wsl$\{distroName}";
+                        if (System.IO.Directory.Exists(targetPath))
+                        {
+                            distros.Add(distroName);
+                        }
+                    }
                 }
             }
         }
         catch (Exception ex)
         {
-            Logger.Log($"[NetworkDriveSettings] Failed to scan WSL distributions: {ex.Message}", LogLevel.Warn);
+            Logger.Log($"[NetworkDriveSettings] Failed to scan WSL distributions via registry: {ex.Message}", LogLevel.Warn);
         }
         return distros;
     }

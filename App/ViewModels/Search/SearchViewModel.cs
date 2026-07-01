@@ -163,7 +163,7 @@ public class SearchViewModel : ViewModelBase, IDisposable
             searching => IsSearching = searching,
             (results, status, final) =>
             {
-                _serviceStatus.ResetAutoInstallFlag();
+                _serviceStatus.ClearReconnectState();
                 LoadingPanelVisibility = Visibility.Collapsed;
                 IsSearchBoxEnabled = true;
                 _allResults = results;

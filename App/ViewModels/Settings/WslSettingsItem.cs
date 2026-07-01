@@ -20,7 +20,7 @@ public class WslSettingsItem : ViewModelBase
     public ICommand RowActionCommand { get; set; } = null!;
     public bool AppliedEnabled { get; set; }
 
-    public string UncPath => $@"{NetworkDriveSettingsHelper.GetWslUncPrefix()}\{DistroName}";
+    public string UncPath => $@"\\wsl$\{DistroName}";
 
     public string State { get => _state; set => SetProperty(ref _state, value); }
     public string ItemCount { get => _itemCount; set => SetProperty(ref _itemCount, value); }
