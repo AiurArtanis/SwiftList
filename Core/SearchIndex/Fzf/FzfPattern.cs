@@ -98,6 +98,16 @@ internal sealed class FzfPattern
             }
         }
 
+        // If the match span spans across a '|' character, reject it (prevent matching across joined aliases)
+        if (validOffsetFound && minBegin < maxEnd)
+        {
+            if (text.AsSpan(minBegin, maxEnd - minBegin).Contains('|'))
+            {
+                result = default;
+                return false;
+            }
+        }
+
         result = new FzfPatternResult(totalScore, minBegin, minEnd, maxEnd, validOffsetFound);
         return true;
     }
