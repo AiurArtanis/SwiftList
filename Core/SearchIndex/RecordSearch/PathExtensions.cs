@@ -47,10 +47,17 @@ internal static class PathExtensions
                     if (!index.IsUnderDirectoryCached(i, bestDirIndex, directoryMembershipCache))
                         continue;
 
-                    var name = index.GetName(i);
                     FzfPatternResult fileMatch = default;
-                    if (filePattern != null && !filePattern.TryMatch(name, out fileMatch, FzfScoringScheme.Default, slab))
-                        continue;
+                    string name;
+                    if (filePattern != null)
+                    {
+                        if (!StreamingSearchExtensions.MatchCandidate(index, i, filePattern, slab, out name, out fileMatch))
+                            continue;
+                    }
+                    else
+                    {
+                        name = index.GetName(i);
+                    }
 
                     // Prioritize files in directories with higher match scores
                     fileMatch = fileMatch with { Score = fileMatch.Score + bestDirScore };
@@ -87,8 +94,7 @@ internal static class PathExtensions
             if (index.IsDeleted(i))
                 continue;
 
-            var name = index.GetName(i);
-            if (!pattern.TryMatch(name, out var fileMatch, FzfScoringScheme.Default, slab))
+            if (!StreamingSearchExtensions.MatchCandidate(index, i, pattern, slab, out var name, out var fileMatch))
                 continue;
 
             var path = index.GetFullPath(i);
@@ -119,8 +125,7 @@ internal static class PathExtensions
             if (index.IsDeleted(i) || !index.IsDirectory(i))
                 continue;
 
-            var name = index.GetName(i);
-            if (!namePattern.TryMatch(name, out _, FzfScoringScheme.Default, slab))
+            if (!StreamingSearchExtensions.MatchCandidate(index, i, namePattern, slab, out _, out _))
                 continue;
 
             var path = index.GetFullPath(i);
@@ -146,6 +151,34 @@ internal static class PathExtensions
         return (bestIdx, bestScore);
     }
 
+    private static bool TryMatchSegmentWithAlias(string segment, FzfPattern pattern, FzfSlab slab)
+    {
+        if (pattern.TryMatch(segment, out _, FzfScoringScheme.Default, slab))
+            return true;
+
+        if (AliasProviderRegistry.HasNonAscii(segment))
+        {
+            foreach (var provider in AliasProviderRegistry.GetActiveProviders())
+            {
+                try
+                {
+                    if (provider.CanHandle(segment))
+                    {
+                        foreach (var alias in provider.GetAliases(segment))
+                        {
+                            if (pattern.TryMatch(alias, out _, FzfScoringScheme.Default, slab))
+                                return true;
+                        }
+                    }
+                }
+                catch
+                {
+                }
+            }
+        }
+        return false;
+    }
+
     private static bool VerifyPathSegmentsMatch(string path, string[] querySegments, FzfSlab slab)
     {
         var pathSegments = path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
@@ -158,7 +191,7 @@ internal static class PathExtensions
             var pSeg = pathSegments[pIdx];
 
             var pattern = Helpers.GetPattern("verify_seg|" + qSeg, qSeg, parseText: true);
-            if (pattern.TryMatch(pSeg, out _, FzfScoringScheme.Default, slab))
+            if (TryMatchSegmentWithAlias(pSeg, pattern, slab))
             {
                 qIdx--;
             }
@@ -191,7 +224,7 @@ internal static class PathExtensions
         if (parsed.ExactPathLower == null || parsed.TargetDrive == null)
             return false;
 
-        if (!index.TryResolvePath(parsed.ExactPathLower, out var parentId, out var childPrefixLower))
+        if (!index.TryResolvePath(parsed.ExactPathLower, out var parentId, out var childPrefixLower, forceLastSegmentAsQuery: !parsed.PathEndsWithSeparator))
             return false;
 
         if (childPrefixLower.Length == 0)
@@ -211,18 +244,26 @@ internal static class PathExtensions
             }
         }
 
-        var pattern = childPrefixLower.Length == 0 ? null : Helpers.GetPattern("child|" + childPrefixLower, "^" + childPrefixLower, parseText: true);
+        var pattern = childPrefixLower.Length == 0 ? null : Helpers.GetPattern("child|" + childPrefixLower, childPrefixLower, parseText: true);
         var matches = new FzfTopN(Math.Max(limit * 8, 64));
         var slab = new FzfSlab();
         foreach (var childIndex in index.EnumerateChildren(parentId))
         {
             token.ThrowIfCancellationRequested();
-            var name = index.GetName(childIndex);
             if (index.IsDeleted(childIndex))
                 continue;
+
             FzfPatternResult match = default;
-            if (pattern != null && !pattern.TryMatch(name, out match, FzfScoringScheme.Default, slab))
-                continue;
+            string name;
+            if (pattern != null)
+            {
+                if (!StreamingSearchExtensions.MatchCandidate(index, childIndex, pattern, slab, out name, out match))
+                    continue;
+            }
+            else
+            {
+                name = index.GetName(childIndex);
+            }
 
             matches.Add(pattern == null
                 ? FzfResultRank.ForDefaultScheme(childIndex, name, new FzfPatternResult(0, 0, 0, 0, false))

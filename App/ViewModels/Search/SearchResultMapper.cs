@@ -15,7 +15,8 @@ public static class SearchResultMapper
             try
             {
                 var trimmed = query.Trim();
-                if (trimmed.EndsWith(":\\") || trimmed.EndsWith(":/") || Directory.Exists(trimmed))
+                var endsWithSeparator = trimmed.EndsWith("\\") || trimmed.EndsWith("/");
+                if (trimmed.EndsWith(":\\") || trimmed.EndsWith(":/") || (endsWithSeparator && Directory.Exists(trimmed)))
                 {
                     var normalizedQuery = SearchResultHelper.NormalizePath(trimmed);
                     fileResults.RemoveAll(x => string.Equals(SearchResultHelper.NormalizePath(x.Path), normalizedQuery, StringComparison.OrdinalIgnoreCase));

@@ -2,7 +2,7 @@ namespace SwiftList.Core.SearchIndex.RecordIndex;
 
 public static class PathQueryExtensions
 {
-    public static bool TryResolvePath(this RuntimeIndex index, string pathLower, out UInt128 id, out string childPrefixLower)
+    public static bool TryResolvePath(this RuntimeIndex index, string pathLower, out UInt128 id, out string childPrefixLower, bool forceLastSegmentAsQuery = false)
     {
         id = default;
         childPrefixLower = string.Empty;
@@ -30,6 +30,13 @@ public static class PathQueryExtensions
             {
                 start = sep + 1;
                 continue;
+            }
+
+            if (isLast && forceLastSegmentAsQuery)
+            {
+                childPrefixLower = segment;
+                id = index.Ids[current];
+                return true;
             }
 
             if (!index.TryFindChildDirectory(current, segment, out var child))
