@@ -93,8 +93,16 @@ public class SettingsViewModel : ViewModelBase
         try
         {
             isServiceReady = await _searchService.PingAsync();
-            settings = await _searchService.GetMachineSettingsAsync();
-            _latestNetworkStatuses = _searchService.GetNetworkIndexStatuses();
+            if (isServiceReady)
+            {
+                settings = await _searchService.GetMachineSettingsAsync();
+                _latestNetworkStatuses = _searchService.GetNetworkIndexStatuses();
+            }
+            else
+            {
+                settings = new MachineSettings();
+                _latestNetworkStatuses = Array.Empty<NetworkIndexStatus>();
+            }
         }
         catch
         {
