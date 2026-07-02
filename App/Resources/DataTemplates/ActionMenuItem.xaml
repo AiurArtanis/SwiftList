@@ -19,11 +19,9 @@
 			<Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SeparatorBrush}" Height="1" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="0,4"
                     Visibility="{Binding IsSeparator, Converter={StaticResource BoolToVis}}"/>
 
-			<!-- Section Header view (e.g. "Context Menu") -->
-			<TextBlock Text="{Binding SectionTitle}" FontSize="12" FontWeight="SemiBold"
+			<TextBlock Text="{Binding SectionTitle}" FontSize="10" FontWeight="SemiBold"
                        Foreground="{DynamicResource AccentBlue}" VerticalAlignment="Center"
-                       
-                       Margin="0,4,0,0"
+                       Margin="0"
                        Visibility="{Binding SectionHeaderVisibility}"/>
 
 			<!-- Menu item view -->

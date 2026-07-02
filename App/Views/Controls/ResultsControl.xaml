@@ -134,6 +134,7 @@
                      BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.CanContentScroll="False"
                      Style="{StaticResource SleekListBoxStyle}"
                      ItemContainerStyle="{StaticResource ActionItemStyle}"
                      ItemTemplate="{StaticResource ActionMenuItemTemplate}"

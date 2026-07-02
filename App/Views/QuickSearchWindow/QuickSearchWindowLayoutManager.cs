@@ -50,7 +50,7 @@ internal sealed class QuickSearchWindowLayoutManager
                     // Let the height naturally fit the items count (free size dynamic resize)
                     actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight - actionsHeaderHeight));
                 }
-                _window.LstActions.Height = actualActionsHeight;
+                _window.LstActions.Height = double.NaN;
                 _window.ResultsPanelControl.Height = actualActionsHeight + actionsHeaderHeight;
             }
             else

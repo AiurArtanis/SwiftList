@@ -94,11 +94,14 @@ internal static class ActionMenuBuilder
 
                         foreach (var item in dynamicItemsList)
                         {
+                            if (string.IsNullOrWhiteSpace(item.Text) && !item.IsSeparator)
+                                continue;
+
                             var iconSource = GetIconFromHBitmap(item.HBitmapItem);
 
                             uiItems.Add(new ActionMenuItem
                             {
-                                Text = item.Text.Replace("&", ""),
+                                Text = (item.Text ?? "").Replace("&", ""),
                                 CommandId = item.CommandId,
                                 IsSeparator = item.IsSeparator,
                                 HasSubMenu = item.HasSubMenu,
@@ -129,11 +132,14 @@ internal static class ActionMenuBuilder
                 var dynamicItems = provider.GetMenuItems(activeResult, hMenu);
                 foreach (var item in dynamicItems)
                 {
+                    if (string.IsNullOrWhiteSpace(item.Text) && !item.IsSeparator)
+                        continue;
+
                     var iconSource = GetIconFromHBitmap(item.HBitmapItem);
 
                     uiItems.Add(new ActionMenuItem
                     {
-                        Text = item.Text.Replace("&", ""),
+                        Text = (item.Text ?? "").Replace("&", ""),
                         CommandId = item.CommandId,
                         IsSeparator = item.IsSeparator,
                         HasSubMenu = item.HasSubMenu,

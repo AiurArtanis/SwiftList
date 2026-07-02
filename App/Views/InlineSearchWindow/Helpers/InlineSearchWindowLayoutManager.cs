@@ -103,7 +103,7 @@ public sealed class InlineSearchWindowLayoutManager
                     var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7);
                     actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight - actionsHeaderHeight));
                 }
-                _window.LstActions.Height = actualActionsHeight;
+                _window.LstActions.Height = double.NaN;
                 _window.ResultsPanelControl.Height = actualActionsHeight + actionsHeaderHeight;
             }
             else

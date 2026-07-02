@@ -6,16 +6,14 @@ public static class ShellMenuFilter
 {
     public static List<ActionMenuItem> Apply(List<ActionMenuItem> rawItems, string filter)
     {
-        if (string.IsNullOrWhiteSpace(filter))
+        var filtered = rawItems;
+        if (!string.IsNullOrWhiteSpace(filter))
         {
-            return rawItems;
-        }
+            // Check if there are active Pinyin or other transliteration providers
+            var activeProviders = AliasProviderRegistry.GetActiveProviders().ToList();
 
-        // Check if there are active Pinyin or other transliteration providers
-        var activeProviders = AliasProviderRegistry.GetActiveProviders().ToList();
-
-        var filtered = rawItems.Where(item => 
-        {
+            filtered = rawItems.Where(item =>
+            {
             if (item.IsSectionHeader || item.IsSeparator)
             {
                 return true;
@@ -82,6 +80,7 @@ public static class ShellMenuFilter
 
             return true;
         }).ToList();
+        }
 
         // Clean up consecutive separators or headers without items
         var cleanItems = new List<ActionMenuItem>();
@@ -120,7 +119,7 @@ public static class ShellMenuFilter
             cleanItems.RemoveAt(cleanItems.Count - 1);
         }
 
-        while (cleanItems.Count > 0 && (cleanItems[0].IsSeparator || cleanItems[0].IsSectionHeader))
+        while (cleanItems.Count > 0 && cleanItems[0].IsSeparator)
         {
             cleanItems.RemoveAt(0);
         }
