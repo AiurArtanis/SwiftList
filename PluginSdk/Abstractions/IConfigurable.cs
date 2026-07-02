@@ -9,7 +9,8 @@ public enum ConfigFieldType
     Array,
     Object,
     Group,
-    StringList
+    StringList,
+    Hotkey
 }
 
 public class PluginConfigField

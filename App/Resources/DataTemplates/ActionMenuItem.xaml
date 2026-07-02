@@ -30,6 +30,7 @@
 					<ColumnDefinition Width="Auto"/>
 					<ColumnDefinition Width="*"/>
 					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
 				</Grid.ColumnDefinitions>
 
 				<!-- Item Icon -->
@@ -47,8 +48,30 @@
                            converters:TextHighlighter.HighlightBrush="{DynamicResource AccentBlue}"
                            TextTrimming="CharacterEllipsis"/>
 
+				<!-- Keyboard shortcut hint -->
+				<TextBlock Grid.Column="2"
+                           Text="{Binding ShortcutHint}"
+                           FontSize="11"
+                           Foreground="{DynamicResource ShortcutColor}"
+                           VerticalAlignment="Center"
+                           Margin="14,0,0,0">
+					<TextBlock.Style>
+						<Style TargetType="TextBlock">
+							<Setter Property="Visibility" Value="Visible"/>
+							<Style.Triggers>
+								<Trigger Property="Text" Value="">
+									<Setter Property="Visibility" Value="Collapsed"/>
+								</Trigger>
+								<Trigger Property="Text" Value="{x:Null}">
+									<Setter Property="Visibility" Value="Collapsed"/>
+								</Trigger>
+							</Style.Triggers>
+						</Style>
+					</TextBlock.Style>
+				</TextBlock>
+
 				<!-- Submenu indicator -->
-				<Path Grid.Column="2" Data="M0,0 L5,4 L0,8 Z" Fill="{DynamicResource ShortcutColor}" Width="5" Height="8" Stretch="Uniform" VerticalAlignment="Center" Margin="10,0,0,0"
+				<Path Grid.Column="3" Data="M0,0 L5,4 L0,8 Z" Fill="{DynamicResource ShortcutColor}" Width="5" Height="8" Stretch="Uniform" VerticalAlignment="Center" Margin="10,0,0,0"
                       Visibility="{Binding HasSubMenu, Converter={StaticResource BoolToVis}}"/>
 			</Grid>
 		</Grid>

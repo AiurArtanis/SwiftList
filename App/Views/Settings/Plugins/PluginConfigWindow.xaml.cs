@@ -60,4 +60,51 @@ public partial class PluginConfigWindow : Window
             }
         }
     }
+
+    private void HotkeyTextBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        e.Handled = true;
+
+        if (sender is System.Windows.Controls.TextBox textBox)
+        {
+            var key = e.Key == Key.System ? e.SystemKey : e.Key;
+
+            if (key == Key.LeftCtrl || key == Key.RightCtrl ||
+                key == Key.LeftAlt || key == Key.RightAlt ||
+                key == Key.LeftShift || key == Key.RightShift ||
+                key == Key.LWin || key == Key.RWin ||
+                key == Key.Clear || key == Key.OemClear)
+            {
+                return;
+            }
+
+            var parts = new List<string>();
+            var modifiers = Keyboard.Modifiers;
+
+            if (e.Key == Key.System)
+            {
+                modifiers |= ModifierKeys.Alt;
+            }
+
+            if (modifiers.HasFlag(ModifierKeys.Control)) parts.Add("Ctrl");
+            if (modifiers.HasFlag(ModifierKeys.Alt)) parts.Add("Alt");
+            if (modifiers.HasFlag(ModifierKeys.Shift)) parts.Add("Shift");
+            if (modifiers.HasFlag(ModifierKeys.Windows)) parts.Add("Win");
+
+            if (key == Key.Escape)
+            {
+                textBox.Text = string.Empty;
+                var expression = textBox.GetBindingExpression(System.Windows.Controls.TextBox.TextProperty);
+                expression?.UpdateSource();
+                return;
+            }
+
+            parts.Add(key.ToString());
+            var hotkeyStr = string.Join("+", parts);
+
+            textBox.Text = hotkeyStr;
+            var bindingExpr = textBox.GetBindingExpression(System.Windows.Controls.TextBox.TextProperty);
+            bindingExpr?.UpdateSource();
+        }
+    }
 }

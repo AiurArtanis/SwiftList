@@ -63,7 +63,8 @@ internal static class ActionMenuBuilder
                         Text = action.DisplayName,
                         CommandId = registration.RuntimeActionId,
                         Icon = action.Icon,
-                        ItemHeight = itemHeight
+                        ItemHeight = itemHeight,
+                        ShortcutHint = action.Hotkey
                     });
                 }
             }

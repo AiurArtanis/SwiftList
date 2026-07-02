@@ -15,6 +15,7 @@ public class ActionMenuItem
     public IntPtr SubMenuHandle { get; set; }
     public bool IsDisabled { get; set; }
     public ImageSource? Icon { get; set; }
+    public string ShortcutHint { get; set; } = string.Empty;
 
     public double ItemHeight { get; set; } = Services.UiMetrics.ListItemHeight;
 

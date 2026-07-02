@@ -45,6 +45,34 @@
                 <Setter Property="ContextMenu"><Setter.Value><ContextMenu Style="{DynamicResource {x:Type ContextMenu}}"><MenuItem Command="ApplicationCommands.Cut"/><MenuItem Command="ApplicationCommands.Copy"/><MenuItem Command="ApplicationCommands.Paste"/></ContextMenu></Setter.Value></Setter>
             </Style>
 
+            <Style x:Key="HotkeyTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Style.Resources>
+                    <VisualBrush x:Key="HotkeyPlaceholderBrush" TileMode="None" Stretch="None" AlignmentX="Center" AlignmentY="Center">
+                        <VisualBrush.Visual>
+                            <Label Content="按下快捷键" Foreground="{DynamicResource TextSecondary}" Opacity="0.5" FontSize="12"/>
+                        </VisualBrush.Visual>
+                    </VisualBrush>
+                </Style.Resources>
+                <Style.Triggers>
+                    <Trigger Property="Text" Value="">
+                        <Setter Property="Background" Value="{StaticResource HotkeyPlaceholderBrush}"/>
+                    </Trigger>
+                    <Trigger Property="Text" Value="{x:Null}">
+                        <Setter Property="Background" Value="{StaticResource HotkeyPlaceholderBrush}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <DataTemplate x:Key="HotkeyFieldTemplate">
+                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" 
+                         Style="{StaticResource HotkeyTextBoxStyle}"
+                         Width="180" Height="26"
+                         IsReadOnly="True"
+                         PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"/>
+            </DataTemplate>
+
             <!-- Implicit ComboBox styling to match SettingsComboBox -->
             <Style TargetType="ComboBox" BasedOn="{StaticResource SettingsComboBox}">
                 <Setter Property="Height" Value="26"/>
@@ -141,6 +169,11 @@
                                                     </DataTemplate>
                                                 </Setter.Value>
                                             </Setter>
+                                        </DataTrigger>
+
+                                        <!-- Hotkey fields -->
+                                        <DataTrigger Binding="{Binding IsHotkey}" Value="True">
+                                            <Setter Property="ContentTemplate" Value="{StaticResource HotkeyFieldTemplate}"/>
                                         </DataTrigger>
 
                                         <!-- Choice fields -->
