@@ -38,9 +38,8 @@
                         <ComboBox Grid.Column="1"
                                   Style="{StaticResource SettingsComboBox}"
                                   ItemsSource="{Binding HotkeyTypeOptions}"
-                                  SelectedValuePath="Value"
                                   DisplayMemberPath="Label"
-                                  SelectedValue="{Binding ToggleType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                  SelectedItem="{Binding SelectedToggleType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </Grid>
 
                     <!-- Toggle Modifier Click Config (Double Ctrl) -->
@@ -140,9 +139,8 @@
                         <ComboBox Grid.Column="1"
                                   Style="{StaticResource SettingsComboBox}"
                                   ItemsSource="{Binding HotkeyTypeOptions}"
-                                  SelectedValuePath="Value"
                                   DisplayMemberPath="Label"
-                                  SelectedValue="{Binding QuickSwitchType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                  SelectedItem="{Binding SelectedQuickSwitchType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </Grid>
 
                     <!-- Quick Switch Modifier Click Config -->

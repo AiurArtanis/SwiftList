@@ -30,8 +30,19 @@ public class HotkeySettingsViewModel : ViewModelBase
         _quickNavTriggerOnDoubleClick = _userSettings.QuickNavTriggerOnDoubleClick;
         _quickNavTriggerOnMiddleClick = _userSettings.QuickNavTriggerOnMiddleClick;
 
+        _selectedToggleType = HotkeyTypeOptions.FirstOrDefault(o => o.Value.ToString() == _toggleType);
+        _selectedQuickSwitchType = HotkeyTypeOptions.FirstOrDefault(o => o.Value.ToString() == _quickSwitchType);
+
         // Dynamically refresh properties when the language changes
-        TranslationManager.Instance.PropertyChanged += (s, e) => OnPropertyChanged(nameof(HotkeyTypeOptions));
+        TranslationManager.Instance.PropertyChanged += (s, e) =>
+        {
+            OnPropertyChanged(nameof(HotkeyTypeOptions));
+            System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                SelectedToggleType = HotkeyTypeOptions.FirstOrDefault(o => o.Value.ToString() == ToggleType);
+                SelectedQuickSwitchType = HotkeyTypeOptions.FirstOrDefault(o => o.Value.ToString() == QuickSwitchType);
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        };
     }
 
     // Quick Navigation properties
@@ -65,6 +76,20 @@ public class HotkeySettingsViewModel : ViewModelBase
     }
     public bool IsToggleModifierClick => ToggleType == "ModifierClick";
     public bool IsToggleKeyCombo => ToggleType == "KeyCombo";
+
+    private HotkeyOptionItem? _selectedToggleType;
+    public HotkeyOptionItem? SelectedToggleType
+    {
+        get => _selectedToggleType;
+        set
+        {
+            if (value == null) return;
+            if (SetProperty(ref _selectedToggleType, value))
+            {
+                ToggleType = value.Value.ToString() ?? "ModifierClick";
+            }
+        }
+    }
 
     private string _toggleClickModifier;
     public string ToggleClickModifier
@@ -110,6 +135,20 @@ public class HotkeySettingsViewModel : ViewModelBase
     }
     public bool IsQuickSwitchModifierClick => QuickSwitchType == "ModifierClick";
     public bool IsQuickSwitchKeyCombo => QuickSwitchType == "KeyCombo";
+
+    private HotkeyOptionItem? _selectedQuickSwitchType;
+    public HotkeyOptionItem? SelectedQuickSwitchType
+    {
+        get => _selectedQuickSwitchType;
+        set
+        {
+            if (value == null) return;
+            if (SetProperty(ref _selectedQuickSwitchType, value))
+            {
+                QuickSwitchType = value.Value.ToString() ?? "KeyCombo";
+            }
+        }
+    }
 
     private string _quickSwitchClickModifier;
     public string QuickSwitchClickModifier
