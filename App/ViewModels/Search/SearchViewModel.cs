@@ -119,6 +119,8 @@ public class SearchViewModel : ViewModelBase, IDisposable
         set => _serviceStatus.IsSearchBoxEnabled = value;
     }
 
+    public bool IsServiceConnected => _serviceStatus.IsServiceConnected;
+
     public Visibility LoadingPanelVisibility
     {
         get => _serviceStatus.LoadingPanelVisibility;

@@ -4,7 +4,6 @@ using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
-using Application = System.Windows.Application;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
 using SwiftList.App.ViewModels.Search;
 namespace SwiftList.App.ViewModels.Service;
@@ -44,6 +43,13 @@ public class ServiceMonitorViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _errorIconVisibility, value);
     }
 
+    private bool _isServiceConnected = true;
+    public bool IsServiceConnected
+    {
+        get => _isServiceConnected;
+        set => SetProperty(ref _isServiceConnected, value);
+    }
+
     public ServiceMonitorViewModel(QuickSearchViewModel mainVm, SearchService searchService)
     {
         _mainVm = mainVm;
@@ -55,10 +61,10 @@ public class ServiceMonitorViewModel : ViewModelBase, IDisposable
             onStatusUpdated: OnStatusUpdated,
             onServiceInstallStarted: () =>
             {
+                IsServiceConnected = false;
                 LoadingTitle = TranslationManager.Instance["Service_AutoConnecting"];
                 LoadingStats = TranslationManager.Instance["Service_AdminPrivilegeTip"];
                 ShowServiceReconnectState(LoadingTitle, LoadingStats);
-
             },
 
             onServiceInstallCompleted: StartConnectionHandlerAfterInstall,
@@ -68,12 +74,15 @@ public class ServiceMonitorViewModel : ViewModelBase, IDisposable
             onServiceFailedToStart: () =>
             {
                 IsIndexReady = false;
+                IsServiceConnected = false;
 
-                Application.Current.Dispatcher.Invoke(() => Application.Current.MainWindow?.Hide());
-                App.ShowSettingsWindow("Service");
+                // Degraded Mode: Collapse loading panel so search box remains usable for apps/WSL/network drives
+                LoadingPanelVisibility = Visibility.Collapsed;
+                StatusBarVisibility = Visibility.Visible;
+                StatusText = TranslationManager.Instance["Service_DisconnectedTitle"];
+                Logger.Log("[ServiceMonitor] Degradation Mode active: Service failed to start, local file search disabled.");
             },
-            onServiceReachable: () => { }
-
+            onServiceReachable: () => IsServiceConnected = true
         );
         _statusHandler = new ServiceMonitorStatusHandler(this, _mainVm, _connectionHandler);
         InstallServiceCommand = new RelayCommand(_connectionHandler.ExecuteInstallService);

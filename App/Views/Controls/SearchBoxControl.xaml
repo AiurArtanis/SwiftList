@@ -36,18 +36,23 @@
                     </Style>
                 </Grid.Style>
                 <!-- Monochrome logo icon -->
-                <Border Width="18" Height="18" Background="{DynamicResource TextSecondary}" Opacity="0.5"
-                        SnapsToDevicePixels="True" UseLayoutRounding="True" RenderOptions.BitmapScalingMode="HighQuality">
-                <Border.Style>
+                <Border Width="18" Height="18" SnapsToDevicePixels="True" UseLayoutRounding="True" RenderOptions.BitmapScalingMode="HighQuality">
+                    <Border.Style>
                         <Style TargetType="Border">
-                        <Setter Property="Visibility" Value="Visible"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSearching}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Setter Property="Background" Value="{DynamicResource TextSecondary}"/>
+                            <Setter Property="Opacity" Value="0.5"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSearching}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsServiceRunning, ElementName=root}" Value="False">
+                                    <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+                                    <Setter Property="Opacity" Value="0.8"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <Border.OpacityMask>
                         <ImageBrush ImageSource="pack://application:,,,/SwiftList.App;component/logo.png"
                                     RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -141,18 +146,23 @@
                     </Style>
                 </Grid.Style>
                 <!-- Monochrome logo icon -->
-                <Border Width="27" Height="27" Background="{DynamicResource TextSecondary}" Opacity="0.6"
-                        SnapsToDevicePixels="True" UseLayoutRounding="True" RenderOptions.BitmapScalingMode="HighQuality">
-                <Border.Style>
+                <Border Width="27" Height="27" SnapsToDevicePixels="True" UseLayoutRounding="True" RenderOptions.BitmapScalingMode="HighQuality">
+                    <Border.Style>
                         <Style TargetType="Border">
-                        <Setter Property="Visibility" Value="Visible"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSearching}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Setter Property="Background" Value="{DynamicResource TextSecondary}"/>
+                            <Setter Property="Opacity" Value="0.6"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSearching}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsServiceRunning, ElementName=root}" Value="False">
+                                    <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
+                                    <Setter Property="Opacity" Value="0.8"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <Border.OpacityMask>
                         <ImageBrush ImageSource="pack://application:,,,/SwiftList.App;component/logo.png"
                                     RenderOptions.BitmapScalingMode="HighQuality"/>

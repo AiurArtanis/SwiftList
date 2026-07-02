@@ -62,7 +62,7 @@
                                 </Canvas>
                             </Viewbox>
                             <!-- Shared SearchBoxControl component -->
-                            <app:SearchBoxControl x:Name="SearchBox" Grid.Column="1" FontSize="15" Padding="0" IsIconOnLeft="True" SearchText="{Binding AdvancedQuery, Mode=TwoWay}"/>
+                            <app:SearchBoxControl x:Name="SearchBox" Grid.Column="1" FontSize="15" Padding="0" IsIconOnLeft="True" SearchText="{Binding AdvancedQuery, Mode=TwoWay}" IsServiceRunning="{Binding IsServiceConnected}"/>
                         </Grid>
                         <!-- Window controls -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,6,6,0">

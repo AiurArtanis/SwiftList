@@ -34,6 +34,7 @@ internal sealed class ServiceMonitorStatusHandler
             return;
         }
 
+        _vm.IsServiceConnected = true;
         _vm.ErrorIconVisibility = Visibility.Collapsed;
 
         var hasQuery = !string.IsNullOrWhiteSpace(_mainVm.Search.SearchQuery);

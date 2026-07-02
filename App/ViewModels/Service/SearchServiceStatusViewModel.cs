@@ -3,7 +3,6 @@ using System.Windows.Input;
 using SwiftList.Core;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
-using Application = System.Windows.Application;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
 using SwiftList.App.ViewModels.Search;
 
@@ -26,6 +25,13 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
     private string _loadingTitle = string.Empty;
     private string _loadingStats = string.Empty;
     private Visibility _installButtonVisibility = Visibility.Collapsed;
+
+    private bool _isServiceConnected = true;
+    public bool IsServiceConnected
+    {
+        get => _isServiceConnected;
+        set => SetProperty(ref _isServiceConnected, value);
+    }
 
     public bool IsSearchBoxEnabled
     {
@@ -127,6 +133,7 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
     private void OnServiceInstallStarted()
     {
         _isRecovering = true;
+        IsServiceConnected = false;
         LoadingTitle = TranslationManager.Instance["Service_AutoConnecting"];
         LoadingStats = TranslationManager.Instance["Service_AdminPrivilegeTip"];
         _statusPresenter.ShowReconnecting();
@@ -134,15 +141,10 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
 
     private void OnServiceFailedToStart()
     {
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            foreach (Window window in Application.Current.Windows)
-            {
-                if (window is SearchWindow)
-                    window.Close();
-            }
-        });
-        App.ShowSettingsWindow("Service");
+        IsServiceConnected = false;
+        // Degraded Mode: Collapse loading panel so search box remains usable
+        LoadingPanelVisibility = Visibility.Collapsed;
+        Logger.Log("[SearchServiceStatus] Degraded Mode active: Service failed to start.");
     }
 
     private void InitializeServiceConnection()
@@ -163,6 +165,11 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
             _searchService,
             onStatusUpdated: status =>
             {
+                if (status.State == "ready" || status.State == "indexing" || status.State == "loading-cache")
+                {
+                    IsServiceConnected = true;
+                }
+
                 if (!_isRecovering && status.State == "ready")
                     return;
 
@@ -172,7 +179,11 @@ public class SearchServiceStatusViewModel : ViewModelBase, IDisposable
             onServiceInstallCompleted: CheckServiceStatusOnStartup,
             onServiceInstallError: ex => MessageBox.Show(string.Format(TranslationManager.Instance["Service_InstallFailedPrompt"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error),
             onServiceFailedToStart: OnServiceFailedToStart,
-            onServiceReachable: OnServiceReachable
+            onServiceReachable: () =>
+            {
+                IsServiceConnected = true;
+                OnServiceReachable();
+            }
         );
 
         InstallServiceCommand = new RelayCommand(_connectionHandler.ExecuteInstallService);

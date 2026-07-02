@@ -82,6 +82,8 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
 
     public bool IsIndexReady => Monitor.IsIndexReady;
 
+    public bool IsServiceConnected => Monitor.IsServiceConnected;
+
     public string StatusText => Monitor.StatusText;
 
     public Visibility ErrorIconVisibility => Monitor.ErrorIconVisibility;

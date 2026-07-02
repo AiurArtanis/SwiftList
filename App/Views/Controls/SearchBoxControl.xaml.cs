@@ -53,4 +53,14 @@ public partial class SearchBoxControl : UserControl
         set => SetValue(IsInActionsModeProperty, value);
     }
 
+    // IsServiceRunning DependencyProperty
+    public static readonly DependencyProperty IsServiceRunningProperty = DependencyProperty.Register(
+        nameof(IsServiceRunning), typeof(bool), typeof(SearchBoxControl),
+        new PropertyMetadata(true));
+
+    public bool IsServiceRunning
+    {
+        get => (bool)GetValue(IsServiceRunningProperty);
+        set => SetValue(IsServiceRunningProperty, value);
+    }
 }

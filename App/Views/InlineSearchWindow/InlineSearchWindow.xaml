@@ -66,9 +66,8 @@
                 <Border x:Name="SearchBoxBorder" Grid.Row="2" Background="{DynamicResource HeaderBg}" 
                         CornerRadius="0,0,7,7"
                         Padding="12,8,12,8">
-                    <!-- Shared SearchBoxControl -->
                     <local:SearchBoxControl x:Name="SearchBox" FontSize="14" Padding="0" IsIconOnLeft="False" 
-                                            SearchText="{Binding SearchQuery, Mode=TwoWay}"/>
+                                            SearchText="{Binding SearchQuery, Mode=TwoWay}" IsServiceRunning="{Binding IsServiceConnected}"/>
                 </Border>
             </Grid>
         </Border>
