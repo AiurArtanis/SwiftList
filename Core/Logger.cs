@@ -62,7 +62,21 @@ public static class Logger
                 Directory.CreateDirectory(_logDir);
                 _logPath = Path.Combine(_logDir, logFileName);
 
-                if (overwrite)
+                var shouldAppend = false;
+                if (File.Exists(_logPath))
+                {
+                    var fileInfo = new FileInfo(_logPath);
+                    if (fileInfo.Length < 1024 * 1024)
+                    {
+                        shouldAppend = true;
+                    }
+                }
+
+                if (shouldAppend)
+                {
+                    File.AppendAllText(_logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Log resumed ({logFileName})\n");
+                }
+                else
                 {
                     File.WriteAllText(_logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Log initialized ({logFileName})\n");
                 }
