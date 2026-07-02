@@ -24,65 +24,77 @@ public static class SearchStreamPump
         }
         SearchContext.DisabledAliasIds = disabledIds;
 
-        using var bufferedStream = new BufferedStream(stream, 8192);
-
-        await SearchResponseBinarySerializer.WriteHeaderAsync(bufferedStream, queryToken).ConfigureAwait(false);
-        await bufferedStream.FlushAsync(queryToken).ConfigureAwait(false);
-
-        var channel = Channel.CreateUnbounded<SearchResult>(
-            new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
-
-        var producer = Task.Run(() =>
+        var bufferedStream = new BufferedStream(stream, 8192);
+        try
         {
+            await SearchResponseBinarySerializer.WriteHeaderAsync(bufferedStream, queryToken).ConfigureAwait(false);
+            await bufferedStream.FlushAsync(queryToken).ConfigureAwait(false);
+
+            var channel = Channel.CreateUnbounded<SearchResult>(
+                new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
+
+            var producer = Task.Run(() =>
+            {
+                try
+                {
+                    var directory = msg.Id == SearchRequestId.SearchDir ? msg.DirectoryFilter : null;
+
+                    engine?.SearchStreaming(msg.Query ?? string.Empty, msg.Limit, msg.AppLimit, directory,
+                        result => channel.Writer.TryWrite(result), queryToken);
+                    channel.Writer.TryComplete();
+                }
+                catch (Exception ex)
+                {
+                    channel.Writer.TryComplete(ex);
+                }
+            }, queryToken);
+
             try
             {
-                var directory = msg.Id == SearchRequestId.SearchDir ? msg.DirectoryFilter : null;
+                var count = 0;
+                await foreach (var item in channel.Reader.ReadAllAsync(queryToken).ConfigureAwait(false))
+                {
+                    await SearchResponseBinarySerializer.WriteFileResultAsync(bufferedStream, item, queryToken).ConfigureAwait(false);
 
-                engine?.SearchStreaming(msg.Query ?? string.Empty, msg.Limit, msg.AppLimit, directory,
-                    result => channel.Writer.TryWrite(result), queryToken);
-                channel.Writer.TryComplete();
+                    count++;
+                    if (count <= 10 || count % 50 == 0)
+                    {
+                        await bufferedStream.FlushAsync(queryToken).ConfigureAwait(false);
+                    }
+                }
+
+                await bufferedStream.FlushAsync(queryToken).ConfigureAwait(false);
+                await producer.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex) when (IsClientDisconnect(ex))
+            {
+                queryCts.Cancel();
             }
             catch (Exception ex)
             {
-                channel.Writer.TryComplete(ex);
+                queryCts.Cancel();
+                Logger.Log($"[SearchStreamPump] Error processing streaming search request {msg.Id}: {ex.Message}", LogLevel.Error);
             }
-        }, queryToken);
-
-        try
-        {
-            var count = 0;
-            await foreach (var item in channel.Reader.ReadAllAsync(queryToken).ConfigureAwait(false))
+            finally
             {
-                await SearchResponseBinarySerializer.WriteFileResultAsync(bufferedStream, item, queryToken).ConfigureAwait(false);
-
-                count++;
-                if (count <= 10 || count % 50 == 0)
+                try
                 {
-                    await bufferedStream.FlushAsync(queryToken).ConfigureAwait(false);
+                    await SearchResponseBinarySerializer.WriteEndAsync(bufferedStream, token).ConfigureAwait(false);
+                    await bufferedStream.FlushAsync(token).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (IsClientDisconnect(ex))
+                {
                 }
             }
-
-            await bufferedStream.FlushAsync(queryToken).ConfigureAwait(false);
-            await producer.ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception ex) when (IsClientDisconnect(ex))
-        {
-            queryCts.Cancel();
-        }
-        catch (Exception ex)
-        {
-            queryCts.Cancel();
-            Logger.Log($"[SearchStreamPump] Error processing streaming search request {msg.Id}: {ex.Message}", LogLevel.Error);
         }
         finally
         {
             try
             {
-                await SearchResponseBinarySerializer.WriteEndAsync(bufferedStream, token).ConfigureAwait(false);
-                await bufferedStream.FlushAsync(token).ConfigureAwait(false);
+                bufferedStream.Dispose();
             }
             catch (Exception ex) when (IsClientDisconnect(ex))
             {
