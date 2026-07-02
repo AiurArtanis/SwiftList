@@ -16,6 +16,8 @@ public class ThemeManager
     public ResourceDictionary? ActiveThemeDictionary => _activeThemeDictionary;
     public PluginSdk.Abstractions.ITheme? ActiveTheme => _activeTheme;
 
+    public event Action? ThemeChanged;
+
     private ThemeManager()
     {
     }
@@ -56,6 +58,7 @@ public class ThemeManager
                 {
                     Helpers.WindowEffectHelper.ApplyThemeEffects(window, theme);
                 }
+                ThemeChanged?.Invoke();
             }
             else
             {
@@ -94,6 +97,7 @@ public class ThemeManager
                                 content.BeginAnimation(UIElement.OpacityProperty, fadeIn);
                             }
                         }
+                        ThemeChanged?.Invoke();
                     });
                 });
             }

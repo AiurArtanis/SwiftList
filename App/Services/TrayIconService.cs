@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using SwiftList.App.ViewModels.Search;
 using SwiftList.Core;
 using Application = System.Windows.Application;
@@ -7,10 +9,14 @@ namespace SwiftList.App.Services;
 
 public class TrayIconService : IDisposable
 {
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern bool DestroyIcon(IntPtr handle);
+
     private NotifyIcon? _notifyIcon;
     private readonly QuickSearchViewModel _viewModel;
     private readonly Action _showWindowAction;
     private readonly Action _toggleVisibilityAction;
+    private IntPtr _hIcon = IntPtr.Zero;
 
     private System.Windows.Controls.ContextMenu? _wpfContextMenu;
     private System.Windows.Controls.MenuItem? _wpfItemShowWindow;
@@ -29,6 +35,7 @@ public class TrayIconService : IDisposable
         _toggleVisibilityAction = toggleVisibilityAction;
         InitializeNotifyIcon();
 
+        ThemeManager.Instance.ThemeChanged += UpdateTrayIconThemeColor;
         TranslationManager.Instance.PropertyChanged += OnLanguageChanged;
         UpdateMenuTexts();
     }
@@ -39,31 +46,12 @@ public class TrayIconService : IDisposable
     {
         _notifyIcon = new NotifyIcon
         {
-            Text = "SwiftList"
+            Text = "SwiftList",
+            Visible = true
         };
 
-        try
-        {
-            var resourceUri = new Uri("pack://application:,,,/SwiftList.App;component/logo.ico", UriKind.Absolute);
-            var resourceInfo = Application.GetResourceStream(resourceUri);
+        UpdateTrayIconThemeColor();
 
-            if (resourceInfo != null)
-            {
-                using var stream = resourceInfo.Stream;
-                _notifyIcon.Icon = new Icon(stream);
-            }
-            else
-            {
-                _notifyIcon.Icon = SystemIcons.Application;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[TrayIconService] Failed to load logo resource: {ex.Message}", LogLevel.Error);
-            _notifyIcon.Icon = SystemIcons.Application;
-        }
-
-        _notifyIcon.Visible = true;
         _notifyIcon.MouseClick += (s, e) =>
         {
             if (e.Button == MouseButtons.Left)
@@ -75,6 +63,73 @@ public class TrayIconService : IDisposable
                 ShowWpfContextMenu();
             }
         };
+    }
+
+    private void UpdateTrayIconThemeColor()
+    {
+        if (_notifyIcon == null) return;
+        try
+        {
+            Color drawingColor;
+            if (ThemeManager.Instance.ActiveTheme?.IsDark == true)
+            {
+                drawingColor = Color.White;
+            }
+            else
+            {
+                var brush = Application.Current.Resources["AccentBlue"] as System.Windows.Media.SolidColorBrush;
+                var mediaColor = brush?.Color ?? System.Windows.Media.Colors.DodgerBlue;
+                drawingColor = Color.FromArgb(mediaColor.A, mediaColor.R, mediaColor.G, mediaColor.B);
+            }
+
+            var resourceUri = new Uri("pack://application:,,,/SwiftList.App;component/logo.png", UriKind.Absolute);
+            var resourceInfo = Application.GetResourceStream(resourceUri);
+            if (resourceInfo == null) return;
+
+            using var originalStream = resourceInfo.Stream;
+            using var originalBitmap = new Bitmap(originalStream);
+
+            // Get target dimensions based on current DPI scaling
+            var iconWidth = SystemInformation.SmallIconSize.Width;
+            var iconHeight = SystemInformation.SmallIconSize.Height;
+
+            using var coloredBitmap = new Bitmap(iconWidth, iconHeight);
+            using (var g = Graphics.FromImage(coloredBitmap))
+            {
+                g.Clear(Color.Transparent);
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+
+                using var attributes = new ImageAttributes();
+                var colorMatrix = new ColorMatrix(new float[][]
+                {
+                    new float[] { 0, 0, 0, 0, 0 },
+                    new float[] { 0, 0, 0, 0, 0 },
+                    new float[] { 0, 0, 0, 0, 0 },
+                    new float[] { 0, 0, 0, drawingColor.A / 255f, 0 },
+                    new float[] { drawingColor.R / 255f, drawingColor.G / 255f, drawingColor.B / 255f, 0, 1 }
+                });
+                attributes.SetColorMatrix(colorMatrix);
+                g.DrawImage(originalBitmap,
+                    new Rectangle(0, 0, iconWidth, iconHeight),
+                    0, 0, originalBitmap.Width, originalBitmap.Height,
+                    GraphicsUnit.Pixel, attributes);
+            }
+
+            var oldHIcon = _hIcon;
+            _hIcon = coloredBitmap.GetHicon();
+            _notifyIcon.Icon = Icon.FromHandle(_hIcon);
+
+            if (oldHIcon != IntPtr.Zero)
+            {
+                DestroyIcon(oldHIcon);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[TrayIconService] Failed to update tray icon theme color: {ex.Message}", LogLevel.Error);
+        }
     }
 
     private void InitializeWpfContextMenu()
@@ -222,32 +277,18 @@ public class TrayIconService : IDisposable
     }
 
     private void ShowSettingsWindow(string? targetSection = null) => App.ShowSettingsWindow(targetSection);
-
     private void ShowSearchWindow() => App.ShowSearchWindow();
 
-    private void UpdateCleanExitVisibility()
-    {
-        if (_wpfItemCleanExit == null) return;
-        var visibility = TrayCleanExitHelper.IsOnlyAppProcessRunning() ? Visibility.Visible : Visibility.Collapsed;
-        _wpfItemCleanExit.Visibility = visibility;
-    }
+    private void UpdateCleanExitVisibility() => _wpfItemCleanExit?.Visibility = TrayCleanExitHelper.IsOnlyAppProcessRunning() ? Visibility.Visible : Visibility.Collapsed;
 
     public void Dispose()
     {
+        ThemeManager.Instance.ThemeChanged -= UpdateTrayIconThemeColor;
         TranslationManager.Instance.PropertyChanged -= OnLanguageChanged;
         App.CloseAllManagedWindows();
 
-        if (_dummyWindow != null)
-        {
-            try { _dummyWindow.Close(); } catch { }
-            _dummyWindow = null;
-        }
-
-        if (_notifyIcon != null)
-        {
-            _notifyIcon.Visible = false;
-            _notifyIcon.Dispose();
-            _notifyIcon = null;
-        }
+        if (_dummyWindow != null) { try { _dummyWindow.Close(); } catch { } _dummyWindow = null; }
+        if (_notifyIcon != null) { _notifyIcon.Visible = false; _notifyIcon.Dispose(); _notifyIcon = null; }
+        if (_hIcon != IntPtr.Zero) { DestroyIcon(_hIcon); _hIcon = IntPtr.Zero; }
     }
 }
