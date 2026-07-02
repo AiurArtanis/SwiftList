@@ -27,6 +27,9 @@ public interface ISearchResultAction
     /// <summary>The display name shown in the Actions menu.</summary>
     string DisplayName { get; }
 
+    /// <summary>The keyboard shortcut/hotkey associated with this action (e.g. "Ctrl+Shift+C", "Alt+D").</summary>
+    string Hotkey => string.Empty;
+
     /// <summary>Keywords that expose this action as a search result instead of an action-menu item.</summary>
     IReadOnlyList<string> Keywords => Array.Empty<string>();
 

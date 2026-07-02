@@ -95,6 +95,16 @@ public static class SearchInputHelper
         if (HandleActionsModeKeys(e, window, menuPresenter))
             return true;
 
+        // 1b. Custom Action Hotkeys
+        if (window.LstResults.SelectedItem is AppSearchResult selectedResult && !selectedResult.IsSearchSectionHeader && !selectedResult.IsEmptyResult)
+        {
+            if (HotkeyActionTrigger.TryExecute(e, selectedResult, window))
+            {
+                e.Handled = true;
+                return true;
+            }
+        }
+
         // 2. Clipboard Copy (Ctrl+C)
         if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
         {
