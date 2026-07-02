@@ -31,60 +31,57 @@ internal static class PathExtensions
 
         if (!string.IsNullOrEmpty(dirQuery))
         {
-            var (bestDirIndex, bestDirScore) = FindBestDirectoryIndex(index, dirQuery, slab, token);
-            if (bestDirIndex >= 0)
+            var filePattern = !string.IsNullOrEmpty(fileQuery) ? Helpers.GetPattern("p_file|" + fileQuery, fileQuery, parseText: true) : null;
+            var querySegments = dirQuery.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+
+            for (var i = 0; i < index.Count; i++)
             {
-                var filePattern = !string.IsNullOrEmpty(fileQuery) ? Helpers.GetPattern("p_file|" + fileQuery, fileQuery, parseText: true) : null;
-                var directoryMembershipCache = new Dictionary<int, bool>();
-                var basePath = index.GetFullPath(bestDirIndex);
+                token.ThrowIfCancellationRequested();
+                if (index.IsDeleted(i))
+                    continue;
 
-                for (var i = 0; i < index.Count; i++)
+                FzfPatternResult fileMatch = default;
+                string name;
+                if (filePattern != null)
                 {
-                    token.ThrowIfCancellationRequested();
-                    if (index.IsDeleted(i))
+                    if (!StreamingSearchExtensions.MatchCandidate(index, i, filePattern, slab, out name, out fileMatch))
                         continue;
-
-                    if (!index.IsUnderDirectoryCached(i, bestDirIndex, directoryMembershipCache))
-                        continue;
-
-                    FzfPatternResult fileMatch = default;
-                    string name;
-                    if (filePattern != null)
-                    {
-                        if (!StreamingSearchExtensions.MatchCandidate(index, i, filePattern, slab, out name, out fileMatch))
-                            continue;
-                    }
-                    else
-                    {
-                        name = index.GetName(i);
-                    }
-
-                    // Prioritize files in directories with higher match scores
-                    fileMatch = fileMatch with { Score = fileMatch.Score + bestDirScore };
-
-                    var path = index.GetFullPath(i);
-                    if (directoryFilterLower != null && !path.StartsWith(directoryFilterLower, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    var rank = FzfResultRank.ForDefaultScheme(i, name, fileMatch);
-                    
-                    // Prioritize shallower relative path depth under the matched directory
-                    var relativeDepth = GetRelativeDepth(path, basePath);
-                    var point3 = (ushort)((Math.Min(relativeDepth, 255) << 8) | (Math.Min(name.Length, 255) & 0xFF));
-                    var sortKey = rank.SortKey;
-                    sortKey &= ~(0xFFFFUL << 32); // Clear bits 32-47 (LengthPoint)
-                    sortKey |= ((ulong)point3 << 32);
-                    rank = rank with { SortKey = sortKey };
-
-                    matches.Add(rank);
+                }
+                else
+                {
+                    name = index.GetName(i);
                 }
 
-                return index.Finish(matches.Finish(keep), limit);
+                var parentIndex = index.ParentIndexes[i];
+                if (parentIndex < 0)
+                    continue;
+
+                var parentPath = index.GetFullPath(parentIndex);
+                var dirScore = VerifyPathSegmentsMatch(parentPath, querySegments, slab);
+                if (dirScore <= 0)
+                    continue;
+
+                // Prioritize files in directories with higher match scores
+                fileMatch = fileMatch with { Score = fileMatch.Score + dirScore };
+
+                var path = index.GetFullPath(i);
+                if (directoryFilterLower != null && !path.StartsWith(directoryFilterLower, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var rank = FzfResultRank.ForDefaultScheme(i, name, fileMatch);
+                
+                // Prioritize shallower relative path depth under the matched directory
+                var relativeDepth = GetRelativeDepth(path, parentPath);
+                var point3 = (ushort)((Math.Min(relativeDepth, 255) << 8) | (Math.Min(name.Length, 255) & 0xFF));
+                var sortKey = rank.SortKey;
+                sortKey &= ~(0xFFFFUL << 32); // Clear bits 32-47 (LengthPoint)
+                sortKey |= ((ulong)point3 << 32);
+                rank = rank with { SortKey = sortKey };
+
+                matches.Add(rank);
             }
-            else
-            {
-                return results;
-            }
+
+            return index.Finish(matches.Finish(keep), limit);
         }
 
         var pattern = Helpers.GetPattern("p_file_fallback|" + pathQuery, pathQuery, parseText: true);
@@ -107,54 +104,16 @@ internal static class PathExtensions
         return index.Finish(matches.Finish(keep), limit);
     }
 
-    private static (int index, int score) FindBestDirectoryIndex(RuntimeIndex index, string dirQuery, FzfSlab slab, CancellationToken token)
+
+
+    private static bool TryMatchSegmentWithAlias(string segment, FzfPattern pattern, FzfSlab slab, out int score)
     {
-        var lastSep = dirQuery.LastIndexOf(Path.DirectorySeparatorChar);
-        var lastSegment = lastSep >= 0 ? dirQuery.Substring(lastSep + 1) : dirQuery;
-
-        var namePattern = Helpers.GetPattern("find_dir_name|" + lastSegment, lastSegment, parseText: true);
-        var pathPattern = Helpers.GetPattern("find_dir_path|" + dirQuery, dirQuery, parseText: true);
-        var querySegments = dirQuery.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
-
-        var bestIdx = -1;
-        var bestScore = -1;
-
-        for (var i = 0; i < index.Count; i++)
+        score = 0;
+        if (pattern.TryMatch(segment, out var match, FzfScoringScheme.Default, slab))
         {
-            token.ThrowIfCancellationRequested();
-            if (index.IsDeleted(i) || !index.IsDirectory(i))
-                continue;
-
-            if (!StreamingSearchExtensions.MatchCandidate(index, i, namePattern, slab, out _, out _))
-                continue;
-
-            var path = index.GetFullPath(i);
-            if (pathPattern.TryMatch(path, out var match, FzfScoringScheme.Path, slab))
-            {
-                if (!VerifyPathSegmentsMatch(path, querySegments, slab))
-                    continue;
-
-                if (match.Score > bestScore)
-                {
-                    bestScore = match.Score;
-                    bestIdx = i;
-                }
-            }
-        }
-
-        // Filter out extremely sparse fuzzy matches that are likely false positives
-        if (bestScore < dirQuery.Length * 10)
-        {
-            return (-1, -1);
-        }
-
-        return (bestIdx, bestScore);
-    }
-
-    private static bool TryMatchSegmentWithAlias(string segment, FzfPattern pattern, FzfSlab slab)
-    {
-        if (pattern.TryMatch(segment, out _, FzfScoringScheme.Default, slab))
+            score = match.Score;
             return true;
+        }
 
         if (AliasProviderRegistry.HasNonAscii(segment))
         {
@@ -166,8 +125,11 @@ internal static class PathExtensions
                     {
                         foreach (var alias in provider.GetAliases(segment))
                         {
-                            if (pattern.TryMatch(alias, out _, FzfScoringScheme.Default, slab))
+                            if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, slab))
+                            {
+                                score = aliasMatch.Score;
                                 return true;
+                            }
                         }
                     }
                 }
@@ -179,11 +141,12 @@ internal static class PathExtensions
         return false;
     }
 
-    private static bool VerifyPathSegmentsMatch(string path, string[] querySegments, FzfSlab slab)
+    private static int VerifyPathSegmentsMatch(string path, string[] querySegments, FzfSlab slab)
     {
         var pathSegments = path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
         var qIdx = querySegments.Length - 1;
         var pIdx = pathSegments.Length - 1;
+        var totalScore = 0;
 
         while (qIdx >= 0 && pIdx >= 0)
         {
@@ -191,14 +154,15 @@ internal static class PathExtensions
             var pSeg = pathSegments[pIdx];
 
             var pattern = Helpers.GetPattern("verify_seg|" + qSeg, qSeg, parseText: true);
-            if (TryMatchSegmentWithAlias(pSeg, pattern, slab))
+            if (TryMatchSegmentWithAlias(pSeg, pattern, slab, out var score))
             {
+                totalScore += score;
                 qIdx--;
             }
             pIdx--;
         }
 
-        return qIdx < 0;
+        return qIdx < 0 ? totalScore : 0;
     }
 
     private static int GetRelativeDepth(string path, string basePath)
