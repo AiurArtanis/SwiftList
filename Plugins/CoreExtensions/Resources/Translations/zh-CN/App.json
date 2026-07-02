@@ -206,6 +206,7 @@
   "Search_HeaderPath": "路径",
   "Search_HeaderDateModified": "修改时间",
   "Search_ActionsTitle": "动作",
+  "Search_ActionsTargetTitle": "目标",
   "Search_ActionsSearchPlaceholder": "搜索动作...",
   "Search_EscBack": "Esc / ◀ 返回",
   "Status_Ready": "就绪",

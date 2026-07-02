@@ -26,6 +26,12 @@ public class InlineSearchWindowInputHandler
         if (SearchInputHelper.HandleCommonSearchKeys(e, _window, _window.MenuPresenter))
             return;
 
+        if (e.Key == Key.Tab)
+        {
+            e.Handled = true;
+            return;
+        }
+
         // Escape key
         if (e.Key == Key.Escape)
         {

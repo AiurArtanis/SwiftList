@@ -50,24 +50,10 @@ public class ShellMenuPresenter : IDisposable
     {
         var tracker = InlineSearchManager.Instance.ExplorerTracker;
         if (tracker.ActiveInlineAdapter != null && !tracker.ActiveInlineAdapter.CanEnterActionsMode(tracker.ActiveHwnd))
-        {
             return;
-        }
 
-        if (result == null
-            || result.FullPath == "__SHOW_MORE__"
-
-            || result.IsEmptyResult
-
-            || result.IsApplication
-
-            || result.IsPluginSearchAction
-
-            || result.IsSearchSectionHeader
-
-            || result.IsInstantResult
-
-            || IsInlineFileDialog())
+        if (result == null || result.FullPath == "__SHOW_MORE__" || result.IsEmptyResult || result.IsApplication
+            || result.IsPluginSearchAction || result.IsSearchSectionHeader || result.IsInstantResult || IsInlineFileDialog())
         {
             return;
         }
@@ -80,23 +66,40 @@ public class ShellMenuPresenter : IDisposable
         _commandToProviderMap.Clear();
         _subMenuToProviderMap.Clear();
 
-        // Clear previous sessions in all registered dynamic action providers
-
         foreach (var provider in PluginManager.Instance.DynamicProviders)
         {
             provider.ClearSession();
         }
 
+        var finalItems = ActionMenuBuilder.Build(
+            _activeResult,
+            IntPtr.Zero,
+            GetWindowType(),
+            _commandToProviderMap,
+            _subMenuToProviderMap
+        );
+        _currentRawItems = finalItems;
+
+        var cleanItems = ShellMenuFilter.Apply(_currentRawItems, string.Empty);
+        foreach (var item in cleanItems)
+        {
+            item.SearchQuery = string.Empty;
+        }
+        _view.LstActions.ItemsSource = cleanItems;
+
+        if (cleanItems.Count > 0)
+        {
+            var firstSelectable = cleanItems.FindIndex(i => !i.IsSeparator && !i.IsSectionHeader && !i.IsDisabled);
+            _view.LstActions.SelectedIndex = firstSelectable >= 0 ? firstSelectable : 0;
+            _view.LstActions.ScrollIntoView(_view.LstActions.SelectedItem);
+        }
+
         _isInActionsMode = true;
         _view.IsInActionsMode = true;
-
-        // Transition UI
-
         _view.GridSearchResults.Visibility = Visibility.Collapsed;
         _view.GridActions.Visibility = Visibility.Visible;
         _view.TxtActionsTarget.Text = Path.GetFileName(result.FullPath);
         _view.SearchTextBox.Clear();
-        LoadMenuItems(IntPtr.Zero);
     }
 
     private void LoadMenuItems(IntPtr hMenu)
@@ -277,14 +280,9 @@ public class ShellMenuPresenter : IDisposable
         }
     }
 
-    public void HandleActionsPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    public void HandleActionsPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) => _mouseHandler.HandleActionsPreviewMouseLeftButtonUp(sender, e);
 
-        => _mouseHandler.HandleActionsPreviewMouseLeftButtonUp(sender, e);
-
-    public void Dispose()
-    {
-        foreach (var p in PluginManager.Instance.DynamicProviders) p.ClearSession();
-    }
+    public void Dispose() { foreach (var p in PluginManager.Instance.DynamicProviders) p.ClearSession(); }
 
     private SearchWindowType GetWindowType() =>
         _view.GetType().Name switch

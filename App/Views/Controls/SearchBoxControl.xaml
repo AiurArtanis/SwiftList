@@ -36,7 +36,7 @@
                     </Style>
                 </Grid.Style>
                 <!-- Monochrome logo icon -->
-                <Border Width="18" Height="18" SnapsToDevicePixels="True" UseLayoutRounding="True" RenderOptions.BitmapScalingMode="HighQuality">
+                <Border Width="{Binding LeftIconSize, ElementName=root}" Height="{Binding LeftIconSize, ElementName=root}" SnapsToDevicePixels="True" UseLayoutRounding="True" RenderOptions.BitmapScalingMode="HighQuality">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Visible"/>
@@ -59,7 +59,7 @@
                     </Border.OpacityMask>
                 </Border>
                 <!-- Loading spinner -->
-                <Control Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Control Width="{Binding LeftIconSize, ElementName=root}" Height="{Binding LeftIconSize, ElementName=root}" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Control.Style>
                         <Style TargetType="Control" BasedOn="{StaticResource ModernSpinnerStyle}">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -146,7 +146,7 @@
                     </Style>
                 </Grid.Style>
                 <!-- Monochrome logo icon -->
-                <Border Width="27" Height="27" SnapsToDevicePixels="True" UseLayoutRounding="True" RenderOptions.BitmapScalingMode="HighQuality">
+                <Border Width="{Binding RightIconSize, ElementName=root}" Height="{Binding RightIconSize, ElementName=root}" SnapsToDevicePixels="True" UseLayoutRounding="True" RenderOptions.BitmapScalingMode="HighQuality">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Visible"/>
@@ -170,7 +170,7 @@
                 </Border>
      
                 <!-- Loading spinner -->
-                <Control Width="27" Height="27">
+                <Control Width="{Binding RightIconSize, ElementName=root}" Height="{Binding RightIconSize, ElementName=root}">
                     <Control.Style>
                         <Style TargetType="Control" BasedOn="{StaticResource ModernSpinnerStyle}">
                             <Setter Property="Visibility" Value="Collapsed"/>

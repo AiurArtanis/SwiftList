@@ -24,9 +24,23 @@ public class QuickSearchWindowInputHandler
         }
         if (e.Key == Key.Tab)
         {
-            CompleteSearchFromSelection();
-            e.Handled = true;
-            return;
+            var tabSelectMod = UserSettings.Load().SelectIndexModifier;
+            var wpfModifier = WpfUiHelper.GetWpfModifier(tabSelectMod);
+            if (Keyboard.Modifiers == wpfModifier)
+            {
+                CompleteSearchFromSelection();
+                e.Handled = true;
+                return;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.None)
+            {
+                if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
+                {
+                    _window.MenuPresenter?.EnterActionsMode(result);
+                }
+                e.Handled = true;
+                return;
+            }
         }
 
         if (e.Key == Key.Right && IsSearchCaretAtEnd())

@@ -123,7 +123,7 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_ActionsTitle]}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBlue}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_ActionsTargetTitle]}" FontWeight="SemiBold" Foreground="{DynamicResource AccentBlue}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock x:Name="TxtActionsTarget" Grid.Column="1" Text="" Foreground="{DynamicResource TextPrimary}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                     <TextBlock Grid.Column="2" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_EscBack]}" Foreground="{DynamicResource TextSecondary}" FontSize="11" VerticalAlignment="Center"/>
                 </Grid>

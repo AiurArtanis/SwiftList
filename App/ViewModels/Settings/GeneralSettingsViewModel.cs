@@ -18,7 +18,7 @@ public class GeneralSettingsViewModel : ViewModelBase
     {
         _userSettings = userSettings;
 
-        _selectedLogLevel = LogLevelOptions.FirstOrDefault(o => o.Value == NormalizeLogLevel(_userSettings.LogLevel))
+        _selectedLogLevel = LogLevelOptions.FirstOrDefault(o => o.Value == SettingsOptionGenerator.NormalizeLogLevel(_userSettings.LogLevel))
                             ?? LogLevelOptions[2]; // Default to Info
 
         _selectedTheme = ThemeOptions.FirstOrDefault(o => o.Value == _userSettings.Theme)
@@ -38,7 +38,7 @@ public class GeneralSettingsViewModel : ViewModelBase
             // Let WPF bind the new ItemsSource first, then restore selections
             System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
             {
-                var newLogLevel = LogLevelOptions.FirstOrDefault(o => o.Value == NormalizeLogLevel(_userSettings.LogLevel));
+                var newLogLevel = LogLevelOptions.FirstOrDefault(o => o.Value == SettingsOptionGenerator.NormalizeLogLevel(_userSettings.LogLevel));
                 if (newLogLevel != null)
                 {
                     SelectedLogLevel = newLogLevel;
@@ -67,7 +67,7 @@ public class GeneralSettingsViewModel : ViewModelBase
                 _userSettings.Save();
                 if (isLogLevelChanged)
                 {
-                    Logger.MinimumLevel = ParseLogLevel(value.Value);
+                    Logger.MinimumLevel = SettingsOptionGenerator.ParseLogLevel(value.Value);
                     // Propagate to hook process so hook.log also respects the new level
                     App.HookClient?.SendMessage(new IpcMessage { Id = IpcMessageId.ReloadSettings });
                 }
@@ -105,13 +105,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         {
             if (_logLevelOptions == null)
             {
-                _logLevelOptions = new[]
-                {
-                    new LogLevelOption("Error", TranslationManager.Instance["LogLevel_Error"]),
-                    new LogLevelOption("Warn", TranslationManager.Instance["LogLevel_Warn"]),
-                    new LogLevelOption("Info", TranslationManager.Instance["LogLevel_Info"]),
-                    new LogLevelOption("Debug", TranslationManager.Instance["LogLevel_Debug"])
-                };
+                _logLevelOptions = SettingsOptionGenerator.GetLogLevelOptions();
             }
             return _logLevelOptions;
         }
@@ -123,12 +117,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         {
             if (_languageOptions == null)
             {
-                var options = new List<LanguageOption>();
-                foreach (var culture in TranslationManager.Instance.GetAvailableCultures())
-                {
-                    options.Add(new LanguageOption(culture, LanguageOption.GetLanguageDisplayName(culture)));
-                }
-                _languageOptions = options;
+                _languageOptions = SettingsOptionGenerator.GetLanguageOptions();
             }
             return _languageOptions;
         }
@@ -140,12 +129,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         {
             if (_themeOptions == null)
             {
-                var options = new List<ThemeOption>();
-                foreach (var t in ThemeManager.Instance.GetAvailableThemes())
-                {
-                    options.Add(new ThemeOption(t.Id, t.DisplayName));
-                }
-                _themeOptions = options;
+                _themeOptions = SettingsOptionGenerator.GetThemeOptions();
             }
             return _themeOptions;
         }
@@ -156,44 +140,19 @@ public class GeneralSettingsViewModel : ViewModelBase
     public bool StartWithWindows
     {
         get => _userSettings.StartWithWindows;
-        set
-        {
-            if (_userSettings.StartWithWindows != value)
-            {
-                _userSettings.StartWithWindows = value;
-                _userSettings.Save();
-                OnPropertyChanged();
-            }
-        }
+        set { if (_userSettings.StartWithWindows != value) { _userSettings.StartWithWindows = value; _userSettings.Save(); OnPropertyChanged(); } }
     }
 
     public bool AutoElevateIfAdmin
     {
         get => _userSettings.AutoElevateIfAdmin;
-        set
-        {
-            if (_userSettings.AutoElevateIfAdmin != value)
-            {
-                _userSettings.AutoElevateIfAdmin = value;
-                _userSettings.Save();
-                OnPropertyChanged();
-            }
-        }
+        set { if (_userSettings.AutoElevateIfAdmin != value) { _userSettings.AutoElevateIfAdmin = value; _userSettings.Save(); OnPropertyChanged(); } }
     }
 
     public bool AutoCheckUpdates
     {
         get => _userSettings.AutoCheckUpdates;
-        set
-        {
-            if (_userSettings.AutoCheckUpdates != value)
-            {
-                _userSettings.AutoCheckUpdates = value;
-                _userSettings.Save();
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsAutoSilentUpdateEnabled));
-            }
-        }
+        set { if (_userSettings.AutoCheckUpdates != value) { _userSettings.AutoCheckUpdates = value; _userSettings.Save(); OnPropertyChanged(); OnPropertyChanged(nameof(IsAutoSilentUpdateEnabled)); } }
     }
 
     public bool IsUserAdmin => UpdateService.Instance.IsUserAdmin();
@@ -203,20 +162,10 @@ public class GeneralSettingsViewModel : ViewModelBase
     public bool AutoSilentUpdate
     {
         get => IsUserAdmin && _userSettings.AutoSilentUpdate;
-        set
-        {
-            if (!IsUserAdmin) return;
-            if (_userSettings.AutoSilentUpdate != value)
-            {
-                _userSettings.AutoSilentUpdate = value;
-                _userSettings.Save();
-                OnPropertyChanged();
-            }
-        }
+        set { if (!IsUserAdmin) return; if (_userSettings.AutoSilentUpdate != value) { _userSettings.AutoSilentUpdate = value; _userSettings.Save(); OnPropertyChanged(); } }
     }
 
-    public string LogLevel => NormalizeLogLevel(_userSettings.LogLevel);
-
+    public string LogLevel => SettingsOptionGenerator.NormalizeLogLevel(_userSettings.LogLevel);
 
     public string PreferredLanguage
     {
@@ -241,43 +190,62 @@ public class GeneralSettingsViewModel : ViewModelBase
     public void Apply()
     {
         StartupManager.SetEnabled(StartWithWindows);
-        Logger.MinimumLevel = ParseLogLevel(LogLevel);
+        Logger.MinimumLevel = SettingsOptionGenerator.ParseLogLevel(LogLevel);
         _userSettings.Save();
     }
-
-
-    public static LogLevel ParseLogLevel(string? value) => value switch
-    {
-        "Error" => Core.LogLevel.Error,
-        "Warn" => Core.LogLevel.Warn,
-        "Debug" => Core.LogLevel.Debug,
-        _ => Core.LogLevel.Info
-    };
-
-    private static string NormalizeLogLevel(string? value) => value switch
-    {
-        "Error" => "Error",
-        "Warn" => "Warn",
-        "Debug" => "Debug",
-        _ => "Info"
-    };
 
     public double SearchBarWidth
     {
         get => _userSettings.SearchWindow.SearchBarWidth;
-        set { if (_userSettings.SearchWindow.SearchBarWidth != value) { _userSettings.SearchWindow.SearchBarWidth = value; _userSettings.Save(); OnPropertyChanged(); } }
+        set
+        {
+            if (value < 300.0 || value > 1200.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "Width must be between 300 and 1200.");
+            }
+            if (_userSettings.SearchWindow.SearchBarWidth != value)
+            {
+                _userSettings.SearchWindow.SearchBarWidth = value;
+                _userSettings.Save();
+                OnPropertyChanged();
+            }
+        }
     }
 
     public double SearchBarHeight
     {
         get => _userSettings.SearchWindow.SearchBarHeight;
-        set { if (_userSettings.SearchWindow.SearchBarHeight != value) { _userSettings.SearchWindow.SearchBarHeight = value; _userSettings.Save(); OnPropertyChanged(); } }
+        set
+        {
+            if (value < 45.0 || value > 120.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "Height must be between 45 and 120.");
+            }
+            if (_userSettings.SearchWindow.SearchBarHeight != value)
+            {
+                _userSettings.SearchWindow.SearchBarHeight = value;
+                _userSettings.Save();
+                OnPropertyChanged();
+            }
+        }
     }
 
     public double SearchWindowCornerRadius
     {
         get => _userSettings.SearchWindow.CornerRadius;
-        set { if (_userSettings.SearchWindow.CornerRadius != value) { _userSettings.SearchWindow.CornerRadius = value; _userSettings.Save(); OnPropertyChanged(); } }
+        set
+        {
+            if (value < 0.0 || value > 50.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "Corner radius must be between 0 and 50.");
+            }
+            if (_userSettings.SearchWindow.CornerRadius != value)
+            {
+                _userSettings.SearchWindow.CornerRadius = value;
+                _userSettings.Save();
+                OnPropertyChanged();
+            }
+        }
     }
 
     public ICommand ResetLayoutCommand => new RelayCommand(ResetLayout);

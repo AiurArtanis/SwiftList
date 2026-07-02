@@ -48,7 +48,7 @@ public static class SearchInputHelper
             return true;
         }
 
-        if (e.Key == Key.Right)
+        if (e.Key == Key.Right || (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None))
         {
             menuPresenter.EnterSubMenu();
             e.Handled = true;
