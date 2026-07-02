@@ -243,7 +243,7 @@ public class SettingsViewModel : ViewModelBase
         NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses, isServiceLifecycleBusy || isLocalDriveBusy);
         IsServiceReady = isServiceReady;
         IsBusy = isBusy;
-        CanApply = isServiceReady && !isBusy;
+        CanApply = !isBusy;
     }
 
     private async Task RebuildScanBasedLocalDrivesAsync(IReadOnlyList<LocalDriveSnapshot> drives, IReadOnlyList<string> enabledLocalDriveIds)
