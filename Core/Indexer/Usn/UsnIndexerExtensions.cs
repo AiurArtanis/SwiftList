@@ -30,6 +30,30 @@ public static class UsnIndexerExtensions
 
             foreach (var record in records)
             {
+                if (Mft.MftHardLinkOptions.Enabled)
+                {
+                    // Hard link added/removed (not last): re-diff this FRN's on-disk links against
+                    // the index. The diff also covers remove-to-empty if a HARD_LINK_CHANGE arrives
+                    // for the last link.
+                    if ((record.Reason & Win32Api.USN_REASON_HARD_LINK_CHANGE) != 0
+                        && (record.Reason & Win32Api.USN_REASON_FILE_CREATE) == 0)
+                    {
+                        HardLinkDelta.ApplyDiff(runtime, drive, record.FileReferenceNumber);
+                        continue;
+                    }
+                    // File deleted (last link gone): drop every row for this FRN, not just one.
+                    if ((record.Reason & Win32Api.USN_REASON_FILE_DELETE) != 0
+                        && (record.Reason & Win32Api.USN_REASON_RENAME_OLD_NAME) == 0)
+                    {
+                        foreach (var row in runtime.RowsForFrn(record.FileReferenceNumber))
+                            runtime.MarkRowDeleted(row);
+                        runtime.Remove(record.FileReferenceNumber);
+                        continue;
+                    }
+                    // create / rename fall through to the one-to-one path below (single-link common
+                    // case); extra links show up as HARD_LINK_CHANGE and go through the diff above.
+                }
+
                 if ((record.Reason & (Win32Api.USN_REASON_FILE_DELETE | Win32Api.USN_REASON_RENAME_OLD_NAME)) != 0)
                 {
                     runtime.Remove(record.FileReferenceNumber);

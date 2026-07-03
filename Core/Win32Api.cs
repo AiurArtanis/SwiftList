@@ -197,6 +197,16 @@ public static class Win32Api
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern bool ReadFile(SafeFileHandle hFile, byte[] lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, IntPtr lpOverlapped);
 
+    // Enumerating all hard-link names of a file (for one-to-many incremental maintenance).
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    public static extern IntPtr FindFirstFileNameW(string lpFileName, uint dwFlags, ref uint stringLength, char[] linkName);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    public static extern bool FindNextFileNameW(IntPtr hFindStream, ref uint stringLength, char[] linkName);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool FindClose(IntPtr hFindFile);
+
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     public static extern bool GetVolumeInformationW(
         string lpRootPathName,
