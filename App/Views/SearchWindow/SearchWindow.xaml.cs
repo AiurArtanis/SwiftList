@@ -57,7 +57,7 @@ public partial class SearchWindow : Window, ISearchWindow
         // Bind list events
         var activeList = ResultsPanelControl.ActiveListBox;
         activeList.KeyDown += LstGridResults_KeyDown;
-        activeList.PreviewMouseLeftButtonUp += LstGridResults_PreviewMouseLeftButtonUp;
+        activeList.MouseDoubleClick += LstGridResults_MouseDoubleClick;
         activeList.PreviewMouseRightButtonUp += LstGridResults_PreviewMouseRightButtonUp;
         activeList.PreviewMouseWheel += LstGridResults_PreviewMouseWheel;
         activeList.SelectionChanged += (s, e) =>
@@ -178,7 +178,7 @@ public partial class SearchWindow : Window, ISearchWindow
     // ==========================================
 
     private void TxtSearchBox_KeyDown(object sender, KeyEventArgs e) => _inputHandler.HandleTxtSearchBoxKeyDown(e);
-    private void LstGridResults_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) => _inputHandler.HandleLstGridResultsPreviewMouseLeftButtonUp(e);
+    private void LstGridResults_MouseDoubleClick(object sender, MouseButtonEventArgs e) => _inputHandler.HandleLstGridResultsMouseDoubleClick(e);
     private void LstGridResults_KeyDown(object sender, KeyEventArgs e) => _inputHandler.HandleLstGridResultsKeyDown(e);
     private void LstGridResults_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e) => _inputHandler.HandleLstGridResultsPreviewMouseRightButtonUp(e);
 

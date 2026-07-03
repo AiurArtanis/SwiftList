@@ -48,7 +48,7 @@
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling"
                           ItemContainerStyle="{StaticResource SearchResultItemStyle}"
-                          SelectionMode="Single"
+                          SelectionMode="Extended"
                           IsEnabled="{Binding IsResultsListEnabled}"
                           GridViewColumnHeader.Click="GridViewColumnHeader_Click">
                     <ListView.View>

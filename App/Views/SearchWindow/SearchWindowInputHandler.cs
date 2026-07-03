@@ -112,7 +112,7 @@ public class SearchWindowInputHandler
         }
     }
 
-    public void HandleLstGridResultsPreviewMouseLeftButtonUp(MouseButtonEventArgs e)
+    public void HandleLstGridResultsMouseDoubleClick(MouseButtonEventArgs e)
     {
         var depObj = e.OriginalSource as DependencyObject;
         while (depObj != null && !(depObj is ListViewItem))
@@ -181,7 +181,21 @@ public class SearchWindowInputHandler
 
     public void OpenSelectedResult(bool asAdmin = false)
     {
-        if (_window.LstGridResultsControl.SelectedItem is AppSearchResult selected)
+        // Open every selected result (the grid list allows multi-selection).
+        var opened = 0;
+        foreach (var obj in _window.LstGridResultsControl.SelectedItems)
+        {
+            if (obj is AppSearchResult r && !r.IsSearchSectionHeader && !r.IsEmptyResult && !string.IsNullOrEmpty(r.FullPath))
+            {
+                if (asAdmin)
+                    FileExecutor.OpenFileOrFolderAsAdmin(r.FullPath);
+                else
+                    FileExecutor.OpenFileOrFolder(r.FullPath);
+                opened++;
+            }
+        }
+
+        if (opened == 0 && _window.LstGridResultsControl.SelectedItem is AppSearchResult selected && !string.IsNullOrEmpty(selected.FullPath))
         {
             if (asAdmin)
                 FileExecutor.OpenFileOrFolderAsAdmin(selected.FullPath);
