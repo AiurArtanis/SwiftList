@@ -19,7 +19,6 @@ public static class Win32Api
     public const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
 
     public const uint FSCTL_QUERY_USN_JOURNAL = 0x000900f4;
-    public const uint FSCTL_ENUM_USN_DATA = 0x000900b3;
     public const uint FSCTL_READ_USN_JOURNAL = 0x000900bb;
     public const uint FSCTL_CREATE_USN_JOURNAL = 0x000900e7;
     public const uint FSCTL_GET_NTFS_VOLUME_DATA = 0x00090064;
@@ -94,14 +93,6 @@ public static class Win32Api
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct MFT_ENUM_DATA_V0
-    {
-        public ulong StartFileReferenceNumber;
-        public long LowUsn;
-        public long HighUsn;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
     public struct READ_USN_JOURNAL_DATA_V0
     {
         public long StartUsn;
@@ -133,18 +124,6 @@ public static class Win32Api
         uint dwCreationDisposition,
         uint dwFlagsAndAttributes,
         IntPtr hTemplateFile
-    );
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool DeviceIoControl(
-        SafeFileHandle hDevice,
-        uint dwIoControlCode,
-        ref MFT_ENUM_DATA_V0 lpInBuffer,
-        uint nInBufferSize,
-        byte[] lpOutBuffer,
-        uint nOutBufferSize,
-        out uint lpBytesReturned,
-        IntPtr lpOverlapped
     );
 
     // For IOCTLs with no input buffer (e.g. FSCTL_GET_REFS_VOLUME_DATA).

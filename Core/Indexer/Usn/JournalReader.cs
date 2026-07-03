@@ -91,107 +91,11 @@ public class JournalReader
             return ReFsScanner.ScanDrive(drive, handle, rootFrn.Value, journalId, nextUsn, onProgress);
         }
 
-        // NTFS: parse the raw $MFT so hard links are fully indexed (one row per link). On any failure
-        // (permissions, an unusual on-disk layout) fall back to the USN-enumeration path below.
+        // NTFS: parse the raw $MFT so hard links are fully indexed (one row per link).
         var mftResult = MftIndexScanner.ScanDrive(drive, handle, rootFrn.Value, journalId, nextUsn, onProgress);
-        if (mftResult != null)
-            return mftResult;
-        Logger.Log($"[JournalReader] $MFT scan failed on {drive}; falling back to USN enumeration.", LogLevel.Warn);
-
-        var bufSize = 1024 * 1024;
-        var outBuf = new byte[bufSize];
-        ulong nextFrn = 0;
-        var store = IndexCacheManager.CreateEmptyStore(drive, rootFrn.Value, nextUsn, journalId);
-        store.Records.EnsureCapacity(2500000);
-        var namePool = new FileRecordNamePool();
-        var progress = new EnumerationProgress(onProgress);
-        var loopCount = 0;
-
-        while (true)
-        {
-            var input = new Win32Api.MFT_ENUM_DATA_V0
-            {
-                StartFileReferenceNumber = nextFrn,
-                LowUsn = 0,
-                HighUsn = nextUsn
-            };
-
-            var prevNextFrn = nextFrn;
-            success = Win32Api.DeviceIoControl(
-                handle,
-                Win32Api.FSCTL_ENUM_USN_DATA,
-                ref input, (uint)Marshal.SizeOf<Win32Api.MFT_ENUM_DATA_V0>(),
-                outBuf, (uint)outBuf.Length,
-                out bytesReturned,
-                IntPtr.Zero
-            );
-
-            if (!success)
-            {
-                var err = Marshal.GetLastWin32Error();
-                if (err == Win32Api.ERROR_HANDLE_EOF)
-                    break;
-
-                Logger.Log($"[JournalReader] FSCTL_ENUM_USN_DATA on {drive} failed. Error: {err}", LogLevel.Error);
-                break;
-            }
-
-            if (bytesReturned <= 8)
-                break;
-
-            nextFrn = BitConverter.ToUInt64(outBuf, 0);
-            if (nextFrn == prevNextFrn)
-                break;
-
-            var offset = 8;
-            var returnedSize = (int)bytesReturned;
-
-            while (offset < returnedSize)
-            {
-                if (offset + 4 > returnedSize)
-                    break;
-
-                var recordLen = BitConverter.ToUInt32(outBuf, offset);
-                if (recordLen == 0 || offset + recordLen > returnedSize)
-                    break;
-
-                var recordSpan = new ReadOnlySpan<byte>(outBuf, offset, (int)recordLen);
-                try
-                {
-                    var record = UsnRecordParser.ParseRecord(recordSpan);
-                    var flags = FileRecordFlagsHelper.FromAttributes((FileAttributes)record.FileAttributes);
- 
-                    store.Records.Add(new FileRecord(
-                        record.FileReferenceNumber,
-                        record.ParentFileReferenceNumber,
-                        namePool.Get(record.FileName),
-                        flags));
-                    progress.Add(record.IsDirectory, store.Records.Count - 1);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log($"[JournalReader] Record parsing error on {drive}: {ex}", LogLevel.Error);
-                }
-
-                offset += (int)recordLen;
-            }
-
-            loopCount++;
-            if (loopCount % 60 == 0)
-            {
-                GC.Collect(1, GCCollectionMode.Forced, blocking: false);
-            }
-        }
-
-        Logger.Log($"[JournalReader] Drive {drive} enum complete: {store.Records.Count - 1} items.");
-        progress.Report();
-        return new UsnDriveIndexResult
-        {
-            Store = store,
-            NextUsn = nextUsn,
-            JournalId = journalId,
-            IsSortedById = true
-        };
+        if (mftResult == null)
+            Logger.Log($"[JournalReader] $MFT scan failed on {drive}; drive not indexed.", LogLevel.Error);
+        return mftResult;
     }
 
     public long CatchUpDrive(string drive, ulong journalId, long startUsn, Action<ParsedUsnRecord> onRecord) => JournalReaderHelper.CatchUpDrive(drive, journalId, startUsn, onRecord);
