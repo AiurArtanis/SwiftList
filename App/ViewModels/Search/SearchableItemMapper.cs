@@ -65,6 +65,12 @@ public static class SearchableItemMapper
         var isKeywordSearch = parts.Length > 1 || (parts.Length == 1 && q.EndsWith(" ", StringComparison.Ordinal));
         var targetFileFilterKind = $"FileFilter_{keyword}";
 
+        // A keyword search only enters a file-filter scope when the first word actually matches a
+        // registered filter keyword. Without this check, ANY space-containing query (e.g.
+        // "visual studio") would be treated as a filter prefix and wrongly hide general items
+        // such as Start Menu apps.
+        var isKnownFilterKeyword = isKeywordSearch && IsRegisteredFilterKeyword(targetFileFilterKind);
+
         foreach (var provider in PluginManager.Instance.SearchableItemProviders)
         {
             EnsureLoaded(provider);
@@ -92,12 +98,13 @@ public static class SearchableItemMapper
                 }
                 else
                 {
-                    // Case B: This is a normal searchable item (like Start Menu shortcuts, etc.).
-                    // If user is currently running a keyword search (e.g. "tf avsa"), we FILTER OUT other general search items.
-                    if (isKeywordSearch && targetFileFilterKind.StartsWith("FileFilter_", StringComparison.OrdinalIgnoreCase) &&
-                        PluginManager.Instance.SearchableItemProviders.Any(p => p.GetType().FullName!.Contains("FileFilters")))
+                    // Case B: This is a normal searchable item (like Start Menu apps).
+                    // Only hide it when the user is genuinely inside a file-filter scope, i.e. the
+                    // first word is a registered filter keyword (e.g. "tf ..."). A plain multi-word
+                    // query like "visual studio" is NOT a filter prefix and must keep showing apps.
+                    if (isKnownFilterKeyword)
                     {
-                        continue; // Skip: User is focused on this filter directory, don't show general apps
+                        continue; // Skip: user is focused on a filter's directory, don't show general apps
                     }
                 }
 
@@ -266,5 +273,21 @@ public static class SearchableItemMapper
                 _cache[id] = new List<CacheEntry>();
             }
         }));
+    }
+
+    // True when `targetFileFilterKind` (e.g. "FileFilter_tf") corresponds to an actually-registered
+    // file filter, i.e. some loaded provider has an item with that ResultKind. Used to decide whether
+    // a keyword search is a real filter prefix that should hide general items.
+    private static bool IsRegisteredFilterKeyword(string targetFileFilterKind)
+    {
+        foreach (var provider in PluginManager.Instance.SearchableItemProviders)
+        {
+            if (_cache.TryGetValue(provider.Id, out var entries) &&
+                entries.Any(e => string.Equals(e.Item.ResultKind, targetFileFilterKind, StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }
