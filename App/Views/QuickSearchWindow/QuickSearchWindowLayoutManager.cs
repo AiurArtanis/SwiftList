@@ -28,7 +28,7 @@ internal sealed class QuickSearchWindowLayoutManager
                 {
                     if (items[i] is ActionMenuItem item)
                     {
-                        totalHeight += item.ItemHeight;
+                        totalHeight += item.ScaledItemHeight;
                     }
                 }
 
@@ -46,7 +46,7 @@ internal sealed class QuickSearchWindowLayoutManager
                 }
                 else
                 {
-                    var maxAvailableHeight = 9 * UiMetrics.SearchResultItemHeight;
+                    var maxAvailableHeight = 9 * UiMetrics.ScaledSearchResultItemHeight;
                     // Let the height naturally fit the items count (free size dynamic resize)
                     actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight - actionsHeaderHeight));
                 }
