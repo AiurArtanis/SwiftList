@@ -34,7 +34,7 @@ internal class WatcherManager : IDisposable
                 drive,
                 Directory.Exists,
                 ConfigureWatcher,
-                message => Logger.Log(message, LogLevel.Error));
+                message => Logger.Log(message, LogLevel.Info));
             _watchers[drive] = host;
             host.Start();
         }

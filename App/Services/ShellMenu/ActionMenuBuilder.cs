@@ -69,8 +69,8 @@ internal static class ActionMenuBuilder
                 }
             }
 
-            // 2. Load dynamic provider actions (e.g. Shell Context Menu)
-            foreach (var provider in PluginManager.Instance.DynamicProviders)
+            // 2. Load dynamic provider actions (e.g. Shell Context Menu) — sorted by Priority descending
+            foreach (var provider in PluginManager.Instance.DynamicProviders.OrderByDescending(p => p.Priority))
             {
                 if (provider.Keywords.Count > 0)
                     continue;
@@ -109,6 +109,8 @@ internal static class ActionMenuBuilder
                                 SubMenuHandle = item.SubMenuHandle,
                                 IsDisabled = item.IsDisabled,
                                 Icon = iconSource,
+                                OnExecute = item.OnExecute,
+                                ShortcutHint = item.ShortcutHint ?? string.Empty,
                                 ItemHeight = item.IsSeparator ? Math.Round(itemHeight * 0.3) : itemHeight
                             });
 

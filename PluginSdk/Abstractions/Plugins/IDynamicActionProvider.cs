@@ -9,6 +9,9 @@ public interface IDynamicActionProvider
     /// <summary>The group name this dynamic action provider belongs to (e.g., "Shortcut Menu").</summary>
     string GroupName { get; }
 
+    /// <summary>Display order in the action menu. Lower values appear first. Default: 0.</summary>
+    int Priority => 0;
+
     /// <summary>Keywords that expose this provider as a search result instead of an action-menu provider.</summary>
     IReadOnlyList<string> Keywords => Array.Empty<string>();
 
@@ -28,6 +31,14 @@ public interface IDynamicActionProvider
     /// Populates and returns menu items for the root menu (hMenu = Zero) or a sub-menu.
     /// </summary>
     IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu);
+
+    /// <summary>
+    /// Returns lightweight hotkey→execute pairs for use in HotkeyActionTrigger.
+    /// Default: empty (provider does not expose hotkeys).
+    /// Override for O(1) hotkey lookup without a full GetMenuItems call.
+    /// </summary>
+    IEnumerable<(string Hotkey, Action Execute)> GetHotkeyActions(ISearchResult result)
+        => Array.Empty<(string, Action)>();
 
     /// <summary>Invokes a dynamic command by its ID.</summary>
     void ExecuteCommand(ISearchResult result, uint commandId, IntPtr ownerHwnd);
@@ -56,4 +67,5 @@ public class DynamicMenuItem
     /// (e.g. virtual Shell namespace items, custom actions).
     /// </summary>
     public Action? OnExecute { get; set; }
+    public string ShortcutHint { get; set; } = string.Empty;
 }

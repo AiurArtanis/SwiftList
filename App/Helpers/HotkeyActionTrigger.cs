@@ -33,6 +33,21 @@ public static class HotkeyActionTrigger
             }
         }
 
+        // Also check dynamic providers (e.g. CustomActions plugin)
+        foreach (var provider in PluginManager.Instance.DynamicProviders)
+        {
+            foreach (var (hotkey, execute) in provider.GetHotkeyActions(result))
+            {
+                if (ParseHotkey(hotkey, out var hotkeyKey, out var hotkeyMods)
+                    && key == hotkeyKey && modifiers == hotkeyMods)
+                {
+                    window.HideWindow();
+                    execute();
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 

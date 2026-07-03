@@ -95,8 +95,10 @@ public static class SearchInputHelper
         if (HandleActionsModeKeys(e, window, menuPresenter))
             return true;
 
-        // 1b. Custom Action Hotkeys
-        if (window.LstResults.SelectedItem is AppSearchResult selectedResult && !selectedResult.IsSearchSectionHeader && !selectedResult.IsEmptyResult)
+        // 1b. Custom Action Hotkeys — only when modifiers held (no overhead for plain typing)
+        if (Keyboard.Modifiers != ModifierKeys.None
+            && window.LstResults.SelectedItem is AppSearchResult selectedResult
+            && !selectedResult.IsSearchSectionHeader && !selectedResult.IsEmptyResult)
         {
             if (HotkeyActionTrigger.TryExecute(e, selectedResult, window))
             {

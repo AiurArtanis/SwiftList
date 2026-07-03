@@ -1,0 +1,17 @@
+{
+  "CustomActions_PluginName": "Custom Actions Plugin",
+  "CustomActions_GroupName": "Custom Actions",
+  "CustomActions_Config_ActionsLabel": "Custom Actions List",
+  "CustomActions_Config_ActionsDesc": "Configure custom actions that appear in the search results action menu.",
+  "CustomActions_Config_EnabledLabel": "Enabled",
+  "CustomActions_Config_TitleLabel": "Title",
+  "CustomActions_Config_PathLabel": "Path (Program or File)",
+  "CustomActions_Config_ParameterLabel": "Parameters (use %s or {0} for selected path)",
+  "CustomActions_Config_IconLabel": "Icon (SVG Path Data)",
+  "CustomActions_Config_WorkingDirLabel": "Working Directory",
+  "CustomActions_Config_RunSilentlyLabel": "Run Silently",
+  "CustomActions_Config_RunAsAdminLabel": "Run as Administrator",
+  "CustomActions_Config_HotkeyLabel": "Hotkey",
+  "CustomActions_Config_FolderOnlyLabel": "Folders Only",
+  "CustomActions_Config_ExtensionsLabel": "Extension Filter (e.g. .txt,.log; empty for no limit)"
+}

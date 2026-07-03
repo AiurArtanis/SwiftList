@@ -11,6 +11,7 @@ namespace SwiftList.Plugins.CoreExtensions.Shell;
 public class ShellMenuActionProvider : IDynamicActionProvider
 {
     public string GroupName => TranslationService.Get("Plugin_ShellGroup");
+    public int Priority => -1;
 
     private ShellMenuSession? _session;
     private string? _lastPath;

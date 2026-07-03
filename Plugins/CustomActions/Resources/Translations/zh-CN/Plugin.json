@@ -1,0 +1,17 @@
+{
+  "CustomActions_PluginName": "自定义动作插件",
+  "CustomActions_GroupName": "自定义动作",
+  "CustomActions_Config_ActionsLabel": "自定义动作列表",
+  "CustomActions_Config_ActionsDesc": "配置可在搜索结果动作菜单中显示并触发运行的自定义动作。",
+  "CustomActions_Config_EnabledLabel": "已启用",
+  "CustomActions_Config_TitleLabel": "标题",
+  "CustomActions_Config_PathLabel": "路径 (程序或文件)",
+  "CustomActions_Config_ParameterLabel": "参数 (支持 %s 或 {0} 作为选中路径占位符)",
+  "CustomActions_Config_IconLabel": "图标 (SVG Path 数据)",
+  "CustomActions_Config_WorkingDirLabel": "工作目录",
+  "CustomActions_Config_RunSilentlyLabel": "静默执行",
+  "CustomActions_Config_RunAsAdminLabel": "以管理员身份运行",
+  "CustomActions_Config_HotkeyLabel": "快捷键",
+  "CustomActions_Config_FolderOnlyLabel": "仅对文件夹生效",
+  "CustomActions_Config_ExtensionsLabel": "限制扩展名 (例如 .txt,.log; 为空表示不限制)"
+}

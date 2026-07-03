@@ -232,6 +232,15 @@ public class ShellMenuPresenter : IDisposable
         if (_view.LstActions.SelectedItem is ActionMenuItem item)
         {
             if (item.IsSeparator || item.IsSectionHeader || item.IsDisabled) return;
+
+            // 0. Direct delegate (e.g. CustomActions dynamic provider)
+            if (item.OnExecute != null)
+            {
+                _view.HideWindow();
+                item.OnExecute();
+                return;
+            }
+
             // 1. Handle custom SwiftList actions dynamically from PluginManager
 
             var registration = PluginManager.Instance.GetActionByRuntimeId(item.CommandId);
