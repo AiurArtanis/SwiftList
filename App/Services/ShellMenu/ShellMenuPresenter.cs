@@ -100,6 +100,11 @@ public class ShellMenuPresenter : IDisposable
         _view.GridActions.Visibility = Visibility.Visible;
         _view.TxtActionsTarget.Text = Path.GetFileName(result.FullPath);
         _view.SearchTextBox.Clear();
+
+        // Size the panel to the action content. Without this the inline window (which is
+        // manually sized, unlike the auto-fitting quick/full windows) keeps its stale results
+        // height, leaving blank space below short action lists.
+        _view.UpdateActionsLayout();
     }
 
     private void LoadMenuItems(IntPtr hMenu)
