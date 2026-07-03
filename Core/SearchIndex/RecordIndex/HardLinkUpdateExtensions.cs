@@ -18,6 +18,11 @@ internal static class HardLinkUpdateExtensions
             if (!index.IsDeleted(i))
                 result.Add(i);
 
+        // A single delta row created by the regular one-to-one Upsert (e.g. a freshly created file
+        // or a rename target). Without this the diff can't see links the index already holds.
+        if (index.DeltaIdToIndex.TryGetValue(frn, out var single) && !index.IsDeleted(single))
+            result.Add(single);
+
         if (index.HardLinkDeltaRows.TryGetValue(frn, out var delta))
             foreach (var i in delta)
                 if (!index.IsDeleted(i))

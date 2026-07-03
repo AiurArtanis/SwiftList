@@ -32,26 +32,28 @@ public static class UsnIndexerExtensions
             {
                 if (Mft.MftHardLinkOptions.Enabled)
                 {
-                    // Hard link added/removed (not last): re-diff this FRN's on-disk links against
-                    // the index. The diff also covers remove-to-empty if a HARD_LINK_CHANGE arrives
-                    // for the last link.
+                    // One-to-many: operate on the exact link the record names (FRN, parent, name),
+                    // so renaming/deleting/creating one hard link never disturbs the file's others.
+                    var frn = record.FileReferenceNumber;
+                    var parentFrn = record.ParentFileReferenceNumber;
+                    var linkName = namePool.Get(record.FileName);
+                    var linkFlags = FileRecordFlagsHelper.FromAttributes((FileAttributes)record.FileAttributes);
+
                     if ((record.Reason & Win32Api.USN_REASON_HARD_LINK_CHANGE) != 0
-                        && (record.Reason & Win32Api.USN_REASON_FILE_CREATE) == 0)
+                        && (record.Reason & (Win32Api.USN_REASON_FILE_CREATE | Win32Api.USN_REASON_FILE_DELETE)) == 0)
                     {
-                        HardLinkDelta.ApplyDiff(runtime, drive, record.FileReferenceNumber);
-                        continue;
+                        HardLinkDelta.ToggleLink(runtime, frn, parentFrn, linkName, linkFlags);
                     }
-                    // File deleted (last link gone): drop every row for this FRN, not just one.
-                    if ((record.Reason & Win32Api.USN_REASON_FILE_DELETE) != 0
-                        && (record.Reason & Win32Api.USN_REASON_RENAME_OLD_NAME) == 0)
+                    else if ((record.Reason & (Win32Api.USN_REASON_FILE_DELETE | Win32Api.USN_REASON_RENAME_OLD_NAME)) != 0)
                     {
-                        foreach (var row in runtime.RowsForFrn(record.FileReferenceNumber))
-                            runtime.MarkRowDeleted(row);
-                        runtime.Remove(record.FileReferenceNumber);
-                        continue;
+                        HardLinkDelta.RemoveLink(runtime, frn, parentFrn, linkName);
                     }
-                    // create / rename fall through to the one-to-one path below (single-link common
-                    // case); extra links show up as HARD_LINK_CHANGE and go through the diff above.
+                    else if ((record.Reason & (Win32Api.USN_REASON_FILE_CREATE | Win32Api.USN_REASON_RENAME_NEW_NAME)) != 0)
+                    {
+                        HardLinkDelta.AddLink(runtime, frn, parentFrn, linkName, linkFlags);
+                    }
+                    // Any other reason (data/attribute-only) doesn't change the name index.
+                    continue;
                 }
 
                 if ((record.Reason & (Win32Api.USN_REASON_FILE_DELETE | Win32Api.USN_REASON_RENAME_OLD_NAME)) != 0)
