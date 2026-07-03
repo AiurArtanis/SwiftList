@@ -56,6 +56,7 @@ When interacting with this repository, performing code modification, compilation
    * **Only run formatting immediately before committing (not before every compilation) / 只在commit前才format**.
    * Never execute `git commit` or `git push` without explicit user authorization. All code changes must be reviewed and submitted under the direct instructions of the user.
    * **Commit Message Standard**: All commit messages must be written in **English**.
+   * **No AI Attribution in Commits**: Commit messages (and PR descriptions) must **NOT** contain any AI/assistant attribution or trailers, such as `Co-Authored-By: Claude ...`, "Generated with Claude Code", or similar. Keep messages clean and attribution-free.
 
 4. **Launch and Debug Workflows**
    * When launching the built executable, to prevent crashes due to incorrect current working directories, you must explicitly specify the output directory of the target binary as the working directory.
