@@ -14,6 +14,8 @@
   "Column_TypeFolder": "文件夹",
   "Column_TypeFile": "文件",
   "Column_TypeExtFile": "{0} 文件",
+  "WebUrl_Name": "网址",
+  "WebUrl_OpenHint": "回车或点击用浏览器打开",
   "Env_Name": "环境变量解析器",
   "Env_PathNotExist": "路径(不存在)",
   "Env_SegmentOpenHint": "环境变量路径段 ({0}) - 回车或单击打开，Tab补全填充",
