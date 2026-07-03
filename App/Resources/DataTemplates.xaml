@@ -41,7 +41,7 @@
             </TextBlock>
 
             <!-- File/Folder icon -->
-            <Image Grid.Column="0" Source="{Binding Icon}" Width="23" Height="23" Margin="0,0,14,0" VerticalAlignment="Center"
+            <Image Grid.Column="0" Source="{Binding Icon}" Width="{Binding ResultIconSize}" Height="{Binding ResultIconSize}" Margin="0,0,14,0" VerticalAlignment="Center"
                    RenderOptions.BitmapScalingMode="HighQuality">
                 <Image.Style>
                     <Style TargetType="Image">
@@ -94,7 +94,7 @@
                                helpers:MarqueeBehavior.EnableMarquee="True">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
-                                <Setter Property="FontSize" Value="14"/>
+                                <Setter Property="FontSize" Value="{Binding NameFontSize}"/>
                                 <Setter Property="TextAlignment" Value="Left"/>
                                 <Setter Property="HorizontalAlignment" Value="Left"/>
                                 <Setter Property="TextTrimming" Value="None"/>
@@ -124,8 +124,8 @@
                             </Style.Triggers>
                         </Style>
                     </ScrollViewer.Style>
-                    <TextBlock FontSize="11"
-                               
+                    <TextBlock FontSize="{Binding PathFontSize}"
+
                                Foreground="{DynamicResource TextSecondary}"
                                HorizontalAlignment="Left"
                                helpers:MarqueeBehavior.EnableMarquee="True"

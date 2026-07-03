@@ -12,6 +12,9 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
 
     public QuickSearchViewModel()
     {
+        // Scale result rows/fonts/icons proportionally to the configured search box height.
+        Services.UiMetrics.ApplyScaleFromSettings();
+
         _searchService = new SearchService();
         Search = new SearchExecutionViewModel(this, _searchService);
         Monitor = new ServiceMonitorViewModel(this, _searchService);
@@ -140,6 +143,7 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
 
     public void RefreshLayoutSettings()
     {
+        Services.UiMetrics.ApplyScaleFromSettings();
         OnPropertyChanged(nameof(WindowCornerRadius));
         OnPropertyChanged(nameof(InnerCornerRadius));
         OnPropertyChanged(nameof(SearchBarWidth));

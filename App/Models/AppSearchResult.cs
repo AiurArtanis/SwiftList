@@ -25,6 +25,11 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     public bool IsInstantResult => ResultKind == "InstantResult";
     public bool IsListItem => ResultKind == "ListItem";
     public double ItemHeight => IsSearchSectionHeader ? UiMetrics.SearchSectionHeaderHeight : (IsListItem ? UiMetrics.ListItemHeight : UiMetrics.SearchResultItemHeight);
+
+    // Scaled visual metrics — grow/shrink proportionally with the configured search box height.
+    public double NameFontSize => UiMetrics.ResultNameFontSize;
+    public double PathFontSize => UiMetrics.ResultPathFontSize;
+    public double ResultIconSize => UiMetrics.ResultIconSize;
     public double InlineItemHeight => IsListItem ? ItemHeight : Math.Round(ItemHeight * 0.7);
     public double ActionsHeaderHeight => Math.Round(ItemHeight * 0.7);
     public string ResultTypeText => IsInstantResult ? TranslationManager.Instance["Model_TypePlugin"] : (IsApplication ? TranslationManager.Instance["Model_TypeApp"] : (IsDir ? TranslationManager.Instance["Model_TypeFolder"] : TranslationManager.Instance["Model_TypeFile"]));

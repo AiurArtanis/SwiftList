@@ -72,6 +72,7 @@
                             CornerRadius="6"
                             Margin="6,2,6,2"
                             Padding="12,0,12,0"
+                            VerticalAlignment="Stretch"
                             Cursor="Hand">
                         <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                     </Border>

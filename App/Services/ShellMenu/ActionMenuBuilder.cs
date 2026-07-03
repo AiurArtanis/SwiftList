@@ -18,7 +18,11 @@ internal static class ActionMenuBuilder
         var uiItems = new List<ActionMenuItem>();
         var itemHeight = UiMetrics.ListItemHeight;
 
-        var headerHeight = Math.Round(itemHeight * (UiMetrics.SearchSectionHeaderHeight / UiMetrics.SearchResultItemHeight));
+        // Section headers must stay tall enough for the header font (see ActionMenuItem.xaml),
+        // otherwise the title (e.g. "快捷命令") gets vertically clipped at small scales.
+        var headerHeight = Math.Max(
+            UiMetrics.MinSectionHeaderHeight,
+            Math.Round(itemHeight * (UiMetrics.SearchSectionHeaderHeight / UiMetrics.SearchResultItemHeight)));
 
         if (hMenu == IntPtr.Zero)
         {

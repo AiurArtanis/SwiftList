@@ -8,13 +8,7 @@
 
 	<!-- ═══════════ Self-Drawn Action Context Menu Item Template ═══════════ -->
 	<DataTemplate x:Key="ActionMenuItemTemplate" DataType="{x:Type app:ActionMenuItem}">
-		<Grid>
-			<Grid.Style>
-				<Style TargetType="Grid">
-					<Setter Property="Height" Value="{Binding ItemHeight}"/>
-				</Style>
-			</Grid.Style>
-
+		<Grid VerticalAlignment="Center">
 			<!-- Separator view -->
 			<Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SeparatorBrush}" Height="1" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="0,4"
                     Visibility="{Binding IsSeparator, Converter={StaticResource BoolToVis}}"/>
