@@ -65,6 +65,17 @@ internal sealed class SearchExecutionEngine : IDisposable
         }
 
         onSearchStateChanged(true);
+
+        // Show instant-provider results (web URL, calculator, env vars, …) right away instead of
+        // waiting for the file search to stream in — those providers are cheap and synchronous,
+        // and a query like a pasted URL may match no files (so the streaming render never fires
+        // until the whole search finishes). Gated on there being instant results so normal file
+        // queries keep their existing behaviour.
+        var instantResults = new List<AppSearchResult>();
+        PluginSearchResultMapper.AddInstantResults(instantResults, query, isInlineSearchContext);
+        if (instantResults.Count > 0)
+            onResultsUpdated(instantResults, string.Empty, false);
+
         var cts = new CancellationTokenSource();
         var searchVersion = Interlocked.Increment(ref _searchVersion);
 
