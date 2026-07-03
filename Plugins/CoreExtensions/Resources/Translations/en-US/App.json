@@ -371,5 +371,5 @@
   "Search_WelcomeTitle": "Start typing to search files or apps",
   "CoreExtensions_Config_CustomFoldersGroupLabel": "Custom App Search Folders",
   "CoreExtensions_Config_CustomFoldersLabel": "Shortcut Folder List",
-  "CoreExtensions_Config_CustomFoldersDesc": "Add folders containing shortcuts or apps, one per line. Items inside will appear in the application search results list."
+  "CoreExtensions_Config_CustomFoldersDesc": "One folder path per line. Shortcuts and apps inside will appear in search results."
 }

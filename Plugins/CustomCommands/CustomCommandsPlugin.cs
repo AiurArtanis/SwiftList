@@ -46,7 +46,7 @@ public class CustomCommandsPlugin : IPlugin, IConfigurable
                     {
                         Key = "Path",
                         LabelKey = "CustomCommands_Config_PathLabel",
-                        FieldType = ConfigFieldType.Text,
+                        FieldType = ConfigFieldType.FilePath,
                         DefaultValue = ""
                     },
                     new PluginConfigField
@@ -67,7 +67,7 @@ public class CustomCommandsPlugin : IPlugin, IConfigurable
                     {
                         Key = "WorkingDir",
                         LabelKey = "CustomCommands_Config_WorkingDirLabel",
-                        FieldType = ConfigFieldType.Text,
+                        FieldType = ConfigFieldType.FolderPath,
                         DefaultValue = ""
                     },
                     new PluginConfigField

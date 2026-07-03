@@ -10,7 +10,9 @@ public enum ConfigFieldType
     Object,
     Group,
     StringList,
-    Hotkey
+    Hotkey,
+    FilePath,
+    FolderPath
 }
 
 public class PluginConfigField

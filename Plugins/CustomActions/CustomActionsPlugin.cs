@@ -27,10 +27,10 @@ public class CustomActionsPlugin : IPlugin, IActionProvider, IConfigurable
                 {
                     new PluginConfigField { Key = "Enabled",     LabelKey = "CustomActions_Config_EnabledLabel",    FieldType = ConfigFieldType.Boolean, DefaultValue = true },
                     new PluginConfigField { Key = "Title",       LabelKey = "CustomActions_Config_TitleLabel",      FieldType = ConfigFieldType.Text,    DefaultValue = "" },
-                    new PluginConfigField { Key = "Path",        LabelKey = "CustomActions_Config_PathLabel",       FieldType = ConfigFieldType.Text,    DefaultValue = "" },
+                    new PluginConfigField { Key = "Path",        LabelKey = "CustomActions_Config_PathLabel",       FieldType = ConfigFieldType.FilePath,   DefaultValue = "" },
                     new PluginConfigField { Key = "Parameter",   LabelKey = "CustomActions_Config_ParameterLabel",  FieldType = ConfigFieldType.Text,    DefaultValue = "" },
                     new PluginConfigField { Key = "Icon",        LabelKey = "CustomActions_Config_IconLabel",       FieldType = ConfigFieldType.Text,    DefaultValue = "" },
-                    new PluginConfigField { Key = "WorkingDir",  LabelKey = "CustomActions_Config_WorkingDirLabel", FieldType = ConfigFieldType.Text,    DefaultValue = "" },
+                    new PluginConfigField { Key = "WorkingDir",  LabelKey = "CustomActions_Config_WorkingDirLabel", FieldType = ConfigFieldType.FolderPath, DefaultValue = "" },
                     new PluginConfigField { Key = "RunSilently", LabelKey = "CustomActions_Config_RunSilentlyLabel",FieldType = ConfigFieldType.Boolean, DefaultValue = false },
                     new PluginConfigField { Key = "RunAsAdmin",  LabelKey = "CustomActions_Config_RunAsAdminLabel", FieldType = ConfigFieldType.Boolean, DefaultValue = false },
                     new PluginConfigField { Key = "Hotkey",      LabelKey = "CustomActions_Config_HotkeyLabel",     FieldType = ConfigFieldType.Hotkey,  DefaultValue = "", RequireModifier = true },

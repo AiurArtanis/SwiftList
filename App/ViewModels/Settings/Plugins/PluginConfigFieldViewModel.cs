@@ -32,9 +32,11 @@ public class PluginConfigFieldViewModel : ViewModelBase
     public bool IsGroup => FieldType == ConfigFieldType.Group;
     public bool IsStringList => FieldType == ConfigFieldType.StringList;
     public bool IsHotkey => FieldType == ConfigFieldType.Hotkey;
+    public bool IsFilePath => FieldType == ConfigFieldType.FilePath;
+    public bool IsFolderPath => FieldType == ConfigFieldType.FolderPath;
     public bool HotkeyRequireModifier => SchemaField.RequireModifier;
     public bool IsIconField => SchemaField.Key.Equals("Icon", StringComparison.OrdinalIgnoreCase);
-    public bool IsSimpleField => IsBoolean || IsText || IsInteger || IsChoice || IsStringList || IsHotkey;
+    public bool IsSimpleField => IsBoolean || IsText || IsInteger || IsChoice || IsStringList || IsHotkey || IsFilePath || IsFolderPath;
 
     public ObservableCollection<PluginConfigFieldViewModel> Children { get; } = new();
     public ObservableCollection<PluginConfigArrayItemViewModel> ArrayItems { get; } = new();

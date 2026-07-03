@@ -82,7 +82,7 @@ public class FolderCascaderPlugin : IPlugin, IConfigurable
                             {
                                 Key = "Path",
                                 LabelKey = "FolderCascader_Config_FolderPath",
-                                FieldType = ConfigFieldType.Text,
+                                FieldType = ConfigFieldType.FolderPath,
                                 DefaultValue = ""
                             }
                         }
