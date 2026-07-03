@@ -62,8 +62,7 @@ public static class PathQueryExtensions
 
     public static string GetFullPath(this RuntimeIndex index, int idx)
     {
-        var id = index.Ids[idx];
-        if (index.PathMemo.TryGetValue(id, out var path))
+        if (index.PathMemo.TryGetValue(idx, out var path))
             return path;
 
         var parentIndex = index.ParentIndexes[idx];
@@ -74,7 +73,9 @@ public static class PathQueryExtensions
         else
             path = Path.Combine(index.GetFullPath(parentIndex), name);
 
-        index.PathMemo.TryAdd(id, path);
+        // Keyed by row index, not FRN: a hard-linked file has one FRN but several rows/paths, so an
+        // FRN-keyed cache would collapse them all to whichever path was computed first.
+        index.PathMemo.TryAdd(idx, path);
         return path;
     }
 
