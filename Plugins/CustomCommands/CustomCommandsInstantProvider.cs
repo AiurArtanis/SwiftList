@@ -114,8 +114,8 @@ public class CustomCommandsInstantProvider : IInstantResultProvider
             // Positional placeholders: %s1/{1} .. %sn/{n} -> the n-th argument (1-based).
             // Single regex pass so %s1 can't match inside %s10, and so a leftover positional
             // token can't be clobbered by the "all arguments" replacement below.
-            // Out-of-range indices resolve to an empty string.
-            var templateForQuoteCheck = resolvedParam;
+            // Out-of-range indices resolve to an empty string. We quote each value ourselves
+            // so it stays a single argument — users must NOT quote placeholders themselves.
             resolvedParam = System.Text.RegularExpressions.Regex.Replace(resolvedParam, @"%s(\d+)|\{(\d+)\}", m =>
             {
                 usedPlaceholder = true;
@@ -123,30 +123,21 @@ public class CustomCommandsInstantProvider : IInstantResultProvider
                 var value = int.TryParse(digits, out var n) && n >= 1 && n <= parsedArgs.Count
                     ? parsedArgs[n - 1]
                     : string.Empty;
-
-                // Auto-quote a value that contains spaces so the launched program keeps it as a
-                // single argument — unless the template already wraps the placeholder in quotes,
-                // or the value itself already contains a quote (avoid producing broken quoting).
-                if (value.IndexOf(' ') >= 0 && !value.Contains('"'))
-                {
-                    var before = m.Index > 0 ? templateForQuoteCheck[m.Index - 1] : '\0';
-                    var after = m.Index + m.Length < templateForQuoteCheck.Length ? templateForQuoteCheck[m.Index + m.Length] : '\0';
-                    var alreadyQuoted = (before == '"' && after == '"') || (before == '\'' && after == '\'');
-                    if (!alreadyQuoted)
-                        value = "\"" + value + "\"";
-                }
-                return value;
+                // A missing/out-of-range argument vanishes rather than becoming an empty "".
+                return value.Length == 0 ? string.Empty : ArgQuoting.Quote(value);
             });
 
-            // "All arguments as one" placeholders: %s or {} -> the whole argument string.
+            // "All arguments as one" placeholders: %s or {} -> the whole input as a single
+            // quoted argument (empty input -> nothing).
+            var allArgs = string.IsNullOrEmpty(argSuffix) ? string.Empty : ArgQuoting.Quote(argSuffix);
             if (resolvedParam.Contains("%s"))
             {
-                resolvedParam = resolvedParam.Replace("%s", argSuffix);
+                resolvedParam = resolvedParam.Replace("%s", allArgs);
                 usedPlaceholder = true;
             }
             if (resolvedParam.Contains("{}"))
             {
-                resolvedParam = resolvedParam.Replace("{}", argSuffix);
+                resolvedParam = resolvedParam.Replace("{}", allArgs);
                 usedPlaceholder = true;
             }
 

@@ -104,11 +104,13 @@ public class DynamicProvider : IDynamicActionProvider
 
     private static void Run(ActionItem cmd, ISearchResult result)
     {
-        var param = string.IsNullOrWhiteSpace(cmd.Parameter) ? "%s" : cmd.Parameter;
-        if (param.Contains("%s"))
-            param = param.Replace("%s", result.FullPath);
-        else if (param.Contains("{0}"))
-            param = string.Format(param, result.FullPath);
+        // The action runs on the selected result, so there is only one substitution value:
+        // its full path. %s and {} are interchangeable placeholders for it. We quote the
+        // value ourselves so it stays a single argument (paths with spaces / trailing
+        // backslashes) — users must NOT wrap the placeholder in quotes themselves.
+        var quotedPath = ArgQuoting.Quote(result.FullPath);
+        var param = string.IsNullOrWhiteSpace(cmd.Parameter) ? quotedPath
+            : cmd.Parameter.Replace("%s", quotedPath).Replace("{}", quotedPath);
 
         var workDir = cmd.WorkingDir;
         if (string.IsNullOrWhiteSpace(workDir))
