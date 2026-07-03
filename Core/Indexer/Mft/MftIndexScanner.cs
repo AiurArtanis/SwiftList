@@ -1,0 +1,144 @@
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+using SwiftList.Core.Indexer.Usn;
+
+namespace SwiftList.Core.Indexer.Mft;
+
+/// <summary>
+/// Builds a drive's index by parsing the raw NTFS $MFT instead of FSCTL_ENUM_USN_DATA. Unlike the
+/// USN enumeration (one primary name per record), this reads every $FILE_NAME attribute, so a
+/// hard-linked file yields one <see cref="FileRecord"/> per link (one-to-many). File reference
+/// numbers are the full 64-bit form (sequence &lt;&lt; 48 | record index) to stay aligned with the
+/// USN journal used for incremental updates. Requires a volume handle opened with read access
+/// (Administrator).
+/// </summary>
+internal static class MftIndexScanner
+{
+    private const int NtfsRootRecordIndex = 5; // $Root; already added by CreateEmptyStore.
+
+    public static UsnDriveIndexResult? ScanDrive(string drive, SafeFileHandle handle, UInt128 rootFrn, ulong journalId, long nextUsn, Action<int, int>? onProgress)
+    {
+        var vd = new byte[512];
+        if (!Win32Api.DeviceIoControl(handle, Win32Api.FSCTL_GET_NTFS_VOLUME_DATA, IntPtr.Zero, 0, vd, (uint)vd.Length, out _, IntPtr.Zero))
+        {
+            Logger.Log($"[MftIndexScanner] GET_NTFS_VOLUME_DATA failed on {drive}: {Marshal.GetLastWin32Error()}", LogLevel.Error);
+            return null;
+        }
+
+        var bytesPerSector = BitConverter.ToUInt32(vd, 40);
+        var bytesPerCluster = BitConverter.ToUInt32(vd, 44);
+        var recordSize = BitConverter.ToUInt32(vd, 48);
+        var mftValidLen = BitConverter.ToInt64(vd, 56);
+        var mftStartLcn = BitConverter.ToInt64(vd, 64);
+        if (recordSize == 0 || bytesPerCluster == 0)
+            return null;
+
+        var rec0 = new byte[recordSize];
+        if (!ReadAt(handle, mftStartLcn * bytesPerCluster, rec0, (int)recordSize))
+            return null;
+        MftParser.ApplyFixup(rec0, bytesPerSector, 0, (int)recordSize);
+        var extents = MftParser.ParseDataRuns(rec0);
+        if (extents.Count == 0)
+        {
+            Logger.Log($"[MftIndexScanner] Could not parse $MFT runlist on {drive}.", LogLevel.Error);
+            return null;
+        }
+
+        var store = IndexCacheManager.CreateEmptyStore(drive, rootFrn, nextUsn, journalId);
+        store.Records.EnsureCapacity(2_800_000);
+        var namePool = new FileRecordNamePool();
+        var records = store.Records;
+
+        int files = 0, dirs = 0;
+        long processed = 0;
+        const int ChunkBytes = 8 * 1024 * 1024;
+        var buf = new byte[ChunkBytes];
+        var names = new List<(UInt128 parent, string name)>(4);
+
+        foreach (var (lcn, clusters) in extents)
+        {
+            var extBytes = clusters * bytesPerCluster;
+            var off = lcn * bytesPerCluster;
+            while (extBytes > 0 && processed < mftValidLen)
+            {
+                var chunk = (int)Math.Min(Math.Min(ChunkBytes, extBytes), mftValidLen - processed);
+                chunk -= chunk % (int)recordSize;
+                if (chunk <= 0)
+                    break;
+                if (!ReadAt(handle, off, buf, chunk))
+                    break;
+
+                for (var r = 0; r + recordSize <= chunk; r += (int)recordSize)
+                {
+                    var idx = processed / recordSize;
+                    processed += recordSize;
+                    if (buf[r] != (byte)'F' || buf[r + 1] != (byte)'I' || buf[r + 2] != (byte)'L' || buf[r + 3] != (byte)'E')
+                        continue;
+                    MftParser.ApplyFixup(buf, bytesPerSector, r, (int)recordSize);
+
+                    var headerFlags = BitConverter.ToUInt16(buf, r + 0x16);
+                    if ((headerFlags & 0x01) == 0) // not in use
+                        continue;
+
+                    var baseRef = (ulong)BitConverter.ToInt64(buf, r + 0x20);
+                    var isExtension = (baseRef & 0xFFFFFFFFFFFF) != 0;
+                    if (!isExtension && idx == NtfsRootRecordIndex)
+                        continue; // root already present via CreateEmptyStore
+
+                    var seq = BitConverter.ToUInt16(buf, r + 0x10);
+                    UInt128 owner = isExtension
+                        ? baseRef
+                        : ((ulong)seq << 48) | ((ulong)idx & 0xFFFFFFFFFFFF);
+                    var isDir = !isExtension && (headerFlags & 0x02) != 0;
+
+                    names.Clear();
+                    var stdAttrs = MftParser.CollectNames(buf, r, (int)recordSize, names);
+
+                    if (names.Count == 0)
+                        continue;
+
+                    var attrs = (FileAttributes)stdAttrs;
+                    if (isDir)
+                        attrs |= FileAttributes.Directory;
+                    var flags = FileRecordFlagsHelper.FromAttributes(attrs);
+
+                    foreach (var (parent, name) in names)
+                    {
+                        records.Add(new FileRecord(owner, parent, namePool.Get(name), flags));
+                        if (isDir) dirs++; else files++;
+                    }
+                }
+
+                off += chunk;
+                extBytes -= chunk;
+                onProgress?.Invoke(files, dirs);
+            }
+        }
+
+        Logger.Log($"[MftIndexScanner] Drive {drive} $MFT scan complete: {records.Count - 1} rows (files={files}, dirs={dirs}).");
+        return new UsnDriveIndexResult
+        {
+            Store = store,
+            NextUsn = nextUsn,
+            JournalId = journalId,
+            IsSortedById = false // one FRN can span multiple rows; let RuntimeIndex.Load sort.
+        };
+    }
+
+    private static bool ReadAt(SafeFileHandle handle, long offset, byte[] buffer, int count)
+    {
+        if (!Win32Api.SetFilePointerEx(handle, offset, out _, 0))
+            return false;
+        var done = 0;
+        while (done < count)
+        {
+            var slice = done == 0 ? buffer : new byte[count - done];
+            if (!Win32Api.ReadFile(handle, slice, (uint)(count - done), out var got, IntPtr.Zero) || got == 0)
+                return false;
+            if (done != 0)
+                Array.Copy(slice, 0, buffer, done, (int)got);
+            done += (int)got;
+        }
+        return true;
+    }
+}

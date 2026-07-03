@@ -1,0 +1,125 @@
+using System.Text;
+
+namespace SwiftList.Core.Indexer.Mft;
+
+/// <summary>Low-level NTFS $MFT structure parsing: fixup, $DATA run lists, and attribute walking.</summary>
+internal static class MftParser
+{
+    /// <summary>Applies the update-sequence-array fixup to a raw FILE record in place.</summary>
+    internal static void ApplyFixup(byte[] buf, uint bytesPerSector, int recOff, int recLen)
+    {
+        int usaOff = BitConverter.ToUInt16(buf, recOff + 4);
+        int usaCount = BitConverter.ToUInt16(buf, recOff + 6);
+        for (var i = 1; i < usaCount; i++)
+        {
+            var secEnd = recOff + i * (int)bytesPerSector - 2;
+            var usaEntry = recOff + usaOff + i * 2;
+            if (secEnd + 2 > recOff + recLen || usaEntry + 2 > buf.Length)
+                break;
+            buf[secEnd] = buf[usaEntry];
+            buf[secEnd + 1] = buf[usaEntry + 1];
+        }
+    }
+
+    /// <summary>Parses the $MFT's own non-resident $DATA run list into (lcn, clusterCount) extents.</summary>
+    internal static List<(long lcn, long clusters)> ParseDataRuns(byte[] rec)
+    {
+        var extents = new List<(long, long)>();
+        int a = BitConverter.ToUInt16(rec, 0x14);
+        while (a + 8 <= rec.Length)
+        {
+            var type = BitConverter.ToUInt32(rec, a);
+            if (type == 0xFFFFFFFF)
+                break;
+            var len = BitConverter.ToUInt32(rec, a + 4);
+            if (len < 16 || a + len > rec.Length)
+                break;
+            if (type == 0x80 && rec[a + 8] == 1) // $DATA, non-resident
+            {
+                int mpOff = BitConverter.ToUInt16(rec, a + 0x20);
+                var p = a + mpOff;
+                long lcn = 0;
+                while (p < a + len && rec[p] != 0)
+                {
+                    var hdr = rec[p++];
+                    var lenBytes = hdr & 0x0F;
+                    var offBytes = (hdr >> 4) & 0x0F;
+                    if (lenBytes == 0)
+                        break;
+                    var runLen = ReadLE(rec, p, lenBytes);
+                    p += lenBytes;
+                    if (offBytes == 0)
+                        continue; // sparse hole (unexpected for $MFT)
+                    var runOff = ReadSignedLE(rec, p, offBytes);
+                    p += offBytes;
+                    lcn += runOff;
+                    extents.Add((lcn, runLen));
+                }
+                break;
+            }
+            a += (int)len;
+        }
+        return extents;
+    }
+
+    /// <summary>
+    /// Walks a FILE record's attributes: collects every resident $FILE_NAME (excluding DOS-only 8.3
+    /// short names) as (parentReference, name) into <paramref name="names"/>, and returns the
+    /// $STANDARD_INFORMATION file attributes (hidden/system/etc).
+    /// </summary>
+    internal static uint CollectNames(byte[] buf, int recOff, int recLen, List<(UInt128 parent, string name)> names)
+    {
+        uint stdAttrs = 0;
+        int a = BitConverter.ToUInt16(buf, recOff + 0x14);
+        while (a + 8 <= recLen)
+        {
+            var type = BitConverter.ToUInt32(buf, recOff + a);
+            if (type == 0xFFFFFFFF)
+                break;
+            var len = BitConverter.ToUInt32(buf, recOff + a + 4);
+            if (len < 16 || a + len > recLen)
+                break;
+            var resident = buf[recOff + a + 8] == 0;
+            if (type == 0x10 && resident) // $STANDARD_INFORMATION
+            {
+                var vo = BitConverter.ToUInt16(buf, recOff + a + 0x14);
+                if (a + vo + 0x24 <= recLen)
+                    stdAttrs = BitConverter.ToUInt32(buf, recOff + a + vo + 0x20);
+            }
+            else if (type == 0x30 && resident) // $FILE_NAME
+            {
+                var vo = BitConverter.ToUInt16(buf, recOff + a + 0x14);
+                var vp = recOff + a + vo;
+                if (vp + 0x42 <= recOff + recLen)
+                {
+                    var ns = buf[vp + 0x41]; // 0=POSIX 1=Win32 2=DOS 3=Win32&DOS
+                    if (ns != 2)
+                    {
+                        UInt128 parent = (ulong)BitConverter.ToInt64(buf, vp);
+                        int nameLen = buf[vp + 0x40];
+                        if (vp + 0x42 + nameLen * 2 <= recOff + recLen)
+                            names.Add((parent, Encoding.Unicode.GetString(buf, vp + 0x42, nameLen * 2)));
+                    }
+                }
+            }
+            a += (int)len;
+        }
+        return stdAttrs;
+    }
+
+    private static long ReadLE(byte[] b, int off, int n)
+    {
+        long v = 0;
+        for (var i = 0; i < n; i++)
+            v |= (long)b[off + i] << (8 * i);
+        return v;
+    }
+
+    private static long ReadSignedLE(byte[] b, int off, int n)
+    {
+        var v = ReadLE(b, off, n);
+        if (n < 8 && (b[off + n - 1] & 0x80) != 0)
+            v |= -1L << (8 * n);
+        return v;
+    }
+}
