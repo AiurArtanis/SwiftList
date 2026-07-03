@@ -11,6 +11,12 @@ public static class ResultsDragDropHelper
     private static System.Windows.Point _dragStartPoint;
     private static bool _dragEndedInside;
 
+    // When pressing on an item that's already part of a multi-selection, we suppress the list's
+    // default "collapse to one" so a drag can carry all selected items. These remember the press
+    // so a plain click (no drag) still collapses to the single item on button-up.
+    private static object? _pendingItem;
+    private static System.Windows.Controls.ListBox? _pendingList;
+
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern bool GetCursorPos(out POINT lpPoint);
 
@@ -30,12 +36,72 @@ public static class ResultsDragDropHelper
     public static void Register(System.Windows.Controls.ListBox listBox)
     {
         listBox.PreviewMouseLeftButtonDown += List_PreviewMouseLeftButtonDown;
+        listBox.PreviewMouseLeftButtonUp += List_PreviewMouseLeftButtonUp;
         listBox.PreviewMouseMove += List_PreviewMouseMove;
         // ponytail: register with handledEventsToo=true because the OLE system/ListBoxItem might handle it internally
         listBox.AddHandler(UIElement.QueryContinueDragEvent, new System.Windows.QueryContinueDragEventHandler(List_QueryContinueDrag), true);
     }
 
-    private static void List_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => _dragStartPoint = e.GetPosition(null);
+    private static void List_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStartPoint = e.GetPosition(null);
+        _pendingItem = null;
+        _pendingList = null;
+
+        // No modifier + pressing a member of an existing multi-selection: keep the selection so a
+        // drag carries all of it. Resolved as a single-select click on button-up if no drag runs.
+        if (Keyboard.Modifiers == ModifierKeys.None && sender is System.Windows.Controls.ListBox lb)
+        {
+            var data = GetItemData(e.OriginalSource);
+            if (data != null && lb.SelectedItems.Count > 1 && lb.SelectedItems.Contains(data))
+            {
+                e.Handled = true;
+                _pendingItem = data;
+                _pendingList = lb;
+            }
+        }
+    }
+
+    private static void List_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        // A suppressed press that never became a drag → treat as a plain click on the item.
+        if (_pendingItem != null && _pendingList != null)
+        {
+            _pendingList.SelectedItem = _pendingItem;
+            _pendingItem = null;
+            _pendingList = null;
+        }
+    }
+
+    private static object? GetItemData(object originalSource)
+    {
+        var dep = originalSource as DependencyObject;
+        while (dep != null && dep is not ListBoxItem)
+            dep = VisualTreeHelper.GetParent(dep);
+        return (dep as ListBoxItem)?.DataContext;
+    }
+
+    // When the dragged item is part of a multi-selection, drag every selected file/folder.
+    private static string[] CollectDragPaths(ItemsControl itemsControl, object dragged, string draggedPath)
+    {
+        var paths = new List<string>();
+        if (itemsControl is System.Windows.Controls.ListBox lb && lb.SelectedItems.Count > 1 && lb.SelectedItems.Contains(dragged))
+        {
+            foreach (var obj in lb.SelectedItems)
+            {
+                try
+                {
+                    dynamic sr = obj;
+                    string? p = sr.FullPath;
+                    if (!string.IsNullOrEmpty(p) && (File.Exists(p) || Directory.Exists(p)))
+                        paths.Add(p);
+                }
+                catch { }
+            }
+        }
+        if (paths.Count == 0) paths.Add(draggedPath);
+        return paths.ToArray();
+    }
 
     private static void List_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
@@ -64,8 +130,12 @@ public static class ResultsDragDropHelper
                                 string? fullPath = searchResult.FullPath;
                                 if (!string.IsNullOrEmpty(fullPath) && (File.Exists(fullPath) || Directory.Exists(fullPath)))
                                 {
-                                    var dataObject = new System.Windows.DataObject(System.Windows.DataFormats.FileDrop, new string[] { fullPath });
+                                    var paths = CollectDragPaths(itemsControl, data, fullPath);
+                                    var dataObject = new System.Windows.DataObject(System.Windows.DataFormats.FileDrop, paths);
 
+                                    // A drag is starting — don't collapse the selection on button-up.
+                                    _pendingItem = null;
+                                    _pendingList = null;
                                     _dragEndedInside = false;
                                     try
                                     {
