@@ -109,28 +109,50 @@ public class CustomCommandsInstantProvider : IInstantResultProvider
                 }
             }
 
-            // Replace %s1, %s2, ... first
-            for (var i = 0; i < parsedArgs.Count; i++)
-            {
-                var placeholder = $"%s{i + 1}";
-                if (resolvedParam.Contains(placeholder))
-                {
-                    resolvedParam = resolvedParam.Replace(placeholder, parsedArgs[i]);
-                }
-            }
+            var usedPlaceholder = false;
 
-            // Fallback to legacy single parameter replacements
+            // Positional placeholders: %s1/{1} .. %sn/{n} -> the n-th argument (1-based).
+            // Single regex pass so %s1 can't match inside %s10, and so a leftover positional
+            // token can't be clobbered by the "all arguments" replacement below.
+            // Out-of-range indices resolve to an empty string.
+            var templateForQuoteCheck = resolvedParam;
+            resolvedParam = System.Text.RegularExpressions.Regex.Replace(resolvedParam, @"%s(\d+)|\{(\d+)\}", m =>
+            {
+                usedPlaceholder = true;
+                var digits = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value;
+                var value = int.TryParse(digits, out var n) && n >= 1 && n <= parsedArgs.Count
+                    ? parsedArgs[n - 1]
+                    : string.Empty;
+
+                // Auto-quote a value that contains spaces so the launched program keeps it as a
+                // single argument — unless the template already wraps the placeholder in quotes,
+                // or the value itself already contains a quote (avoid producing broken quoting).
+                if (value.IndexOf(' ') >= 0 && !value.Contains('"'))
+                {
+                    var before = m.Index > 0 ? templateForQuoteCheck[m.Index - 1] : '\0';
+                    var after = m.Index + m.Length < templateForQuoteCheck.Length ? templateForQuoteCheck[m.Index + m.Length] : '\0';
+                    var alreadyQuoted = (before == '"' && after == '"') || (before == '\'' && after == '\'');
+                    if (!alreadyQuoted)
+                        value = "\"" + value + "\"";
+                }
+                return value;
+            });
+
+            // "All arguments as one" placeholders: %s or {} -> the whole argument string.
             if (resolvedParam.Contains("%s"))
             {
                 resolvedParam = resolvedParam.Replace("%s", argSuffix);
+                usedPlaceholder = true;
             }
-            else if (resolvedParam.Contains("{0}"))
+            if (resolvedParam.Contains("{}"))
             {
-                resolvedParam = string.Format(resolvedParam, argSuffix);
+                resolvedParam = resolvedParam.Replace("{}", argSuffix);
+                usedPlaceholder = true;
             }
-            else if (!string.IsNullOrEmpty(argSuffix) && !resolvedParam.Contains("%s"))
+
+            // If the template used no placeholder at all, append the whole argument string.
+            if (!usedPlaceholder && !string.IsNullOrEmpty(argSuffix))
             {
-                // If no specific placeholders are used, append whole argSuffix
                 resolvedParam = (resolvedParam + " " + argSuffix).Trim();
             }
 

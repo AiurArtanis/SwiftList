@@ -53,6 +53,7 @@ public class CustomCommandsPlugin : IPlugin, IConfigurable
                     {
                         Key = "Parameter",
                         LabelKey = "CustomCommands_Config_ParameterLabel",
+                        DescriptionKey = "CustomCommands_Config_ParameterDesc",
                         FieldType = ConfigFieldType.Text,
                         DefaultValue = ""
                     },
