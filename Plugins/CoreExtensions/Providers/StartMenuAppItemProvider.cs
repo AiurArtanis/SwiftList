@@ -165,6 +165,66 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
             });
         }
 
+        // 5. Add modern packaged (UWP/MSIX) apps from shell:AppsFolder — Calculator, Notepad, Terminal,
+        //    etc. have no .lnk on disk so the scan above misses them. Classic apps are mirrored into
+        //    AppsFolder too, so dedupe by display name against what we already indexed (entriesByName
+        //    holds every scanned shortcut name); only genuinely-new names (the packaged apps) survive.
+        AppendAppsFolderApps(list, entriesByName.Keys);
+
         return list;
+    }
+
+    private static void AppendAppsFolderApps(List<SearchableItem> list, IEnumerable<string> alreadyIndexedNames)
+    {
+        var existingNames = new HashSet<string>(alreadyIndexedNames, StringComparer.OrdinalIgnoreCase);
+        var appDesc = TranslationService.Get("Search_ResultApp") ?? "Application";
+
+        List<AppsFolderEnumerator.AppEntry> apps;
+        try
+        {
+            apps = AppsFolderEnumerator.Enumerate(96);
+        }
+        catch (Exception ex)
+        {
+            PluginSdk.Logger.Log($"[StartMenuAppItemProvider] Failed to enumerate shell:AppsFolder: {ex.Message}", PluginSdk.LogLevel.Warn);
+            return;
+        }
+
+        foreach (var app in apps)
+        {
+            if (string.IsNullOrWhiteSpace(app.Name) || !existingNames.Add(app.Name))
+                continue; // already covered by a Start Menu shortcut (classic app), or a duplicate name
+
+            var aumid = app.Aumid;
+            // Packaged apps launch by AUMID via shell:AppsFolder; a classic entry may expose a real
+            // file path instead (rare here, since those are usually deduped away) — launch it directly.
+            var looksLikePath = aumid.Length > 2 && aumid[1] == ':';
+            var launchTarget = looksLikePath ? aumid : $"shell:AppsFolder\\{aumid}";
+
+            list.Add(new SearchableItem
+            {
+                Title = app.Name,
+                Description = appDesc,
+                ResultKind = "Application",
+                HBitmapIcon = app.HBitmapIcon,
+                ActionType = "None",
+                ActionArgument = launchTarget,
+                OnExecute = () =>
+                {
+                    try
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = launchTarget,
+                            UseShellExecute = true
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        PluginSdk.Logger.Log($"[StartMenuAppItemProvider] Failed to launch app '{app.Name}' ({aumid}): {ex.Message}", PluginSdk.LogLevel.Error);
+                    }
+                }
+            });
+        }
     }
 }
