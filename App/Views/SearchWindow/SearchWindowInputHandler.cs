@@ -48,7 +48,7 @@ public class SearchWindowInputHandler
         {
             if (_window.LstGridResultsControl.SelectedItem is AppSearchResult result)
             {
-                _window.MenuPresenter?.EnterActionsMode(result);
+                _window.MenuPresenter?.EnterActionsMode(GetSelectedResults());
                 e.Handled = true;
                 return;
             }
@@ -62,7 +62,7 @@ public class SearchWindowInputHandler
             {
                 if (_window.LstGridResultsControl.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
                 {
-                    _window.MenuPresenter?.EnterActionsMode(result);
+                    _window.MenuPresenter?.EnterActionsMode(GetSelectedResults());
                     e.Handled = true;
                     return;
                 }
@@ -110,6 +110,14 @@ public class SearchWindowInputHandler
             }
             e.Handled = true;
         }
+    }
+
+    private IReadOnlyList<AppSearchResult> GetSelectedResults()
+    {
+        var list = new List<AppSearchResult>();
+        foreach (var obj in _window.LstGridResultsControl.SelectedItems)
+            if (obj is AppSearchResult r) list.Add(r);
+        return list;
     }
 
     public void HandleLstGridResultsMouseDoubleClick(MouseButtonEventArgs e)
@@ -230,11 +238,13 @@ public class SearchWindowInputHandler
         if (element is ListViewItem listViewItem && listViewItem.Content is AppSearchResult result)
         {
             e.Handled = true;
-            _window.LstGridResultsControl.SelectedItem = result;
+            // Preserve an existing multi-selection when right-clicking one of its members;
+            // otherwise select just the right-clicked item.
+            if (!_window.LstGridResultsControl.SelectedItems.Contains(result))
+                _window.LstGridResultsControl.SelectedItem = result;
 
             // Trigger the shared premium actions context menu panel overlay
-
-            _window.MenuPresenter.EnterActionsMode(result);
+            _window.MenuPresenter.EnterActionsMode(GetSelectedResults());
         }
     }
 

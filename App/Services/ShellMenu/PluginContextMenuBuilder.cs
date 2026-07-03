@@ -43,7 +43,7 @@ public static class PluginContextMenuBuilder
                 if (menuItem.Items.Count > 0 && (menuItem.Items[0] as MenuItem)?.Header?.ToString() == "Loading...")
                 {
                     menuItem.Items.Clear();
-                    foreach (var subItem in provider.GetMenuItems(result, item.SubMenuHandle))
+                    foreach (var subItem in provider.GetMenuItems(new[] { result }, item.SubMenuHandle))
                         menuItem.Items.Add(subItem.IsSeparator ? new Separator() : CreateActionMenuItem(subItem, result, provider, contextMenu, isFocusable));
                 }
             };
@@ -62,7 +62,7 @@ public static class PluginContextMenuBuilder
                         (contextMenu.PlacementTarget as Window)?.Hide();
                     }
                     var hwnd = Application.Current.MainWindow != null ? new WindowInteropHelper(Application.Current.MainWindow).Handle : IntPtr.Zero;
-                    Application.Current.Dispatcher.BeginInvoke(new Action(() => provider.ExecuteCommand(result, item.CommandId, hwnd)), System.Windows.Threading.DispatcherPriority.Background);
+                    Application.Current.Dispatcher.BeginInvoke(new Action(() => provider.ExecuteCommand(new[] { result }, item.CommandId, hwnd)), System.Windows.Threading.DispatcherPriority.Background);
                 }
             };
         }

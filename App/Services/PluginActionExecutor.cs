@@ -130,7 +130,7 @@ public static class PluginActionExecutor
         }
 
         registration.Action.Execute(
-            new PluginSearchResult(result.Name, result.PluginActionArgumentText, result.ContextDirectory), view);
+            new[] { new PluginSearchResult(result.Name, result.PluginActionArgumentText, result.ContextDirectory) }, view);
         return true;
     }
 }

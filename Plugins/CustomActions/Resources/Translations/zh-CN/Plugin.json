@@ -13,5 +13,6 @@
   "CustomActions_Config_RunAsAdminLabel": "以管理员身份运行",
   "CustomActions_Config_HotkeyLabel": "快捷键",
   "CustomActions_Config_FolderOnlyLabel": "仅对文件夹生效",
+  "CustomActions_Config_MultiSelectLabel": "适配多项选择 (选中多项时一次传入全部路径)",
   "CustomActions_Config_ExtensionsLabel": "限制扩展名 (例如 .txt,.log; 为空表示不限制)"
 }

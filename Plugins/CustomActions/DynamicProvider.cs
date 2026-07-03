@@ -25,6 +25,7 @@ public class DynamicProvider : IDynamicActionProvider
         public string Hotkey { get; set; } = string.Empty;
         public bool FolderOnly { get; set; } = false;
         public string Extensions { get; set; } = string.Empty;
+        public bool MultiSelect { get; set; } = false;
     }
 
     // ponytail: permanent cache; UserSettings.Load() is already memory-cached but GetSetting
@@ -42,45 +43,51 @@ public class DynamicProvider : IDynamicActionProvider
 
     public static void InvalidateCache() => _cache = null;
 
-    public bool CanProvide(ISearchResult result) => true;
+    public bool CanProvide(IReadOnlyList<ISearchResult> results) => true;
 
-    public bool IsVisibleInMenu(ISearchResult result, SearchWindowType windowType)
-        => LoadActions().Any(a => IsApplicable(a, result));
+    public bool IsVisibleInMenu(IReadOnlyList<ISearchResult> results, SearchWindowType windowType)
+        => LoadActions().Any(a => IsAvailableFor(a, results));
 
-    public IEnumerable<(string Hotkey, Action Execute)> GetHotkeyActions(ISearchResult result)
+    public IEnumerable<(string Hotkey, Action Execute)> GetHotkeyActions(IReadOnlyList<ISearchResult> results)
     {
+        var targets = results.ToArray();
         foreach (var cmd in LoadActions())
         {
-            if (!IsApplicable(cmd, result) || string.IsNullOrWhiteSpace(cmd.Hotkey)) continue;
+            if (string.IsNullOrWhiteSpace(cmd.Hotkey) || !IsAvailableFor(cmd, targets)) continue;
             var c = cmd;
-            var r = result;
-            yield return (c.Hotkey, () => Run(c, r));
+            var t = targets;
+            yield return (c.Hotkey, () => RunMulti(c, t));
         }
     }
 
-    public IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu)
+    public IEnumerable<DynamicMenuItem> GetMenuItems(IReadOnlyList<ISearchResult> results, IntPtr hMenu)
     {
         if (hMenu != IntPtr.Zero) yield break;
 
+        var targets = results.ToArray();
         foreach (var cmd in LoadActions())
         {
-            if (!IsApplicable(cmd, result)) continue;
+            if (!IsAvailableFor(cmd, targets)) continue;
 
             var capturedCmd = cmd;
-            var capturedResult = result;
-            var iconPath = string.IsNullOrWhiteSpace(cmd.Icon) ? DefaultIcon : cmd.Icon.Trim();
+            var t = targets;
 
             yield return new DynamicMenuItem
             {
                 Text = cmd.Title,
                 CommandId = 0,
                 ShortcutHint = cmd.Hotkey,
-                OnExecute = () => Run(capturedCmd, capturedResult)
+                OnExecute = () => RunMulti(capturedCmd, t)
             };
         }
     }
 
-    public void ExecuteCommand(ISearchResult result, uint commandId, IntPtr ownerHwnd) { }
+    // An action is available when it applies to every selected result AND either a single result
+    // is selected or the action opts into multi-selection.
+    private static bool IsAvailableFor(ActionItem cmd, IReadOnlyList<ISearchResult> results)
+        => results.Count > 0 && (results.Count == 1 || cmd.MultiSelect) && results.All(r => IsApplicable(cmd, r));
+
+    public void ExecuteCommand(IReadOnlyList<ISearchResult> results, uint commandId, IntPtr ownerHwnd) { }
 
     public void ClearSession() => _cache = null;
 
@@ -102,19 +109,21 @@ public class DynamicProvider : IDynamicActionProvider
         return true;
     }
 
-    private static void Run(ActionItem cmd, ISearchResult result)
+    private static void RunMulti(ActionItem cmd, IReadOnlyList<ISearchResult> results)
     {
-        // The action runs on the selected result, so there is only one substitution value:
-        // its full path. %s and {} are interchangeable placeholders for it. We quote the
-        // value ourselves so it stays a single argument (paths with spaces / trailing
-        // backslashes) — users must NOT wrap the placeholder in quotes themselves.
-        var quotedPath = ArgQuoting.Quote(result.FullPath);
-        var param = string.IsNullOrWhiteSpace(cmd.Parameter) ? quotedPath
-            : cmd.Parameter.Replace("%s", quotedPath).Replace("{}", quotedPath);
+        if (results.Count == 0) return;
 
+        // %s and {} expand to every selected path, each quoted so it stays one argument, joined
+        // by spaces — a single invocation receives all files (e.g. tool "a" "b" "c"). For a single
+        // selection this is just the one path. Users must NOT wrap the placeholder in quotes.
+        var allPaths = string.Join(" ", results.Select(r => ArgQuoting.Quote(r.FullPath)));
+        var param = string.IsNullOrWhiteSpace(cmd.Parameter) ? allPaths
+            : cmd.Parameter.Replace("%s", allPaths).Replace("{}", allPaths);
+
+        var first = results[0];
         var workDir = cmd.WorkingDir;
         if (string.IsNullOrWhiteSpace(workDir))
-            workDir = result.IsDir ? result.FullPath : Path.GetDirectoryName(result.FullPath) ?? "";
+            workDir = first.IsDir ? first.FullPath : Path.GetDirectoryName(first.FullPath) ?? "";
 
         var psi = new ProcessStartInfo
         {

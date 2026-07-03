@@ -16,16 +16,17 @@ public class TouchAction : ISearchResultAction
 
     public IReadOnlyList<string> Parameters => new[] { "filename" };
 
-    public bool IsVisibleInSearch(ISearchResult result, SearchWindowType windowType) => windowType == SearchWindowType.Inline;
+    public bool IsVisibleInSearch(IReadOnlyList<ISearchResult> results, SearchWindowType windowType) => windowType == SearchWindowType.Inline;
 
     public ImageSource? Icon => VectorIconHelper.CreateVectorIcon(
         "M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 12h-3v3h-2v-3H8v-2h3V9h2v3h3v2zm-3-5V3.5L18.5 9H13z",
         "TextPrimary");
 
-    public bool CanExecute(ISearchResult result) => result != null && !string.IsNullOrWhiteSpace(result.ContextDirectory) && Directory.Exists(result.ContextDirectory);
+    public bool CanExecute(IReadOnlyList<ISearchResult> results) => results.Count == 1 && !string.IsNullOrWhiteSpace(results[0].ContextDirectory) && Directory.Exists(results[0].ContextDirectory);
 
-    public void Execute(ISearchResult result, IPluginSearchWindow view)
+    public void Execute(IReadOnlyList<ISearchResult> results, IPluginSearchWindow view)
     {
+        var result = results[0];
         if (string.IsNullOrWhiteSpace(result.FullPath))
         {
             return;

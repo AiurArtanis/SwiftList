@@ -15,17 +15,17 @@ public class OpenCommandPromptAction : ISearchResultAction
 
     public IReadOnlyList<string> Keywords => new[] { "cmd" };
 
-    public bool IsVisibleInSearch(ISearchResult result, SearchWindowType windowType) => windowType == SearchWindowType.Inline;
+    public bool IsVisibleInSearch(IReadOnlyList<ISearchResult> results, SearchWindowType windowType) => windowType == SearchWindowType.Inline;
 
-    public bool IsVisibleInMenu(ISearchResult result, SearchWindowType windowType) => result != null && result.IsDir;
+    public bool IsVisibleInMenu(IReadOnlyList<ISearchResult> results, SearchWindowType windowType) => results.Count == 1 && results[0].IsDir;
 
     public ImageSource? Icon => VectorIconHelper.CreateVectorIcon(
         "M3 5h18v14H3V5zm2 2v10h14V7H5zm2 2 3 3-3 3V9zm5 6h5v-2h-5v2z",
         "TextPrimary");
 
-    public bool CanExecute(ISearchResult result) => result != null && !string.IsNullOrWhiteSpace(result.ContextDirectory) && Directory.Exists(result.ContextDirectory);
+    public bool CanExecute(IReadOnlyList<ISearchResult> results) => results.Count == 1 && !string.IsNullOrWhiteSpace(results[0].ContextDirectory) && Directory.Exists(results[0].ContextDirectory);
 
-    public void Execute(ISearchResult result, IPluginSearchWindow view) => CommandPromptLauncher.Open(result.FullPath, result.ContextDirectory, runAsAdmin: false);
+    public void Execute(IReadOnlyList<ISearchResult> results, IPluginSearchWindow view) => CommandPromptLauncher.Open(results[0].FullPath, results[0].ContextDirectory, runAsAdmin: false);
 }
 
 public class OpenAdminCommandPromptAction : ISearchResultAction
@@ -36,17 +36,17 @@ public class OpenAdminCommandPromptAction : ISearchResultAction
 
     public IReadOnlyList<string> Keywords => new[] { "cmda" };
 
-    public bool IsVisibleInSearch(ISearchResult result, SearchWindowType windowType) => windowType == SearchWindowType.Inline;
+    public bool IsVisibleInSearch(IReadOnlyList<ISearchResult> results, SearchWindowType windowType) => windowType == SearchWindowType.Inline;
 
-    public bool IsVisibleInMenu(ISearchResult result, SearchWindowType windowType) => result != null && result.IsDir;
+    public bool IsVisibleInMenu(IReadOnlyList<ISearchResult> results, SearchWindowType windowType) => results.Count == 1 && results[0].IsDir;
 
     public ImageSource? Icon => VectorIconHelper.CreateVectorIcon(
         "M3 5h18v14H3V5zm2 2v10h14V7H5zm2 2 3 3-3 3V9zm5 6h5v-2h-5v2z",
         "TextPrimary");
 
-    public bool CanExecute(ISearchResult result) => result != null && !string.IsNullOrWhiteSpace(result.ContextDirectory) && Directory.Exists(result.ContextDirectory);
+    public bool CanExecute(IReadOnlyList<ISearchResult> results) => results.Count == 1 && !string.IsNullOrWhiteSpace(results[0].ContextDirectory) && Directory.Exists(results[0].ContextDirectory);
 
-    public void Execute(ISearchResult result, IPluginSearchWindow view) => CommandPromptLauncher.Open(result.FullPath, result.ContextDirectory, runAsAdmin: true);
+    public void Execute(IReadOnlyList<ISearchResult> results, IPluginSearchWindow view) => CommandPromptLauncher.Open(results[0].FullPath, results[0].ContextDirectory, runAsAdmin: true);
 }
 
 internal static class CommandPromptLauncher

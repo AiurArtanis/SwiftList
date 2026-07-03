@@ -16,14 +16,19 @@ public class ShellMenuActionProvider : IDynamicActionProvider
     private ShellMenuSession? _session;
     private string? _lastPath;
 
-    public bool CanProvide(ISearchResult result)
+    public bool CanProvide(IReadOnlyList<ISearchResult> results)
     {
+        // The native shell menu is single-item only for now (multi-file menu needs multi-PIDL);
+        // hide it when more than one result is selected.
+        if (results.Count != 1) return false;
+        var result = results[0];
         if (result == null || string.IsNullOrEmpty(result.FullPath)) return false;
         return File.Exists(result.FullPath) || Directory.Exists(result.FullPath);
     }
 
-    public IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu)
+    public IEnumerable<DynamicMenuItem> GetMenuItems(IReadOnlyList<ISearchResult> results, IntPtr hMenu)
     {
+        var result = results[0];
         // If root menu, create a new session
         if (hMenu == IntPtr.Zero)
         {
@@ -40,10 +45,10 @@ public class ShellMenuActionProvider : IDynamicActionProvider
         try
         {
             var items = _session.EnumerateItems(hMenu);
-            var results = new List<DynamicMenuItem>();
+            var menuItems = new List<DynamicMenuItem>();
             foreach (var item in items)
             {
-                results.Add(new DynamicMenuItem
+                menuItems.Add(new DynamicMenuItem
                 {
                     Text = item.Text,
                     CommandId = item.CommandId,
@@ -54,7 +59,7 @@ public class ShellMenuActionProvider : IDynamicActionProvider
                     HBitmapItem = item.HBitmapItem
                 });
             }
-            return results;
+            return menuItems;
         }
         catch
         {
@@ -62,7 +67,7 @@ public class ShellMenuActionProvider : IDynamicActionProvider
         }
     }
 
-    public void ExecuteCommand(ISearchResult result, uint commandId, IntPtr ownerHwnd)
+    public void ExecuteCommand(IReadOnlyList<ISearchResult> results, uint commandId, IntPtr ownerHwnd)
     {
         var sessionToExecute = _session;
         _session = null; // Detach to allow parallel executions/cleanup

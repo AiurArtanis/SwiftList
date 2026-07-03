@@ -37,17 +37,17 @@ public interface ISearchResultAction
     IReadOnlyList<string> Parameters => Array.Empty<string>();
 
     /// <summary>Determines whether this action is visible in the search result matching for the given window type.</summary>
-    bool IsVisibleInSearch(ISearchResult result, SearchWindowType windowType) => true;
+    bool IsVisibleInSearch(IReadOnlyList<ISearchResult> results, SearchWindowType windowType) => true;
 
     /// <summary>Determines whether this action should be visible in the right-click / action menu.</summary>
-    bool IsVisibleInMenu(ISearchResult result, SearchWindowType windowType) => Keywords.Count == 0;
+    bool IsVisibleInMenu(IReadOnlyList<ISearchResult> results, SearchWindowType windowType) => Keywords.Count == 0;
 
     /// <summary>The icon associated with this action.</summary>
     ImageSource? Icon { get; }
 
-    /// <summary>Determines if this action is applicable to the given search result.</summary>
-    bool CanExecute(ISearchResult result);
+    /// <summary>Determines if this action is applicable to the given (one or more) search results.</summary>
+    bool CanExecute(IReadOnlyList<ISearchResult> results);
 
-    /// <summary>Executes the action on the search result.</summary>
-    void Execute(ISearchResult result, IPluginSearchWindow view);
+    /// <summary>Executes the action on the given (one or more) search results.</summary>
+    void Execute(IReadOnlyList<ISearchResult> results, IPluginSearchWindow view);
 }

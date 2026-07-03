@@ -19,29 +19,29 @@ public interface IDynamicActionProvider
     IReadOnlyList<string> Parameters => Array.Empty<string>();
 
     /// <summary>Determines whether this provider is visible in the search result matching for the given window type.</summary>
-    bool IsVisibleInSearch(ISearchResult result, SearchWindowType windowType) => true;
+    bool IsVisibleInSearch(IReadOnlyList<ISearchResult> results, SearchWindowType windowType) => true;
 
     /// <summary>Determines whether this provider should be visible in the right-click / action menu.</summary>
-    bool IsVisibleInMenu(ISearchResult result, SearchWindowType windowType) => Keywords.Count == 0;
+    bool IsVisibleInMenu(IReadOnlyList<ISearchResult> results, SearchWindowType windowType) => Keywords.Count == 0;
 
-    /// <summary>Determines if this provider can handle the given search result.</summary>
-    bool CanProvide(ISearchResult result);
+    /// <summary>Determines if this provider can handle the given (one or more) search results.</summary>
+    bool CanProvide(IReadOnlyList<ISearchResult> results);
 
     /// <summary>
     /// Populates and returns menu items for the root menu (hMenu = Zero) or a sub-menu.
     /// </summary>
-    IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu);
+    IEnumerable<DynamicMenuItem> GetMenuItems(IReadOnlyList<ISearchResult> results, IntPtr hMenu);
 
     /// <summary>
     /// Returns lightweight hotkey→execute pairs for use in HotkeyActionTrigger.
     /// Default: empty (provider does not expose hotkeys).
     /// Override for O(1) hotkey lookup without a full GetMenuItems call.
     /// </summary>
-    IEnumerable<(string Hotkey, Action Execute)> GetHotkeyActions(ISearchResult result)
+    IEnumerable<(string Hotkey, Action Execute)> GetHotkeyActions(IReadOnlyList<ISearchResult> results)
         => Array.Empty<(string, Action)>();
 
-    /// <summary>Invokes a dynamic command by its ID.</summary>
-    void ExecuteCommand(ISearchResult result, uint commandId, IntPtr ownerHwnd);
+    /// <summary>Invokes a dynamic command by its ID against the given (one or more) search results.</summary>
+    void ExecuteCommand(IReadOnlyList<ISearchResult> results, uint commandId, IntPtr ownerHwnd);
 
     /// <summary>Cleans up any allocated session resources (e.g., when exiting the action list).</summary>
     void ClearSession();

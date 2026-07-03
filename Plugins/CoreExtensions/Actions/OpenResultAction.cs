@@ -15,9 +15,13 @@ public class OpenResultAction : ISearchResultAction
         "M8 5v14l11-7L8 5z",
         "TextPrimary");
 
-    public bool CanExecute(ISearchResult result) => HasExistingPath(result);
+    public bool CanExecute(IReadOnlyList<ISearchResult> results) => results.Count > 0 && results.All(HasExistingPath);
 
-    public void Execute(ISearchResult result, IPluginSearchWindow view) => view.OpenFileOrFolderExternal(result.FullPath);
+    public void Execute(IReadOnlyList<ISearchResult> results, IPluginSearchWindow view)
+    {
+        foreach (var result in results)
+            view.OpenFileOrFolderExternal(result.FullPath);
+    }
 
     internal static bool HasExistingPath(ISearchResult result)
     {
@@ -39,7 +43,11 @@ public class OpenResultAsAdminAction : ISearchResultAction
         "M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3zm0 3.2 5 1.9V11c0 3.4-2 6.7-5 8-3-1.3-5-4.6-5-8V7.1l5-1.9z",
         "TextPrimary");
 
-    public bool CanExecute(ISearchResult result) => OpenResultAction.HasExistingPath(result) && !result.IsDir;
+    public bool CanExecute(IReadOnlyList<ISearchResult> results) => results.Count > 0 && results.All(r => OpenResultAction.HasExistingPath(r) && !r.IsDir);
 
-    public void Execute(ISearchResult result, IPluginSearchWindow view) => view.OpenFileOrFolderAsAdminExternal(result.FullPath);
+    public void Execute(IReadOnlyList<ISearchResult> results, IPluginSearchWindow view)
+    {
+        foreach (var result in results)
+            view.OpenFileOrFolderAsAdminExternal(result.FullPath);
+    }
 }

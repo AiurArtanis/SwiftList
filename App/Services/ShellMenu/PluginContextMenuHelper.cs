@@ -39,10 +39,10 @@ public static class PluginContextMenuHelper
         foreach (var provider in PluginManager.Instance.DynamicProviders)
         {
             if (provider.Keywords.Count > 0) continue;
-            if (provider.CanProvide(dummyResult))
+            if (provider.CanProvide(new[] { dummyResult }))
             {
                 provider.ClearSession();
-                var dynamicItems = provider.GetMenuItems(dummyResult, IntPtr.Zero);
+                var dynamicItems = provider.GetMenuItems(new[] { dummyResult }, IntPtr.Zero);
                 foreach (var subItem in dynamicItems)
                 {
                     if (subItem.IsSeparator)

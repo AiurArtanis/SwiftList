@@ -6,13 +6,13 @@ namespace SwiftList.App.Services;
 internal static class ActionMenuBuilder
 {
     public static List<ActionMenuItem> Build(
-        AppSearchResult activeResult,
+        IReadOnlyList<AppSearchResult> selection,
         IntPtr hMenu,
         SearchWindowType windowType,
         Dictionary<uint, IDynamicActionProvider> commandToProviderMap,
         Dictionary<IntPtr, IDynamicActionProvider> subMenuToProviderMap)
     {
-        if (activeResult == null)
+        if (selection == null || selection.Count == 0)
             return new List<ActionMenuItem>();
 
         var uiItems = new List<ActionMenuItem>();
@@ -35,10 +35,10 @@ internal static class ActionMenuBuilder
             foreach (var registration in PluginManager.Instance.Actions)
             {
                 var action = registration.Action;
-                if (!action.IsVisibleInMenu(activeResult, windowType))
+                if (!action.IsVisibleInMenu(selection, windowType))
                     continue;
 
-                if (action.CanExecute(activeResult))
+                if (action.CanExecute(selection))
                 {
                     var group = string.IsNullOrWhiteSpace(action.GroupName) ? TranslationManager.Instance["Action_BuiltinGroup"] : action.GroupName;
                     if (!groupedActions.TryGetValue(group, out var list))
@@ -79,12 +79,12 @@ internal static class ActionMenuBuilder
                 if (provider.Keywords.Count > 0)
                     continue;
 
-                if (!provider.IsVisibleInMenu(activeResult, windowType))
+                if (!provider.IsVisibleInMenu(selection, windowType))
                     continue;
 
-                if (provider.CanProvide(activeResult))
+                if (provider.CanProvide(selection))
                 {
-                    var dynamicItems = provider.GetMenuItems(activeResult, IntPtr.Zero);
+                    var dynamicItems = provider.GetMenuItems(selection, IntPtr.Zero);
                     var dynamicItemsList = new List<DynamicMenuItem>(dynamicItems);
 
                     if (dynamicItemsList.Count > 0)
@@ -136,7 +136,7 @@ internal static class ActionMenuBuilder
             // Submenu navigation: lookup the owning dynamic provider
             if (subMenuToProviderMap.TryGetValue(hMenu, out var provider))
             {
-                var dynamicItems = provider.GetMenuItems(activeResult, hMenu);
+                var dynamicItems = provider.GetMenuItems(selection, hMenu);
                 foreach (var item in dynamicItems)
                 {
                     if (string.IsNullOrWhiteSpace(item.Text) && !item.IsSeparator)

@@ -204,13 +204,14 @@ public class PluginManager : PluginRegistry
             FullPath = string.Empty,
             IsDir = false
         };
+        var single = new SimpleSearchResult[] { tempResult };
 
         foreach (var action in _actions)
         {
             if (action.Action.Keywords.Count == 0) continue;
-            if (!action.Action.IsVisibleInSearch(tempResult, windowType)) continue;
+            if (!action.Action.IsVisibleInSearch(single, windowType)) continue;
             if (!_filter.IsEnabled(ComponentFilter.GetDllName(action.Plugin), PluginComponentType.Action, action.Action.Id)) continue;
-            if (!action.Action.CanExecute(tempResult)) continue;
+            if (!action.Action.CanExecute(single)) continue;
 
             var match = KeywordMatcher.TryMatchKeyword(query, action.Action.Keywords);
             if (match == null) continue;

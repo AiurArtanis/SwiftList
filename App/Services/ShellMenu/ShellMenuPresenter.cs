@@ -16,6 +16,7 @@ public class ShellMenuPresenter : IDisposable
     private readonly ISearchWindow _view;
     private bool _isInActionsMode;
     private AppSearchResult? _activeResult;
+    private IReadOnlyList<AppSearchResult> _activeResults = Array.Empty<AppSearchResult>();
     private readonly Stack<IntPtr> _menuStack = new();
     private readonly Stack<int> _menuSelectedIndexStack = new();
     private readonly Stack<string> _menuTitleStack = new();
@@ -46,19 +47,26 @@ public class ShellMenuPresenter : IDisposable
     public bool IsInActionsMode => _isInActionsMode;
     public string SavedSearchQuery => _savedSearchQuery;
 
-    public void EnterActionsMode(AppSearchResult result)
+    public void EnterActionsMode(AppSearchResult result) => EnterActionsMode(new[] { result });
+
+    public void EnterActionsMode(IReadOnlyList<AppSearchResult> selection)
     {
         var tracker = InlineSearchManager.Instance.ExplorerTracker;
         if (tracker.ActiveInlineAdapter != null && !tracker.ActiveInlineAdapter.CanEnterActionsMode(tracker.ActiveHwnd))
             return;
 
-        if (result == null || result.FullPath == "__SHOW_MORE__" || result.IsEmptyResult || result.IsApplication
-            || result.IsPluginSearchAction || result.IsSearchSectionHeader || result.IsInstantResult || IsInlineFileDialog())
+        // Keep only real, actionable results; the first is the primary (used for the header).
+        var items = selection?.Where(r => r != null && !r.IsSearchSectionHeader && !r.IsEmptyResult).ToList() ?? new List<AppSearchResult>();
+        var result = items.Count > 0 ? items[0] : null;
+
+        if (result == null || result.FullPath == "__SHOW_MORE__" || result.IsApplication
+            || result.IsPluginSearchAction || result.IsInstantResult || IsInlineFileDialog())
         {
             return;
         }
 
         _savedSearchQuery = _view.SearchTextBox.Text;
+        _activeResults = items;
         _activeResult = result;
         _menuStack.Clear();
         _menuSelectedIndexStack.Clear();
@@ -72,7 +80,7 @@ public class ShellMenuPresenter : IDisposable
         }
 
         var finalItems = ActionMenuBuilder.Build(
-            _activeResult,
+            _activeResults,
             IntPtr.Zero,
             GetWindowType(),
             _commandToProviderMap,
@@ -98,7 +106,7 @@ public class ShellMenuPresenter : IDisposable
         _view.IsInActionsMode = true;
         _view.GridSearchResults.Visibility = Visibility.Collapsed;
         _view.GridActions.Visibility = Visibility.Visible;
-        _view.TxtActionsTarget.Text = Path.GetFileName(result.FullPath);
+        _view.TxtActionsTarget.Text = Path.GetFileName(result.FullPath) + (items.Count > 1 ? $" (+{items.Count - 1})" : string.Empty);
         _view.SearchTextBox.Clear();
 
         // Size the panel to the action content. Without this the inline window (which is
@@ -123,7 +131,7 @@ public class ShellMenuPresenter : IDisposable
         }
 
         var finalItems = ActionMenuBuilder.Build(
-            _activeResult,
+            _activeResults,
             hMenu,
             GetWindowType(),
             _commandToProviderMap,
@@ -259,7 +267,7 @@ public class ShellMenuPresenter : IDisposable
                         _view.HideWindow();
                     }
 
-                    registration.Action.Execute(resultToExecute, _view);
+                    registration.Action.Execute(_activeResults, _view);
                 }
 
                 ExitActionsMode();
@@ -282,7 +290,7 @@ public class ShellMenuPresenter : IDisposable
                 if (resultToExecute != null)
                 {
                     var hwnd = new WindowInteropHelper(_view as Window ?? System.Windows.Application.Current.MainWindow).Handle;
-                    provider.ExecuteCommand(resultToExecute, item.CommandId, hwnd);
+                    provider.ExecuteCommand(_activeResults, item.CommandId, hwnd);
                     if (!_view.GetType().Name.Equals("SearchWindow", StringComparison.Ordinal))
                     {
                         _view.HideWindow();

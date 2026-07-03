@@ -16,13 +16,15 @@ public class CopyPathAction : ISearchResultAction
         "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
         "TextPrimary");
 
-    public bool CanExecute(ISearchResult result) => result != null && !string.IsNullOrEmpty(result.FullPath);
+    public bool CanExecute(IReadOnlyList<ISearchResult> results) => results.Count > 0 && results.All(r => r != null && !string.IsNullOrEmpty(r.FullPath));
 
-    public void Execute(ISearchResult result, IPluginSearchWindow view)
+    public void Execute(IReadOnlyList<ISearchResult> results, IPluginSearchWindow view)
     {
         try
         {
-            System.Windows.Clipboard.SetText(result.FullPath);
+            // All selected paths, newline-joined, in a single clipboard set.
+            var text = string.Join(Environment.NewLine, results.Select(r => r.FullPath).Where(p => !string.IsNullOrEmpty(p)));
+            System.Windows.Clipboard.SetText(text);
         }
         catch (Exception ex)
         {

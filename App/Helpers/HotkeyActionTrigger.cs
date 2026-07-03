@@ -9,6 +9,18 @@ public static class HotkeyActionTrigger
     {
         if (result == null || window == null) return false;
 
+        // Act on the whole selection (the full window supports multi-select); fall back to the
+        // single active result for the quick/inline windows.
+        var selection = new List<AppSearchResult>();
+        try
+        {
+            foreach (var obj in window.LstResults.SelectedItems)
+                if (obj is AppSearchResult r) selection.Add(r);
+        }
+        catch { }
+        if (selection.Count == 0) selection.Add(result);
+        var single = selection;
+
         var key = WpfUiHelper.GetActualKey(e);
         var modifiers = Keyboard.Modifiers;
 
@@ -24,9 +36,9 @@ public static class HotkeyActionTrigger
             {
                 if (key == hotkeyKey && modifiers == hotkeyMods)
                 {
-                    if (action.IsVisibleInMenu(result, windowType) && action.CanExecute(result))
+                    if (action.IsVisibleInMenu(single, windowType) && action.CanExecute(single))
                     {
-                        action.Execute(result, window);
+                        action.Execute(single, window);
                         return true;
                     }
                 }
@@ -36,7 +48,7 @@ public static class HotkeyActionTrigger
         // Also check dynamic providers (e.g. CustomActions plugin)
         foreach (var provider in PluginManager.Instance.DynamicProviders)
         {
-            foreach (var (hotkey, execute) in provider.GetHotkeyActions(result))
+            foreach (var (hotkey, execute) in provider.GetHotkeyActions(single))
             {
                 if (ParseHotkey(hotkey, out var hotkeyKey, out var hotkeyMods)
                     && key == hotkeyKey && modifiers == hotkeyMods)
