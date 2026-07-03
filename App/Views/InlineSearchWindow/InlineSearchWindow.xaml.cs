@@ -291,6 +291,9 @@ public partial class InlineSearchWindow : Window, ISearchWindow
         _activeTimer?.Stop();
         _manager.ExplorerTracker.OnActiveWindowMoved -= HandleActiveWindowMoved;
         _menuPresenter.Dispose();
+        // Cancel the in-flight search and release the per-session search service (this window's
+        // view model is its own instance), matching the quick/full search windows.
+        _viewModel.Dispose();
         if (_originalLayout != IntPtr.Zero)
         {
             InlineSearchWindowNativeMethods.ActivateKeyboardLayout(_originalLayout, 0);
