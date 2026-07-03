@@ -21,7 +21,8 @@ internal sealed class SearchExecutionEngine : IDisposable
         Func<List<SearchResult>?, string?, List<AppSearchResult>> resultMapper,
         Action<bool> onSearchStateChanged,
         Action<List<AppSearchResult>, string, bool> onResultsUpdated,
-        Action? onLocalServiceUnavailable = null)
+        Action? onLocalServiceUnavailable = null,
+        Func<bool>? shouldEmitInstantResults = null)
     {
         _debounceCts?.Cancel();
         _debounceCts?.Dispose();
@@ -31,7 +32,7 @@ internal sealed class SearchExecutionEngine : IDisposable
         var delay = string.IsNullOrEmpty(query) || query.Length <= 1 ? 0 : (fileLimit > 100 ? 150 : 30);
         if (delay == 0)
         {
-            PerformSearch(query, searchScope, isInlineSearchContext, fileLimit, appLimit, resultMapper, onSearchStateChanged, onResultsUpdated, onLocalServiceUnavailable);
+            PerformSearch(query, searchScope, isInlineSearchContext, fileLimit, appLimit, resultMapper, onSearchStateChanged, onResultsUpdated, onLocalServiceUnavailable, shouldEmitInstantResults);
         }
         else
         {
@@ -39,7 +40,7 @@ internal sealed class SearchExecutionEngine : IDisposable
             {
                 if (t.IsCanceled) return;
                 _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                    PerformSearch(query, searchScope, isInlineSearchContext, fileLimit, appLimit, resultMapper, onSearchStateChanged, onResultsUpdated, onLocalServiceUnavailable)));
+                    PerformSearch(query, searchScope, isInlineSearchContext, fileLimit, appLimit, resultMapper, onSearchStateChanged, onResultsUpdated, onLocalServiceUnavailable, shouldEmitInstantResults)));
             }, cts.Token);
         }
     }
@@ -53,7 +54,8 @@ internal sealed class SearchExecutionEngine : IDisposable
         Func<List<SearchResult>?, string?, List<AppSearchResult>> resultMapper,
         Action<bool> onSearchStateChanged,
         Action<List<AppSearchResult>, string, bool> onResultsUpdated,
-        Action? onLocalServiceUnavailable = null)
+        Action? onLocalServiceUnavailable = null,
+        Func<bool>? shouldEmitInstantResults = null)
     {
         Logger.Log($"[SearchExecutionEngine] Performing search: '{query}', scope: '{searchScope}'", LogLevel.Debug);
         CancelPendingSearch();
@@ -73,7 +75,12 @@ internal sealed class SearchExecutionEngine : IDisposable
         // queries keep their existing behaviour.
         var instantResults = new List<AppSearchResult>();
         PluginSearchResultMapper.AddInstantResults(instantResults, query, isInlineSearchContext);
-        if (instantResults.Count > 0)
+        // Emit instant results up-front only when the caller opts in — the quick window allows this
+        // only while its list is empty. During continuous typing the list already has rows, and an
+        // instant-only snapshot would collapse the existing file rows away and then re-expand them
+        // on the next (file) render — that's the flicker. When skipped, the upcoming file render
+        // still includes the instant results, so nothing is lost, just no separate collapsing frame.
+        if (instantResults.Count > 0 && (shouldEmitInstantResults?.Invoke() ?? true))
             onResultsUpdated(instantResults, string.Empty, false);
 
         var cts = new CancellationTokenSource();

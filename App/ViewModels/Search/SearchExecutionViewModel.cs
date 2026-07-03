@@ -82,7 +82,8 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
                         resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, value, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
                         state => IsSearching = state,
                         (results, status, final) => ApplySearchResults(value, results, status, final),
-                        HandleLocalServiceUnavailable
+                        HandleLocalServiceUnavailable,
+                        shouldEmitInstantResults: () => Results.Count == 0
                     );
                 }
             }
@@ -208,7 +209,8 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
             resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, query, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
             state => IsSearching = state,
             (results, status, final) => ApplySearchResults(query, results, status, final),
-            HandleLocalServiceUnavailable
+            HandleLocalServiceUnavailable,
+            shouldEmitInstantResults: () => Results.Count == 0
         );
     }
 
@@ -219,8 +221,8 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
         if (SearchQuery != query)
             return;
 
-        if (!AreSameResults(Results, uiResults))
-            ReplaceResults(uiResults);
+        // ReplaceResults reconciles row-by-row and no-ops when nothing changed, so no pre-check needed.
+        ReplaceResults(uiResults);
 
         var hasResults = uiResults.Count > 0;
         ResultsPanelVisibility = hasResults ? Visibility.Visible : Visibility.Collapsed;
@@ -229,34 +231,31 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
         _mainVm.Monitor.StatusText = statusText;
     }
 
-    private static bool AreSameResults(IReadOnlyList<AppSearchResult> current, IReadOnlyList<AppSearchResult> next)
-    {
-        if (current.Count != next.Count)
-            return false;
-
-        for (var i = 0; i < current.Count; i++)
-        {
-            if (!string.Equals(current[i].FullPath, next[i].FullPath, StringComparison.OrdinalIgnoreCase) ||
-                !string.Equals(current[i].Name, next[i].Name, StringComparison.Ordinal) ||
-                !string.Equals(current[i].ResultKind, next[i].ResultKind, StringComparison.Ordinal) ||
-                !string.Equals(current[i].SearchQuery, next[i].SearchQuery, StringComparison.Ordinal))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
+    private static bool ItemsEqual(AppSearchResult a, AppSearchResult b) =>
+        string.Equals(a.FullPath, b.FullPath, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(a.Name, b.Name, StringComparison.Ordinal) &&
+        string.Equals(a.ResultKind, b.ResultKind, StringComparison.Ordinal) &&
+        string.Equals(a.SearchQuery, b.SearchQuery, StringComparison.Ordinal);
 
     private void ReplaceResults(IEnumerable<AppSearchResult> results)
     {
-        AppSearchResult? firstSelectable = null;
         var list = results as List<AppSearchResult> ?? new List<AppSearchResult>(results);
-        Results.ReplaceRange(list);
 
+        // Reconcile row-by-row instead of a full Clear+Add reset: only changed rows are replaced in
+        // place (recycling ListBox reuses containers) and the tail is appended/trimmed, so the list
+        // is never torn down and rebuilt from the top — which is what caused the flicker.
+        Results.ReconcileTo(list, ItemsEqual);
+
+        // Keep the current selection if it survived the update; only re-select when it's gone or
+        // no longer selectable, so streaming updates don't yank the highlight back to the top.
+        if (SelectedResult != null && Results.Contains(SelectedResult)
+            && !SelectedResult.IsEmptyResult && !SelectedResult.IsSearchSectionHeader)
+            return;
+
+        AppSearchResult? firstSelectable = null;
         foreach (var result in list)
         {
-            if (firstSelectable == null && !result.IsEmptyResult && !result.IsSearchSectionHeader)
+            if (!result.IsEmptyResult && !result.IsSearchSectionHeader)
             {
                 firstSelectable = result;
                 break;
