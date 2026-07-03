@@ -32,6 +32,7 @@ public class PluginConfigFieldViewModel : ViewModelBase
     public bool IsGroup => FieldType == ConfigFieldType.Group;
     public bool IsStringList => FieldType == ConfigFieldType.StringList;
     public bool IsHotkey => FieldType == ConfigFieldType.Hotkey;
+    public bool HotkeyRequireModifier => SchemaField.RequireModifier;
     public bool IsIconField => SchemaField.Key.Equals("Icon", StringComparison.OrdinalIgnoreCase);
     public bool IsSimpleField => IsBoolean || IsText || IsInteger || IsChoice || IsStringList || IsHotkey;
 

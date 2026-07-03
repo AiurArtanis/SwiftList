@@ -86,6 +86,11 @@ public partial class PluginConfigWindow : Window
                 modifiers |= ModifierKeys.Alt;
             }
 
+            // If the field requires a modifier key, reject plain key presses
+            var requireModifier = textBox.DataContext is PluginConfigFieldViewModel { HotkeyRequireModifier: true };
+            if (requireModifier && modifiers == ModifierKeys.None)
+                return;
+
             if (modifiers.HasFlag(ModifierKeys.Control)) parts.Add("Ctrl");
             if (modifiers.HasFlag(ModifierKeys.Alt)) parts.Add("Alt");
             if (modifiers.HasFlag(ModifierKeys.Shift)) parts.Add("Shift");

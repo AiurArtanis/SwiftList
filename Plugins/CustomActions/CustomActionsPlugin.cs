@@ -33,7 +33,7 @@ public class CustomActionsPlugin : IPlugin, IActionProvider, IConfigurable
                     new PluginConfigField { Key = "WorkingDir",  LabelKey = "CustomActions_Config_WorkingDirLabel", FieldType = ConfigFieldType.Text,    DefaultValue = "" },
                     new PluginConfigField { Key = "RunSilently", LabelKey = "CustomActions_Config_RunSilentlyLabel",FieldType = ConfigFieldType.Boolean, DefaultValue = false },
                     new PluginConfigField { Key = "RunAsAdmin",  LabelKey = "CustomActions_Config_RunAsAdminLabel", FieldType = ConfigFieldType.Boolean, DefaultValue = false },
-                    new PluginConfigField { Key = "Hotkey",      LabelKey = "CustomActions_Config_HotkeyLabel",     FieldType = ConfigFieldType.Hotkey,  DefaultValue = "" },
+                    new PluginConfigField { Key = "Hotkey",      LabelKey = "CustomActions_Config_HotkeyLabel",     FieldType = ConfigFieldType.Hotkey,  DefaultValue = "", RequireModifier = true },
                     new PluginConfigField { Key = "FolderOnly",  LabelKey = "CustomActions_Config_FolderOnlyLabel", FieldType = ConfigFieldType.Boolean, DefaultValue = false },
                     new PluginConfigField { Key = "Extensions",  LabelKey = "CustomActions_Config_ExtensionsLabel", FieldType = ConfigFieldType.Text,    DefaultValue = "" }
                 }

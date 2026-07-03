@@ -23,6 +23,8 @@ public class PluginConfigField
     public object DefaultValue { get; set; } = null!;
     public List<string>? Choices { get; set; }
     public List<PluginConfigField>? SubFields { get; set; }
+    /// <summary>For Hotkey fields: when true, single keys without modifier keys (Ctrl/Alt/Shift/Win) are rejected.</summary>
+    public bool RequireModifier { get; set; }
 }
 
 public class PluginConfigSchema
