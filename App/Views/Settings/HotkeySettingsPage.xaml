@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:services="clr-namespace:SwiftList.App.Services"
+             xmlns:ctrl="clr-namespace:SwiftList.App.Views.Controls"
              mc:Ignorable="d"
              d:DesignHeight="550" d:DesignWidth="700">
     <UserControl.Resources>
@@ -99,26 +100,10 @@
                                 <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="200"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ComboModifier]}" VerticalAlignment="Center"/>
-                            <ComboBox Grid.Column="1"
-                                      Style="{StaticResource SettingsComboBox}"
-                                      ItemsSource="{Binding ModifierOptions}"
-                                      SelectedValuePath="Value"
-                                      DisplayMemberPath="Label"
-                                      SelectedValue="{Binding ToggleModifier, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        </Grid>
-                        <Grid Margin="0,8,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="200"/>
-                            </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ComboKey]}" VerticalAlignment="Center"/>
-                            <ComboBox Grid.Column="1"
-                                      Style="{StaticResource SettingsComboBox}"
-                                      ItemsSource="{Binding KeyOptions}"
-                                      SelectedValuePath="Value"
-                                      DisplayMemberPath="Label"
-                                      SelectedValue="{Binding ToggleKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
+                                Value="{Binding ToggleComboHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                RequireModifier="True"/>
                         </Grid>
                     </StackPanel>
                 </StackPanel>
@@ -200,26 +185,10 @@
                                 <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="200"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ComboModifier]}" VerticalAlignment="Center"/>
-                            <ComboBox Grid.Column="1"
-                                      Style="{StaticResource SettingsComboBox}"
-                                      ItemsSource="{Binding ModifierOptions}"
-                                      SelectedValuePath="Value"
-                                      DisplayMemberPath="Label"
-                                      SelectedValue="{Binding QuickSwitchModifier, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        </Grid>
-                        <Grid Margin="0,8,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="200"/>
-                            </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ComboKey]}" VerticalAlignment="Center"/>
-                            <ComboBox Grid.Column="1"
-                                      Style="{StaticResource SettingsComboBox}"
-                                      ItemsSource="{Binding KeyOptions}"
-                                      SelectedValuePath="Value"
-                                      DisplayMemberPath="Label"
-                                      SelectedValue="{Binding QuickSwitchKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
+                                Value="{Binding QuickSwitchComboHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                RequireModifier="True"/>
                         </Grid>
                     </StackPanel>
                 </StackPanel>

@@ -186,6 +186,34 @@ public class HotkeySettingsViewModel : ViewModelBase
         set => SetProperty(ref _selectIndexModifier, value);
     }
 
+    // Composite hotkey strings for HotkeyRecorderControl binding
+    public string ToggleComboHotkey
+    {
+        get => FormatComboHotkey(ToggleModifier, ToggleKey);
+        set { ParseComboHotkey(value, out var mod, out var k); ToggleModifier = mod; ToggleKey = k; OnPropertyChanged(); }
+    }
+
+    public string QuickSwitchComboHotkey
+    {
+        get => FormatComboHotkey(QuickSwitchModifier, QuickSwitchKey);
+        set { ParseComboHotkey(value, out var mod, out var k); QuickSwitchModifier = mod; QuickSwitchKey = k; OnPropertyChanged(); }
+    }
+
+    private static string FormatComboHotkey(string modifier, string key)
+    {
+        var mod = modifier == "Control" ? "Ctrl" : modifier;
+        return string.IsNullOrEmpty(key) ? string.Empty : $"{mod}+{key}";
+    }
+
+    private static void ParseComboHotkey(string value, out string modifier, out string key)
+    {
+        if (string.IsNullOrWhiteSpace(value)) { modifier = "Control"; key = "Space"; return; }
+        var parts = value.Split('+');
+        key = parts[^1];
+        var modPart = parts.Length > 1 ? parts[0] : "Ctrl";
+        modifier = modPart == "Ctrl" ? "Control" : modPart; // Win/Alt/Shift pass through
+    }
+
     // Options lists
     public List<HotkeyOptionItem> HotkeyTypeOptions => new()
     {

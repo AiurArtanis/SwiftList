@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:services="clr-namespace:SwiftList.App.Services"
         xmlns:vm="clr-namespace:SwiftList.App.ViewModels.Settings.Plugins"
+        xmlns:ctrl="clr-namespace:SwiftList.App.Views.Controls"
         mc:Ignorable="d"
         MinWidth="480" MaxWidth="720" MaxHeight="750" SizeToContent="WidthAndHeight"
         WindowStartupLocation="CenterOwner"
@@ -45,32 +46,11 @@
                 <Setter Property="ContextMenu"><Setter.Value><ContextMenu Style="{DynamicResource {x:Type ContextMenu}}"><MenuItem Command="ApplicationCommands.Cut"/><MenuItem Command="ApplicationCommands.Copy"/><MenuItem Command="ApplicationCommands.Paste"/></ContextMenu></Setter.Value></Setter>
             </Style>
 
-            <Style x:Key="HotkeyTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                <Setter Property="VerticalContentAlignment" Value="Center"/>
-                <Style.Resources>
-                    <VisualBrush x:Key="HotkeyPlaceholderBrush" TileMode="None" Stretch="None" AlignmentX="Center" AlignmentY="Center">
-                        <VisualBrush.Visual>
-                            <Label Content="按下快捷键" Foreground="{DynamicResource TextSecondary}" Opacity="0.5" FontSize="12"/>
-                        </VisualBrush.Visual>
-                    </VisualBrush>
-                </Style.Resources>
-                <Style.Triggers>
-                    <Trigger Property="Text" Value="">
-                        <Setter Property="Background" Value="{StaticResource HotkeyPlaceholderBrush}"/>
-                    </Trigger>
-                    <Trigger Property="Text" Value="{x:Null}">
-                        <Setter Property="Background" Value="{StaticResource HotkeyPlaceholderBrush}"/>
-                    </Trigger>
-                </Style.Triggers>
-            </Style>
 
             <DataTemplate x:Key="HotkeyFieldTemplate">
-                <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" 
-                         Style="{StaticResource HotkeyTextBoxStyle}"
-                         Width="180" Height="26"
-                         IsReadOnly="True"
-                         PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"/>
+                <ctrl:HotkeyRecorderControl Value="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            RequireModifier="{Binding HotkeyRequireModifier}"
+                                            Width="180" Height="26"/>
             </DataTemplate>
 
             <DataTemplate x:Key="FilePathFieldTemplate">
