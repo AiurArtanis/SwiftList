@@ -36,6 +36,28 @@ public static class UsnIndexerExtensions
                     continue;
                 }
 
+                // A hard link was added or removed. The reason alone can't say which, and the file
+                // may still have other links, so re-resolve the FRN to a currently-valid name
+                // (or remove it if the last link is gone) instead of trusting this record's name.
+                if ((record.Reason & Win32Api.USN_REASON_HARD_LINK_CHANGE) != 0
+                    && (record.Reason & (Win32Api.USN_REASON_FILE_CREATE | Win32Api.USN_REASON_FILE_DELETE)) == 0)
+                {
+                    if (HardLinkResolver.TryResolveRecord(drive, record.FileReferenceNumber, out var current))
+                    {
+                        var linkFlags = FileRecordFlagsHelper.FromAttributes((FileAttributes)current.FileAttributes);
+                        runtime.Upsert(new FileRecord(
+                            current.FileReferenceNumber,
+                            current.ParentFileReferenceNumber,
+                            namePool.Get(current.FileName),
+                            linkFlags));
+                    }
+                    else
+                    {
+                        runtime.Remove(record.FileReferenceNumber);
+                    }
+                    continue;
+                }
+
                 if ((record.Reason & (Win32Api.USN_REASON_FILE_CREATE | Win32Api.USN_REASON_RENAME_NEW_NAME)) == 0)
                     continue;
 

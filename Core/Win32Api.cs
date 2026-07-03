@@ -13,6 +13,7 @@ public static class Win32Api
     public const uint GENERIC_WRITE = 0x40000000;
     public const uint FILE_SHARE_READ = 1;
     public const uint FILE_SHARE_WRITE = 2;
+    public const uint FILE_SHARE_DELETE = 4;
     public const uint OPEN_EXISTING = 3;
     public const IntPtr INVALID_HANDLE_VALUE = -1;
     public const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
@@ -36,11 +37,15 @@ public static class Win32Api
     public const uint USN_REASON_FILE_DELETE = 0x00000200;
     public const uint USN_REASON_RENAME_OLD_NAME = 0x00001000;
     public const uint USN_REASON_RENAME_NEW_NAME = 0x00002000;
+    public const uint USN_REASON_HARD_LINK_CHANGE = 0x00010000;
 
     // ==========================================
     // Win32 Structures
     // ==========================================
-    [StructLayout(LayoutKind.Sequential)]
+    // Pack = 4 matches the native FILETIME (4-byte-aligned) layout. Without it, the ulong time
+    // fields force 8-byte alignment and pad after dwFileAttributes, shifting nFileIndex* to the
+    // wrong offsets and yielding a garbage file reference number.
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
     public struct BY_HANDLE_FILE_INFORMATION
     {
         public uint dwFileAttributes;
