@@ -28,7 +28,9 @@ public static class FileRecordStoreSerializer
     private const string MetaMagic = "SLRCMETA";
     private const string RecordsMagic = "SLRCREC";
     private const string NamesMagic = "SLRCNAME";
-    public const int Version = 8;
+    // v9: $MFT-based one-to-many hard-link index. Bumping this invalidates older single-name caches
+    // so existing installs rebuild once and pick up full hard-link paths.
+    public const int Version = 9;
 
     public static string GetBasePath(string cacheDir, string sourceKey) => Path.Combine(cacheDir, sourceKey.ToLowerInvariant());
 

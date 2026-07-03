@@ -91,15 +91,12 @@ public class JournalReader
             return ReFsScanner.ScanDrive(drive, handle, rootFrn.Value, journalId, nextUsn, onProgress);
         }
 
-        // Opt-in: parse the raw $MFT so hard links are fully indexed (one row per link). Any failure
-        // falls through to the proven USN-enumeration path below.
-        if (MftHardLinkOptions.Enabled)
-        {
-            var mftResult = MftIndexScanner.ScanDrive(drive, handle, rootFrn.Value, journalId, nextUsn, onProgress);
-            if (mftResult != null)
-                return mftResult;
-            Logger.Log($"[JournalReader] $MFT scan failed on {drive}; falling back to USN enumeration.", LogLevel.Warn);
-        }
+        // NTFS: parse the raw $MFT so hard links are fully indexed (one row per link). On any failure
+        // (permissions, an unusual on-disk layout) fall back to the USN-enumeration path below.
+        var mftResult = MftIndexScanner.ScanDrive(drive, handle, rootFrn.Value, journalId, nextUsn, onProgress);
+        if (mftResult != null)
+            return mftResult;
+        Logger.Log($"[JournalReader] $MFT scan failed on {drive}; falling back to USN enumeration.", LogLevel.Warn);
 
         var bufSize = 1024 * 1024;
         var outBuf = new byte[bufSize];

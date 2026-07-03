@@ -30,71 +30,27 @@ public static class UsnIndexerExtensions
 
             foreach (var record in records)
             {
-                if (Mft.MftHardLinkOptions.Enabled)
-                {
-                    // One-to-many: operate on the exact link the record names (FRN, parent, name),
-                    // so renaming/deleting/creating one hard link never disturbs the file's others.
-                    var frn = record.FileReferenceNumber;
-                    var parentFrn = record.ParentFileReferenceNumber;
-                    var linkName = namePool.Get(record.FileName);
-                    var linkFlags = FileRecordFlagsHelper.FromAttributes((FileAttributes)record.FileAttributes);
+                // One-to-many: operate on the exact link the record names (FRN, parent, name), so
+                // renaming/deleting/creating one hard link never disturbs the file's other links.
+                var frn = record.FileReferenceNumber;
+                var parentFrn = record.ParentFileReferenceNumber;
+                var linkName = namePool.Get(record.FileName);
+                var linkFlags = FileRecordFlagsHelper.FromAttributes((FileAttributes)record.FileAttributes);
 
-                    if ((record.Reason & Win32Api.USN_REASON_HARD_LINK_CHANGE) != 0
-                        && (record.Reason & (Win32Api.USN_REASON_FILE_CREATE | Win32Api.USN_REASON_FILE_DELETE)) == 0)
-                    {
-                        HardLinkDelta.ToggleLink(runtime, frn, parentFrn, linkName, linkFlags);
-                    }
-                    else if ((record.Reason & (Win32Api.USN_REASON_FILE_DELETE | Win32Api.USN_REASON_RENAME_OLD_NAME)) != 0)
-                    {
-                        HardLinkDelta.RemoveLink(runtime, frn, parentFrn, linkName);
-                    }
-                    else if ((record.Reason & (Win32Api.USN_REASON_FILE_CREATE | Win32Api.USN_REASON_RENAME_NEW_NAME)) != 0)
-                    {
-                        HardLinkDelta.AddLink(runtime, frn, parentFrn, linkName, linkFlags);
-                    }
-                    // Any other reason (data/attribute-only) doesn't change the name index.
-                    continue;
-                }
-
-                if ((record.Reason & (Win32Api.USN_REASON_FILE_DELETE | Win32Api.USN_REASON_RENAME_OLD_NAME)) != 0)
-                {
-                    runtime.Remove(record.FileReferenceNumber);
-                    continue;
-                }
-
-                // A hard link was added or removed. The reason alone can't say which, and the file
-                // may still have other links, so re-resolve the FRN to a currently-valid name
-                // (or remove it if the last link is gone) instead of trusting this record's name.
                 if ((record.Reason & Win32Api.USN_REASON_HARD_LINK_CHANGE) != 0
                     && (record.Reason & (Win32Api.USN_REASON_FILE_CREATE | Win32Api.USN_REASON_FILE_DELETE)) == 0)
                 {
-                    if (HardLinkResolver.TryResolveRecord(drive, record.FileReferenceNumber, out var current))
-                    {
-                        var linkFlags = FileRecordFlagsHelper.FromAttributes((FileAttributes)current.FileAttributes);
-                        runtime.Upsert(new FileRecord(
-                            current.FileReferenceNumber,
-                            current.ParentFileReferenceNumber,
-                            namePool.Get(current.FileName),
-                            linkFlags));
-                    }
-                    else
-                    {
-                        runtime.Remove(record.FileReferenceNumber);
-                    }
-                    continue;
+                    HardLinkDelta.ToggleLink(runtime, frn, parentFrn, linkName, linkFlags);
                 }
-
-                if ((record.Reason & (Win32Api.USN_REASON_FILE_CREATE | Win32Api.USN_REASON_RENAME_NEW_NAME)) == 0)
-                    continue;
-
-                var flags = FileRecordFlagsHelper.FromAttributes((FileAttributes)record.FileAttributes);
-                var fileRecord = new FileRecord(
-                    record.FileReferenceNumber,
-                    record.ParentFileReferenceNumber,
-                    namePool.Get(record.FileName),
-                    flags);
-
-                runtime.Upsert(fileRecord);
+                else if ((record.Reason & (Win32Api.USN_REASON_FILE_DELETE | Win32Api.USN_REASON_RENAME_OLD_NAME)) != 0)
+                {
+                    HardLinkDelta.RemoveLink(runtime, frn, parentFrn, linkName);
+                }
+                else if ((record.Reason & (Win32Api.USN_REASON_FILE_CREATE | Win32Api.USN_REASON_RENAME_NEW_NAME)) != 0)
+                {
+                    HardLinkDelta.AddLink(runtime, frn, parentFrn, linkName, linkFlags);
+                }
+                // Any other reason (data/attribute-only) doesn't change the name index.
             }
 
             indexer.UpdateTotalsFromRuntime();
