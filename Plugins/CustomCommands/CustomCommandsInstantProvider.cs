@@ -109,8 +109,6 @@ public class CustomCommandsInstantProvider : IInstantResultProvider
                 }
             }
 
-            var usedPlaceholder = false;
-
             // Positional placeholders: %s1/{1} .. %sn/{n} -> the n-th argument (1-based).
             // Single regex pass so %s1 can't match inside %s10, and so a leftover positional
             // token can't be clobbered by the "all arguments" replacement below.
@@ -118,7 +116,6 @@ public class CustomCommandsInstantProvider : IInstantResultProvider
             // so it stays a single argument — users must NOT quote placeholders themselves.
             resolvedParam = System.Text.RegularExpressions.Regex.Replace(resolvedParam, @"%s(\d+)|\{(\d+)\}", m =>
             {
-                usedPlaceholder = true;
                 var digits = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value;
                 var value = int.TryParse(digits, out var n) && n >= 1 && n <= parsedArgs.Count
                     ? parsedArgs[n - 1]
@@ -133,19 +130,14 @@ public class CustomCommandsInstantProvider : IInstantResultProvider
             if (resolvedParam.Contains("%s"))
             {
                 resolvedParam = resolvedParam.Replace("%s", allArgs);
-                usedPlaceholder = true;
             }
             if (resolvedParam.Contains("{}"))
             {
                 resolvedParam = resolvedParam.Replace("{}", allArgs);
-                usedPlaceholder = true;
             }
 
-            // If the template used no placeholder at all, append the whole argument string.
-            if (!usedPlaceholder && !string.IsNullOrEmpty(argSuffix))
-            {
-                resolvedParam = (resolvedParam + " " + argSuffix).Trim();
-            }
+            // Input is used only through placeholders. A template with no placeholder runs with
+            // exactly its configured parameters — trailing input is not appended.
 
             if (!string.IsNullOrWhiteSpace(cmd.WorkingDir) || cmd.RunSilently)
             {
