@@ -79,7 +79,7 @@ internal sealed class QuickSearchWindowLayoutManager
             Interlocked.Exchange(ref _layoutUpdateQueued, 0);
 
             var count = _window.ViewModel.Results.Count;
-            var resultsHeight = Math.Min(count, 9) * UiMetrics.SearchResultItemHeight;
+            var resultsHeight = Math.Min(count, 9) * UiMetrics.ScaledSearchResultItemHeight;
             _window.LstResults.Height = resultsHeight;
             _window.ResultsPanelControl.Height = resultsHeight;
 

@@ -41,12 +41,19 @@
             </TextBlock>
 
             <!-- File/Folder icon -->
-            <Image Grid.Column="0" Source="{Binding Icon}" Width="{Binding ResultIconSize}" Height="{Binding ResultIconSize}" Margin="0,0,14,0" VerticalAlignment="Center"
+            <Image Grid.Column="0" Source="{Binding Icon}" Margin="0,0,14,0" VerticalAlignment="Center"
                    RenderOptions.BitmapScalingMode="HighQuality">
                 <Image.Style>
                     <Style TargetType="Image">
                         <Setter Property="Visibility" Value="Visible"/>
+                        <Setter Property="Width" Value="{Binding ResultIconSize}"/>
+                        <Setter Property="Height" Value="{Binding ResultIconSize}"/>
                         <Style.Triggers>
+                            <!-- Quick window only: icons scale with the search box height. -->
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList">
+                                <Setter Property="Width" Value="{Binding ScaledResultIconSize}"/>
+                                <Setter Property="Height" Value="{Binding ScaledResultIconSize}"/>
+                            </DataTrigger>
                             <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
@@ -99,6 +106,10 @@
                                 <Setter Property="HorizontalAlignment" Value="Left"/>
                                 <Setter Property="TextTrimming" Value="None"/>
                                 <Style.Triggers>
+                                    <!-- Quick window only: name text scales with the search box height. -->
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList">
+                                        <Setter Property="FontSize" Value="{Binding ScaledNameFontSize}"/>
+                                    </DataTrigger>
                                     <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
                                         <Setter Property="FontSize" Value="24"/>
                                         <Setter Property="TextAlignment" Value="Center"/>
@@ -124,14 +135,24 @@
                             </Style.Triggers>
                         </Style>
                     </ScrollViewer.Style>
-                    <TextBlock FontSize="{Binding PathFontSize}"
-
-                               Foreground="{DynamicResource TextSecondary}"
+                    <TextBlock Foreground="{DynamicResource TextSecondary}"
                                HorizontalAlignment="Left"
                                helpers:MarqueeBehavior.EnableMarquee="True"
                                local:TextHighlighter.Text="{Binding ParentDir}"
                                local:TextHighlighter.HighlightText="{Binding SearchQuery}"
-                               local:TextHighlighter.HighlightBrush="{DynamicResource AccentBlue}"/>
+                               local:TextHighlighter.HighlightBrush="{DynamicResource AccentBlue}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontSize" Value="{Binding PathFontSize}"/>
+                                <Style.Triggers>
+                                    <!-- Quick window only: path text scales with the search box height. -->
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList">
+                                        <Setter Property="FontSize" Value="{Binding ScaledPathFontSize}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </ScrollViewer>
             </StackPanel>
 

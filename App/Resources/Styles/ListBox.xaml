@@ -54,6 +54,10 @@
             <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList Inline">
                 <Setter Property="Height" Value="{Binding InlineItemHeight}"/>
             </DataTrigger>
+            <!-- Quick window only: rows scale with the configured search box height. -->
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList">
+                <Setter Property="Height" Value="{Binding ScaledItemHeight}"/>
+            </DataTrigger>
         </Style.Triggers>
     </Style>
 

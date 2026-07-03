@@ -2,12 +2,24 @@ using System.Runtime.InteropServices;
 
 namespace SwiftList.Plugins.FolderCascader.Navigation;
 
+/// <summary>
+/// Loads shell icons as HBITMAPs for the navigation menu. Fetches a high-resolution
+/// icon from the system image list (256px Jumbo / 48px ExtraLarge) and renders it down
+/// to a fixed 64px premultiplied bitmap so it stays crisp and matches the plugin's other
+/// 64px menu glyphs (star/clock). Own copy — plugins ship as independent DLLs.
+/// </summary>
 internal static class ShellIconLoader
 {
     private const uint SHGFI_SYSICONINDEX = 0x000004000;
     private const uint SHGFI_USEFILEATTRIBUTES = 0x000000010;
     private const uint FILE_ATTRIBUTE_NORMAL = 0x80;
     private const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
+
+    private const int SHIL_SMALL = 1;
+    private const int SHIL_EXTRALARGE = 2; // 48px
+    private const int SHIL_JUMBO = 4;      // 256px
+    private const int ILD_TRANSPARENT = 1;
+    private const int RenderSize = 64;     // match the plugin's custom 64px menu glyphs
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct SHFILEINFOW
@@ -21,18 +33,8 @@ internal static class ShellIconLoader
         public string szTypeName;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct ICONINFO
-    {
-        public bool fIcon;
-        public int xHotspot;
-        public int yHotspot;
-        public IntPtr hbmMask;
-        public IntPtr hbmColor;
-    }
-
     [ComImport]
-    [Guid("46EB2DE8-BE82-11D1-8A3A-00C04FC36182")]
+    [Guid("46EB5926-582E-4017-9FDF-E8998DAA0950")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface IImageList
     {
@@ -49,19 +51,13 @@ internal static class ShellIconLoader
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern IntPtr SHGetFileInfoW(string pszPath, uint dwFileAttributes, ref SHFILEINFOW pszFileInfo, uint cbFileInfo, uint uFlags);
 
-    [DllImport("shell32.dll", EntryPoint = "#727", CharSet = CharSet.Unicode)]
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern int SHGetImageList(int iImageList, ref Guid riid, out IImageList ppv);
-
-    [DllImport("user32.dll")]
-    private static extern bool GetIconInfo(IntPtr hIcon, out ICONINFO piconinfo);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool DestroyIcon(IntPtr hIcon);
 
-    [DllImport("gdi32.dll", SetLastError = true)]
-    private static extern bool DeleteObject(IntPtr hObject);
-
-    private static readonly Guid IID_IImageList = new Guid("46EB2DE8-BE82-11D1-8A3A-00C04FC36182");
+    private static readonly Guid IID_IImageList = new Guid("46EB5926-582E-4017-9FDF-E8998DAA0950");
 
     public static IntPtr GetIconHBitmap(string path, bool isDir)
     {
@@ -70,31 +66,53 @@ internal static class ShellIconLoader
         var attributes = isDir ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL;
 
         var res = SHGetFileInfoW(path, attributes, ref shfi, (uint)Marshal.SizeOf(shfi), flags);
-        if (res != IntPtr.Zero)
+        if (res == IntPtr.Zero)
+            return IntPtr.Zero;
+
+        var iid = IID_IImageList;
+        // Prefer the highest-resolution image list available, degrade gracefully.
+        foreach (var shil in new[] { SHIL_JUMBO, SHIL_EXTRALARGE, SHIL_SMALL })
         {
-            // SHIL_SMALL = 1: retrieves the system small image list, which matches GetSystemMetrics(SM_CXSMICON) DPI-scaled size
-            var iid = IID_IImageList;
-            if (SHGetImageList(1, ref iid, out var imageList) == 0)
+            if (SHGetImageList(shil, ref iid, out var imageList) != 0 || imageList == null)
+                continue;
+
+            if (imageList.GetIcon(shfi.iIcon, ILD_TRANSPARENT, out var hIcon) == 0 && hIcon != IntPtr.Zero)
             {
-                var hIcon = IntPtr.Zero;
-                if (imageList.GetIcon(shfi.iIcon, 1, out hIcon) == 0 && hIcon != IntPtr.Zero)
-                {
-                    try
-                    {
-                        if (GetIconInfo(hIcon, out var iconInfo))
-                        {
-                            if (iconInfo.hbmMask != IntPtr.Zero)
-                                DeleteObject(iconInfo.hbmMask);
-                            return iconInfo.hbmColor;
-                        }
-                    }
-                    finally
-                    {
-                        DestroyIcon(hIcon);
-                    }
-                }
+                try { return RenderHIconToHBitmap(hIcon, RenderSize); }
+                catch { return IntPtr.Zero; }
+                finally { DestroyIcon(hIcon); }
             }
         }
+
         return IntPtr.Zero;
+    }
+
+    /// <summary>Renders an HICON (any native size) into a fixed-size premultiplied HBITMAP.</summary>
+    private static IntPtr RenderHIconToHBitmap(IntPtr hIcon, int size)
+    {
+        var src = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
+            hIcon, System.Windows.Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+
+        var visual = new System.Windows.Media.DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            System.Windows.Media.RenderOptions.SetBitmapScalingMode(visual, System.Windows.Media.BitmapScalingMode.HighQuality);
+            dc.DrawImage(src, new System.Windows.Rect(0, 0, size, size));
+        }
+
+        var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(size, size, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+        rtb.Render(visual);
+
+        var stride = size * 4;
+        var pixels = new byte[size * stride];
+        rtb.CopyPixels(pixels, stride, 0);
+
+        using var bmp = new System.Drawing.Bitmap(size, size, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+        var rect = new System.Drawing.Rectangle(0, 0, size, size);
+        var bmpData = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.WriteOnly, bmp.PixelFormat);
+        Marshal.Copy(pixels, 0, bmpData.Scan0, pixels.Length);
+        bmp.UnlockBits(bmpData);
+
+        return bmp.GetHbitmap();
     }
 }

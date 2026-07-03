@@ -59,6 +59,13 @@ internal static class ShellIconShortcutResolver
 
     private static ImageSource? ExtractLargeIcon(string iconPath, int iconIndex)
     {
+        // Prefer a high-resolution extraction (48/256px) so shortcut icons stay crisp.
+        var hiRes = ShellImageListInterop.ExtractHiRes(iconPath, iconIndex);
+        if (hiRes != null)
+        {
+            return hiRes;
+        }
+
         var largeIcons = new IntPtr[1];
         var extracted = ShellIconNativeMethods.ExtractIconEx(iconPath, iconIndex, largeIcons, null, 1);
         if (extracted == 0 || largeIcons[0] == IntPtr.Zero)
@@ -83,6 +90,12 @@ internal static class ShellIconShortcutResolver
 
     public static ImageSource? GetShellIconWithoutLinkOverlay(string targetPath)
     {
+        var hiRes = ShellImageListInterop.TryGetIcon(targetPath, 0, 0);
+        if (hiRes != null)
+        {
+            return hiRes;
+        }
+
         var shfi = new ShellIconNativeMethods.SHFILEINFOW();
         var res = ShellIconNativeMethods.SHGetFileInfoW(targetPath, 0, ref shfi, (uint)Marshal.SizeOf(shfi), ShellIconNativeMethods.SHGFI_ICON | ShellIconNativeMethods.SHGFI_LARGEICON);
         if (res == IntPtr.Zero || shfi.hIcon == IntPtr.Zero)

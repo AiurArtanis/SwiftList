@@ -209,7 +209,7 @@ public static class ShellPathHelper
     /// Caller must free the returned HBITMAP with DeleteObject when no longer needed.
     /// Returns IntPtr.Zero if the icon cannot be retrieved.
     /// </summary>
-    public static IntPtr TryGetIconHBitmapForShellItem(object comObj, int size = 32)
+    public static IntPtr TryGetIconHBitmapForShellItem(object comObj, int size = 96)
     {
         if (comObj == null) return IntPtr.Zero;
         var pidl   = IntPtr.Zero;
@@ -221,12 +221,14 @@ public static class ShellPathHelper
         {
             if (SHGetIDListFromObject(comObj, out pidl) != 0 || pidl == IntPtr.Zero) return IntPtr.Zero;
 
-            var shfi  = new SHFILEINFO();
-            var flags = SHGFI_ICON | SHGFI_LARGEICON | SHGFI_PIDL;
-            if (SHGetFileInfoPidl(pidl, 0, ref shfi, (uint)Marshal.SizeOf(shfi), flags) == IntPtr.Zero
-                || shfi.hIcon == IntPtr.Zero)
+            // Preferred: correctly size-scaled icon (avoids the Jumbo small-icon centering bug).
+            var direct = ShellImageListNative.GetShellHBitmapFromPidl(pidl, size);
+            if (direct != IntPtr.Zero) return direct;
+
+            // Fallback: system image-list HICON scaled to `size` below.
+            hIcon = ShellImageListNative.GetHiResHIcon(pidl, size);
+            if (hIcon == IntPtr.Zero)
                 return IntPtr.Zero;
-            hIcon = shfi.hIcon;
 
             // Convert HICON → HBITMAP.  Use the screen DC for CreateCompatibleBitmap so
             // we get a colour bitmap (CreateCompatibleDC(NULL) alone gives monochrome).
@@ -256,21 +258,23 @@ public static class ShellPathHelper
     /// Gets an icon HBITMAP for a physical file or directory path.
     /// Caller must free the returned HBITMAP with DeleteObject when no longer needed.
     /// </summary>
-    public static IntPtr GetIconHBitmapForPath(string path, int size = 32)
+    public static IntPtr GetIconHBitmapForPath(string path, int size = 96)
     {
         if (string.IsNullOrEmpty(path)) return IntPtr.Zero;
+
+        // Preferred: correctly size-scaled icon (avoids the Jumbo small-icon centering bug).
+        var direct = ShellImageListNative.GetShellHBitmap(path, size);
+        if (direct != IntPtr.Zero) return direct;
+
         var hIcon  = IntPtr.Zero;
         var hdc    = IntPtr.Zero;
         var hMemDC = IntPtr.Zero;
         var hBmp   = IntPtr.Zero;
         try
         {
-            var shfi = new SHFILEINFO();
-            var flags = SHGFI_ICON | SHGFI_LARGEICON;
-            var res = SHGetFileInfo(path, 0, ref shfi, (uint)Marshal.SizeOf(shfi), flags);
-            if (res == IntPtr.Zero || shfi.hIcon == IntPtr.Zero)
+            hIcon = ShellImageListNative.GetHiResHIcon(path, size);
+            if (hIcon == IntPtr.Zero)
                 return IntPtr.Zero;
-            hIcon = shfi.hIcon;
 
             hdc    = GetDC(IntPtr.Zero);
             hMemDC = CreateCompatibleDC(hdc);

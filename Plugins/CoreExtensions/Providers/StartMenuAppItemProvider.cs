@@ -133,10 +133,10 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
                 ? (TranslationService.Get("Search_ResultApp") ?? "Application")
                 : string.Format(descTemplate, parentDir);
 
-            var hBitmap = ShellPathHelper.GetIconHBitmapForPath(targetPath, 32);
+            var hBitmap = ShellPathHelper.GetIconHBitmapForPath(targetPath, 96);
             if (hBitmap == IntPtr.Zero && targetPath != capturedPath)
             {
-                hBitmap = ShellPathHelper.GetIconHBitmapForPath(capturedPath, 32);
+                hBitmap = ShellPathHelper.GetIconHBitmapForPath(capturedPath, 96);
             }
 
             list.Add(new SearchableItem

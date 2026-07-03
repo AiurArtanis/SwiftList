@@ -18,7 +18,7 @@ public static class ShellIconHelper
     {
         needsLoad = false;
         if (path == "__NO_RESULTS__") return null;
-        if (path == "__SHOW_MORE__") return GetVectorIconShowMore();
+        if (path == "__SHOW_MORE__") return VectorIconFactory.ShowMore();
 
         var ext = isDir ? "::directory::" : Path.GetExtension(path);
         if (string.IsNullOrEmpty(ext))
@@ -90,7 +90,7 @@ public static class ShellIconHelper
 
         if (path == "__SHOW_MORE__")
         {
-            return GetVectorIconShowMore();
+            return VectorIconFactory.ShowMore();
         }
 
         var ext = isDir ? "::directory::" : Path.GetExtension(path);
@@ -124,7 +124,7 @@ public static class ShellIconHelper
         {
             try
             {
-                var thumb = thumbnailProvider.GetThumbnail(path, 48);
+                var thumb = thumbnailProvider.GetThumbnail(path, ShellImageListInterop.PreferredPixels());
                 if (thumb != null)
                 {
                     _iconCache[cacheKey] = thumb;
@@ -159,6 +159,13 @@ public static class ShellIconHelper
                 {
                     try
                     {
+                        var hiRes = ShellImageListInterop.TryGetIconPidl(pidl);
+                        if (hiRes != null)
+                        {
+                            _iconCache[cacheKey] = hiRes;
+                            return hiRes;
+                        }
+
                         var flags = ShellIconNativeMethods.SHGFI_ICON | ShellIconNativeMethods.SHGFI_LARGEICON | ShellIconNativeMethods.SHGFI_PIDL;
                         var res = ShellIconNativeMethods.SHGetFileInfoW(pidl, 0, ref shfi, (uint)Marshal.SizeOf(shfi), flags);
                         if (res != IntPtr.Zero && shfi.hIcon != IntPtr.Zero)
@@ -190,6 +197,13 @@ public static class ShellIconHelper
             if (isUniqueIconType && (File.Exists(checkPath) || Directory.Exists(checkPath)))
             {
                 // For existing EXE/LNK/ICO (or folder fallback), load the actual unique embedded icon from the file path
+                var hiRes = ShellImageListInterop.TryGetIcon(checkPath, 0, 0);
+                if (hiRes != null)
+                {
+                    _iconCache[cacheKey] = hiRes;
+                    return hiRes;
+                }
+
                 var flags = ShellIconNativeMethods.SHGFI_ICON | ShellIconNativeMethods.SHGFI_LARGEICON;
                 var res = ShellIconNativeMethods.SHGetFileInfoW(checkPath, 0, ref shfi, (uint)Marshal.SizeOf(shfi), flags);
                 if (res != IntPtr.Zero && shfi.hIcon != IntPtr.Zero)
@@ -216,6 +230,13 @@ public static class ShellIconHelper
                 var flags = ShellIconNativeMethods.SHGFI_ICON | ShellIconNativeMethods.SHGFI_LARGEICON | ShellIconNativeMethods.SHGFI_USEFILEATTRIBUTES;
                 var attributes = isDir ? ShellIconNativeMethods.FILE_ATTRIBUTE_DIRECTORY : ShellIconNativeMethods.FILE_ATTRIBUTE_NORMAL;
                 var lookupPath = isDir ? "dummy_folder" : ext;
+
+                var hiRes = ShellImageListInterop.TryGetIcon(lookupPath, attributes, ShellIconNativeMethods.SHGFI_USEFILEATTRIBUTES);
+                if (hiRes != null)
+                {
+                    _iconCache[cacheKey] = hiRes;
+                    return hiRes;
+                }
 
                 var res = ShellIconNativeMethods.SHGetFileInfoW(lookupPath, attributes, ref shfi, (uint)Marshal.SizeOf(shfi), flags);
                 if (res != IntPtr.Zero && shfi.hIcon != IntPtr.Zero)
@@ -245,37 +266,5 @@ public static class ShellIconHelper
         return null;
     }
 
-    private static ImageSource? _vectorIconShowMore;
-    private static ImageSource GetVectorIconShowMore()
-    {
-        if (_vectorIconShowMore == null)
-        {
-            var geometry = Geometry.Parse("M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z");
-            var group = new DrawingGroup();
-            var brush = System.Windows.Application.Current?.TryFindResource("AccentBlue") as System.Windows.Media.Brush
-                        ?? System.Windows.Media.Brushes.Blue;
-            group.Children.Add(new GeometryDrawing(brush, null, geometry));
-            var image = new DrawingImage(group);
-            image.Freeze();
-            _vectorIconShowMore = image;
-        }
-        return _vectorIconShowMore;
-    }
-
-    public static ImageSource CreateVectorIcon(string pathData, string colorHexOrKey)
-    {
-        var geometry = Geometry.Parse(pathData);
-        var group = new DrawingGroup();
-        var brush = System.Windows.Application.Current?.TryFindResource(colorHexOrKey) as System.Windows.Media.Brush;
-        if (brush == null && !string.IsNullOrEmpty(colorHexOrKey))
-        {
-            try { brush = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHexOrKey)); }
-            catch { }
-        }
-        brush ??= System.Windows.Application.Current?.TryFindResource("TextPrimary") as System.Windows.Media.Brush ?? System.Windows.Media.Brushes.Gray;
-        group.Children.Add(new GeometryDrawing(brush, null, geometry));
-        var image = new DrawingImage(group);
-        try { image.Freeze(); } catch { }
-        return image;
-    }
+    public static ImageSource CreateVectorIcon(string pathData, string colorHexOrKey) => VectorIconFactory.Create(pathData, colorHexOrKey);
 }

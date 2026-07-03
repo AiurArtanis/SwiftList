@@ -16,7 +16,7 @@ public static class UiMetrics
     // Base font/icon metrics used by the search result item template.
     public const double BaseResultNameFontSize = 14;
     public const double BaseResultPathFontSize = 11;
-    public const double BaseResultIconSize = 23;
+    public const double BaseResultIconSize = 28;
 
     private static double _scale = 1.0;
 
@@ -48,12 +48,23 @@ public static class UiMetrics
         catch { /* fall back to current scale */ }
     }
 
-    public static double SearchResultItemHeight => Math.Round(BaseSearchResultItemHeight * _scale);
-    public static double ListItemHeight => Math.Round(BaseListItemHeight * _scale);
-    public static double SearchSectionHeaderHeight => Math.Round(BaseSearchSectionHeaderHeight * _scale);
+    // ── Base metrics (used everywhere by default: inline window, full window, action menu) ──
+    public static double SearchResultItemHeight => BaseSearchResultItemHeight;
+    public static double ListItemHeight => BaseListItemHeight;
+    public static double SearchSectionHeaderHeight => BaseSearchSectionHeaderHeight;
     public static double MenuItemHeight => ListItemHeight * 0.8;
 
-    public static double ResultNameFontSize => Math.Round(BaseResultNameFontSize * _scale);
-    public static double ResultPathFontSize => Math.Round(BaseResultPathFontSize * _scale);
-    public static double ResultIconSize => Math.Round(BaseResultIconSize * _scale);
+    public static double ResultNameFontSize => BaseResultNameFontSize;
+    public static double ResultPathFontSize => BaseResultPathFontSize;
+    public static double ResultIconSize => BaseResultIconSize;
+
+    // ── Scaled metrics — consumed ONLY by the quick window (opted in via window title),
+    //    so the inline/full windows never scale with the search-bar height. ──
+    public static double ScaledSearchResultItemHeight => Math.Round(BaseSearchResultItemHeight * _scale);
+    public static double ScaledListItemHeight => Math.Round(BaseListItemHeight * _scale);
+    public static double ScaledSearchSectionHeaderHeight => Math.Round(BaseSearchSectionHeaderHeight * _scale);
+
+    public static double ScaledResultNameFontSize => Math.Round(BaseResultNameFontSize * _scale);
+    public static double ScaledResultPathFontSize => Math.Round(BaseResultPathFontSize * _scale);
+    public static double ScaledResultIconSize => Math.Round(BaseResultIconSize * _scale);
 }
