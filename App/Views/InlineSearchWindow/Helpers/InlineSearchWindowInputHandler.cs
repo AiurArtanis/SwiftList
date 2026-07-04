@@ -52,8 +52,6 @@ public class InlineSearchWindowInputHandler
         if (actualKey == Key.Enter)
         {
             e.Handled = true;
-            var selectModifier = GetWpfModifier(UserSettings.Load().SelectIndexModifier);
-            var currentModifiers = Keyboard.Modifiers;
 
             var result = _window.LstResults.SelectedItem as AppSearchResult;
             if (result == null && _window.LstResults.Items.Count > 0)
@@ -62,29 +60,14 @@ public class InlineSearchWindowInputHandler
                 result = _window.LstResults.SelectedItem as AppSearchResult;
             }
 
+            // File/folder results are handled earlier by HotkeyActionTrigger (Ctrl+Enter locate,
+            // Ctrl+Shift+Enter open-as-admin) and never reach here. What reaches here on those chords
+            // is a result with no matching file action — notably an application — so honor
+            // Ctrl+Shift+Enter as "launch as admin" so apps can still be elevated.
             if (result != null)
             {
-                var isFileOrFolder = !result.IsSearchSectionHeader && !result.IsEmptyResult &&
-                    (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath));
-
-                if (currentModifiers == selectModifier && isFileOrFolder)
-                {
-                    var parentPath = System.IO.Path.GetDirectoryName(result.FullPath);
-                    if (!string.IsNullOrEmpty(parentPath))
-                    {
-                        var parentResult = new AppSearchResult
-                        {
-                            FullPath = parentPath,
-                            IsDir = true,
-                            ResultKind = "Folder"
-                        };
-                        ExecuteResult(parentResult, asAdmin: false);
-                    }
-                }
-                else
-                {
-                    ExecuteResult(result, asAdmin: false);
-                }
+                var asAdmin = Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift);
+                ExecuteResult(result, asAdmin: asAdmin);
             }
             return;
         }

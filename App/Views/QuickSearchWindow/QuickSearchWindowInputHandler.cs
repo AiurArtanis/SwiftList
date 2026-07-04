@@ -60,9 +60,6 @@ public class QuickSearchWindowInputHandler
         var actualKey = WpfUiHelper.GetActualKey(e);
         if (actualKey == Key.Enter)
         {
-            var selectModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
-            var currentModifiers = Keyboard.Modifiers;
-            
             var result = _window.LstResults.SelectedItem as AppSearchResult;
             if (result == null && _window.LstResults.Items.Count > 0)
             {
@@ -70,24 +67,14 @@ public class QuickSearchWindowInputHandler
                 result = _window.LstResults.SelectedItem as AppSearchResult;
             }
 
+            // File/folder results are handled earlier by HotkeyActionTrigger (Ctrl+Enter locate,
+            // Ctrl+Shift+Enter open-as-admin) and never reach here. What reaches here on those chords
+            // is a result with no matching file action — notably an application — so honor
+            // Ctrl+Shift+Enter as "launch as admin" so apps can still be elevated.
             if (result != null)
             {
-                var isFileOrFolder = !result.IsSearchSectionHeader && !result.IsEmptyResult &&
-                    (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath));
-
-                if (currentModifiers == selectModifier && isFileOrFolder)
-                {
-                    FileExecutor.LocateInExplorer(result.FullPath);
-                    _window.HideWindow();
-                }
-                else if (currentModifiers == (selectModifier | ModifierKeys.Shift))
-                {
-                    ExecuteResult(result, asAdmin: true);
-                }
-                else
-                {
-                    ExecuteResult(result, asAdmin: false);
-                }
+                var asAdmin = Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift);
+                ExecuteResult(result, asAdmin: asAdmin);
             }
             e.Handled = true;
             return;

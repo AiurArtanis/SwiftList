@@ -8,6 +8,10 @@ public static class PluginActionExecutor
     {
         if (result.IsInstantResult)
         {
+            // Dismiss the window before executing. An admin launch blocks on the UAC prompt, so
+            // deferring the close (as the callers do on success) would leave the search window up
+            // until the app actually starts. Closing up front makes it disappear immediately.
+            view?.HideWindow();
             try
             {
                 if (result.InstantResultOnExecute != null)

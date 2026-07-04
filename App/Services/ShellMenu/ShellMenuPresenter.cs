@@ -49,21 +49,34 @@ public class ShellMenuPresenter : IDisposable
 
     public void EnterActionsMode(AppSearchResult result) => EnterActionsMode(new[] { result });
 
-    public void EnterActionsMode(IReadOnlyList<AppSearchResult> selection)
+    /// <summary>
+    /// Whether the actions menu is allowed to open for this selection right now. Scenarios that
+    /// suppress the right-click menu (an adapter that opts out, apps, plugin/instant results, the
+    /// "show more" row, an inline file dialog) also suppress action hotkeys, so callers gate on this.
+    /// </summary>
+    public bool CanShowActionsMenu(IReadOnlyList<AppSearchResult> selection)
     {
         var tracker = InlineSearchManager.Instance.ExplorerTracker;
         if (tracker.ActiveInlineAdapter != null && !tracker.ActiveInlineAdapter.CanEnterActionsMode(tracker.ActiveHwnd))
+            return false;
+
+        var items = selection?.Where(r => r != null && !r.IsSearchSectionHeader && !r.IsEmptyResult).ToList() ?? new List<AppSearchResult>();
+        var result = items.Count > 0 ? items[0] : null;
+
+        return result != null && result.FullPath != "__SHOW_MORE__" && !result.IsApplication
+            && !result.IsPluginSearchAction && !result.IsInstantResult && !IsInlineFileDialog();
+    }
+
+    public void EnterActionsMode(IReadOnlyList<AppSearchResult> selection)
+    {
+        if (!CanShowActionsMenu(selection))
             return;
 
         // Keep only real, actionable results; the first is the primary (used for the header).
         var items = selection?.Where(r => r != null && !r.IsSearchSectionHeader && !r.IsEmptyResult).ToList() ?? new List<AppSearchResult>();
-        var result = items.Count > 0 ? items[0] : null;
-
-        if (result == null || result.FullPath == "__SHOW_MORE__" || result.IsApplication
-            || result.IsPluginSearchAction || result.IsInstantResult || IsInlineFileDialog())
-        {
+        if (items.Count == 0)
             return;
-        }
+        var result = items[0];
 
         _savedSearchQuery = _view.SearchTextBox.Text;
         _activeResults = items;

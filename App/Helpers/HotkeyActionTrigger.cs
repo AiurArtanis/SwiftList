@@ -38,6 +38,9 @@ public static class HotkeyActionTrigger
                 {
                     if (action.IsVisibleInMenu(single, windowType) && action.CanExecute(single))
                     {
+                        // Dismiss first, then run: an open/admin action can block on the UAC prompt, and
+                        // hiding afterwards would keep the window up until the target actually launches.
+                        window.HideWindow();
                         action.Execute(single, window);
                         return true;
                     }

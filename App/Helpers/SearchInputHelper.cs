@@ -95,10 +95,14 @@ public static class SearchInputHelper
         if (HandleActionsModeKeys(e, window, menuPresenter))
             return true;
 
-        // 1b. Custom Action Hotkeys — only when modifiers held (no overhead for plain typing)
+        // 1b. Action hotkeys — only when modifiers are held (no overhead for plain typing), and only
+        // where the actions menu itself is allowed to open. Scenarios that suppress the right-click
+        // menu (apps, instant/plugin results, adapters that opt out, inline file dialogs, ...) must
+        // suppress the hotkeys too, so gate on the same CanShowActionsMenu check.
         if (Keyboard.Modifiers != ModifierKeys.None
             && window.LstResults.SelectedItem is AppSearchResult selectedResult
-            && !selectedResult.IsSearchSectionHeader && !selectedResult.IsEmptyResult)
+            && menuPresenter != null
+            && menuPresenter.CanShowActionsMenu(new[] { selectedResult }))
         {
             if (HotkeyActionTrigger.TryExecute(e, selectedResult, window))
             {
@@ -107,27 +111,7 @@ public static class SearchInputHelper
             }
         }
 
-        // 2. Clipboard Copy (Ctrl+C)
-        if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            if (window.LstResults.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult)
-            {
-                if (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath))
-                {
-                    try
-                    {
-                        var fileList = new System.Collections.Specialized.StringCollection { result.FullPath };
-                        System.Windows.Clipboard.SetFileDropList(fileList);
-                        window.HideWindow();
-                        e.Handled = true;
-                        return true;
-                    }
-                    catch { }
-                }
-            }
-        }
-
-        // 3. QuickLook
+        // 2. QuickLook
         if (window.GetType().Name != "InlineSearchWindow" && IsQuickLookKey(e))
         {
             if (window.LstResults.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult && !result.IsApplication && result.FullPath != "__SHOW_MORE__")

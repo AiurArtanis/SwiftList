@@ -87,26 +87,14 @@ public class SearchWindowInputHandler
 
         else if (actualKey == Key.Enter)
         {
-            var selectModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
-            var currentModifiers = Keyboard.Modifiers;
-            if (_window.LstGridResultsControl.SelectedItem is AppSearchResult selected)
+            // File/folder results are handled earlier by HotkeyActionTrigger (Ctrl+Enter locate,
+            // Ctrl+Shift+Enter open-as-admin) and never reach here. What reaches here on those chords
+            // is a result with no matching file action — notably an application — so honor
+            // Ctrl+Shift+Enter as "launch as admin" so apps can still be elevated.
+            if (_window.LstGridResultsControl.SelectedItem is AppSearchResult)
             {
-                var isFileOrFolder = !selected.IsSearchSectionHeader && !selected.IsEmptyResult &&
-                    (selected.ResultKind == "File" || selected.ResultKind == "Folder" || System.IO.File.Exists(selected.FullPath) || System.IO.Directory.Exists(selected.FullPath));
-
-                if (currentModifiers == selectModifier && isFileOrFolder)
-                {
-                    FileExecutor.LocateInExplorer(selected.FullPath);
-                    _window.Close();
-                }
-                else if (currentModifiers == (selectModifier | ModifierKeys.Shift))
-                {
-                    OpenSelectedResult(asAdmin: true);
-                }
-                else
-                {
-                    OpenSelectedResult(asAdmin: false);
-                }
+                var asAdmin = Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift);
+                OpenSelectedResult(asAdmin: asAdmin);
             }
             e.Handled = true;
         }
