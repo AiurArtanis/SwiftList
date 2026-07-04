@@ -60,10 +60,8 @@ Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desk
 ; Run the app as original non-elevated user at the end
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchApp}"; Flags: postinstall nowait runasoriginaluser
 
-[UninstallRun]
-; Stop and delete service on uninstall
-Filename: "sc.exe"; Parameters: "stop {#ServiceName}"; Flags: runhidden
-Filename: "sc.exe"; Parameters: "delete {#ServiceName}"; Flags: runhidden
+; Service stop/delete on uninstall is handled in CurUninstallStepChanged below (which also kills the
+; app and hook process first), so no [UninstallRun] entries are needed.
 
 [Code]
 var
