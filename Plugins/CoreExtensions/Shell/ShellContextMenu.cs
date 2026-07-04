@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Windows.Threading;
 using SwiftList.PluginSdk;
 
 namespace SwiftList.Plugins.CoreExtensions.Shell;
@@ -54,9 +55,52 @@ public class ShellMenuSession : IDisposable
     public const uint CMD_FIRST = 1;
     public const uint CMD_LAST = 30000;
 
+    // Shell context-menu COM objects must live in a stable STA. Host them on a dedicated, long-lived
+    // STA thread so the menu can be built OFF the UI thread (a slow shell extension no longer freezes
+    // the whole actions list) while the COM objects stay valid for a later InvokeCommand.
+    private static Dispatcher? _staDispatcher;
+    private static readonly object _staLock = new();
+
+    [DllImport("ole32.dll")]
+    private static extern int OleInitialize(IntPtr pvReserved);
+
+    private static Dispatcher StaDispatcher
+    {
+        get
+        {
+            if (_staDispatcher != null) return _staDispatcher;
+            lock (_staLock)
+            {
+                if (_staDispatcher != null) return _staDispatcher;
+                using var ready = new ManualResetEventSlim();
+                var thread = new Thread(() =>
+                {
+                    // Shell context-menu handlers (especially folder ones — drag-drop, data objects,
+                    // cloud/overlay providers) require an OLE-initialized STA. The WPF UI thread has
+                    // this; a bare worker thread does not, so initialize OLE here or those handlers load
+                    // incompletely (missing/changing items on first open).
+                    OleInitialize(IntPtr.Zero);
+                    _staDispatcher = Dispatcher.CurrentDispatcher;
+                    ready.Set();
+                    Dispatcher.Run();
+                })
+                {
+                    IsBackground = true,
+                    Name = "ShellMenuStaWorker"
+                };
+                thread.SetApartmentState(ApartmentState.STA);
+                thread.Start();
+                ready.Wait();
+                return _staDispatcher!;
+            }
+        }
+    }
+
     private ShellMenuSession() { }
 
-    public static ShellMenuSession? Create(string path)
+    public static ShellMenuSession? Create(string path) => StaDispatcher.Invoke(() => CreateCore(path));
+
+    private static ShellMenuSession? CreateCore(string path)
     {
         var session = new ShellMenuSession();
         try
@@ -105,10 +149,17 @@ public class ShellMenuSession : IDisposable
         }
     }
 
-    public List<ShellMenuItem> EnumerateItems(IntPtr hMenu = default)
+    public List<ShellMenuItem> EnumerateItems(IntPtr hMenu = default) => StaDispatcher.Invoke(() => EnumerateItemsCore(hMenu));
+
+    private List<ShellMenuItem> EnumerateItemsCore(IntPtr hMenu)
     {
         if (hMenu == IntPtr.Zero)
             hMenu = _hMenu;
+
+        // Let the context-menu handler populate delayed / owner-drawn item bitmaps by first sending it
+        // WM_INITMENUPOPUP for this menu. Some handlers only fill icons in response to it, so without
+        // this the very first open (before the shell has cached the bitmaps) shows no icons.
+        InitializeSubMenu(hMenu, 0);
 
         var items = new List<ShellMenuItem>();
         var count = ShellContextMenuNativeMethods.GetMenuItemCount(hMenu);
@@ -190,7 +241,9 @@ public class ShellMenuSession : IDisposable
     }
 
 
-    public void InvokeCommand(uint commandId, IntPtr ownerHwnd)
+    public void InvokeCommand(uint commandId, IntPtr ownerHwnd) => StaDispatcher.Invoke(() => InvokeCommandCore(commandId, ownerHwnd));
+
+    private void InvokeCommandCore(uint commandId, IntPtr ownerHwnd)
     {
         if (_contextMenu == null) return;
 
@@ -210,7 +263,9 @@ public class ShellMenuSession : IDisposable
         }
     }
 
-    public void Dispose()
+    public void Dispose() => StaDispatcher.Invoke(DisposeCore);
+
+    private void DisposeCore()
     {
         if (_disposed) return;
         _disposed = true;

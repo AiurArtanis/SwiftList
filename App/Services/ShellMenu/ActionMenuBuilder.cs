@@ -15,65 +15,104 @@ internal static class ActionMenuBuilder
         if (selection == null || selection.Count == 0)
             return new List<ActionMenuItem>();
 
-        var uiItems = new List<ActionMenuItem>();
-        var itemHeight = UiMetrics.ListItemHeight;
+        List<ActionMenuItem> uiItems;
+        if (hMenu == IntPtr.Zero)
+        {
+            // Root menu: built-in actions + dynamic providers.
+            commandToProviderMap.Clear();
+            subMenuToProviderMap.Clear();
+            uiItems = BuildStatic(selection, windowType);
+            uiItems.AddRange(BuildDynamic(selection, IntPtr.Zero, windowType, commandToProviderMap, subMenuToProviderMap));
+        }
+        else
+        {
+            // Submenu navigation is dynamic-only.
+            uiItems = BuildDynamic(selection, hMenu, windowType, commandToProviderMap, subMenuToProviderMap);
+        }
 
-        // Section headers must stay tall enough for the header font (see ActionMenuItem.xaml),
-        // otherwise the title (e.g. "快捷命令") gets vertically clipped at small scales.
+        return FinalizeItems(uiItems);
+    }
+
+    // Builds ONLY the built-in (static) action items — the fast part of the menu. The presenter shows
+    // these immediately (on the UI thread, where the vector icons are created) and appends the
+    // potentially-slow dynamic (shell) group asynchronously.
+    public static List<ActionMenuItem> BuildStatic(IReadOnlyList<AppSearchResult> selection, SearchWindowType windowType)
+    {
+        var uiItems = new List<ActionMenuItem>();
+        if (selection == null || selection.Count == 0)
+            return uiItems;
+
+        var itemHeight = UiMetrics.ListItemHeight;
+        var headerHeight = Math.Max(
+            UiMetrics.MinSectionHeaderHeight,
+            Math.Round(itemHeight * (UiMetrics.SearchSectionHeaderHeight / UiMetrics.SearchResultItemHeight)));
+
+        var groupedActions = new Dictionary<string, List<PluginActionRegistration>>();
+        foreach (var registration in PluginManager.Instance.Actions)
+        {
+            var action = registration.Action;
+            if (!action.IsVisibleInMenu(selection, windowType))
+                continue;
+
+            if (action.CanExecute(selection))
+            {
+                var group = string.IsNullOrWhiteSpace(action.GroupName) ? TranslationManager.Instance["Action_BuiltinGroup"] : action.GroupName;
+                if (!groupedActions.TryGetValue(group, out var list))
+                {
+                    list = new List<PluginActionRegistration>();
+                    groupedActions[group] = list;
+                }
+                list.Add(registration);
+            }
+        }
+
+        foreach (var kvp in groupedActions)
+        {
+            uiItems.Add(new ActionMenuItem
+            {
+                IsSectionHeader = true,
+                SectionTitle = kvp.Key,
+                ItemHeight = headerHeight
+            });
+
+            foreach (var registration in kvp.Value)
+            {
+                var action = registration.Action;
+                uiItems.Add(new ActionMenuItem
+                {
+                    Text = action.DisplayName,
+                    CommandId = registration.RuntimeActionId,
+                    Icon = action.Icon,
+                    ItemHeight = itemHeight,
+                    ShortcutHint = action.Hotkey
+                });
+            }
+        }
+        return uiItems;
+    }
+
+    // Builds the dynamic-provider items (shell context menu, etc). This can be slow (loading shell
+    // extensions), so the presenter runs it OFF the UI thread and appends the result to the already
+    // shown static items. Its icons come from HBITMAPs and are frozen, so they are safe cross-thread.
+    public static List<ActionMenuItem> BuildDynamic(
+        IReadOnlyList<AppSearchResult> selection,
+        IntPtr hMenu,
+        SearchWindowType windowType,
+        Dictionary<uint, IDynamicActionProvider> commandToProviderMap,
+        Dictionary<IntPtr, IDynamicActionProvider> subMenuToProviderMap)
+    {
+        var uiItems = new List<ActionMenuItem>();
+        if (selection == null || selection.Count == 0)
+            return uiItems;
+
+        var itemHeight = UiMetrics.ListItemHeight;
         var headerHeight = Math.Max(
             UiMetrics.MinSectionHeaderHeight,
             Math.Round(itemHeight * (UiMetrics.SearchSectionHeaderHeight / UiMetrics.SearchResultItemHeight)));
 
         if (hMenu == IntPtr.Zero)
         {
-            // Root menu: load static actions and dynamic providers
-            commandToProviderMap.Clear();
-            subMenuToProviderMap.Clear();
-
-            // 1. Group and append static actions by GroupName
-            var groupedActions = new Dictionary<string, List<PluginActionRegistration>>();
-            foreach (var registration in PluginManager.Instance.Actions)
-            {
-                var action = registration.Action;
-                if (!action.IsVisibleInMenu(selection, windowType))
-                    continue;
-
-                if (action.CanExecute(selection))
-                {
-                    var group = string.IsNullOrWhiteSpace(action.GroupName) ? TranslationManager.Instance["Action_BuiltinGroup"] : action.GroupName;
-                    if (!groupedActions.TryGetValue(group, out var list))
-                    {
-                        list = new List<PluginActionRegistration>();
-                        groupedActions[group] = list;
-                    }
-                    list.Add(registration);
-                }
-            }
-
-            foreach (var kvp in groupedActions)
-            {
-                uiItems.Add(new ActionMenuItem
-                {
-                    IsSectionHeader = true,
-                    SectionTitle = kvp.Key,
-                    ItemHeight = headerHeight
-                });
-
-                foreach (var registration in kvp.Value)
-                {
-                    var action = registration.Action;
-                    uiItems.Add(new ActionMenuItem
-                    {
-                        Text = action.DisplayName,
-                        CommandId = registration.RuntimeActionId,
-                        Icon = action.Icon,
-                        ItemHeight = itemHeight,
-                        ShortcutHint = action.Hotkey
-                    });
-                }
-            }
-
-            // 2. Load dynamic provider actions (e.g. Shell Context Menu) — sorted by Priority descending
+            // Root: every dynamic provider (e.g. shell context menu), sorted by Priority descending.
             foreach (var provider in PluginManager.Instance.DynamicProviders.OrderByDescending(p => p.Priority))
             {
                 if (provider.Keywords.Count > 0)
@@ -133,7 +172,7 @@ internal static class ActionMenuBuilder
         }
         else
         {
-            // Submenu navigation: lookup the owning dynamic provider
+            // Submenu navigation: look up the owning dynamic provider.
             if (subMenuToProviderMap.TryGetValue(hMenu, out var provider))
             {
                 var dynamicItems = provider.GetMenuItems(selection, hMenu);
@@ -167,8 +206,12 @@ internal static class ActionMenuBuilder
                 }
             }
         }
+        return uiItems;
+    }
 
-        // Deduplicate items based on text
+    // Dedupes by text and tidies separators. Runs on the merged (static + dynamic) list.
+    public static List<ActionMenuItem> FinalizeItems(List<ActionMenuItem> uiItems)
+    {
         var uniqueItems = new List<ActionMenuItem>();
         foreach (var item in uiItems)
         {
@@ -193,7 +236,6 @@ internal static class ActionMenuBuilder
             }
         }
 
-        // Clean up separators
         var finalItems = new List<ActionMenuItem>();
         for (var i = 0; i < uniqueItems.Count; i++)
         {

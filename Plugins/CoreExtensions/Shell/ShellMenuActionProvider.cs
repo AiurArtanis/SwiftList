@@ -16,6 +16,34 @@ public class ShellMenuActionProvider : IDynamicActionProvider
     private ShellMenuSession? _session;
     private string? _lastPath;
 
+    private static int _warmedUp;
+
+    public ShellMenuActionProvider()
+    {
+        // Warm up the STA worker and the folder shell extensions in the background at startup, so the
+        // FIRST real menu open is already warm. Otherwise the first open cold-loads folder handlers and
+        // shows incomplete items, only becoming complete on the second open. Once per process.
+        if (Interlocked.Exchange(ref _warmedUp, 1) != 0)
+            return;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var warmPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                if (!string.IsNullOrEmpty(warmPath) && Directory.Exists(warmPath))
+                {
+                    var session = ShellMenuSession.Create(warmPath);
+                    session?.EnumerateItems();
+                    session?.Dispose();
+                }
+            }
+            catch
+            {
+                // Warm-up is best-effort.
+            }
+        });
+    }
+
     public bool CanProvide(IReadOnlyList<ISearchResult> results)
     {
         // The native shell menu is single-item only for now (multi-file menu needs multi-PIDL);

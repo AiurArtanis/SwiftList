@@ -29,6 +29,7 @@ public class ShellMenuPresenter : IDisposable
 
     private string _savedSearchQuery = string.Empty;
     private List<ActionMenuItem> _currentRawItems = new();
+    private int _actionsGeneration;
 
     public ShellMenuPresenter(ISearchWindow view)
     {
@@ -92,40 +93,65 @@ public class ShellMenuPresenter : IDisposable
             provider.ClearSession();
         }
 
-        var finalItems = ActionMenuBuilder.Build(
-            _activeResults,
-            IntPtr.Zero,
-            GetWindowType(),
-            _commandToProviderMap,
-            _subMenuToProviderMap
-        );
-        _currentRawItems = finalItems;
-
-        var cleanItems = ShellMenuFilter.Apply(_currentRawItems, string.Empty);
-        foreach (var item in cleanItems)
-        {
-            item.SearchQuery = string.Empty;
-        }
-        _view.LstActions.ItemsSource = cleanItems;
-
-        if (cleanItems.Count > 0)
-        {
-            var firstSelectable = cleanItems.FindIndex(i => !i.IsSeparator && !i.IsSectionHeader && !i.IsDisabled);
-            _view.LstActions.SelectedIndex = firstSelectable >= 0 ? firstSelectable : 0;
-            _view.LstActions.ScrollIntoView(_view.LstActions.SelectedItem);
-        }
-
+        // 1. Show the built-in (static) actions immediately — this part is instant, so a slow shell
+        //    context menu never delays the whole list appearing.
         _isInActionsMode = true;
         _view.IsInActionsMode = true;
         _view.GridSearchResults.Visibility = Visibility.Collapsed;
         _view.GridActions.Visibility = Visibility.Visible;
         _view.TxtActionsTarget.Text = Path.GetFileName(result.FullPath) + (items.Count > 1 ? $" (+{items.Count - 1})" : string.Empty);
-        _view.SearchTextBox.Clear();
 
-        // Size the panel to the action content. Without this the inline window (which is
-        // manually sized, unlike the auto-fitting quick/full windows) keeps its stale results
-        // height, leaving blank space below short action lists.
+        var generation = ++_actionsGeneration;
+        _currentRawItems = ActionMenuBuilder.FinalizeItems(ActionMenuBuilder.BuildStatic(_activeResults, GetWindowType()));
+        ApplyFilter(string.Empty);
+        _view.SearchTextBox.Clear();
         _view.UpdateActionsLayout();
+
+        // 2. Build the dynamic (potentially slow shell) group off the UI thread, capped at 2s. When it
+        //    finishes in time, merge it in; on timeout, keep the built-in actions. A generation token
+        //    stops a stale build from overwriting a newer/closed actions session.
+        var selectionSnapshot = _activeResults;
+        var windowType = GetWindowType();
+        _ = Task.Run(() =>
+        {
+            var cmdMap = new Dictionary<uint, IDynamicActionProvider>();
+            var subMap = new Dictionary<IntPtr, IDynamicActionProvider>();
+            List<ActionMenuItem>? dynamicItems = null;
+            try
+            {
+                var buildTask = Task.Run(
+                    () => ActionMenuBuilder.BuildDynamic(selectionSnapshot, IntPtr.Zero, windowType, cmdMap, subMap));
+                if (buildTask.Wait(2000))
+                    dynamicItems = buildTask.Result;
+                else
+                    Core.Logger.Log("[ShellMenuPresenter] Dynamic actions build exceeded 2s; keeping built-in actions only.", Core.LogLevel.Warn);
+            }
+            catch (Exception ex)
+            {
+                Core.Logger.Log($"[ShellMenuPresenter] Dynamic actions build failed: {ex.Message}", Core.LogLevel.Error);
+            }
+
+            System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!_isInActionsMode || generation != _actionsGeneration)
+                    return; // user exited actions mode or opened a newer menu
+                if (dynamicItems == null || dynamicItems.Count == 0)
+                    return; // timeout / failure / nothing to add — built-in actions stay
+
+                _commandToProviderMap.Clear();
+                foreach (var kv in cmdMap) _commandToProviderMap[kv.Key] = kv.Value;
+                _subMenuToProviderMap.Clear();
+                foreach (var kv in subMap) _subMenuToProviderMap[kv.Key] = kv.Value;
+
+                // Rebuild the static part on the UI thread (its vector icons may not be frozen) and
+                // append the dynamic items; re-render while preserving the current filter/selection.
+                var merged = ActionMenuBuilder.BuildStatic(_activeResults, GetWindowType());
+                merged.AddRange(dynamicItems);
+                _currentRawItems = ActionMenuBuilder.FinalizeItems(merged);
+                ApplyFilter(_view.SearchTextBox.Text);
+                _view.UpdateActionsLayout();
+            }));
+        });
     }
 
     private void LoadMenuItems(IntPtr hMenu)
