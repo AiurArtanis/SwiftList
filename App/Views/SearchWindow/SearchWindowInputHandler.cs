@@ -96,6 +96,13 @@ public class SearchWindowInputHandler
         return list;
     }
 
+    // Mouse events can originate from a non-Visual ContentElement (e.g. a highlight Run inside a result's
+    // name TextBlock); VisualTreeHelper.GetParent throws on those, so step to the content parent instead.
+    private static DependencyObject? VisualOrContentParent(DependencyObject dep)
+        => dep is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D
+            ? System.Windows.Media.VisualTreeHelper.GetParent(dep)
+            : (dep as FrameworkContentElement)?.Parent;
+
     public void HandleLstGridResultsMouseDoubleClick(MouseButtonEventArgs e)
     {
         var depObj = e.OriginalSource as DependencyObject;
@@ -106,7 +113,7 @@ public class SearchWindowInputHandler
                 return; // Ignore double clicks on column headers!
             }
 
-            depObj = System.Windows.Media.VisualTreeHelper.GetParent(depObj);
+            depObj = VisualOrContentParent(depObj);
         }
 
         if (depObj is ListViewItem item && item.Content is AppSearchResult result)
@@ -208,7 +215,7 @@ public class SearchWindowInputHandler
         var element = e.OriginalSource as DependencyObject;
         while (element != null && element is not ListViewItem)
         {
-            element = System.Windows.Media.VisualTreeHelper.GetParent(element);
+            element = VisualOrContentParent(element);
         }
 
         if (element is ListViewItem listViewItem && listViewItem.Content is AppSearchResult result)

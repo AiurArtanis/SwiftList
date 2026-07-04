@@ -76,8 +76,11 @@ public static class ResultsDragDropHelper
     private static object? GetItemData(object originalSource)
     {
         var dep = originalSource as DependencyObject;
+        // Walk up via GetParent (not VisualTreeHelper.GetParent directly): the press can land on a
+        // non-Visual ContentElement (e.g. a highlight Run inside the name TextBlock), which
+        // VisualTreeHelper.GetParent rejects with InvalidOperationException. GetParent handles both.
         while (dep != null && dep is not ListBoxItem)
-            dep = VisualTreeHelper.GetParent(dep);
+            dep = GetParent(dep);
         return (dep as ListBoxItem)?.DataContext;
     }
 
