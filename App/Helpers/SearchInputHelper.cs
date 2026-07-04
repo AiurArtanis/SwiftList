@@ -89,16 +89,14 @@ public static class SearchInputHelper
         return false;
     }
 
-    public static bool HandleCommonSearchKeys(System.Windows.Input.KeyEventArgs e, ISearchWindow window, ShellMenuPresenter? menuPresenter)
+    /// <summary>
+    /// Fires an action hotkey (e.g. Ctrl+C copy, Ctrl+Enter locate) on the selected result without
+    /// opening any menu — the always-available behavior the quick window has. Only runs when a modifier
+    /// is held and the actions menu is allowed for the selection, so plain typing pays no cost and
+    /// suppressed rows (apps / plugin results / ...) suppress the hotkeys too.
+    /// </summary>
+    public static bool TryActionHotkey(System.Windows.Input.KeyEventArgs e, ISearchWindow window, ShellMenuPresenter? menuPresenter)
     {
-        // 1. Actions Mode keys
-        if (HandleActionsModeKeys(e, window, menuPresenter))
-            return true;
-
-        // 1b. Action hotkeys — only when modifiers are held (no overhead for plain typing), and only
-        // where the actions menu itself is allowed to open. Scenarios that suppress the right-click
-        // menu (apps, instant/plugin results, adapters that opt out, inline file dialogs, ...) must
-        // suppress the hotkeys too, so gate on the same CanShowActionsMenu check.
         if (Keyboard.Modifiers != ModifierKeys.None
             && window.LstResults.SelectedItem is AppSearchResult selectedResult
             && menuPresenter != null
@@ -110,6 +108,18 @@ public static class SearchInputHelper
                 return true;
             }
         }
+        return false;
+    }
+
+    public static bool HandleCommonSearchKeys(System.Windows.Input.KeyEventArgs e, ISearchWindow window, ShellMenuPresenter? menuPresenter)
+    {
+        // 1. Actions Mode keys
+        if (HandleActionsModeKeys(e, window, menuPresenter))
+            return true;
+
+        // 1b. Action hotkeys on the selected item (Ctrl+C copy, Ctrl+Enter locate, ...).
+        if (TryActionHotkey(e, window, menuPresenter))
+            return true;
 
         // 2. QuickLook
         if (window.GetType().Name != "InlineSearchWindow" && IsQuickLookKey(e))

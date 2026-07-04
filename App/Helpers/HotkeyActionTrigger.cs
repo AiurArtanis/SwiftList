@@ -19,12 +19,25 @@ public static class HotkeyActionTrigger
         }
         catch { }
         if (selection.Count == 0) selection.Add(result);
-        var single = selection;
+
+        var windowType = GetWindowType(window);
+
+        // The full window is a persistent search app, so it stays open after a hotkey action; the
+        // quick/inline windows are dismiss-on-use launchers and hide first (also so an open/admin action
+        // that blocks on a UAC prompt doesn't keep the window up until the target launches).
+        return TryExecute(e, selection, window, windowType, hideOnRun: windowType != SearchWindowType.Main);
+    }
+
+    /// <summary>
+    /// Runs the action whose registered hotkey matches the key event, on the given selection/view. Used
+    /// both by the search windows and by the action flyout (quick-nav) so hotkeys work the same anywhere.
+    /// </summary>
+    public static bool TryExecute(System.Windows.Input.KeyEventArgs e, IReadOnlyList<AppSearchResult> selection, IPluginSearchWindow view, SearchWindowType windowType, bool hideOnRun)
+    {
+        if (selection == null || selection.Count == 0 || view == null) return false;
 
         var key = WpfUiHelper.GetActualKey(e);
         var modifiers = Keyboard.Modifiers;
-
-        var windowType = GetWindowType(window);
 
         foreach (var registration in PluginManager.Instance.Actions)
         {
@@ -36,12 +49,10 @@ public static class HotkeyActionTrigger
             {
                 if (key == hotkeyKey && modifiers == hotkeyMods)
                 {
-                    if (action.IsVisibleInMenu(single, windowType) && action.CanExecute(single))
+                    if (action.IsVisibleInMenu(selection, windowType) && action.CanExecute(selection))
                     {
-                        // Dismiss first, then run: an open/admin action can block on the UAC prompt, and
-                        // hiding afterwards would keep the window up until the target actually launches.
-                        window.HideWindow();
-                        action.Execute(single, window);
+                        if (hideOnRun) view.HideWindow();
+                        action.Execute(selection, view);
                         return true;
                     }
                 }
@@ -51,12 +62,12 @@ public static class HotkeyActionTrigger
         // Also check dynamic providers (e.g. CustomActions plugin)
         foreach (var provider in PluginManager.Instance.DynamicProviders)
         {
-            foreach (var (hotkey, execute) in provider.GetHotkeyActions(single))
+            foreach (var (hotkey, execute) in provider.GetHotkeyActions(selection))
             {
                 if (ParseHotkey(hotkey, out var hotkeyKey, out var hotkeyMods)
                     && key == hotkeyKey && modifiers == hotkeyMods)
                 {
-                    window.HideWindow();
+                    if (hideOnRun) view.HideWindow();
                     execute();
                     return true;
                 }

@@ -215,6 +215,34 @@ public static class QuickNavigationMenu
 
         menuItem.PreviewKeyDown += (s, e) =>
         {
+            // Action hotkeys (Ctrl+C, Ctrl+Enter, ...) fire directly on the highlighted item without
+            // opening its action menu — like the full window's result list. Gated to real file/folder
+            // items (same places the action menu is allowed), so nav categories don't respond.
+            if (menuItem.IsFocused && enableRightClick && canNavigate && !string.IsNullOrEmpty(itemPath)
+                && System.Windows.Input.Keyboard.Modifiers != System.Windows.Input.ModifierKeys.None)
+            {
+                var hotkeySelection = new[]
+                {
+                    new AppSearchResult
+                    {
+                        FullPath = itemPath!,
+                        Name = Path.GetFileName(itemPath),
+                        IsDir = item.HasSubMenu || Directory.Exists(itemPath),
+                        ContextDirectory = Directory.Exists(itemPath) ? itemPath! : (Path.GetDirectoryName(itemPath) ?? string.Empty)
+                    }
+                };
+                var shim = new QuickNavShimView(() =>
+                {
+                    contextMenu.IsOpen = false;
+                    (contextMenu.PlacementTarget as Window)?.Hide();
+                });
+                if (Helpers.HotkeyActionTrigger.TryExecute(e, hotkeySelection, shim, SearchWindowType.Main, hideOnRun: true))
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+
             if ((e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Return) && menuItem.IsFocused)
             {
                 e.Handled = true;

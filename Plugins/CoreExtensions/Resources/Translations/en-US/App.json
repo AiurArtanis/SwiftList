@@ -197,7 +197,7 @@
   "Search_Title": "SwiftList Search",
   "Search_Total": "{0:N0} items",
   "Search_StatusText": "MFT/USN Local Drive Service Connected",
-  "Search_HintKeyboard": "Click to open · Enter to open · ↑↓ Select",
+  "Search_HintKeyboard": "Double-click to open · Enter to open · ↑↓ Select",
   "QuickSearch_Placeholder": "Type to search...",
   "QuickSearch_OpenMore": "Open full search window",
   "Search_DragTooltip": "Click and drag to move the window",

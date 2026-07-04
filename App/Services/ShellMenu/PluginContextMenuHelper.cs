@@ -2,13 +2,16 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Interop;
+using SwiftList.App.Helpers;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
-using MenuItem = System.Windows.Controls.MenuItem; using ContextMenu = System.Windows.Controls.ContextMenu;
-using StackPanel = System.Windows.Controls.StackPanel; using Border = System.Windows.Controls.Border;
+using MenuItem = System.Windows.Controls.MenuItem;
+using ContextMenu = System.Windows.Controls.ContextMenu;
+using StackPanel = System.Windows.Controls.StackPanel;
+using Border = System.Windows.Controls.Border;
 using Application = System.Windows.Application;
-using ItemsPanelTemplate = System.Windows.Controls.ItemsPanelTemplate; using KeyEventHandler = System.Windows.Input.KeyEventHandler;
+using ItemsPanelTemplate = System.Windows.Controls.ItemsPanelTemplate;
+using KeyEventHandler = System.Windows.Input.KeyEventHandler;
 
 namespace SwiftList.App.Services;
 
@@ -111,49 +114,20 @@ public static class PluginContextMenuHelper
         template.VisualTree = factory;
         rightClickMenu.ItemsPanel = template;
 
-        // Hide the quick-nav menu (used by built-in actions' HideWindow and after any item runs).
-        Action hideMenu = () =>
+        // Close the whole quick-nav menu when an action runs or a built-in action calls HideWindow.
+        Action closeFlyout = () =>
         {
+            _currentRightClickPopup?.IsOpen = false;
             contextMenu.IsOpen = false;
             (contextMenu.PlacementTarget as Window)?.Hide();
         };
-        var view = new QuickNavShimView(hideMenu);
-
-        var menuItems = new List<MenuItem>();
-        var highlightedIndex = -1;
+        var view = new QuickNavShimView(closeFlyout);
         var flyoutStyle = (Style)Application.Current.FindResource("ActionFlyoutMenuItemStyle");
 
-        foreach (var item in finalItems)
-        {
-            if (item.IsSectionHeader || item.IsSeparator)
-            {
-                // Group headers and separators are rendered by the exact same style/template as the list,
-                // so they look pixel-identical. Disabled + non-hit-testable so navigation skips them
-                // (GetActiveMenuState filters on IsEnabled; no hit-test means no hover highlight).
-                rightClickMenu.Items.Add(CreateNonInteractiveItem(item, flyoutStyle));
-                continue;
-            }
-
-            var mItem = CreateActionItem(item, selection, cmdMap, subMap, contextMenu, view, flyoutStyle);
-            menuItems.Add(mItem);
-
-            mItem.MouseEnter += (s, ev) =>
-            {
-                foreach (var child in rightClickMenu.Items)
-                {
-                    if (child is MenuItem childItem && childItem != mItem && childItem.IsSubmenuOpen)
-                    {
-                        childItem.IsSubmenuOpen = false;
-                    }
-                }
-                if (mItem.HasItems && !mItem.IsSubmenuOpen)
-                {
-                    mItem.IsSubmenuOpen = true;
-                }
-            };
-
-            rightClickMenu.Items.Add(mItem);
-        }
+        // Render via the shared core so this menu and the full-window flyout never drift in content.
+        var menuItems = ActionFlyoutItems.PopulateMenu(
+            rightClickMenu, finalItems, selection, cmdMap, subMap, MenuWindowType, view, flyoutStyle, closeFlyout);
+        var highlightedIndex = -1;
 
         if (menuItems.Count > 0)
         {
@@ -257,6 +231,16 @@ public static class PluginContextMenuHelper
             KeyEventHandler? keyHandler = (s, ev) =>
             {
                 if (_currentRightClickPopup == null || !_currentRightClickPopup.IsOpen || isHighlightedKey == null) return;
+
+                // Registered action hotkeys (Ctrl+C, Ctrl+Enter, ...) fire on the item while the flyout is
+                // open too; hideOnRun closes the whole quick-nav menu afterward.
+                if (Keyboard.Modifiers != ModifierKeys.None
+                    && HotkeyActionTrigger.TryExecute(ev, selection, view, MenuWindowType, hideOnRun: true))
+                {
+                    ev.Handled = true;
+                    return;
+                }
+
                 var state = PluginContextMenuBuilder.GetActiveMenuState(rightClickMenu, isHighlightedKey);
                 if (state.items.Count == 0) return;
 
@@ -360,110 +344,6 @@ public static class PluginContextMenuHelper
         else
         {
             QuickNavigationMenu.IsShowingShellMenu = false;
-        }
-    }
-
-    // A section header / separator row: same style + template as the actions list, but disabled and
-    // non-hit-testable so it is purely visual and skipped by navigation. The ActionMenuItem is both the
-    // DataContext (for Height) and the Header (rendered by ActionMenuItemTemplate).
-    private static MenuItem CreateNonInteractiveItem(ActionMenuItem item, Style flyoutStyle)
-    {
-        item.IsCompact = true;
-        return new MenuItem
-        {
-            Style = flyoutStyle,
-            DataContext = item,
-            Header = item,
-            Height = Math.Round(item.ItemHeight * 0.8),
-            IsEnabled = false,
-            IsHitTestVisible = false
-        };
-    }
-
-    // Renders one ActionMenuItem as a flyout MenuItem that looks identical to a list row (icon, text,
-    // hotkey hint, submenu arrow all come from ActionMenuItemTemplate). Shell submenus lazy-load via the
-    // shared ActionMenuBuilder; a leaf's click runs the action the same way the list does.
-    private static MenuItem CreateActionItem(
-        ActionMenuItem item,
-        IReadOnlyList<AppSearchResult> selection,
-        Dictionary<uint, IDynamicActionProvider> cmdMap,
-        Dictionary<IntPtr, IDynamicActionProvider> subMap,
-        ContextMenu contextMenu,
-        IPluginSearchWindow view,
-        Style flyoutStyle)
-    {
-        item.IsCompact = true;
-        var menuItem = new MenuItem
-        {
-            Style = flyoutStyle,
-            DataContext = item,
-            Header = item,
-            Height = Math.Round(item.ItemHeight * 0.8),
-            IsEnabled = !item.IsDisabled
-        };
-
-        if (item.HasSubMenu && item.SubMenuHandle != IntPtr.Zero)
-        {
-            menuItem.Items.Add(CreateNonInteractiveItem(new ActionMenuItem { Text = "Loading..." }, flyoutStyle));
-            var loaded = false;
-            menuItem.SubmenuOpened += (s, e) =>
-            {
-                if (loaded) return;
-                loaded = true;
-                menuItem.Items.Clear();
-                foreach (var subItem in ActionMenuBuilder.Build(selection, item.SubMenuHandle, MenuWindowType, cmdMap, subMap))
-                {
-                    menuItem.Items.Add(subItem.IsSectionHeader || subItem.IsSeparator
-                        ? CreateNonInteractiveItem(subItem, flyoutStyle)
-                        : CreateActionItem(subItem, selection, cmdMap, subMap, contextMenu, view, flyoutStyle));
-                }
-            };
-        }
-        else
-        {
-            menuItem.Click += (s, e) =>
-            {
-                if (e.Source != menuItem) return;
-                _currentRightClickPopup?.IsOpen = false;
-                contextMenu.IsOpen = false;
-                (contextMenu.PlacementTarget as Window)?.Hide();
-                Application.Current.Dispatcher.BeginInvoke(
-                    new Action(() => DispatchExecute(item, selection, cmdMap, view)),
-                    System.Windows.Threading.DispatcherPriority.Background);
-            };
-        }
-
-        return menuItem;
-    }
-
-    // Runs an item exactly like ShellMenuPresenter.ExecuteSelectedAction's non-navigation branches:
-    // direct delegate, built-in SwiftList action, or dynamic (shell) provider command. Content parity
-    // with the actions list is guaranteed upstream by sharing ActionMenuBuilder.
-    private static void DispatchExecute(
-        ActionMenuItem item,
-        IReadOnlyList<AppSearchResult> selection,
-        Dictionary<uint, IDynamicActionProvider> cmdMap,
-        IPluginSearchWindow view)
-    {
-        if (item.OnExecute != null)
-        {
-            item.OnExecute();
-            return;
-        }
-
-        var registration = PluginManager.Instance.GetActionByRuntimeId(item.CommandId);
-        if (registration != null)
-        {
-            registration.Action.Execute(selection, view);
-            return;
-        }
-
-        if (cmdMap.TryGetValue(item.CommandId, out var provider))
-        {
-            var hwnd = Application.Current.MainWindow != null
-                ? new WindowInteropHelper(Application.Current.MainWindow).Handle
-                : IntPtr.Zero;
-            provider.ExecuteCommand(selection, item.CommandId, hwnd);
         }
     }
 

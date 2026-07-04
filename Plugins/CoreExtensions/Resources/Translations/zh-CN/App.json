@@ -197,7 +197,7 @@
   "Search_Title": "SwiftList 搜索",
   "Search_Total": "{0:N0} 个项目",
   "Search_StatusText": "MFT/USN 本地驱动器服务已连接",
-  "Search_HintKeyboard": "单击打开 · Enter 打开 · ↑↓ 选择",
+  "Search_HintKeyboard": "双击打开 · Enter 打开 · ↑↓ 选择",
   "QuickSearch_Placeholder": "输入以搜索...",
   "QuickSearch_OpenMore": "打开完整搜索窗口",
   "Search_DragTooltip": "按住拖动以调整窗口位置",

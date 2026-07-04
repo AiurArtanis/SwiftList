@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using SwiftList.App.Services;
 using SwiftList.Core;
@@ -16,6 +17,15 @@ public class SearchWindowInputHandler
 
     public void HandleWindowPreviewKeyDown(KeyEventArgs e)
     {
+        // While the action flyout is open it owns navigation; still let action hotkeys fire on the item
+        // (Ctrl+C etc.), then stand down so arrows/enter drive the flyout, not the result list behind it.
+        if (ActionFlyout.IsOpen)
+        {
+            if (SearchInputHelper.TryActionHotkey(e, _window, _window.MenuPresenter))
+                ActionFlyout.Close();
+            return;
+        }
+
         if (SearchInputHelper.HandleCommonSearchKeys(e, _window, _window.MenuPresenter))
             return;
 
@@ -43,31 +53,9 @@ public class SearchWindowInputHandler
             return;
         }
 
-        // Right arrow key enters Actions Mode if caret is at the end
-        if (e.Key == Key.Right && IsSearchCaretAtEnd())
-        {
-            if (_window.LstGridResultsControl.SelectedItem is AppSearchResult result)
-            {
-                _window.MenuPresenter?.EnterActionsMode(GetSelectedResults());
-                e.Handled = true;
-                return;
-            }
-        }
-
-        var selectIndexMod = UserSettings.Load().SelectIndexModifier;
-        if (Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(selectIndexMod))
-        {
-            var actualKey = WpfUiHelper.GetActualKey(e);
-            if (actualKey == Key.O)
-            {
-                if (_window.LstGridResultsControl.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
-                {
-                    _window.MenuPresenter?.EnterActionsMode(GetSelectedResults());
-                    e.Handled = true;
-                    return;
-                }
-            }
-        }
+        // The action menu opens on right-click only. Keyboard access to actions is via the registered
+        // action hotkeys (Ctrl+C, Ctrl+Enter, ...), handled directly on the item by HandleCommonSearchKeys
+        // above — no menu needed.
     }
 
     public void HandleTxtSearchBoxKeyDown(KeyEventArgs e)
@@ -231,9 +219,40 @@ public class SearchWindowInputHandler
             if (!_window.LstGridResultsControl.SelectedItems.Contains(result))
                 _window.LstGridResultsControl.SelectedItem = result;
 
-            // Trigger the shared premium actions context menu panel overlay
-            _window.MenuPresenter.EnterActionsMode(GetSelectedResults());
+            // Show the action flyout at the cursor, anchored to the right-clicked row.
+            ShowActionFlyout(PlacementMode.MousePoint, listViewItem);
         }
+    }
+
+    // Opens the action flyout for the current selection. Gated by the same CanShowActionsMenu check the
+    // old in-window actions panel used, so apps / plugin results / empty rows still suppress it.
+    private void ShowActionFlyout(PlacementMode placement, UIElement? anchor = null)
+    {
+        var selection = GetSelectedResults();
+        if (_window.MenuPresenter?.CanShowActionsMenu(selection) != true)
+            return;
+
+        if (anchor == null)
+        {
+            // Keyboard-triggered: anchor to the selected row's container. Realize it first (scroll into
+            // view) so the popup lands on-screen; if it still isn't realized, fall back to the search box
+            // so the flyout is always visible instead of anchoring off the bottom of the list.
+            var lst = _window.LstGridResultsControl;
+            var selected = lst.SelectedItem;
+            if (selected != null)
+            {
+                lst.ScrollIntoView(selected);
+                lst.UpdateLayout();
+            }
+            anchor = lst.ItemContainerGenerator.ContainerFromItem(selected) as UIElement;
+            if (anchor == null)
+            {
+                anchor = _window.TxtSearchBoxControl;
+                placement = PlacementMode.Bottom;
+            }
+        }
+
+        ActionFlyout.Show(selection, _window, _window, anchor, placement);
     }
 
     private bool IsSearchCaretAtEnd() => _window.TxtSearchBoxControl.IsKeyboardFocusWithin
