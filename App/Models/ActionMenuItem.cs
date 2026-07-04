@@ -20,6 +20,10 @@ public class ActionMenuItem
 
     public double ItemHeight { get; set; } = Services.UiMetrics.ListItemHeight;
 
+    // Set for the quick-nav flyout so it renders at the compact shell-menu size (smaller font + shorter
+    // rows) instead of the roomy full-window list size, while keeping the same layout and colors.
+    public bool IsCompact { get; set; }
+
     // Base content sizes (match ActionMenuItem.xaml) and their scaled variants, used only by
     // the quick window so its action list scales with the configured search box height.
     private const double BaseIconSize = 16;

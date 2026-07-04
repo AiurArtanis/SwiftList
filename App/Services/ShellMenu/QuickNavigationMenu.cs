@@ -34,7 +34,9 @@ public static class QuickNavigationMenu
             if (!provider.CanProvide(dummyResult)) continue;
             provider.ClearSession();
             foreach (var item in provider.GetMenuItems(dummyResult, IntPtr.Zero))
-                contextMenu.Items.Add(item.IsSeparator ? new Separator() : CreateMenuItem(item, dummyResult, provider, contextMenu));
+                // Root entries are navigation categories (Favorites/History/drives), so don't attach the
+                // right-click action flyout here; only real files/folders in deeper levels get it.
+                contextMenu.Items.Add(item.IsSeparator ? new Separator() : CreateMenuItem(item, dummyResult, provider, contextMenu, enableRightClick: false));
         }
 
         if (contextMenu.Items.Count == 0) return;
@@ -100,7 +102,7 @@ public static class QuickNavigationMenu
         contextMenu.IsOpen = true;
     }
 
-    private static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu)
+    private static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, bool enableRightClick = true)
     {
         var menuItem = new MenuItem { Header = item.Text, IsEnabled = !item.IsDisabled, Focusable = !item.IsDisabled };
 
@@ -181,16 +183,19 @@ public static class QuickNavigationMenu
             }), System.Windows.Threading.DispatcherPriority.Background);
         };
 
-        Action triggerRightClickAction = () => PluginContextMenuHelper.Show(canNavigate, itemPath, item.HasSubMenu, menuItem, contextMenu);
-
-        menuItem.AddHandler(UIElement.PreviewMouseRightButtonUpEvent, new MouseButtonEventHandler((s, e) =>
+        if (enableRightClick)
         {
-            if (FindVisualParent<MenuItem>(e.OriginalSource as DependencyObject) == menuItem)
+            Action triggerRightClickAction = () => PluginContextMenuHelper.Show(canNavigate, itemPath, item.HasSubMenu, menuItem, contextMenu);
+
+            menuItem.AddHandler(UIElement.PreviewMouseRightButtonUpEvent, new MouseButtonEventHandler((s, e) =>
             {
-                e.Handled = true;
-                triggerRightClickAction();
-            }
-        }), handledEventsToo: true);
+                if (FindVisualParent<MenuItem>(e.OriginalSource as DependencyObject) == menuItem)
+                {
+                    e.Handled = true;
+                    triggerRightClickAction();
+                }
+            }), handledEventsToo: true);
+        }
 
         if (item.HasSubMenu && item.SubMenuHandle != IntPtr.Zero)
         {
