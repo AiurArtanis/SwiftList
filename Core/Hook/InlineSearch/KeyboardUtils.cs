@@ -163,20 +163,31 @@ internal static class KeyboardUtils
         }
     }
 
-    public static bool IsChineseImeActive(IntPtr fgHwnd)
+    // True when the foreground window's IME is actively composing (open AND in native conversion mode),
+    // for any IME language. Open status alone is unreliable: TSF IMEs (MS Pinyin, Rime, ...) report open
+    // even in English mode, so their open status only means "IME on", not "composing". The conversion
+    // mode's CMODE_NATIVE bit (set for Chinese/kana input, cleared for English/alphanumeric) is what
+    // actually distinguishes it. Runs inside the low-level keyboard hook, so both queries use
+    // SendMessageTimeout with a small timeout to never stall the callback.
+    public static bool IsImeActive(IntPtr fgHwnd)
     {
         if (fgHwnd == IntPtr.Zero) return false;
-        var fgThread = KeyboardNativeMethods.GetWindowThreadProcessId(fgHwnd, out _);
-        if (fgThread != 0)
-        {
-            var hkl = KeyboardNativeMethods.GetKeyboardLayout(fgThread);
-            var langId = (int)((long)hkl & 0xFFFF);
-            if (langId == 0x0804 || langId == 0x0404 || langId == 0x0C04 || langId == 0x1004 || langId == 0x1404)
-            {
-                return true;
-            }
-        }
-        return false;
+        var hImeWnd = KeyboardNativeMethods.ImmGetDefaultIMEWnd(fgHwnd);
+        if (hImeWnd == IntPtr.Zero) return false;
+
+        // Must be open (IME turned on).
+        if (KeyboardNativeMethods.SendMessageTimeout(hImeWnd, KeyboardNativeMethods.WM_IME_CONTROL,
+                (IntPtr)KeyboardNativeMethods.IMC_GETOPENSTATUS, IntPtr.Zero,
+                KeyboardNativeMethods.SMTO_ABORTIFHUNG, 40, out var open) == IntPtr.Zero || open == IntPtr.Zero)
+            return false;
+
+        // ...and in native (Chinese/kana) conversion mode. English/alphanumeric mode clears CMODE_NATIVE.
+        // If the mode can't be read, fall back to the (conservative) open-status result.
+        if (KeyboardNativeMethods.SendMessageTimeout(hImeWnd, KeyboardNativeMethods.WM_IME_CONTROL,
+                (IntPtr)KeyboardNativeMethods.IMC_GETCONVERSIONMODE, IntPtr.Zero,
+                KeyboardNativeMethods.SMTO_ABORTIFHUNG, 40, out var conv) == IntPtr.Zero)
+            return true;
+        return (conv.ToInt64() & KeyboardNativeMethods.IME_CMODE_NATIVE) != 0;
     }
 
     public static char GetUnicodeChar(KeyboardNativeMethods.KBDLLHOOKSTRUCT hookStruct)

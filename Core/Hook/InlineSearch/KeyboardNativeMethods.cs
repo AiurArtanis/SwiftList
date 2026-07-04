@@ -32,6 +32,12 @@ internal static class KeyboardNativeMethods
     [DllImport("user32.dll")]
     public static extern IntPtr GetKeyboardLayout(uint idThread);
 
+    [DllImport("imm32.dll")]
+    public static extern IntPtr ImmGetDefaultIMEWnd(IntPtr hWnd);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam, uint fuFlags, uint uTimeout, out IntPtr lpdwResult);
+
     [DllImport("user32.dll")]
     public static extern int ToUnicode(uint wVirtKey, uint wScanCode, byte[] lpKeyState,
         [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pwszBuff, int cchBuff, uint wFlags);
@@ -103,6 +109,12 @@ internal static class KeyboardNativeMethods
     public const int VK_LEFT = 0x25;
     public const int VK_RIGHT = 0x27;
     public const int VK_PROCESSKEY = 0xE5;
+
+    public const uint WM_IME_CONTROL = 0x0283;
+    public const uint IMC_GETOPENSTATUS = 0x0005;
+    public const uint IMC_GETCONVERSIONMODE = 0x0001;
+    public const int IME_CMODE_NATIVE = 0x0001;
+    public const uint SMTO_ABORTIFHUNG = 0x0002;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct KBDLLHOOKSTRUCT

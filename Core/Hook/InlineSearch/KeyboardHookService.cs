@@ -251,20 +251,29 @@ public class KeyboardHookService : IDisposable
                                 (vkCode >= 0x30 && vkCode <= 0x39) ||
                                 (vkCode >= 0x60 && vkCode <= 0x69);
 
-            if (isTriggerKey && !IsInlineSearchVisible)
+            if (isTriggerKey)
             {
-                var isChineseImeActive = KeyboardUtils.IsChineseImeActive(fgHwnd);
-
-                if (isChineseImeActive || vkCode == KeyboardNativeMethods.VK_PROCESSKEY)
+                // When an IME is composing, ignore what/how many keys are pressed: just pop the (empty)
+                // inline window and keep swallowing keys until focus is taken. Never let them through to
+                // the host window (which would drive the system's default IME composition popup instead).
+                var imeOn = vkCode == KeyboardNativeMethods.VK_PROCESSKEY || KeyboardUtils.IsImeActive(fgHwnd);
+                if (imeOn)
                 {
-                    OnCharacterTyped?.Invoke('\0');
+                    if (!IsInlineSearchVisible)
+                    {
+                        OnCharacterTyped?.Invoke('\0');
+                    }
+                    return true;
                 }
-                else
+
+                if (!IsInlineSearchVisible)
                 {
+                    // No IME: inject the first typed character as before; later keys go to the focused box.
                     var ch = KeyboardUtils.GetUnicodeChar(hookStruct);
                     OnCharacterTyped?.Invoke(ch);
+                    return true;
                 }
-                return true;
+                return false;
             }
         }
         return false;
