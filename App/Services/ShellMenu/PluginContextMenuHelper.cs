@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using SwiftList.PluginSdk.Abstractions.Plugins;
 using MenuItem = System.Windows.Controls.MenuItem; using ContextMenu = System.Windows.Controls.ContextMenu;
 using StackPanel = System.Windows.Controls.StackPanel; using Border = System.Windows.Controls.Border;
 using Separator = System.Windows.Controls.Separator; using Application = System.Windows.Application;
@@ -13,19 +14,83 @@ public static class PluginContextMenuHelper
 {
     private static Popup? _currentRightClickPopup;
 
+    // Each Show() call bumps this. The off-thread gather marshals back with its captured value; a newer
+    // Show (rapid right-clicks) or a close invalidates a stale build so it never pops a wrong popup.
+    private static int _showGeneration;
+
     public static void Show(bool canNavigate, string? itemPath, bool hasSubMenu, MenuItem menuItem, ContextMenu contextMenu)
     {
         if (!canNavigate || string.IsNullOrEmpty(itemPath)) return;
 
         QuickNavigationMenu.IsShowingShellMenu = true;
 
+        // Close any popup still open from a previous right-click before starting a new one.
+        _currentRightClickPopup?.IsOpen = false;
+
+        var generation = ++_showGeneration;
         var dummyResult = new AppSearchResult { FullPath = itemPath, Name = Path.GetFileName(itemPath), IsDir = hasSubMenu || Directory.Exists(itemPath) };
+
+        // Gather the shell items OFF the UI thread with a 2s cap (mirrors ShellMenuPresenter). The
+        // provider enumeration hops to the shell STA worker internally and used to block the UI thread
+        // here — a slow shell extension would freeze the whole app. Build the popup only once data is
+        // ready, back on the UI thread.
+        _ = Task.Run(() =>
+        {
+            var gathered = new List<(IDynamicActionProvider provider, List<DynamicMenuItem> items)>();
+            try
+            {
+                var buildTask = Task.Run(() =>
+                {
+                    var list = new List<(IDynamicActionProvider provider, List<DynamicMenuItem> items)>();
+                    foreach (var provider in PluginManager.Instance.DynamicProviders)
+                    {
+                        if (provider.Keywords.Count > 0) continue;
+                        if (!provider.CanProvide(new[] { dummyResult })) continue;
+
+                        provider.ClearSession();
+                        var items = new List<DynamicMenuItem>(provider.GetMenuItems(new[] { dummyResult }, IntPtr.Zero));
+                        if (items.Count > 0) list.Add((provider, items));
+                    }
+                    return list;
+                });
+
+                if (buildTask.Wait(2000))
+                    gathered = buildTask.Result;
+                else
+                    Core.Logger.Log("[PluginContextMenuHelper] Shell menu build exceeded 2s; skipping popup.", Core.LogLevel.Warn);
+            }
+            catch (Exception ex)
+            {
+                Core.Logger.Log($"[PluginContextMenuHelper] Shell menu build failed: {ex.Message}", Core.LogLevel.Error);
+            }
+
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                // Stale (a newer Show ran) or the owning menu is gone — don't pop.
+                if (generation != _showGeneration || !contextMenu.IsOpen || gathered.Count == 0)
+                {
+                    if (generation == _showGeneration)
+                        QuickNavigationMenu.IsShowingShellMenu = false;
+                    return;
+                }
+
+                BuildAndShowPopup(gathered, dummyResult, menuItem, contextMenu);
+            }));
+        });
+    }
+
+    private static void BuildAndShowPopup(
+        List<(IDynamicActionProvider provider, List<DynamicMenuItem> items)> gathered,
+        AppSearchResult dummyResult,
+        MenuItem menuItem,
+        ContextMenu contextMenu)
+    {
         var rightClickMenu = new System.Windows.Controls.Menu
         {
             Background = System.Windows.Media.Brushes.Transparent,
             Focusable = false
         };
-        
+
         var template = new ItemsPanelTemplate();
         var factory = new FrameworkElementFactory(typeof(StackPanel));
         factory.SetValue(System.Windows.Controls.Panel.IsItemsHostProperty, true);
@@ -36,43 +101,37 @@ public static class PluginContextMenuHelper
         var highlightedIndex = -1;
 
         var addedTexts = new HashSet<string>();
-        foreach (var provider in PluginManager.Instance.DynamicProviders)
+        foreach (var (provider, dynamicItems) in gathered)
         {
-            if (provider.Keywords.Count > 0) continue;
-            if (provider.CanProvide(new[] { dummyResult }))
+            foreach (var subItem in dynamicItems)
             {
-                provider.ClearSession();
-                var dynamicItems = provider.GetMenuItems(new[] { dummyResult }, IntPtr.Zero);
-                foreach (var subItem in dynamicItems)
+                if (subItem.IsSeparator)
                 {
-                    if (subItem.IsSeparator)
+                    rightClickMenu.Items.Add(new Separator());
+                }
+                else
+                {
+                    if (addedTexts.Add(subItem.Text))
                     {
-                        rightClickMenu.Items.Add(new Separator());
-                    }
-                    else
-                    {
-                        if (addedTexts.Add(subItem.Text))
+                        var mItem = PluginContextMenuBuilder.CreateActionMenuItem(subItem, dummyResult, provider, null, isFocusable: false);
+                        menuItems.Add(mItem);
+
+                        mItem.MouseEnter += (s, ev) =>
                         {
-                            var mItem = PluginContextMenuBuilder.CreateActionMenuItem(subItem, dummyResult, provider, null, isFocusable: false);
-                            menuItems.Add(mItem);
-                            
-                            mItem.MouseEnter += (s, ev) =>
+                            foreach (var child in rightClickMenu.Items)
                             {
-                                foreach (var child in rightClickMenu.Items)
+                                if (child is MenuItem childItem && childItem != mItem && childItem.IsSubmenuOpen)
                                 {
-                                    if (child is MenuItem childItem && childItem != mItem && childItem.IsSubmenuOpen)
-                                    {
-                                        childItem.IsSubmenuOpen = false;
-                                    }
+                                    childItem.IsSubmenuOpen = false;
                                 }
-                                if (mItem.HasItems && !mItem.IsSubmenuOpen)
-                                {
-                                    mItem.IsSubmenuOpen = true;
-                                }
-                            };
-                            
-                            rightClickMenu.Items.Add(mItem);
-                        }
+                            }
+                            if (mItem.HasItems && !mItem.IsSubmenuOpen)
+                            {
+                                mItem.IsSubmenuOpen = true;
+                            }
+                        };
+
+                        rightClickMenu.Items.Add(mItem);
                     }
                 }
             }
@@ -158,7 +217,7 @@ public static class PluginContextMenuHelper
             {
                 if (_currentRightClickPopup != null && _currentRightClickPopup.IsOpen)
                 {
-                    Application.Current.Dispatcher.BeginInvoke(new Action(() => 
+                    Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                     {
                         if (_currentRightClickPopup != null && _currentRightClickPopup.IsOpen && isHighlightedKey != null)
                             menuItem.SetValue(isHighlightedKey, true);

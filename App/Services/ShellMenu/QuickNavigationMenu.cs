@@ -82,6 +82,18 @@ public static class QuickNavigationMenu
                 App.HookClient.OnMouseMiddleClick -= clickOutsideHandler;
             }
             helperWin.Close();
+
+            // Release everything the menu pulled in so memory falls back immediately on close: dispose the
+            // shell COM sessions (they own the native HMENU/HBITMAPs), drop the icon cache, then return
+            // the freed pages to the OS. Deferred + off the UI thread so WPF first tears down the menu
+            // visual tree (matching QuickSearch's hide path); otherwise the GC still sees it referenced.
+            foreach (var provider in PluginManager.Instance.QuickNavigationProviders) provider.ClearSession();
+            foreach (var provider in PluginManager.Instance.DynamicProviders) provider.ClearSession();
+            _ = Task.Delay(100).ContinueWith(_ =>
+            {
+                try { ShellIconHelper.ClearCache(); } catch { }
+                try { Core.Win32Api.TrimWorkingSet(); } catch { }
+            });
         };
 
         contextMenu.Opened += (s, e) => contextMenu.Focus();
