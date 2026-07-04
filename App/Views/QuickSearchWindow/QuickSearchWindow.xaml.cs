@@ -173,19 +173,24 @@ public partial class QuickSearchWindow : Window, ISearchWindow
     public void LocateInExplorerExternal(string path) => FileExecutor.LocateInExplorer(path);
     public static T? FindVisualParentExternal<T>(DependencyObject? child) where T : DependencyObject => FindVisualParent<T>(child);
 
-    private void Window_Deactivated(object sender, EventArgs e) => Dispatcher.BeginInvoke(new Action(() =>
-                                                                        {
-                                                                            if (!IsActive)
-                                                                            {
-                                                                                // ponytail: do not hide if there are visible owned windows (e.g. crash MessageBox dialog)
-                                                                                foreach (Window owned in OwnedWindows)
-                                                                                {
-                                                                                    if (owned.IsVisible) return;
-                                                                                }
-                                                                                _controller.HideWindow();
-                                                                            }
-
-                                                                        }), DispatcherPriority.Background);
+    private void Window_Deactivated(object sender, EventArgs e)
+    {
+        // A transient foreground steal can deactivate us mid-typing -- e.g. reading a \\wsl$ result's icon
+        // or modified date on a background thread wakes the WSL VM, whose cold start briefly flashes a
+        // conhost that grabs the foreground. Wait a moment and only hide if still inactive, so focus that
+        // bounces right back doesn't drop the search window.
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        timer.Tick += (s, _) =>
+        {
+            timer.Stop();
+            if (IsActive) return;
+            // Do not hide if there are visible owned windows (e.g. a crash MessageBox dialog).
+            foreach (Window owned in OwnedWindows)
+                if (owned.IsVisible) return;
+            _controller.HideWindow();
+        };
+        timer.Start();
+    }
 
     private void Border_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {

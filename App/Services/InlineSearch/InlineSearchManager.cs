@@ -81,7 +81,7 @@ public class InlineSearchManager : IDisposable
                 }
             }));
 
-        _explorerTracker.OnExplorerDeactivated += () => Application.Current.Dispatcher.BeginInvoke(new Action(() => CloseInlineSearch("ExplorerDeactivated")));
+        _explorerTracker.OnExplorerDeactivated += () => Application.Current.Dispatcher.BeginInvoke(new Action(ScheduleCloseOnExplorerDeactivated));
 
         _explorerTracker.OnError += (msg) => Logger.Log($"[InlineSearchManager] ExplorerTracker error: {msg}", LogLevel.Error);
 
@@ -211,6 +211,27 @@ public class InlineSearchManager : IDisposable
     }
 
     public bool IsExecuting { get; set; }
+
+    // A transient foreground steal fires ExplorerDeactivated and would instantly close the inline window
+    // mid-typing -- e.g. reading a \\wsl$ result's icon/date on a background thread wakes the WSL VM, whose
+    // cold start briefly flashes a conhost that grabs the foreground. Wait a moment and only close if the
+    // foreground really left both Explorer and this window (i.e. it didn't just bounce back).
+    private void ScheduleCloseOnExplorerDeactivated()
+    {
+        if (_window == null) return;
+        var timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(200) };
+        timer.Tick += (s, e) =>
+        {
+            timer.Stop();
+            if (_window == null) return;
+            if (_explorerTracker.IsExplorerOrDesktopActive) return; // focus bounced back to Explorer/Desktop
+            var fg = InlineSearchWindowNativeMethods.GetForegroundWindow();
+            var self = new System.Windows.Interop.WindowInteropHelper(_window).Handle;
+            if (fg == self) return; // focus bounced back to the inline window itself
+            CloseInlineSearch("ExplorerDeactivated");
+        };
+        timer.Start();
+    }
 
     public void CloseInlineSearch(string reason = "Unknown")
     {
