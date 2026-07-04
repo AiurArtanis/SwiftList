@@ -50,14 +50,14 @@ public class InlineSearchWindowPositioner
         }
 
         // Window height is fixed at 550 logical pixels to allow content to grow upwards/downwards internally
-        var windowHeight = double.IsNaN(_window.Height) || _window.Height <= 0 
-            ? (_window.ActualHeight > 0 ? _window.ActualHeight : 550.0) 
+        var windowHeight = double.IsNaN(_window.Height) || _window.Height <= 0
+            ? (_window.ActualHeight > 0 ? _window.ActualHeight : 550.0)
             : _window.Height;
         var windowWidth = _window.Width;
 
         // Get actual visible content height (MainBorder)
-        var visibleHeight = _window.MainBorder.ActualHeight > 0 
-            ? _window.MainBorder.ActualHeight 
+        var visibleHeight = _window.MainBorder.ActualHeight > 0
+            ? _window.MainBorder.ActualHeight
             : windowHeight;
 
         // MainBorder in XAML has Margin="12" to make room for drop shadow.
@@ -123,7 +123,10 @@ public class InlineSearchWindowPositioner
 
         if (tracker.IsDesktop)
         {
-            var screen = Screen.PrimaryScreen ?? Screen.AllScreens[0];
+            // The desktop spans every monitor, so anchor to the one the cursor is on rather than always
+            // the primary -- otherwise triggering inline search on a secondary screen jumps the window
+            // to the primary's bottom-right corner.
+            var screen = Screen.FromPoint(System.Windows.Forms.Control.MousePosition);
             var workingArea = screen.WorkingArea;
             var targetLeft = workingArea.Right * dpiScaleX - windowWidth + xamlMargin - visibleMargin;
             var targetTop = workingArea.Bottom * dpiScaleY - windowHeight + xamlMargin - visibleMargin;

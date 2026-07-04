@@ -27,10 +27,9 @@ public partial class SearchWindow : Window, ISearchWindow
         this.PreviewKeyDown += Window_PreviewKeyDown;
         this.StateChanged += SearchWindow_StateChanged;
 
-        // Restrict window size when maximized to avoid covering the Windows Taskbar
+        // The maximized-size cap that keeps the window off the taskbar is applied per-monitor in
+        // SearchWindowChromeHandler.HandleStateChanged, so it stays correct on secondary screens.
 
-        this.MaxHeight = SystemParameters.MaximizedPrimaryScreenHeight;
-        this.MaxWidth = SystemParameters.MaximizedPrimaryScreenWidth;
         _viewModel = new SearchViewModel(initialQuery);
         this.DataContext = _viewModel;
 

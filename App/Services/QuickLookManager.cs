@@ -137,10 +137,17 @@ public class QuickLookManager
 
             _window.Height = ownerHeight;
 
-            var targetLeft = ownerLeft + ownerWidth + 8;
-            var screenWidth = SystemParameters.PrimaryScreenWidth;
+            // Use the work area of the monitor the owner is actually on -- not the primary monitor --
+            // so the right/left placement flip is correct when the search window sits on a secondary screen.
+            var ownerHandle = new System.Windows.Interop.WindowInteropHelper(_owner).Handle;
+            var workingArea = Screen.FromHandle(ownerHandle).WorkingArea;
+            var dpiScale = 1.0;
+            var src = PresentationSource.FromVisual(_owner);
+            if (src?.CompositionTarget != null) dpiScale = src.CompositionTarget.TransformFromDevice.M11;
+            var screenRight = workingArea.Right * dpiScale; // physical (system-DPI space) -> DIP
 
-            if (targetLeft + _window.Width > screenWidth)
+            var targetLeft = ownerLeft + ownerWidth + 8;
+            if (targetLeft + _window.Width > screenRight)
             {
                 targetLeft = ownerLeft - _window.Width - 8;
             }

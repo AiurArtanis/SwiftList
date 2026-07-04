@@ -98,8 +98,12 @@ public class QuickSearchWindowController
         var workingArea = screen.WorkingArea;
         var settings = UserSettings.Load();
         var windowWidth = settings.SearchWindow.SearchBarWidth + 48;
-        if (settings.SearchWindow.Left.HasValue && settings.SearchWindow.Top.HasValue)
+        if (settings.SearchWindow.Left.HasValue && settings.SearchWindow.Top.HasValue
+            && IsAnchorOnAnyScreen(settings.SearchWindow.Left.Value + windowWidth / 2, settings.SearchWindow.Top.Value + 20, dpiScaleX, dpiScaleY))
         {
+            // A saved position may point at a monitor that has since been unplugged or resized, which would
+            // open the window off-screen where it can't be seen or reached. Only restore it when its top
+            // strip still lands on a connected monitor's work area; otherwise fall back to centering below.
             _window.Left = settings.SearchWindow.Left.Value;
             _window.Top = settings.SearchWindow.Top.Value;
         }
@@ -108,6 +112,22 @@ public class QuickSearchWindowController
             _window.Left = (workingArea.Width * dpiScaleX - windowWidth) / 2 + workingArea.Left * dpiScaleX;
             _window.Top = workingArea.Height * dpiScaleY * 0.25 + workingArea.Top * dpiScaleY;
         }
+    }
+
+    // Saved Left/Top are DIP; Screen work areas are physical (system-DPI space), so scale them to DIP
+    // with the same factor before testing whether the given DIP anchor point falls on any monitor.
+    private static bool IsAnchorOnAnyScreen(double anchorX, double anchorY, double dpiScaleX, double dpiScaleY)
+    {
+        foreach (var s in Screen.AllScreens)
+        {
+            var wa = s.WorkingArea;
+            if (anchorX >= wa.Left * dpiScaleX && anchorX <= wa.Right * dpiScaleX &&
+                anchorY >= wa.Top * dpiScaleY && anchorY <= wa.Bottom * dpiScaleY)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void ToggleVisibility() => _window.Dispatcher.Invoke(() =>
