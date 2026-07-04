@@ -50,13 +50,38 @@ public static class FileExecutor
                         }
                         else
                         {
-                            startInfo = new ProcessStartInfo
+                            // The "runas" verb applies to executables, not documents, so we can't just
+                            // elevate the file directly. Resolve the file's associated program (e.g.
+                            // Notepad++) and elevate THAT with the file as its argument, so admin-open
+                            // uses the same handler as a normal open.
+                            var associatedExe = TryGetAssociatedExecutable(path);
+                            if (!string.IsNullOrEmpty(associatedExe))
                             {
-                                FileName = "notepad.exe",
-                                Arguments = $"\"{path}\"",
-                                UseShellExecute = true,
-                                Verb = "runas"
-                            };
+                                startInfo = new ProcessStartInfo
+                                {
+                                    FileName = associatedExe,
+                                    Arguments = $"\"{path}\"",
+                                    UseShellExecute = true,
+                                    Verb = "runas"
+                                };
+                            }
+                            else
+                            {
+                                // No association resolved — bring up the shell "Open with" dialog, but run
+                                // it ELEVATED (runas). The program the user then picks is launched as a
+                                // child of the elevated dialog and inherits admin rights, which matches the
+                                // admin-open intent instead of degrading to a normal launch.
+                                // OpenWith.exe is a normal exe that pops the same "Open with" dialog and
+                                // takes a standard quoted path argument (so spaces just work). Elevating it
+                                // means the program the user picks inherits admin rights.
+                                startInfo = new ProcessStartInfo
+                                {
+                                    FileName = "OpenWith.exe",
+                                    Arguments = $"\"{path}\"",
+                                    UseShellExecute = true,
+                                    Verb = "runas"
+                                };
+                            }
                         }
                     }
                     else
@@ -140,6 +165,45 @@ public static class FileExecutor
         {
             Logger.Log($"[FileExecutor] Locate in explorer failed for '{path}': {ex.Message}", LogLevel.Error);
             MessageBox.Show(string.Format(TranslationManager.Instance["Executor_LocateFailed"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private enum AssocStr { Executable = 2 }
+
+    [DllImport("shlwapi.dll", CharSet = CharSet.Unicode, EntryPoint = "AssocQueryStringW")]
+    private static extern int AssocQueryString(uint flags, AssocStr str, string pszAssoc, string? pszExtra, System.Text.StringBuilder? pszOut, ref uint pcchOut);
+
+    /// <summary>
+    /// Resolves the executable associated with a file's extension (the program a normal double-click
+    /// would launch). Returns null when there is no real association, so callers can fall back.
+    /// </summary>
+    private static string? TryGetAssociatedExecutable(string path)
+    {
+        try
+        {
+            var ext = Path.GetExtension(path);
+            if (string.IsNullOrEmpty(ext))
+                return null;
+
+            uint length = 1024;
+            var sb = new System.Text.StringBuilder((int)length);
+            if (AssocQueryString(0, AssocStr.Executable, ext, null, sb, ref length) != 0) // S_OK == 0
+                return null;
+
+            var exe = sb.ToString();
+            if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe))
+                return null;
+
+            // Windows hands back a generic launcher when there is no real handler; don't elevate those.
+            var name = Path.GetFileName(exe).ToLowerInvariant();
+            if (name is "openwith.exe" or "rundll32.exe" or "applicationframehost.exe")
+                return null;
+
+            return exe;
+        }
+        catch
+        {
+            return null;
         }
     }
 
