@@ -142,15 +142,23 @@ public static class QuickNavigationMenu
 
         if (item.HBitmapItem == IntPtr.Zero && !string.IsNullOrEmpty(itemPath) && item.OnExecute == null)
         {
-            var isDir = item.HasSubMenu;
-            var cached = ShellIconHelper.GetIconFromCacheOnly(itemPath, isDir, out var needsLoad);
-            if (cached != null) menuItem.Icon = new Image { Source = cached };
-            if (needsLoad)
+            if (Helpers.FavoriteUrlHelper.IsWebUrl(itemPath))
             {
-                Task.Run(() => {
-                    var icon = ShellIconHelper.GetIconForPath(itemPath, isDir);
-                    if (icon != null) Application.Current.Dispatcher.BeginInvoke(() => menuItem.Icon = new Image { Source = icon });
-                });
+                menuItem.Icon = new Image { Source = Helpers.FavoriteUrlHelper.Icon };
+            }
+            else
+            {
+                var isDir = item.HasSubMenu;
+                var cached = ShellIconHelper.GetIconFromCacheOnly(itemPath, isDir, out var needsLoad);
+                if (cached != null) menuItem.Icon = new Image { Source = cached };
+                if (needsLoad)
+                {
+                    Task.Run(() =>
+                    {
+                        var icon = ShellIconHelper.GetIconForPath(itemPath, isDir);
+                        if (icon != null) Application.Current.Dispatcher.BeginInvoke(() => menuItem.Icon = new Image { Source = icon });
+                    });
+                }
             }
         }
 
@@ -303,8 +311,10 @@ public static class QuickNavigationMenu
         return menuItem;
     }
 
-    public static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject {
-        while (child != null) {
+    public static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+    {
+        while (child != null)
+        {
             if (child is T p) return p;
             child = child is FrameworkContentElement fce ? fce.Parent : System.Windows.Media.VisualTreeHelper.GetParent(child);
         }

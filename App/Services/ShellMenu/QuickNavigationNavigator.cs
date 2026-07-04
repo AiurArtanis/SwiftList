@@ -8,6 +8,13 @@ public static class QuickNavigationNavigator
 {
     public static void NavigateOrOpen(string path)
     {
+        // Web-address favorites: straight to the default browser (no working dir / explorer navigation).
+        if (Helpers.FavoriteUrlHelper.IsWebUrl(path))
+        {
+            try { Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true }); } catch { }
+            return;
+        }
+
         var tracker = InlineSearchManager.Instance.ExplorerTracker;
         if (tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
         {

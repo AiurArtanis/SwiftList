@@ -1,4 +1,5 @@
 using System.IO;
+using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.Core;
 using SwiftList.PluginSdk.Helpers;
@@ -7,30 +8,28 @@ namespace SwiftList.App.ViewModels.Search;
 
 public static class FavoriteSearchHelper
 {
+    // Display label for a favorite: explicit Name, else virtual-folder name / full URL / file name.
+    private static string GetDisplayName(FavoriteItemSetting fav)
+    {
+        if (!string.IsNullOrWhiteSpace(fav.Name)) return fav.Name;
+        if (fav.Path.StartsWith("shell:::", StringComparison.OrdinalIgnoreCase) || fav.Path.StartsWith("::", StringComparison.OrdinalIgnoreCase))
+            return ShellPathHelper.GetVirtualFolderDisplayName(fav.Path, fav.Path);
+        if (FavoriteUrlHelper.IsWebUrl(fav.Path))
+            return fav.Path.Trim();
+        try
+        {
+            var name = Path.GetFileName(fav.Path.TrimEnd('\\', '/'));
+            if (!string.IsNullOrWhiteSpace(name)) return name;
+        }
+        catch { }
+        return fav.Path;
+    }
+
     public static bool IsFavoriteMatch(FavoriteItemSetting fav, string query)
     {
         if (string.IsNullOrWhiteSpace(query)) return false;
 
-        var displayName = fav.Name;
-        if (string.IsNullOrWhiteSpace(displayName))
-        {
-            if (fav.Path.StartsWith("shell:::", StringComparison.OrdinalIgnoreCase) || fav.Path.StartsWith("::", StringComparison.OrdinalIgnoreCase))
-            {
-                displayName = ShellPathHelper.GetVirtualFolderDisplayName(fav.Path, fav.Path);
-            }
-            else
-            {
-                try
-                {
-                    displayName = Path.GetFileName(fav.Path.TrimEnd('\\', '/'));
-                }
-                catch { }
-                if (string.IsNullOrWhiteSpace(displayName))
-                {
-                    displayName = fav.Path;
-                }
-            }
-        }
+        var displayName = GetDisplayName(fav);
 
         if (displayName.Contains(query, StringComparison.OrdinalIgnoreCase)) return true;
         if (fav.Path.Contains(query, StringComparison.OrdinalIgnoreCase)) return true;
@@ -47,26 +46,7 @@ public static class FavoriteSearchHelper
         var isDir = fav.Path.StartsWith("::") || fav.Path.StartsWith("shell:") || Directory.Exists(fav.Path);
         var label = TranslationManager.Instance["Search_ResultFavorite"] ?? "Favorite";
 
-        var displayName = fav.Name;
-        if (string.IsNullOrWhiteSpace(displayName))
-        {
-            if (fav.Path.StartsWith("shell:::", StringComparison.OrdinalIgnoreCase) || fav.Path.StartsWith("::", StringComparison.OrdinalIgnoreCase))
-            {
-                displayName = ShellPathHelper.GetVirtualFolderDisplayName(fav.Path, fav.Path);
-            }
-            else
-            {
-                try
-                {
-                    displayName = Path.GetFileName(fav.Path.TrimEnd('\\', '/'));
-                }
-                catch { }
-                if (string.IsNullOrWhiteSpace(displayName))
-                {
-                    displayName = fav.Path;
-                }
-            }
-        }
+        var displayName = GetDisplayName(fav);
 
         return new AppSearchResult
         {
@@ -78,7 +58,9 @@ public static class FavoriteSearchHelper
             Drive = string.Empty,
             ResultKind = "File",
             Index = index,
-            SearchQuery = query
+            SearchQuery = query,
+            // Web-address favorites have no shell icon; give them the globe icon.
+            IconOverride = FavoriteUrlHelper.IsWebUrl(fav.Path) ? FavoriteUrlHelper.Icon : null
         };
     }
 }

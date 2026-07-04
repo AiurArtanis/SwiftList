@@ -26,6 +26,14 @@ public static class FileExecutor
 
         try
         {
+            // Web-address (http/https) favorites: hand straight to the default browser. They aren't files,
+            // so the File/Directory.Exists check below would wrongly report "not found".
+            if (Helpers.FavoriteUrlHelper.IsWebUrl(path))
+            {
+                Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+                return;
+            }
+
             var isVirtual = path.StartsWith("::") || path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase);
             if (isVirtual || File.Exists(path) || Directory.Exists(path))
             {

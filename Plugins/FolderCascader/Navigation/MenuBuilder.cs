@@ -168,6 +168,17 @@ public static class MenuBuilder
                             HBitmapItem = IntPtr.Zero
                         });
                     }
+                    else if (IsWebUrl(favPath))
+                    {
+                        // Web-address favorite: a leaf command item. The host renders the globe icon and
+                        // opens it in the browser (both keyed off the http/https path).
+                        items.Add(new DynamicMenuItem
+                        {
+                            Text = string.IsNullOrWhiteSpace(favItem.Name) ? favPath : favItem.Name,
+                            CommandId = provider.AllocateCommand(favPath),
+                            HBitmapItem = IntPtr.Zero
+                        });
+                    }
                 }
                 if (items.Count == 0)
                     items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_NoFavorites") ?? "(No favorites)", IsDisabled = true });
@@ -264,4 +275,8 @@ public static class MenuBuilder
         }
         catch { return path; }
     }
+
+    private static bool IsWebUrl(string path)
+        => Uri.TryCreate(path?.Trim(), UriKind.Absolute, out var uri)
+           && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 }

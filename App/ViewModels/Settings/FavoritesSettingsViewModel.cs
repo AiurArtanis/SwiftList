@@ -56,7 +56,9 @@ public class FavoritesSettingsViewModel : ViewModelBase
             if (SetProperty(ref _newPath, value))
             {
                 CommandManager.InvalidateRequerySuggested();
-                if (string.IsNullOrWhiteSpace(NewName) && !string.IsNullOrWhiteSpace(value))
+                // Don't auto-fill a name from a URL (GetFileName would give a stray last segment); leave it
+                // blank so the full URL shows as the display name.
+                if (string.IsNullOrWhiteSpace(NewName) && !string.IsNullOrWhiteSpace(value) && !FavoriteUrlHelper.IsWebUrl(value))
                 {
                     try
                     {
@@ -182,6 +184,10 @@ public class FavoriteItemViewModel : ViewModelBase
             if (Path.StartsWith("shell:::", StringComparison.OrdinalIgnoreCase) || Path.StartsWith("::", StringComparison.OrdinalIgnoreCase))
             {
                 return PluginSdk.Helpers.ShellPathHelper.GetVirtualFolderDisplayName(Path, Path);
+            }
+            if (FavoriteUrlHelper.IsWebUrl(Path))
+            {
+                return Path.Trim();
             }
             try
             {

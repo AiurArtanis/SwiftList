@@ -65,7 +65,8 @@ public class ShellMenuPresenter : IDisposable
         var result = items.Count > 0 ? items[0] : null;
 
         return result != null && result.FullPath != "__SHOW_MORE__" && !result.IsApplication
-            && !result.IsPluginSearchAction && !result.IsInstantResult && !IsInlineFileDialog();
+            && !result.IsPluginSearchAction && !result.IsInstantResult && !IsInlineFileDialog()
+            && !Helpers.FavoriteUrlHelper.IsWebUrl(result.FullPath);
     }
 
     public void EnterActionsMode(IReadOnlyList<AppSearchResult> selection)
