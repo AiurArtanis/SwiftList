@@ -15,7 +15,13 @@ public partial class SettingsWindow : Window
         var vm = new SettingsViewModel();
         DataContext = vm;
         Loaded += (_, _) => { if (LstSections.SelectedItem == null) LstSections.SelectedIndex = 0; };
-        Closed += (_, _) => vm.Cleanup();
+        Closed += (_, _) =>
+        {
+            vm.Cleanup();
+            // Release cached bitmaps and trim the working set on close, like the search windows.
+            ShellIconHelper.ClearCache();
+            Core.Win32Api.TrimWorkingSet();
+        };
         this.AddHandler(Validation.ErrorEvent, new EventHandler<ValidationErrorEventArgs>(OnValidationError));
     }
 

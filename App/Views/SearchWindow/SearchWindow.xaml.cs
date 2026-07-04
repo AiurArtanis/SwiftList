@@ -224,6 +224,10 @@ public partial class SearchWindow : Window, ISearchWindow
     protected override void OnClosed(EventArgs e)
     {
         _viewModel.Dispose();
+        // This window can be one of several (e.g. opened via "show more"), so on close release the icon
+        // cache and trim the working set, matching the quick/inline windows, to reclaim its bitmaps.
+        ShellIconHelper.ClearCache();
+        Core.Win32Api.TrimWorkingSet();
         base.OnClosed(e);
     }
 }

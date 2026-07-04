@@ -160,6 +160,10 @@ public class SearchService : IDisposable
                         else
                         {
                             entries = LiveDirectorySearcher.ScanDirectory(liveScanDir, 10000, token);
+                            // Bound the per-session directory cache so long-running sessions that scope
+                            // searches into many directories don't retain them all indefinitely.
+                            if (_sessionDirectoryCache.Count > 32)
+                                _sessionDirectoryCache.Clear();
                             _sessionDirectoryCache[liveScanDir] = entries;
                         }
                     }

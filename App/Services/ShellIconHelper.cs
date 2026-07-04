@@ -14,9 +14,20 @@ public static class ShellIconHelper
 
     public static void ClearCache() => _iconCache.Clear();
 
+    private const int MaxIconCacheEntries = 2000;
+
+    // Coarse upper bound so a long session that touches many distinct file icons can't grow the cache
+    // without limit. Entries are frozen bitmaps that reload cheaply, so clearing wholesale is fine.
+    private static void EnforceCacheLimit()
+    {
+        if (_iconCache.Count > MaxIconCacheEntries)
+            _iconCache.Clear();
+    }
+
     public static ImageSource? GetIconFromCacheOnly(string path, bool isDir, out bool needsLoad)
     {
         needsLoad = false;
+        EnforceCacheLimit();
         if (path == "__NO_RESULTS__") return null;
         if (path == "__SHOW_MORE__") return VectorIconFactory.ShowMore();
 
@@ -85,6 +96,7 @@ public static class ShellIconHelper
 
     public static ImageSource? GetIconForPath(this string path, bool isDir)
     {
+        EnforceCacheLimit();
         if (path == "__NO_RESULTS__")
             return null;
 

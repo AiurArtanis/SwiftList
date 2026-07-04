@@ -241,6 +241,11 @@ public class InlineSearchManager : IDisposable
         win.Hide();
         win.Close();
 
+        // Inline search closes whenever you leave Explorer; release the icon cache and trim the working
+        // set each time, matching QuickSearch's hide behavior, so inline-only users reclaim memory too.
+        ShellIconHelper.ClearCache();
+        Win32Api.TrimWorkingSet();
+
         Logger.Log($"[InlineSearchManager] InlineSearchWindow closed and destroyed. Reason: {reason}", LogLevel.Debug);
     }
 

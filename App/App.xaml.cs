@@ -128,6 +128,12 @@ public partial class App : Application
         _ = PluginManager.Instance;
         ViewModels.Search.SearchableItemMapper.Preload();
 
+        // Startup — loading every plugin, preloading providers/icons, JIT and WPF init — inflates the
+        // working set with transient allocations that the GC reclaims but doesn't return to the OS.
+        // Once things settle, trim the working set once so the app idles lean instead of sitting at a
+        // few hundred MB. (Search windows already trim on close for the ongoing case.)
+        _ = Task.Delay(10000).ContinueWith(_ => Win32Api.TrimWorkingSet());
+
         // Now that all plugins are loaded, initialize translations.
 
         // This must happen after PluginManager to avoid a Lazy<T> circular initialization crash.
