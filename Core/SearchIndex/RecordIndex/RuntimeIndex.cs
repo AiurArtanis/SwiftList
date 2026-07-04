@@ -7,6 +7,13 @@ public sealed class RuntimeIndex
     private readonly Dictionary<char, List<int>> _nameCharDelta = new();
     private readonly System.Collections.Concurrent.ConcurrentDictionary<int, string> _pathMemo = new();
     private readonly Dictionary<UInt128, List<int>> _hardLinkDeltaRows = new();
+    // Rows whose parent FRN wasn't in the index when they were linked (parentIndex == -1). Keyed by row
+    // index — safe because the index never physically compacts/reorders rows (deletes are a soft flag).
+    // Keeps the true parent FRN so GetParentId round-trips it losslessly (instead of collapsing to a
+    // self-parent) and GetFullPath can resolve the real path once the parent directory is indexed.
+    // Concurrent because GetFullPath reads it on the lock-free search path while USN updates write it
+    // (same reason PathMemo is concurrent).
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<int, UInt128> _orphanParentFrns = new();
     private readonly List<UInt128> _ids = new();
     private readonly List<int> _parentIndexes = new();
     private readonly List<int> _nameIds = new();
@@ -48,6 +55,16 @@ public sealed class RuntimeIndex
     internal Dictionary<UInt128, int> DeltaIdToIndex => _deltaIdToIndex;
     internal Dictionary<char, List<int>> NameCharDelta => _nameCharDelta;
     internal System.Collections.Concurrent.ConcurrentDictionary<int, string> PathMemo => _pathMemo;
+    internal System.Collections.Concurrent.ConcurrentDictionary<int, UInt128> OrphanParentFrns => _orphanParentFrns;
+
+    // Records/clears a row's stashed true parent FRN as its parent link is (re)computed incrementally.
+    internal void TrackOrphanParent(int row, int parentIndex, UInt128 parentId)
+    {
+        if (parentIndex < 0 && parentId != _ids[row])
+            _orphanParentFrns[row] = parentId;
+        else
+            _orphanParentFrns.TryRemove(row, out _);
+    }
 
     // Extra rows appended for a hard-linked FRN by incremental one-to-many maintenance (delta region).
     internal Dictionary<UInt128, List<int>> HardLinkDeltaRows => _hardLinkDeltaRows;
@@ -112,6 +129,7 @@ public sealed class RuntimeIndex
         _nameCharBuckets.Clear();
         _pathMemo.Clear();
         _hardLinkDeltaRows.Clear();
+        _orphanParentFrns.Clear();
         _loadedCount = 0;
         TotalFiles = 0;
         TotalDirs = 0;
@@ -185,9 +203,9 @@ public sealed class RuntimeIndex
             {
                 var foundParent = _ids.BinarySearch(parentId);
                 if (foundParent >= 0)
-                {
                     parentIndex = foundParent;
-                }
+                else
+                    _orphanParentFrns[index] = parentId; // parent not (yet) indexed — keep its true FRN
             }
             resolvedParentIndexes[index] = parentIndex;
 

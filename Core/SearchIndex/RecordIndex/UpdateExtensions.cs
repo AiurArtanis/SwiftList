@@ -32,6 +32,7 @@ public static class UpdateExtensions
             var oldIsDirectory = index.IsDirectory(oldIndex);
 
             index.ParentIndexes[oldIndex] = newParentIndex;
+            index.TrackOrphanParent(oldIndex, newParentIndex, record.ParentId);
             index.NameIds[oldIndex] = index.Names.GetId(name);
             index.Flags[oldIndex] = (byte)record.Flags;
             var newAliases = index.GenerateAliases(name, out var newProviderIds);
@@ -87,6 +88,7 @@ public static class UpdateExtensions
 
         var parentIndex = index.ResolveParentIndex(record.Id, record.ParentId);
         index.ParentIndexes.Add(parentIndex);
+        index.TrackOrphanParent(idx, parentIndex, record.ParentId);
         if (parentIndex >= 0)
         {
             if (!index.ParentToChildren.TryGetValue(parentIndex, out var newList))
@@ -96,6 +98,9 @@ public static class UpdateExtensions
             }
             newList.Add(idx);
         }
+
+        // This new record may be the parent that earlier out-of-order rows were orphaned waiting for.
+        index.ReparentWaitingOrphans(idx, record.Id);
 
         if (record.IsDirectory)
             index.TotalDirs++;
@@ -130,6 +135,7 @@ public static class UpdateExtensions
         index.DeltaIdToIndex.Remove(id);
         index.DeltaNameAliases.Remove(idx);
         index.DeltaAliasProviderIds.Remove(idx);
+        index.OrphanParentFrns.TryRemove(idx, out _); // keep the orphan table mirroring the row lifecycle
 
         var parentIndex = index.ParentIndexes[idx];
         if (parentIndex >= 0 && index.ParentToChildren.TryGetValue(parentIndex, out var list))
@@ -153,6 +159,33 @@ public static class UpdateExtensions
         index.NameIds.Capacity = Math.Max(index.NameIds.Capacity, capacity);
         index.Flags.Capacity = Math.Max(index.Flags.Capacity, capacity);
         index.CharMasks.Capacity = Math.Max(index.CharMasks.Capacity, capacity);
+    }
+
+    // A parent FRN that earlier out-of-order rows were orphaned waiting for just appeared at newRow: link
+    // those orphans now so directory-children queries include them too (their paths already resolve via
+    // the stash; this also restores ParentToChildren). Runs under the index write lock.
+    // ponytail: linear scan of the (rare) orphan set per new record — ceiling O(orphans) per insert; add
+    // a reverse parentFrn->rows map if orphan counts ever grow large.
+    internal static void ReparentWaitingOrphans(this RuntimeIndex index, int newRow, UInt128 frn)
+    {
+        List<int>? waiting = null;
+        foreach (var kv in index.OrphanParentFrns)
+            if (kv.Value == frn)
+                (waiting ??= new List<int>()).Add(kv.Key);
+        if (waiting == null)
+            return;
+
+        foreach (var orphanRow in waiting)
+        {
+            index.ParentIndexes[orphanRow] = newRow;
+            index.OrphanParentFrns.TryRemove(orphanRow, out _);
+            if (!index.ParentToChildren.TryGetValue(newRow, out var children))
+            {
+                children = new List<int>();
+                index.ParentToChildren[newRow] = children;
+            }
+            children.Add(orphanRow);
+        }
     }
 
     internal static void TrimStorage(this RuntimeIndex index)

@@ -162,9 +162,9 @@ internal static class RuntimeIndexCacheExtensions
             {
                 var foundParent = index.Ids.BinarySearch(parentId);
                 if (foundParent >= 0)
-                {
                     parentIndex = foundParent;
-                }
+                else
+                    index.OrphanParentFrns[idx] = parentId; // parent not (yet) indexed — keep its true FRN
             }
             resolvedParentIndexes[idx] = parentIndex;
 

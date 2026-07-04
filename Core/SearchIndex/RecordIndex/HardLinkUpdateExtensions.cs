@@ -39,6 +39,7 @@ internal static class HardLinkUpdateExtensions
 
         var parentIndex = index.ResolveParentIndex(record.Id, record.ParentId);
         index.ParentIndexes.Add(parentIndex);
+        index.TrackOrphanParent(idx, parentIndex, record.ParentId);
         if (parentIndex >= 0)
         {
             if (!index.ParentToChildren.TryGetValue(parentIndex, out var list))
@@ -48,6 +49,9 @@ internal static class HardLinkUpdateExtensions
             }
             list.Add(idx);
         }
+
+        // This new row may be the parent earlier out-of-order rows were orphaned waiting for.
+        index.ReparentWaitingOrphans(idx, record.Id);
 
         if (record.IsDirectory)
             index.TotalDirs++;

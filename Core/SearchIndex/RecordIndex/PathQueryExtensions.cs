@@ -69,7 +69,17 @@ public static class PathQueryExtensions
         var name = index.GetName(idx);
 
         if (parentIndex < 0 || parentIndex == idx)
-            path = Path.Combine(index.SourceRoot, name);
+        {
+            // Orphan: if its parent directory has since been indexed, resolve the real path via the true
+            // parent FRN instead of pinning it at the drive root. (PathMemo is cleared on every update,
+            // so this re-resolves automatically once the late-arriving parent appears.)
+            if (index.OrphanParentFrns.TryGetValue(idx, out var parentFrn)
+                && index.TryGetIndexById(parentFrn, out var resolvedParent)
+                && resolvedParent != idx)
+                path = Path.Combine(index.GetFullPath(resolvedParent), name);
+            else
+                path = Path.Combine(index.SourceRoot, name);
+        }
         else
             path = Path.Combine(index.GetFullPath(parentIndex), name);
 

@@ -7,7 +7,11 @@ public static class QueryExtensions
     public static UInt128 GetParentId(this RuntimeIndex index, int i)
     {
         var parentIndex = index.ParentIndexes[i];
-        return (uint)parentIndex < (uint)index.Ids.Count ? index.Ids[parentIndex] : index.Ids[i];
+        if ((uint)parentIndex < (uint)index.Ids.Count)
+            return index.Ids[parentIndex];
+        // Orphan (parent wasn't in the index when linked): return the true parent FRN we stashed so the
+        // record saves losslessly instead of collapsing to a self-parent. A genuine root falls back to self.
+        return index.OrphanParentFrns.TryGetValue(i, out var parentFrn) ? parentFrn : index.Ids[i];
     }
 
     public static string GetName(this RuntimeIndex index, int i) => index.Names.GetValue(index.NameIds[i]);
