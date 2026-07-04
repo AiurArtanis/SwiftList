@@ -105,7 +105,17 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
             .OrderBy(w => w, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        if (HasPendingEdits)
+        // Update in place (don't Clear+rebuild) whenever the drive/WSL set is unchanged. A periodic status
+        // refresh rebuilding the rows would replace the WslSettingsItem a "refresh mode" ComboBox is bound
+        // to and instantly close its open dropdown -- which is why the WSL refresh mode couldn't be changed
+        // once indexing started producing status. Only rebuild when a drive/distro is actually added/removed.
+        var structureUnchanged =
+            NetworkDrives.Count == visibleDrives.Count &&
+            visibleDrives.All(letter => NetworkDrives.Any(d => d.Drive.Equals(letter, StringComparison.OrdinalIgnoreCase))) &&
+            WslDrives.Count == visibleWsl.Count &&
+            visibleWsl.All(name => WslDrives.Any(d => d.DistroName.Equals(name, StringComparison.OrdinalIgnoreCase)));
+
+        if (HasPendingEdits || structureUnchanged)
         {
             foreach (var letter in visibleDrives)
             {
