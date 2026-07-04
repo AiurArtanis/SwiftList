@@ -34,13 +34,15 @@ internal static class TrayCleanExitHelper
     {
         try
         {
+            // No elevation: the service grants START/STOP to authenticated users at install time, so a
+            // normal-user stop succeeds without a UAC prompt. (Older installs lacking that grant just fail
+            // here and the service keeps running, which is harmless.)
             var psi = new ProcessStartInfo
             {
                 FileName = "sc.exe",
                 Arguments = "stop SwiftListService",
-                Verb = "runas",
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Hidden
+                UseShellExecute = false,
+                CreateNoWindow = true
             };
             Process.Start(psi);
         }

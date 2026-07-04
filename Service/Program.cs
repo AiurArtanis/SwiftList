@@ -120,6 +120,20 @@ static class Program
             var proc = Process.Start(psiCreate);
             proc?.WaitForExit();
 
+            // Grant all authenticated users START/STOP/QUERY on the service so the non-elevated app can
+            // start and stop it without a UAC prompt every time. Install is already elevated here, so this
+            // one-time descriptor change is free. SYSTEM and Administrators keep full control.
+            // AU ACE = CC LC SW RP WP LO RC = query-config/status, enum-deps, start, stop, interrogate, read.
+            Logger.Log("Setting service security descriptor to allow non-admin start/stop.");
+            var psiSdset = new ProcessStartInfo
+            {
+                FileName = "sc.exe",
+                Arguments = "sdset SwiftListService D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)(A;;CCLCSWRPWPLORC;;;AU)S:(AU;FA;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;WD)",
+                UseShellExecute = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            Process.Start(psiSdset)?.WaitForExit();
+
             Logger.Log("Starting service: sc.exe start SwiftListService");
             var psiStart = new ProcessStartInfo
             {

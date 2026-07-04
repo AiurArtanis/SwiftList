@@ -107,6 +107,15 @@ public class ServiceConnectionHandler : IDisposable
         if (_globalAutoInstallingService)
             return;
 
+        // Fast path: if the service is already installed at the current exe path, start it without
+        // elevation instead of prompting for a reinstall.
+        if (ServiceInstallManager.TryStartExistingService())
+        {
+            BeginServiceReconnectGracePeriod();
+            NotifySubscribers(subscriber => subscriber._onServiceInstallCompleted());
+            return;
+        }
+
         _globalAutoInstallingService = true;
         BeginServiceReconnectGracePeriod();
         NotifySubscribers(subscriber => subscriber._onServiceInstallStarted());
