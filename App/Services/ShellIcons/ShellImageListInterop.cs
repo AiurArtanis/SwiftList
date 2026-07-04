@@ -147,6 +147,36 @@ internal static class ShellImageListInterop
         finally { DeleteObject(hbmp); }
     }
 
+    private const int SIIGBF_BIGGERSIZEOK = 0x1; // allow a larger bitmap than requested (avoids upscaling)
+
+    /// <summary>
+    /// Fetches a large real thumbnail (video frame, document page, image) at up to <paramref name="size"/>
+    /// pixels for the preview pane — no ICONONLY, so the shell returns the actual content thumbnail when it
+    /// has one, and its native icon otherwise. Uncached; returns null on failure.
+    /// </summary>
+    public static ImageSource? TryGetPreviewThumbnail(string path, int size)
+    {
+        try
+        {
+            var iid = _iidImageFactory;
+            SHCreateItemFromParsingName(path, IntPtr.Zero, ref iid, out var f);
+            try
+            {
+                if (f.GetImage(new SIZE { cx = size, cy = size }, SIIGBF_BIGGERSIZEOK, out var hbmp) != 0 || hbmp == IntPtr.Zero)
+                    return null;
+                try
+                {
+                    var bmp = Imaging.CreateBitmapSourceFromHBitmap(hbmp, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                    bmp.Freeze();
+                    return bmp;
+                }
+                finally { DeleteObject(hbmp); }
+            }
+            finally { Marshal.ReleaseComObject(f); }
+        }
+        catch { return null; }
+    }
+
     private static ImageSource? FromImageList(int iIcon)
     {
         IImageList? list = null;

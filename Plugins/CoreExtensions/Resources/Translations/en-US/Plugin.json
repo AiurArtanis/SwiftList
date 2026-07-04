@@ -68,8 +68,6 @@
   "QuickLook_Architecture": "Architecture",
   "QuickLook_Company": "Company",
   "QuickLook_Product": "Product",
-  "QuickLook_File": "File",
-  "QuickLook_Size": "Size",
   "QuickLook_UnknownItem": "Unknown Item",
   "QuickLook_Inaccessible": "Item does not exist or is inaccessible.",
   "QuickLook_Error": "Error",
@@ -78,5 +76,6 @@
   "QuickLook_ImageProviderName": "Default Image Preview Provider",
   "QuickLook_TextProviderName": "Default Text Preview Provider",
   "QuickLook_PeProviderName": "Default PE Preview Provider",
-  "QuickLook_MetadataProviderName": "Default Metadata Preview Provider"
+  "QuickLook_MetadataProviderName": "Default Metadata Preview Provider",
+  "QuickLook_ShellPreviewProviderName": "System Preview Handler"
 }

@@ -1,4 +1,5 @@
 using System.Windows;
+using SwiftList.PluginSdk.Abstractions.Plugins;
 
 namespace SwiftList.App.Services;
 
@@ -10,6 +11,10 @@ public class QuickLookManager
     private Views.QuickLook.QuickLookWindow? _window;
     private Window? _owner;
     private bool _userWantsPreview;
+
+    // Owners whose Closed we've hooked (once each) to end the preview session — release pooled native
+    // preview handlers and their prevhost surrogates when the search window that used them goes away.
+    private readonly HashSet<Window> _sessionOwners = new();
 
     private QuickLookManager() { }
 
@@ -64,6 +69,11 @@ public class QuickLookManager
     {
         _owner = owner;
 
+        // Keep the preview-handler pool alive across this owner's hide/show cycles; release it only when
+        // the owner window itself closes. Hooked once per owner (self-removes on close).
+        if (_sessionOwners.Add(owner))
+            owner.Closed += OnSessionOwnerClosed;
+
         if (_window == null)
         {
             _window = new Views.QuickLook.QuickLookWindow();
@@ -100,6 +110,19 @@ public class QuickLookManager
     private void Owner_LocationChanged(object? sender, EventArgs e) => PositionWindow();
     private void Owner_SizeChanged(object? sender, SizeChangedEventArgs e) => PositionWindow();
     private void Owner_Deactivated(object? sender, EventArgs e) => Hide();
+
+    private void OnSessionOwnerClosed(object? sender, EventArgs e)
+    {
+        if (sender is Window w)
+        {
+            w.Closed -= OnSessionOwnerClosed;
+            _sessionOwners.Remove(w);
+        }
+        // The owner is already deactivated → QuickLook hidden → any visible host parked its handler back
+        // in the pool, so releasing now can't blank a live preview.
+        foreach (var provider in PluginManager.Instance.FilePreviewProviders)
+            (provider as IPreviewSessionAware)?.EndPreviewSession();
+    }
 
     private void PositionWindow()
     {

@@ -146,6 +146,7 @@ public partial class App : Application
 
             // Register IconService delegate for decoupled plugins
             PluginSdk.Services.IconService.GetIconFunc = (path, isDir) => ShellIconHelper.GetIconForPath(path, isDir);
+            PluginSdk.Services.IconService.GetThumbnailFunc = (path, size) => ShellImageListInterop.TryGetPreviewThumbnail(path, size);
 
             // Register Logger delegate for decoupled plugins
 

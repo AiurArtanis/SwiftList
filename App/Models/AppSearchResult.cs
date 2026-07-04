@@ -24,6 +24,9 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     public bool IsEmptyResult => ResultKind == "Empty";
     public bool IsInstantResult => ResultKind == "InstantResult";
     public bool IsListItem => ResultKind == "ListItem";
+    // Only genuine on-disk file/folder results get the preview window — excludes calculator/URL/env instant
+    // results, plugin actions, apps, jump-to-path, list items, headers, empties, and the "show more" row.
+    public bool CanPreview => ResultKind == "File" && FullPath != "__SHOW_MORE__";
     public double ItemHeight => IsSearchSectionHeader ? UiMetrics.SearchSectionHeaderHeight : (IsListItem ? UiMetrics.ListItemHeight : UiMetrics.SearchResultItemHeight);
 
     // Base visual metrics (inline/full windows use these — no scaling).

@@ -68,8 +68,6 @@
   "QuickLook_Architecture": "架构",
   "QuickLook_Company": "公司",
   "QuickLook_Product": "产品",
-  "QuickLook_File": "文件",
-  "QuickLook_Size": "大小",
   "QuickLook_UnknownItem": "未知项目",
   "QuickLook_Inaccessible": "项目不存在或无法访问。",
   "QuickLook_Error": "错误",
@@ -78,5 +76,6 @@
   "QuickLook_ImageProviderName": "默认图片预览器",
   "QuickLook_TextProviderName": "默认文本预览器",
   "QuickLook_PeProviderName": "默认 PE 可执行文件预览器",
-  "QuickLook_MetadataProviderName": "默认元数据预览器"
+  "QuickLook_MetadataProviderName": "默认元数据预览器",
+  "QuickLook_ShellPreviewProviderName": "系统预览器"
 }

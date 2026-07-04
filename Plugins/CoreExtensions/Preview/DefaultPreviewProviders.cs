@@ -26,9 +26,12 @@ public class FolderPreviewProvider : IFilePreviewProvider
             var items = dirInfo.EnumerateFileSystemInfos().Take(31).ToList();
             if (items.Count == 0)
             {
-                panel.Children.Add(new TextBlock {
-                    Text = TranslationService.Get("QuickLook_FolderEmpty"), FontStyle = FontStyles.Italic,
-                    Foreground = Application.Current?.TryFindResource("TextSecondary") as Brush ?? Brushes.Gray, Margin = new Thickness(8)
+                panel.Children.Add(new TextBlock
+                {
+                    Text = TranslationService.Get("QuickLook_FolderEmpty"),
+                    FontStyle = FontStyles.Italic,
+                    Foreground = Application.Current?.TryFindResource("TextSecondary") as Brush ?? Brushes.Gray,
+                    Margin = new Thickness(8)
                 });
             }
             else
@@ -39,28 +42,42 @@ public class FolderPreviewProvider : IFilePreviewProvider
                     var item = items[idx];
                     var isItemDir = (item.Attributes & FileAttributes.Directory) != 0;
                     var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 2) };
-                    row.Children.Add(new Image {
-                        Source = IconService.GetIcon(item.FullName, isItemDir), Width = 16, Height = 16, Margin = new Thickness(0, 0, 8, 0)
+                    row.Children.Add(new Image
+                    {
+                        Source = IconService.GetIcon(item.FullName, isItemDir),
+                        Width = 16,
+                        Height = 16,
+                        Margin = new Thickness(0, 0, 8, 0)
                     });
-                    row.Children.Add(new TextBlock {
-                        Text = item.Name, Foreground = Application.Current?.TryFindResource("TextPrimary") as Brush ?? Brushes.White, FontSize = 12
+                    row.Children.Add(new TextBlock
+                    {
+                        Text = item.Name,
+                        Foreground = Application.Current?.TryFindResource("TextPrimary") as Brush ?? Brushes.White,
+                        FontSize = 12
                     });
                     panel.Children.Add(row);
                 }
                 if (items.Count > 30)
                 {
-                    panel.Children.Add(new TextBlock {
+                    panel.Children.Add(new TextBlock
+                    {
                         Text = TranslationService.Get("QuickLook_MoreItems"),
                         Foreground = Application.Current?.TryFindResource("TextSecondary") as Brush ?? Brushes.Gray,
-                        Margin = new Thickness(24, 4, 0, 0), FontSize = 11, FontStyle = FontStyles.Italic
+                        Margin = new Thickness(24, 4, 0, 0),
+                        FontSize = 11,
+                        FontStyle = FontStyles.Italic
                     });
                 }
             }
         }
         catch (Exception ex)
         {
-            panel.Children.Add(new TextBlock {
-                Text = $"{TranslationService.Get("QuickLook_Error")}: {ex.Message}", Foreground = Brushes.Red, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(8)
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"{TranslationService.Get("QuickLook_Error")}: {ex.Message}",
+                Foreground = Brushes.Red,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(8)
             });
         }
         return scroll;
@@ -81,7 +98,8 @@ public class ImagePreviewProvider : IFilePreviewProvider
     public UIElement CreatePreview(string path, bool isDir)
     {
         var grid = new Grid();
-        var border = new Border {
+        var border = new Border
+        {
             BorderThickness = new Thickness(1),
             BorderBrush = Application.Current?.TryFindResource("SeparatorBrush") as Brush ?? Brushes.Gray,
             CornerRadius = new CornerRadius(8),
@@ -120,10 +138,10 @@ public class TextPreviewProvider : IFilePreviewProvider
     {
         if (isDir) return false;
         var ext = Path.GetExtension(path).ToLower();
-        string[] txtExts = { 
-            ".txt", ".log", ".cs", ".xml", ".json", ".md", ".js", ".ts", ".py", 
-            ".html", ".css", ".ini", ".cfg", ".bat", ".cmd", ".sh", ".yml", 
-            ".yaml", ".sql", ".csproj", ".sln", ".config", ".properties" 
+        string[] txtExts = {
+            ".txt", ".log", ".cs", ".xml", ".json", ".md", ".js", ".ts", ".py",
+            ".html", ".css", ".ini", ".cfg", ".bat", ".cmd", ".sh", ".yml",
+            ".yaml", ".sql", ".csproj", ".sln", ".config", ".properties"
         };
         if (txtExts.Contains(ext)) return true;
         try
@@ -145,7 +163,8 @@ public class TextPreviewProvider : IFilePreviewProvider
                 e.Handled = true;
             }
         };
-        var txt = new TextBlock {
+        var txt = new TextBlock
+        {
             FontFamily = new FontFamily("Consolas, Courier New, monospace"),
             FontSize = 12.5,
             Foreground = Application.Current?.TryFindResource("TextPrimary") as Brush ?? Brushes.White,
@@ -238,22 +257,60 @@ public class PePreviewProvider : IFilePreviewProvider
         catch { }
         return "Unknown Architecture";
     }
-    public static UIElement BuildMetadataControl(string path, string title, string details)
+    public static UIElement BuildMetadataControl(string path, string? title, string? details, ImageSource? image = null)
     {
-        var grid = new Grid { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+        var grid = new Grid { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(16) };
         var panel = new StackPanel();
         grid.Children.Add(panel);
-        panel.Children.Add(new Image {
-            Source = IconService.GetIcon(path, false), Width = 64, Height = 64, Margin = new Thickness(0, 0, 0, 16), HorizontalAlignment = HorizontalAlignment.Center
-        });
-        panel.Children.Add(new TextBlock {
-            Text = title, TextAlignment = TextAlignment.Center, FontSize = 13, FontWeight = FontWeights.SemiBold,
-            Foreground = Application.Current?.TryFindResource("TextPrimary") as Brush ?? Brushes.White, Margin = new Thickness(0, 0, 0, 4)
-        });
-        panel.Children.Add(new TextBlock {
-            Text = details, TextAlignment = TextAlignment.Center, FontSize = 12,
-            Foreground = Application.Current?.TryFindResource("TextSecondary") as Brush ?? Brushes.Gray
-        });
+        Image img;
+        if (image != null)
+        {
+            // Real thumbnail — stretch to fill the pane width (keeping aspect), capped in height.
+            img = new Image
+            {
+                Source = image,
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                MaxHeight = 420,
+                Margin = new Thickness(0, 0, 0, 16)
+            };
+        }
+        else
+        {
+            // No thumbnail (generic file / executable) — a small centered shell icon, not an upscaled blur.
+            img = new Image
+            {
+                Source = IconService.GetIcon(path, false),
+                Width = 64,
+                Height = 64,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 0, 0, 16)
+            };
+        }
+        RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+        panel.Children.Add(img);
+        if (!string.IsNullOrEmpty(title))
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = title,
+                TextAlignment = TextAlignment.Center,
+                FontSize = 13,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = Application.Current?.TryFindResource("TextPrimary") as Brush ?? Brushes.White,
+                Margin = new Thickness(0, 0, 0, 4)
+            });
+        }
+        if (!string.IsNullOrEmpty(details))
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = details,
+                TextAlignment = TextAlignment.Center,
+                FontSize = 12,
+                Foreground = Application.Current?.TryFindResource("TextSecondary") as Brush ?? Brushes.Gray
+            });
+        }
         return grid;
     }
 }
@@ -265,30 +322,9 @@ public class DefaultMetadataPreviewProvider : IFilePreviewProvider
     public bool CanPreview(string path, bool isDir) => true;
     public UIElement CreatePreview(string path, bool isDir)
     {
-        try
-        {
-            var fileInfo = new FileInfo(path);
-            var ext = Path.GetExtension(path).ToUpper().TrimStart('.');
-            var type = $"{ext} {TranslationService.Get("QuickLook_File")}";
-            var sizeStr = FormatFileSize(fileInfo.Length);
-            var details = $"{TranslationService.Get("QuickLook_Size")}: {sizeStr}";
-            return PePreviewProvider.BuildMetadataControl(path, type, details);
-        }
-        catch
-        {
-            return PePreviewProvider.BuildMetadataControl(path, "File", "Details unavailable");
-        }
-    }
-    private string FormatFileSize(long bytes)
-    {
-        string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
-        double val = bytes;
-        var i = 0;
-        while (val >= 1024 && i < suffixes.Length - 1)
-        {
-            val /= 1024;
-            i++;
-        }
-        return $"{val:0.##} {suffixes[i]}";
+        // Filename and size/date already live in the QuickLook header and footer, so this fallback shows
+        // just a large real thumbnail (video frame / document page / image), or a small shell icon if none.
+        var thumb = IconService.GetThumbnail(path, 512);
+        return PePreviewProvider.BuildMetadataControl(path, null, null, thumb);
     }
 }

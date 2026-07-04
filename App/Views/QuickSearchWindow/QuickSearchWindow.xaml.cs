@@ -104,7 +104,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow
 
         LstResults.SelectionChanged += (s, e) =>
         {
-            if (LstResults.SelectedItem is AppSearchResult result && !result.IsSearchSectionHeader && !result.IsEmptyResult && !result.IsApplication && result.FullPath != "__SHOW_MORE__")
+            if (LstResults.SelectedItem is AppSearchResult result && result.CanPreview)
             {
                 QuickLookManager.Instance.UpdateOrShow(this, result.FullPath);
             }
