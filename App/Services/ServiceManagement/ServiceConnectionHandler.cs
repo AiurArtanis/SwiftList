@@ -8,6 +8,11 @@ namespace SwiftList.App.Services;
 public class ServiceConnectionHandler : IDisposable
 {
     private static readonly TimeSpan ServiceReconnectGracePeriod = TimeSpan.FromSeconds(15);
+
+    // Steady-state poll interval: once the service is reachable and no detailed status is needed, the
+    // shared timer backs off from the per-subscriber fast interval to this, so an idle-but-open window
+    // isn't pinging the service several times a second forever (it only needs to notice a rare crash).
+    private const int SteadyPollIntervalMs = 2500;
     private static readonly object GlobalMonitorLock = new();
     private static readonly List<ServiceConnectionHandler> ActiveSubscribers = new();
     private static DispatcherTimer? _sharedStatusTimer;
@@ -159,11 +164,26 @@ public class ServiceConnectionHandler : IDisposable
         if (_sharedSearchService == null && ActiveSubscribers.Count > 0)
             _sharedSearchService = ActiveSubscribers[0]._searchService;
 
-        var interval = ActiveSubscribers.Count > 0
-            ? ActiveSubscribers.Min(s => s._pollIntervalMs)
-            : 400;
-        _sharedStatusTimer.Interval = TimeSpan.FromMilliseconds(interval);
+        // Start (or re-arm) fast so a freshly shown window gets a prompt status check; the tick backs off
+        // to the steady interval once the service is reachable and no detailed status is needed.
+        _sharedStatusTimer.Interval = TimeSpan.FromMilliseconds(FastPollIntervalMs_NoLock());
         _sharedStatusTimer.Start();
+    }
+
+    private static int FastPollIntervalMs_NoLock() => ActiveSubscribers.Count > 0 ? ActiveSubscribers.Min(s => s._pollIntervalMs) : 400;
+
+    // Adaptive backoff: poll fast while a detailed status is needed (install / index build) or the service
+    // is unreachable (so recovery is detected quickly); otherwise back off to the steady interval.
+    private static void ApplyPollInterval(bool reachable)
+    {
+        lock (GlobalMonitorLock)
+        {
+            if (_sharedStatusTimer == null) return;
+            var detailed = ActiveSubscribers.Any(s => s._needsDetailedStatus);
+            var target = (detailed || !reachable) ? FastPollIntervalMs_NoLock() : SteadyPollIntervalMs;
+            if ((int)_sharedStatusTimer.Interval.TotalMilliseconds != target)
+                _sharedStatusTimer.Interval = TimeSpan.FromMilliseconds(target);
+        }
     }
 
     private static void StopSharedTimer_NoLock()
@@ -196,6 +216,7 @@ public class ServiceConnectionHandler : IDisposable
                         try
                         {
                             NotifySubscribers(subscriber => subscriber.ProcessStatus(status));
+                            ApplyPollInterval(reachable: true);
                         }
                         finally
                         {
@@ -211,6 +232,7 @@ public class ServiceConnectionHandler : IDisposable
                     try
                     {
                         NotifySubscribers(subscriber => subscriber.ProcessPingResult(isReachable));
+                        ApplyPollInterval(isReachable);
                     }
                     finally
                     {
@@ -225,6 +247,7 @@ public class ServiceConnectionHandler : IDisposable
                     try
                     {
                         NotifySubscribers(subscriber => subscriber.ProcessPingResult(false));
+                        ApplyPollInterval(reachable: false);
                     }
                     finally
                     {

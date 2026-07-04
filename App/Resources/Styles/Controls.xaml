@@ -25,7 +25,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="Visibility" Value="Visible">
                             <Trigger.EnterActions>
-                                <BeginStoryboard>
+                                <BeginStoryboard x:Name="SpinnerStoryboard">
                                     <Storyboard>
                                         <DoubleAnimation Storyboard.TargetName="SpinnerGrid"
                                                          Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
@@ -34,6 +34,12 @@
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.EnterActions>
+                            <!-- Stop the Forever animation when the spinner is hidden; otherwise its clock
+                                 keeps ticking (and re-compositing the layered window) forever, burning ~1%
+                                 CPU invisibly after the first search/loading. -->
+                            <Trigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="SpinnerStoryboard"/>
+                            </Trigger.ExitActions>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
