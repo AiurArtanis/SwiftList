@@ -129,6 +129,10 @@
                                 <DataTrigger Binding="{Binding IsApplication}" Value="True">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
+                                <!-- Blank subtitle (e.g. applications) shows name-only: hide the empty row. -->
+                                <DataTrigger Binding="{Binding ParentDir}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>

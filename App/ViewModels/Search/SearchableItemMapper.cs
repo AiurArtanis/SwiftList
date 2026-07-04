@@ -215,7 +215,9 @@ public static class SearchableItemMapper
                 {
                     Name = item.Title,
                     FullPath = (isRealFile || isRealDir) ? item.ActionArgument : $"__SEARCHABLE_ITEM__:{provider.Name}:{item.Title}",
-                    ParentDir = item.Description,
+                    // Applications show name-only: blank the subtitle so the path row collapses (an app's
+                    // FullPath is a virtual token anyway). Other item kinds keep their description.
+                    ParentDir = item.ResultKind == "Application" ? string.Empty : item.Description,
                     IsDir = isRealDir,
                     Drive = string.Empty,
                     ResultKind = isRealFile ? "File" : (isRealDir ? "Directory" : "InstantResult"),
