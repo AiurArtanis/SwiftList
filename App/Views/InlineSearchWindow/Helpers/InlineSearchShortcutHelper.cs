@@ -19,29 +19,20 @@ public static class InlineSearchShortcutHelper
             selectMod = settings.SelectJumpModifier;
 
             var quickSwitch = settings.QuickSwitchHotkey;
-            if (quickSwitch != null)
+            if (HotkeyStringFormat.IsBareModifier(quickSwitch, out var clickModifier))
             {
-                if (string.Equals(quickSwitch.Type, "KeyCombo", StringComparison.OrdinalIgnoreCase))
-                {
-                    var qsMod = quickSwitch.Modifier;
-                    if (string.Equals(qsMod, "Control", StringComparison.OrdinalIgnoreCase)) qsMod = "Ctrl";
+                var qsClickMod = string.Equals(clickModifier, "Control", StringComparison.OrdinalIgnoreCase) ? "Ctrl" : clickModifier;
+                quickSwitchHint = $"{qsClickMod} x2";
+            }
+            else if (!string.IsNullOrEmpty(quickSwitch))
+            {
+                HotkeyStringFormat.ParseCombo(quickSwitch, out var qsMod, out var qsKey);
+                if (string.Equals(qsMod, "Control", StringComparison.OrdinalIgnoreCase)) qsMod = "Ctrl";
 
-                    var qsKey = quickSwitch.Key;
-                    if (string.Equals(qsKey, "Space", StringComparison.OrdinalIgnoreCase)) qsKey = "Space";
-                    else if (string.Equals(qsKey, "Enter", StringComparison.OrdinalIgnoreCase)) qsKey = "Enter";
-                    else if (string.Equals(qsKey, "Escape", StringComparison.OrdinalIgnoreCase)) qsKey = "Esc";
-                    else if (string.Equals(qsKey, "Tab", StringComparison.OrdinalIgnoreCase)) qsKey = "Tab";
+                if (string.Equals(qsKey, "Escape", StringComparison.OrdinalIgnoreCase)) qsKey = "Esc";
 
-                    quickSwitchHint = string.IsNullOrEmpty(qsKey) ? string.Empty
-                        : string.Equals(qsMod, "None", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(qsMod)
-                            ? qsKey : $"{qsMod}+{qsKey}";
-                }
-                else
-                {
-                    var qsClickMod = quickSwitch.ClickModifier;
-                    if (string.Equals(qsClickMod, "Control", StringComparison.OrdinalIgnoreCase)) qsClickMod = "Ctrl";
-                    quickSwitchHint = $"{qsClickMod} x{quickSwitch.ClickCount}";
-                }
+                quickSwitchHint = string.IsNullOrEmpty(qsKey) ? string.Empty
+                    : string.IsNullOrEmpty(qsMod) ? qsKey : $"{qsMod}+{qsKey}";
             }
         }
         catch { }

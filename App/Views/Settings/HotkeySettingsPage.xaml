@@ -24,126 +24,238 @@
             <TextBlock Style="{StaticResource SettingsHintText}"
                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_Hint]}"/>
 
-            <!-- Group: Global Hotkeys -->
-            <TextBlock Style="{StaticResource SettingsGroupTitle}"
-                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_GroupGlobal]}"/>
-
-            <Grid Margin="0,4,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="200"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ToggleLabel]}" VerticalAlignment="Center"/>
-                <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                    Value="{Binding ToggleHotkeyValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                    RequireModifier="True" AllowBareModifier="True" DefaultValue="Ctrl"/>
-                <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ToggleDoubleTapHint]}">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock" BasedOn="{StaticResource SettingsHintText}">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsToggleModifierClick}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </Grid>
-
-            <Grid Margin="0,8,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="200"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickSwitchLabel]}" VerticalAlignment="Center"/>
-                <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                    Value="{Binding QuickSwitchComboHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                    RequireModifier="True" DefaultValue="Ctrl+G"/>
-            </Grid>
-
-            <TextBlock Style="{StaticResource SettingsSubHeading}"
-                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectionTitle]}"/>
-
-            <Grid Margin="0,4,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="200"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectNextItem]}" VerticalAlignment="Center"/>
-                <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                    Value="{Binding NextItemHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                    DefaultValue="Ctrl+N"/>
-            </Grid>
-            <Grid Margin="0,8,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="200"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectPreviousItem]}" VerticalAlignment="Center"/>
-                <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                    Value="{Binding PreviousItemHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                    DefaultValue="Ctrl+P"/>
-            </Grid>
-            <Grid Margin="0,8,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="200"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectJumpItem]}" VerticalAlignment="Center"/>
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <ctrl:HotkeyRecorderControl Width="90" Height="26"
-                        Value="{Binding SelectJumpModifier, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        ModifierOnly="True" DefaultValue="Ctrl"/>
-                    <TextBlock Text=" + 1~9" VerticalAlignment="Center" Margin="6,0,0,0"/>
+            <!-- Tab header row -->
+            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                <StackPanel Margin="0,0,28,0">
+                    <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_Tab_Global]}"
+                            Command="{Binding SelectTabCommand}" CommandParameter="Global">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedTab}" Value="Global">
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Border>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedTab}" Value="Global">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
                 </StackPanel>
-            </Grid>
-            <Grid Margin="0,8,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="200"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectActions]}" VerticalAlignment="Center"/>
-                <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                    Value="{Binding ActionsMenuHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                    DefaultValue="Ctrl+O"/>
-            </Grid>
-            <Grid Margin="0,8,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="200"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectComplete]}" VerticalAlignment="Center"/>
-                <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                    Value="{Binding CompleteFromSelectionHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                    DefaultValue="Ctrl+Tab"/>
-            </Grid>
-            <Grid Margin="0,8,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="200"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectQuickLook]}" VerticalAlignment="Center"/>
-                <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                    Value="{Binding QuickLookHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                    DefaultValue="Alt+P"/>
-            </Grid>
+                <StackPanel>
+                    <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_Tab_PluginActions]}"
+                            Command="{Binding SelectTabCommand}" CommandParameter="PluginActions">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedTab}" Value="PluginActions">
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Border>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedTab}" Value="PluginActions">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+            <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
 
-            <Border Style="{StaticResource SettingsGroupDivider}"/>
+            <!-- Tab: Global -->
+            <StackPanel>
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedTab}" Value="Global">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
 
-            <!-- Group: Quick Navigation -->
-            <TextBlock Style="{StaticResource SettingsGroupTitle}"
-                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_GroupQuickNav]}"/>
+                <!-- Group: Global Hotkeys -->
+                <TextBlock Style="{StaticResource SettingsGroupTitle}" Margin="0,0,0,10"
+                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_GroupGlobal]}"/>
 
-            <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickNavDoubleClick]}"
-                      IsChecked="{Binding QuickNavTriggerOnDoubleClick, Mode=TwoWay}"
-                      Margin="0,4"/>
+                <Grid Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ToggleLabel]}" VerticalAlignment="Center"/>
+                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
+                        Value="{Binding ToggleHotkeyValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        RequireModifier="True" AllowBareModifier="True" DefaultValue="Ctrl"/>
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0"
+                               Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ToggleDoubleTapHint]}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource SettingsHintText}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsToggleModifierClick}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
 
-            <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickNavMiddleClick]}"
-                      IsChecked="{Binding QuickNavTriggerOnMiddleClick, Mode=TwoWay}"
-                      Margin="0,4"/>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="200"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickSwitchLabel]}" VerticalAlignment="Center"/>
+                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
+                        Value="{Binding QuickSwitchComboHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        RequireModifier="True" DefaultValue="Ctrl+G"/>
+                </Grid>
+
+                <TextBlock Style="{StaticResource SettingsSubHeading}"
+                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectionTitle]}"/>
+
+                <Grid Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="200"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectNextItem]}" VerticalAlignment="Center"/>
+                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
+                        Value="{Binding NextItemHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        DefaultValue="Ctrl+N"/>
+                </Grid>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="200"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectPreviousItem]}" VerticalAlignment="Center"/>
+                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
+                        Value="{Binding PreviousItemHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        DefaultValue="Ctrl+P"/>
+                </Grid>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="200"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectJumpItem]}" VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <ctrl:HotkeyRecorderControl Width="90" Height="26"
+                            Value="{Binding SelectJumpModifier, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            ModifierOnly="True" DefaultValue="Ctrl"/>
+                        <TextBlock Text=" + 1~9" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                    </StackPanel>
+                </Grid>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="200"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectActions]}" VerticalAlignment="Center"/>
+                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
+                        Value="{Binding ActionsMenuHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        DefaultValue="Ctrl+O"/>
+                </Grid>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="200"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectComplete]}" VerticalAlignment="Center"/>
+                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
+                        Value="{Binding CompleteFromSelectionHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        DefaultValue="Ctrl+Tab"/>
+                </Grid>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="200"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectQuickLook]}" VerticalAlignment="Center"/>
+                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
+                        Value="{Binding QuickLookHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        DefaultValue="Alt+P"/>
+                </Grid>
+
+                <Border Style="{StaticResource SettingsGroupDivider}"/>
+
+                <!-- Group: Quick Navigation -->
+                <TextBlock Style="{StaticResource SettingsGroupTitle}"
+                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_GroupQuickNav]}"/>
+
+                <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickNavDoubleClick]}"
+                          IsChecked="{Binding QuickNavTriggerOnDoubleClick, Mode=TwoWay}"
+                          Margin="0,4"/>
+
+                <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickNavMiddleClick]}"
+                          IsChecked="{Binding QuickNavTriggerOnMiddleClick, Mode=TwoWay}"
+                          Margin="0,4"/>
+            </StackPanel>
+
+            <!-- Tab: Plugin Actions -->
+            <StackPanel>
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedTab}" Value="PluginActions">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+
+                <ItemsControl ItemsSource="{Binding PluginActionGroups}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SettingsGroupTitle}" Text="{Binding PluginName}"/>
+                                <ItemsControl ItemsSource="{Binding Items}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,8,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="180"/>
+                                                    <ColumnDefinition Width="200"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                                <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
+                                                    Value="{Binding HotkeyValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    DefaultValue="{Binding DefaultHotkey}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Border Style="{StaticResource SettingsGroupDivider}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

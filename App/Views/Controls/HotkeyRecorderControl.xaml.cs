@@ -90,6 +90,11 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
         _ => null
     };
 
+    // WPF's Key enum's canonical name for this key is "Return", but every hardcoded plugin hotkey
+    // string (and everywhere else in this app) spells it "Enter" -- normalize so recorded values
+    // match instead of showing "Alt+Return" next to a plugin default of "Ctrl+Shift+Enter".
+    private static string KeyDisplayName(Key key) => key == Key.Return ? "Enter" : key.ToString();
+
     private void HotkeyBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         e.Handled = true;
@@ -131,7 +136,7 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
         if (modifiers.HasFlag(ModifierKeys.Alt)) parts.Add("Alt");
         if (modifiers.HasFlag(ModifierKeys.Shift)) parts.Add("Shift");
         if (modifiers.HasFlag(ModifierKeys.Windows)) parts.Add("Win");
-        parts.Add(key.ToString());
+        parts.Add(KeyDisplayName(key));
         Value = string.Join("+", parts);
     }
 

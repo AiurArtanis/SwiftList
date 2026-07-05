@@ -212,41 +212,18 @@ public class WslSetting
     public string RefreshMode { get; set; } = "Manual";
 }
 
-public class HotkeySetting
-{
-    // Type: "KeyCombo" or "ModifierClick"
-    public string Type { get; set; } = "KeyCombo";
-
-    // For KeyCombo: "Control", "Alt", "Shift", "Win", "None"
-    public string Modifier { get; set; } = "None";
-
-    // For KeyCombo: "A"-"Z", "0"-"9", "Space", "F1"-"F12", "Tab", "Enter", "Escape"
-    public string Key { get; set; } = "None";
-
-    // For ModifierClick: "Control", "Alt", "Shift", "Win"
-    public string ClickModifier { get; set; } = "Control";
-
-    // For ModifierClick: number of clicks
-    public int ClickCount { get; set; } = 2;
-}
-
 /// <summary>Everything shown on the Hotkey Settings page, grouped under one object.</summary>
 public class HotkeyPageSettings
 {
-    public HotkeySetting ToggleWindowHotkey { get; set; } = new()
-    {
-        Type = "ModifierClick",
-        Modifier = "Control",
-        Key = "Space",
-        ClickModifier = "Control",
-        ClickCount = 2
-    };
-    public HotkeySetting QuickSwitchHotkey { get; set; } = new()
-    {
-        Type = "KeyCombo",
-        Modifier = "Control",
-        Key = "G"
-    };
+    /// <summary>
+    /// A bare modifier (e.g. "Ctrl") means double-tap that modifier; a combo (e.g. "Alt+Space") means a
+    /// literal key combination. See <see cref="HotkeyStringFormat"/>.
+    /// </summary>
+    public string ToggleWindowHotkey { get; set; } = "Ctrl";
+
+    /// <summary>Same flat format as <see cref="ToggleWindowHotkey"/>.</summary>
+    public string QuickSwitchHotkey { get; set; } = "Ctrl+G";
+
     public string SelectJumpModifier { get; set; } = "Ctrl";
     public string NextItemHotkey { get; set; } = "Ctrl+N";
     public string PreviousItemHotkey { get; set; } = "Ctrl+P";
@@ -255,6 +232,14 @@ public class HotkeyPageSettings
     public string QuickLookHotkey { get; set; } = "Alt+P";
     public bool QuickNavTriggerOnDoubleClick { get; set; } = true;
     public bool QuickNavTriggerOnMiddleClick { get; set; } = true;
+
+    /// <summary>
+    /// User overrides for plugin action hotkeys, keyed by plugin ID (the DLL file name without its
+    /// extension, matching <see cref="PluginSettings"/>'s convention) then by
+    /// <c>ISearchResultAction.Id</c>. An empty string value means the action's hotkey is explicitly
+    /// disabled; a missing entry (either level) means "use the action's own built-in default".
+    /// </summary>
+    public Dictionary<string, Dictionary<string, string>> PluginActionHotkeys { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 public class FavoriteItemSetting

@@ -54,6 +54,30 @@
         <Setter Property="Margin" Value="0,10,0,0"/>
     </Style>
 
+    <Style x:Key="TabHeaderButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Padding" Value="0,0,0,10"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="TabUnderlineStyle" TargetType="Border">
+        <Setter Property="Height" Value="2"/>
+        <Setter Property="Background" Value="{DynamicResource AccentBlue}"/>
+        <Setter Property="Margin" Value="0,-2,0,0"/>
+        <Setter Property="Visibility" Value="Collapsed"/>
+    </Style>
+
     <Style x:Key="SettingsComboBoxItem" TargetType="ComboBoxItem">
         <Setter Property="Height" Value="32"/>
         <Setter Property="Padding" Value="10,0"/>

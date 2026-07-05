@@ -1,5 +1,7 @@
 using System.Windows.Input;
 using SwiftList.App.Services;
+using SwiftList.App.Services.PluginManagerCore;
+using SwiftList.Core;
 using SwiftList.PluginSdk.Abstractions;
 namespace SwiftList.App.Helpers;
 
@@ -39,13 +41,24 @@ public static class HotkeyActionTrigger
         var key = WpfUiHelper.GetActualKey(e);
         var modifiers = Keyboard.Modifiers;
 
+        var pluginActionHotkeys = UserSettings.Load().Hotkeys.PluginActionHotkeys;
+
         foreach (var registration in PluginManager.Instance.Actions)
         {
             var action = registration.Action;
-            if (string.IsNullOrWhiteSpace(action.Hotkey))
+            var effectiveHotkey = action.Hotkey;
+            // Matches the plugin ID convention used by PluginSettings: the DLL file name without its extension.
+            var pluginId = System.IO.Path.GetFileNameWithoutExtension(ComponentFilter.GetDllName(registration.Plugin));
+            if (pluginActionHotkeys.TryGetValue(pluginId, out var overrides)
+                && overrides.TryGetValue(action.Id, out var overrideHotkey))
+            {
+                effectiveHotkey = overrideHotkey;
+            }
+
+            if (string.IsNullOrWhiteSpace(effectiveHotkey))
                 continue;
 
-            if (ParseHotkey(action.Hotkey, out var hotkeyKey, out var hotkeyMods))
+            if (ParseHotkey(effectiveHotkey, out var hotkeyKey, out var hotkeyMods))
             {
                 if (key == hotkeyKey && modifiers == hotkeyMods)
                 {
