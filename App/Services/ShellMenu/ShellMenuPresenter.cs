@@ -52,8 +52,9 @@ public class ShellMenuPresenter : IDisposable
 
     /// <summary>
     /// Whether the actions menu is allowed to open for this selection right now. Scenarios that
-    /// suppress the right-click menu (an adapter that opts out, apps, plugin/instant results, the
-    /// "show more" row, an inline file dialog) also suppress action hotkeys, so callers gate on this.
+    /// suppress the right-click menu (an adapter that opts out, apps outside the quick window,
+    /// plugin/instant results, the "show more" row, an inline file dialog) also suppress action
+    /// hotkeys, so callers gate on this.
     /// </summary>
     public bool CanShowActionsMenu(IReadOnlyList<AppSearchResult> selection)
     {
@@ -64,7 +65,12 @@ public class ShellMenuPresenter : IDisposable
         var items = selection?.Where(r => r != null && !r.IsSearchSectionHeader && !r.IsEmptyResult).ToList() ?? new List<AppSearchResult>();
         var result = items.Count > 0 ? items[0] : null;
 
-        return result != null && result.FullPath != "__SHOW_MORE__" && !result.IsApplication
+        // Apps are only allowed into the actions list in the quick window; each action there still
+        // self-guards via its own CanExecute (a real Start Menu shortcut has a file path actions can act
+        // on, while a virtual shell:AppsFolder entry for a packaged app simply won't satisfy those checks).
+        var appsAllowed = result == null || !result.IsApplication || GetWindowType() == SearchWindowType.Quick;
+
+        return result != null && result.FullPath != "__SHOW_MORE__" && appsAllowed
             && !result.IsPluginSearchAction && !result.IsInstantResult && !IsInlineFileDialog()
             && !Helpers.FavoriteUrlHelper.IsWebUrl(result.FullPath);
     }

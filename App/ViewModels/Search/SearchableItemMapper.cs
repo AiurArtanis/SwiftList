@@ -170,6 +170,7 @@ public static class SearchableItemMapper
 
                 var isRealFile = false;
                 var isRealDir = false;
+                var isApplication = false;
                 var rKind = item.ResultKind ?? string.Empty;
                 var isFileFilterItem = rKind.StartsWith("FileFilter_", StringComparison.OrdinalIgnoreCase);
 
@@ -180,6 +181,14 @@ public static class SearchableItemMapper
                 else if (rKind == "Directory")
                 {
                     isRealDir = true;
+                }
+                else if (rKind == "Application")
+                {
+                    // Keep the app's real target path (a Start Menu .lnk, or a virtual shell:AppsFolder
+                    // token for packaged apps) instead of the generic "__SEARCHABLE_ITEM__:" placeholder,
+                    // so file actions (copy, locate in explorer, ...) have something to act on -- each
+                    // action's own CanExecute already handles a path that doesn't exist on disk.
+                    isApplication = true;
                 }
                 else if (isFileFilterItem)
                 {
@@ -195,7 +204,7 @@ public static class SearchableItemMapper
                     // no per-keystroke rebuild and no leaked GDI handle.
                     iconOverride = entry.Icon;
                 }
-                else if ((isRealFile || isRealDir) && !string.IsNullOrWhiteSpace(item.ActionArgument))
+                else if ((isRealFile || isRealDir || isApplication) && !string.IsNullOrWhiteSpace(item.ActionArgument))
                 {
                     // Fallback to ShellIconHelper so native high-fidelity shell thumbnails display correctly!
                     iconOverride = ShellIconHelper.GetIconForPath(item.ActionArgument, isRealDir);
@@ -227,13 +236,13 @@ public static class SearchableItemMapper
                 uiResults.Add(new AppSearchResult
                 {
                     Name = item.Title,
-                    FullPath = (isRealFile || isRealDir) ? item.ActionArgument : $"__SEARCHABLE_ITEM__:{provider.Name}:{item.Title}",
+                    FullPath = (isRealFile || isRealDir || isApplication) ? item.ActionArgument : $"__SEARCHABLE_ITEM__:{provider.Name}:{item.Title}",
                     // Applications show name-only: blank the subtitle so the path row collapses (an app's
                     // FullPath is a virtual token anyway). Other item kinds keep their description.
                     ParentDir = item.ResultKind == "Application" ? string.Empty : item.Description,
                     IsDir = isRealDir,
                     Drive = string.Empty,
-                    ResultKind = isRealFile ? "File" : (isRealDir ? "Directory" : "InstantResult"),
+                    ResultKind = isRealFile ? "File" : (isRealDir ? "Directory" : (isApplication ? "Application" : "InstantResult")),
                     Index = uiResults.Count,
                     SearchQuery = activeHighlighterQuery ?? string.Empty,
                     IconOverride = iconOverride,

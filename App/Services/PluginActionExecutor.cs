@@ -6,7 +6,10 @@ public static class PluginActionExecutor
 {
     public static bool TryExecute(AppSearchResult result, PluginSdk.Abstractions.IPluginSearchWindow view, bool asAdmin = false)
     {
-        if (result.IsInstantResult)
+        // Apps (Start Menu shortcuts, packaged apps) launch through the same OnExecute delegate as an
+        // instant result -- they just carry ResultKind "Application" instead so they get a real FullPath
+        // and can be acted on (copy, locate in explorer, ...) like a normal file result.
+        if (result.IsInstantResult || result.IsApplication)
         {
             // Dismiss the window before executing. An admin launch blocks on the UAC prompt, so
             // deferring the close (as the callers do on success) would leave the search window up
