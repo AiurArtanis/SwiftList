@@ -9,18 +9,8 @@ public static class SearchInputHelper
 {
     public static bool IsQuickLookKey(System.Windows.Input.KeyEventArgs e)
     {
-        var selectIndexMod = UserSettings.Load().SelectIndexModifier;
-        var quickLookModifier = selectIndexMod.Trim().ToUpperInvariant() switch
-        {
-            "ALT" => ModifierKeys.Alt,
-            "SHIFT" => ModifierKeys.Shift,
-            "WIN" or "WINDOWS" => ModifierKeys.Windows,
-            "NONE" => ModifierKeys.None,
-            _ => ModifierKeys.Control,
-        };
         var checkKey = e.Key == Key.System ? e.SystemKey : e.Key;
-        return (checkKey == Key.P && Keyboard.Modifiers == quickLookModifier) ||
-               (checkKey == Key.Space && Keyboard.Modifiers == quickLookModifier);
+        return WpfUiHelper.MatchesHotkey(UserSettings.Load().Hotkeys.QuickLookHotkey, Keyboard.Modifiers, checkKey);
     }
 
     public static bool HandleActionsModeKeys(System.Windows.Input.KeyEventArgs e, ISearchWindow? window, ShellMenuPresenter? menuPresenter)

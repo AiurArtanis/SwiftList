@@ -22,25 +22,22 @@ public class QuickSearchWindowInputHandler
             e.Handled = true;
             return;
         }
-        if (e.Key == Key.Tab)
+
+        var settings = UserSettings.Load().Hotkeys;
+        if (WpfUiHelper.MatchesHotkey(settings.CompleteFromSelectionHotkey, Keyboard.Modifiers, WpfUiHelper.GetActualKey(e)))
         {
-            var tabSelectMod = UserSettings.Load().SelectIndexModifier;
-            var wpfModifier = WpfUiHelper.GetWpfModifier(tabSelectMod);
-            if (Keyboard.Modifiers == wpfModifier)
+            CompleteSearchFromSelection();
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
             {
-                CompleteSearchFromSelection();
-                e.Handled = true;
-                return;
+                _window.MenuPresenter?.EnterActionsMode(result);
             }
-            else if (Keyboard.Modifiers == ModifierKeys.None)
-            {
-                if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
-                {
-                    _window.MenuPresenter?.EnterActionsMode(result);
-                }
-                e.Handled = true;
-                return;
-            }
+            e.Handled = true;
+            return;
         }
 
         if (e.Key == Key.Right && IsSearchCaretAtEnd())
@@ -91,19 +88,30 @@ public class QuickSearchWindowInputHandler
             e.Handled = true;
             return;
         }
-        var selectIndexMod = UserSettings.Load().SelectIndexModifier;
-        if (Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(selectIndexMod))
+        if (WpfUiHelper.MatchesHotkey(settings.NextItemHotkey, Keyboard.Modifiers, actualKey))
         {
-            if (actualKey == Key.O)
+            MoveResultSelection(1);
+            e.Handled = true;
+            return;
+        }
+        if (WpfUiHelper.MatchesHotkey(settings.PreviousItemHotkey, Keyboard.Modifiers, actualKey))
+        {
+            MoveResultSelection(-1);
+            e.Handled = true;
+            return;
+        }
+        if (WpfUiHelper.MatchesHotkey(settings.ActionsMenuHotkey, Keyboard.Modifiers, actualKey))
+        {
+            if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
             {
-                if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
-                {
-                    _window.MenuPresenter?.EnterActionsMode(result);
-                    e.Handled = true;
-                    return;
-                }
+                _window.MenuPresenter?.EnterActionsMode(result);
+                e.Handled = true;
+                return;
             }
+        }
 
+        if (!string.IsNullOrEmpty(settings.SelectJumpModifier) && Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(settings.SelectJumpModifier))
+        {
             var num = -1;
             if (actualKey >= Key.D1 && actualKey <= Key.D9)
                 num = actualKey - Key.D1;

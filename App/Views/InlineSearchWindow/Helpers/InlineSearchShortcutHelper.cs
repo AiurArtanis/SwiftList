@@ -15,12 +15,8 @@ public static class InlineSearchShortcutHelper
         var quickSwitchHint = "Ctrl+G";
         try
         {
-            var settings = UserSettings.Load();
-            var mod = settings.SelectIndexModifier;
-            if (!string.IsNullOrEmpty(mod))
-            {
-                selectMod = string.Equals(mod, "Control", StringComparison.OrdinalIgnoreCase) ? "Ctrl" : mod;
-            }
+            var settings = UserSettings.Load().Hotkeys;
+            selectMod = settings.SelectJumpModifier;
 
             var quickSwitch = settings.QuickSwitchHotkey;
             if (quickSwitch != null)
@@ -36,8 +32,9 @@ public static class InlineSearchShortcutHelper
                     else if (string.Equals(qsKey, "Escape", StringComparison.OrdinalIgnoreCase)) qsKey = "Esc";
                     else if (string.Equals(qsKey, "Tab", StringComparison.OrdinalIgnoreCase)) qsKey = "Tab";
 
-                    quickSwitchHint = string.Equals(qsMod, "None", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(qsMod)
-                        ? qsKey : $"{qsMod}+{qsKey}";
+                    quickSwitchHint = string.IsNullOrEmpty(qsKey) ? string.Empty
+                        : string.Equals(qsMod, "None", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(qsMod)
+                            ? qsKey : $"{qsMod}+{qsKey}";
                 }
                 else
                 {
@@ -63,13 +60,14 @@ public static class InlineSearchShortcutHelper
                 if (item.IsJumpToExplorerPath)
                 {
                     item.ShortcutHint = quickSwitchHint;
-                    item.ShortcutVisibility = Visibility.Visible;
+                    item.ShortcutVisibility = string.IsNullOrEmpty(quickSwitchHint) ? Visibility.Collapsed : Visibility.Visible;
                     continue;
                 }
 
-                if (i >= firstVisible && shortcutIndex <= 9)
+                if (!string.IsNullOrEmpty(selectMod) && i >= firstVisible && shortcutIndex <= 9)
                 {
-                    item.ShortcutHint = $"{selectMod}+{shortcutIndex}";
+                    var prefix = string.Equals(selectMod, "None", StringComparison.OrdinalIgnoreCase) ? "" : $"{selectMod}+";
+                    item.ShortcutHint = $"{prefix}{shortcutIndex}";
                     item.ShortcutVisibility = Visibility.Visible;
                     shortcutIndex++;
                 }

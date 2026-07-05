@@ -95,22 +95,13 @@ internal sealed class QuickSearchWindowLayoutManager
         var firstVisible = scrollViewer != null ? (int)Math.Round(scrollViewer.VerticalOffset) : 0;
         var shortcutIndex = 1;
 
-        var selectMod = "Ctrl";
-        try
-        {
-            var mod = UserSettings.Load().SelectIndexModifier;
-            if (!string.IsNullOrEmpty(mod))
-            {
-                selectMod = string.Equals(mod, "Control", StringComparison.OrdinalIgnoreCase) ? "Ctrl" : mod;
-            }
-        }
-        catch { }
+        var selectMod = UserSettings.Load().Hotkeys.SelectJumpModifier;
 
         for (var i = 0; i < _window.LstResults.Items.Count; i++)
         {
             if (_window.LstResults.Items[i] is AppSearchResult item)
             {
-                if (item.IsEmptyResult || item.IsSearchSectionHeader)
+                if (item.IsEmptyResult || item.IsSearchSectionHeader || string.IsNullOrEmpty(selectMod))
                 {
                     item.ShortcutHint = string.Empty;
                     item.ShortcutVisibility = Visibility.Collapsed;
@@ -119,7 +110,8 @@ internal sealed class QuickSearchWindowLayoutManager
 
                 if (i >= firstVisible && shortcutIndex <= 9)
                 {
-                    item.ShortcutHint = $"{selectMod}+{shortcutIndex}";
+                    var prefix = string.Equals(selectMod, "None", StringComparison.OrdinalIgnoreCase) ? "" : $"{selectMod}+";
+                    item.ShortcutHint = $"{prefix}{shortcutIndex}";
                     item.ShortcutVisibility = Visibility.Visible;
                     shortcutIndex++;
                 }

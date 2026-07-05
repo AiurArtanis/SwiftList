@@ -218,7 +218,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow
         if (item != null && item.Content is AppSearchResult result)
         {
             e.Handled = true;
-            var asAdmin = Keyboard.Modifiers == Helpers.WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
+            var asAdmin = Keyboard.Modifiers == ModifierKeys.Control;
             ExecuteSearchResult(result, asAdmin);
         }
     }

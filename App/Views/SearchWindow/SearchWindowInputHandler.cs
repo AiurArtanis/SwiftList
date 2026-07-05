@@ -119,7 +119,7 @@ public class SearchWindowInputHandler
         if (depObj is ListViewItem item && item.Content is AppSearchResult result)
         {
             e.Handled = true;
-            var selectModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
+            var selectModifier = ModifierKeys.Control;
             var currentModifiers = Keyboard.Modifiers;
             var isFileOrFolder = !result.IsSearchSectionHeader && !result.IsEmptyResult &&
                 (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath));
@@ -145,7 +145,7 @@ public class SearchWindowInputHandler
         var actualKey2 = WpfUiHelper.GetActualKey(e);
         if (actualKey2 == Key.Enter)
         {
-            var selectModifier = WpfUiHelper.GetWpfModifier(UserSettings.Load().SelectIndexModifier);
+            var selectModifier = ModifierKeys.Control;
             var currentModifiers = Keyboard.Modifiers;
             if (_window.LstGridResultsControl.SelectedItem is AppSearchResult selected)
             {

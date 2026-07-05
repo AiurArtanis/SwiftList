@@ -79,6 +79,15 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
         InitializeComponent();
         DataContext = this;
         Loaded += AboutSettingsPage_Loaded;
+
+        // AppVersion/CoreVersion/ServiceVersion embed a translated format string, so they need to
+        // re-resolve (not just the XAML-bound About_* labels) when the language changes at runtime.
+        TranslationManager.Instance.PropertyChanged += (s, e) =>
+        {
+            OnPropertyChanged(nameof(AppVersion));
+            OnPropertyChanged(nameof(CoreVersion));
+            OnPropertyChanged(nameof(ServiceVersion));
+        };
     }
 
     private void AboutSettingsPage_Loaded(object sender, RoutedEventArgs e) => CheckServiceStatus();

@@ -30,28 +30,10 @@ public class UserSettings
     public bool AutoElevateIfAdmin { get; set; }
     public bool AutoCheckUpdates { get; set; } = true;
     public bool AutoSilentUpdate { get; set; } = false;
-    public bool QuickNavTriggerOnDoubleClick { get; set; } = true;
-    public bool QuickNavTriggerOnMiddleClick { get; set; } = true;
     public string LogLevel { get; set; } = "Info";
     public string PreferredLanguage { get; set; } = GetDefaultSystemLanguage();
     public string Theme { get; set; } = "Light";
-    public HotkeySetting ToggleWindowHotkey { get; set; } = new()
-    {
-        Type = "ModifierClick",
-        Modifier = "Control",
-        Key = "Space",
-        ClickModifier = "Control",
-        ClickCount = 2
-    };
-    public HotkeySetting QuickSwitchHotkey { get; set; } = new()
-    {
-        Type = "KeyCombo",
-        Modifier = "Control",
-        Key = "G",
-        ClickModifier = "Control",
-        ClickCount = 2
-    };
-    public string SelectIndexModifier { get; set; } = "Control";
+    public HotkeyPageSettings Hotkeys { get; set; } = new();
     public SearchWindowSettings SearchWindow { get; set; } = new();
 
     private static string GetDefaultSystemLanguage()
@@ -246,6 +228,33 @@ public class HotkeySetting
 
     // For ModifierClick: number of clicks
     public int ClickCount { get; set; } = 2;
+}
+
+/// <summary>Everything shown on the Hotkey Settings page, grouped under one object.</summary>
+public class HotkeyPageSettings
+{
+    public HotkeySetting ToggleWindowHotkey { get; set; } = new()
+    {
+        Type = "ModifierClick",
+        Modifier = "Control",
+        Key = "Space",
+        ClickModifier = "Control",
+        ClickCount = 2
+    };
+    public HotkeySetting QuickSwitchHotkey { get; set; } = new()
+    {
+        Type = "KeyCombo",
+        Modifier = "Control",
+        Key = "G"
+    };
+    public string SelectJumpModifier { get; set; } = "Ctrl";
+    public string NextItemHotkey { get; set; } = "Ctrl+N";
+    public string PreviousItemHotkey { get; set; } = "Ctrl+P";
+    public string ActionsMenuHotkey { get; set; } = "Ctrl+O";
+    public string CompleteFromSelectionHotkey { get; set; } = "Ctrl+Tab";
+    public string QuickLookHotkey { get; set; } = "Alt+P";
+    public bool QuickNavTriggerOnDoubleClick { get; set; } = true;
+    public bool QuickNavTriggerOnMiddleClick { get; set; } = true;
 }
 
 public class FavoriteItemSetting

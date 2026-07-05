@@ -99,21 +99,33 @@ public class InlineSearchWindowInputHandler
             return;
         }
 
-        // Custom Modifier + 1..9
+        // Next/previous item + actions menu + jump-to-item shortcuts
 
-        var selectIndexMod = UserSettings.Load().SelectIndexModifier;
-        if (Keyboard.Modifiers == GetWpfModifier(selectIndexMod))
+        var settings = UserSettings.Load().Hotkeys;
+        if (WpfUiHelper.MatchesHotkey(settings.NextItemHotkey, Keyboard.Modifiers, actualKey))
         {
-            if (actualKey == Key.O)
+            e.Handled = true;
+            MoveResultSelection(1);
+            return;
+        }
+        if (WpfUiHelper.MatchesHotkey(settings.PreviousItemHotkey, Keyboard.Modifiers, actualKey))
+        {
+            e.Handled = true;
+            MoveResultSelection(-1);
+            return;
+        }
+        if (WpfUiHelper.MatchesHotkey(settings.ActionsMenuHotkey, Keyboard.Modifiers, actualKey))
+        {
+            if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
             {
-                if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
-                {
-                    e.Handled = true;
-                    _window.MenuPresenter.EnterActionsMode(result);
-                    return;
-                }
+                e.Handled = true;
+                _window.MenuPresenter.EnterActionsMode(result);
+                return;
             }
+        }
 
+        if (!string.IsNullOrEmpty(settings.SelectJumpModifier) && Keyboard.Modifiers == WpfUiHelper.GetWpfModifier(settings.SelectJumpModifier))
+        {
             var num = -1;
             if (actualKey >= Key.D1 && actualKey <= Key.D9)
                 num = (int)actualKey - (int)Key.D1 + 1;
@@ -220,19 +232,6 @@ public class InlineSearchWindowInputHandler
     }
 
     public static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject => InlineSearchWindowLayoutManager.FindVisualParent<T>(child);
-
-    private ModifierKeys GetWpfModifier(string modifierStr)
-    {
-        if (string.IsNullOrEmpty(modifierStr)) return ModifierKeys.Control;
-        return modifierStr.Trim().ToUpperInvariant() switch
-        {
-            "ALT" => ModifierKeys.Alt,
-            "SHIFT" => ModifierKeys.Shift,
-            "WIN" or "WINDOWS" => ModifierKeys.Windows,
-            "NONE" => ModifierKeys.None,
-            _ => ModifierKeys.Control,
-        };
-    }
 
     private void ExecuteResult(AppSearchResult result, bool asAdmin)
     {

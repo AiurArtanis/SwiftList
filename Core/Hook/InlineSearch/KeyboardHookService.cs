@@ -180,7 +180,8 @@ public class KeyboardHookService : IDisposable
                     return false;
                 }
             }
-            var isIndexModifierDown = KeyboardUtils.CheckModifiersMatchOnly(_settings.SelectIndexModifier);
+            var isIndexModifierDown = !string.IsNullOrEmpty(_settings.Hotkeys.SelectJumpModifier)
+                && KeyboardUtils.CheckModifiersMatchOnly(_settings.Hotkeys.SelectJumpModifier);
             if (isIndexModifierDown && IsInlineSearchVisible)
             {
                 var num = -1;

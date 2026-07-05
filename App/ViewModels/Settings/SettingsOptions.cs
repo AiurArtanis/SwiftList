@@ -30,8 +30,3 @@ public sealed record LanguageOption(string Value, string Label)
         return cultureCode;
     }
 }
-
-public sealed record HotkeyOptionItem(object Value, string Label)
-{
-    public override string ToString() => Label;
-}

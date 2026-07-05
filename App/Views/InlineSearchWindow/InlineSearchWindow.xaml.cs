@@ -174,7 +174,7 @@ public partial class InlineSearchWindow : Window, ISearchWindow
             if (item != null && item.Content is AppSearchResult result)
             {
                 e.Handled = true;
-                var asAdmin = Keyboard.Modifiers == Helpers.WpfUiHelper.GetWpfModifier(Core.UserSettings.Load().SelectIndexModifier);
+                var asAdmin = Keyboard.Modifiers == ModifierKeys.Control;
                 InlineSearchNavigator.ExecuteSearchResult(this, result, asAdmin);
             }
 

@@ -42,7 +42,6 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     public double ScaledResultIconSize => UiMetrics.ScaledResultIconSize;
     public double InlineItemHeight => IsListItem ? ItemHeight : Math.Round(ItemHeight * 0.7);
     public double ActionsHeaderHeight => Math.Round(ItemHeight * 0.7);
-    public string ResultTypeText => IsInstantResult ? TranslationManager.Instance["Model_TypePlugin"] : (IsApplication ? TranslationManager.Instance["Model_TypeApp"] : (IsDir ? TranslationManager.Instance["Model_TypeFolder"] : TranslationManager.Instance["Model_TypeFile"]));
     public string DisplayPath => IsApplication ? ParentDir : FullPath;
     public uint PluginActionId { get; set; }
     public string PluginActionArgumentText { get; set; } = string.Empty;

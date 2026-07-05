@@ -34,6 +34,26 @@
         <Setter Property="Padding" Value="0,10"/>
     </Style>
 
+    <Style x:Key="SettingsGroupTitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="Margin" Value="0,20,0,10"/>
+    </Style>
+
+    <Style x:Key="SettingsSubHeading" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="Margin" Value="0,14,0,8"/>
+    </Style>
+
+    <Style x:Key="SettingsGroupDivider" TargetType="Border">
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource SettingsRowBorderBrush}"/>
+        <Setter Property="Margin" Value="0,10,0,0"/>
+    </Style>
+
     <Style x:Key="SettingsComboBoxItem" TargetType="ComboBoxItem">
         <Setter Property="Height" Value="32"/>
         <Setter Property="Padding" Value="10,0"/>

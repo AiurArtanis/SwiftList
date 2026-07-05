@@ -1,4 +1,3 @@
-using SwiftList.App.Services;
 using SwiftList.Core;
 
 namespace SwiftList.App.ViewModels.Settings;
@@ -10,39 +9,27 @@ public class HotkeySettingsViewModel : ViewModelBase
     public HotkeySettingsViewModel(UserSettings userSettings)
     {
         _userSettings = userSettings;
+        var hotkeys = _userSettings.Hotkeys;
 
         // Initialize local bindings from user settings
-        _toggleType = _userSettings.ToggleWindowHotkey?.Type ?? "ModifierClick";
-        _toggleClickModifier = _userSettings.ToggleWindowHotkey?.ClickModifier ?? "Control";
-        _toggleClickCount = _userSettings.ToggleWindowHotkey?.ClickCount ?? 2;
-        _toggleModifier = _userSettings.ToggleWindowHotkey?.Modifier ?? "Control";
-        if (_toggleModifier == "None") _toggleModifier = "Control";
-        _toggleKey = _userSettings.ToggleWindowHotkey?.Key ?? "Space";
+        _toggleType = hotkeys.ToggleWindowHotkey.Type;
+        _toggleClickModifier = hotkeys.ToggleWindowHotkey.ClickModifier;
+        _toggleClickCount = hotkeys.ToggleWindowHotkey.ClickCount;
+        _toggleModifier = hotkeys.ToggleWindowHotkey.Modifier == "None" ? "Control" : hotkeys.ToggleWindowHotkey.Modifier;
+        _toggleKey = hotkeys.ToggleWindowHotkey.Key;
 
-        _quickSwitchType = _userSettings.QuickSwitchHotkey?.Type ?? "KeyCombo";
-        _quickSwitchClickModifier = _userSettings.QuickSwitchHotkey?.ClickModifier ?? "Control";
-        _quickSwitchClickCount = _userSettings.QuickSwitchHotkey?.ClickCount ?? 2;
-        _quickSwitchModifier = _userSettings.QuickSwitchHotkey?.Modifier ?? "Control";
-        if (_quickSwitchModifier == "None") _quickSwitchModifier = "Control";
-        _quickSwitchKey = _userSettings.QuickSwitchHotkey?.Key ?? "G";
+        _quickSwitchModifier = hotkeys.QuickSwitchHotkey.Modifier == "None" ? "Control" : hotkeys.QuickSwitchHotkey.Modifier;
+        _quickSwitchKey = hotkeys.QuickSwitchHotkey.Key;
 
-        _selectIndexModifier = _userSettings.SelectIndexModifier ?? "Control";
-        _quickNavTriggerOnDoubleClick = _userSettings.QuickNavTriggerOnDoubleClick;
-        _quickNavTriggerOnMiddleClick = _userSettings.QuickNavTriggerOnMiddleClick;
+        _quickNavTriggerOnDoubleClick = hotkeys.QuickNavTriggerOnDoubleClick;
+        _quickNavTriggerOnMiddleClick = hotkeys.QuickNavTriggerOnMiddleClick;
 
-        _selectedToggleType = HotkeyTypeOptions.FirstOrDefault(o => o.Value.ToString() == _toggleType);
-        _selectedQuickSwitchType = HotkeyTypeOptions.FirstOrDefault(o => o.Value.ToString() == _quickSwitchType);
-
-        // Dynamically refresh properties when the language changes
-        TranslationManager.Instance.PropertyChanged += (s, e) =>
-        {
-            OnPropertyChanged(nameof(HotkeyTypeOptions));
-            System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
-            {
-                SelectedToggleType = HotkeyTypeOptions.FirstOrDefault(o => o.Value.ToString() == ToggleType);
-                SelectedQuickSwitchType = HotkeyTypeOptions.FirstOrDefault(o => o.Value.ToString() == QuickSwitchType);
-            }), System.Windows.Threading.DispatcherPriority.Loaded);
-        };
+        _selectJumpModifier = hotkeys.SelectJumpModifier;
+        _nextItemHotkey = hotkeys.NextItemHotkey;
+        _previousItemHotkey = hotkeys.PreviousItemHotkey;
+        _actionsMenuHotkey = hotkeys.ActionsMenuHotkey;
+        _completeFromSelectionHotkey = hotkeys.CompleteFromSelectionHotkey;
+        _quickLookHotkey = hotkeys.QuickLookHotkey;
     }
 
     // Quick Navigation properties
@@ -60,110 +47,42 @@ public class HotkeySettingsViewModel : ViewModelBase
         set => SetProperty(ref _quickNavTriggerOnMiddleClick, value);
     }
 
-    // Toggle Window properties
+    // Toggle Window hotkey: merged into a single recorder value. A bare modifier (e.g. "Ctrl") means
+    // "double-tap this modifier"; a full combo (e.g. "Alt+Space") means a literal key combination.
     private string _toggleType;
-    public string ToggleType
-    {
-        get => _toggleType;
-        set
-        {
-            if (SetProperty(ref _toggleType, value))
-            {
-                OnPropertyChanged(nameof(IsToggleModifierClick));
-                OnPropertyChanged(nameof(IsToggleKeyCombo));
-            }
-        }
-    }
-    public bool IsToggleModifierClick => ToggleType == "ModifierClick";
-    public bool IsToggleKeyCombo => ToggleType == "KeyCombo";
-
-    private HotkeyOptionItem? _selectedToggleType;
-    public HotkeyOptionItem? SelectedToggleType
-    {
-        get => _selectedToggleType;
-        set
-        {
-            if (value == null) return;
-            if (SetProperty(ref _selectedToggleType, value))
-            {
-                ToggleType = value.Value.ToString() ?? "ModifierClick";
-            }
-        }
-    }
-
     private string _toggleClickModifier;
-    public string ToggleClickModifier
-    {
-        get => _toggleClickModifier;
-        set => SetProperty(ref _toggleClickModifier, value);
-    }
-
     private int _toggleClickCount;
-    public int ToggleClickCount
-    {
-        get => _toggleClickCount;
-        set => SetProperty(ref _toggleClickCount, value);
-    }
-
     private string _toggleModifier;
-    public string ToggleModifier
-    {
-        get => _toggleModifier;
-        set => SetProperty(ref _toggleModifier, value);
-    }
-
     private string _toggleKey;
-    public string ToggleKey
-    {
-        get => _toggleKey;
-        set => SetProperty(ref _toggleKey, value);
-    }
 
-    // Quick Switch properties
-    private string _quickSwitchType;
-    public string QuickSwitchType
+    public string ToggleHotkeyValue
     {
-        get => _quickSwitchType;
+        get => _toggleType == "ModifierClick"
+            ? (_toggleClickModifier == "Control" ? "Ctrl" : _toggleClickModifier)
+            : FormatComboHotkey(_toggleModifier, _toggleKey);
         set
         {
-            if (SetProperty(ref _quickSwitchType, value))
+            if (ModifierTokens.Contains(value, StringComparer.OrdinalIgnoreCase))
             {
-                OnPropertyChanged(nameof(IsQuickSwitchModifierClick));
-                OnPropertyChanged(nameof(IsQuickSwitchKeyCombo));
+                _toggleType = "ModifierClick";
+                _toggleClickModifier = value == "Ctrl" ? "Control" : value;
+                _toggleClickCount = 2;
             }
-        }
-    }
-    public bool IsQuickSwitchModifierClick => QuickSwitchType == "ModifierClick";
-    public bool IsQuickSwitchKeyCombo => QuickSwitchType == "KeyCombo";
-
-    private HotkeyOptionItem? _selectedQuickSwitchType;
-    public HotkeyOptionItem? SelectedQuickSwitchType
-    {
-        get => _selectedQuickSwitchType;
-        set
-        {
-            if (value == null) return;
-            if (SetProperty(ref _selectedQuickSwitchType, value))
+            else
             {
-                QuickSwitchType = value.Value.ToString() ?? "KeyCombo";
+                _toggleType = "KeyCombo";
+                ParseComboHotkey(value, out _toggleModifier, out _toggleKey);
             }
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsToggleModifierClick));
         }
     }
 
-    private string _quickSwitchClickModifier;
-    public string QuickSwitchClickModifier
-    {
-        get => _quickSwitchClickModifier;
-        set => SetProperty(ref _quickSwitchClickModifier, value);
-    }
+    // Whether the toggle hotkey is currently a bare modifier (double-tap mode) -- drives the
+    // "(Double Tap)" hint shown next to the recorder.
+    public bool IsToggleModifierClick => _toggleType == "ModifierClick";
 
-    private int _quickSwitchClickCount;
-    public int QuickSwitchClickCount
-    {
-        get => _quickSwitchClickCount;
-        set => SetProperty(ref _quickSwitchClickCount, value);
-    }
-
+    // Quick Switch properties (combo-key only)
     private string _quickSwitchModifier;
     public string QuickSwitchModifier
     {
@@ -178,99 +97,119 @@ public class HotkeySettingsViewModel : ViewModelBase
         set => SetProperty(ref _quickSwitchKey, value);
     }
 
-    // Select Index (1-9) properties
-    private string _selectIndexModifier;
-    public string SelectIndexModifier
+    // Function key shortcuts, each stored directly in HotkeyRecorderControl's own combo format
+    private string _selectJumpModifier;
+    public string SelectJumpModifier
     {
-        get => _selectIndexModifier;
-        set => SetProperty(ref _selectIndexModifier, value);
+        get => _selectJumpModifier;
+        set => SetProperty(ref _selectJumpModifier, value);
     }
 
-    // Composite hotkey strings for HotkeyRecorderControl binding
-    public string ToggleComboHotkey
+    private string _nextItemHotkey;
+    public string NextItemHotkey
     {
-        get => FormatComboHotkey(ToggleModifier, ToggleKey);
-        set { ParseComboHotkey(value, out var mod, out var k); ToggleModifier = mod; ToggleKey = k; OnPropertyChanged(); }
+        get => _nextItemHotkey;
+        set => SetProperty(ref _nextItemHotkey, value);
     }
 
+    private string _previousItemHotkey;
+    public string PreviousItemHotkey
+    {
+        get => _previousItemHotkey;
+        set => SetProperty(ref _previousItemHotkey, value);
+    }
+
+    private string _actionsMenuHotkey;
+    public string ActionsMenuHotkey
+    {
+        get => _actionsMenuHotkey;
+        set => SetProperty(ref _actionsMenuHotkey, value);
+    }
+
+    private string _completeFromSelectionHotkey;
+    public string CompleteFromSelectionHotkey
+    {
+        get => _completeFromSelectionHotkey;
+        set => SetProperty(ref _completeFromSelectionHotkey, value);
+    }
+
+    private string _quickLookHotkey;
+    public string QuickLookHotkey
+    {
+        get => _quickLookHotkey;
+        set => SetProperty(ref _quickLookHotkey, value);
+    }
+
+    // Composite hotkey string for HotkeyRecorderControl binding
     public string QuickSwitchComboHotkey
     {
         get => FormatComboHotkey(QuickSwitchModifier, QuickSwitchKey);
         set { ParseComboHotkey(value, out var mod, out var k); QuickSwitchModifier = mod; QuickSwitchKey = k; OnPropertyChanged(); }
     }
 
+    private static readonly string[] ModifierTokens = { "Ctrl", "Alt", "Shift", "Win" };
+
     private static string FormatComboHotkey(string modifier, string key)
     {
         var mod = modifier == "Control" ? "Ctrl" : modifier;
-        return string.IsNullOrEmpty(key) ? string.Empty : $"{mod}+{key}";
+        if (string.IsNullOrEmpty(key)) return string.IsNullOrEmpty(mod) ? string.Empty : mod;
+        return string.IsNullOrEmpty(mod) ? key : $"{mod}+{key}";
     }
 
     private static void ParseComboHotkey(string value, out string modifier, out string key)
     {
-        if (string.IsNullOrWhiteSpace(value)) { modifier = "Control"; key = "Space"; return; }
+        if (string.IsNullOrWhiteSpace(value)) { modifier = string.Empty; key = string.Empty; return; }
         var parts = value.Split('+');
+        if (parts.Length == 1)
+        {
+            // A single token is either a bare modifier alone (e.g. "Ctrl") or a bare key with no
+            // modifier (e.g. "P") -- tell them apart instead of always assuming the latter.
+            if (ModifierTokens.Contains(parts[0], StringComparer.OrdinalIgnoreCase))
+            {
+                modifier = parts[0] == "Ctrl" ? "Control" : parts[0];
+                key = string.Empty;
+            }
+            else
+            {
+                modifier = string.Empty;
+                key = parts[0];
+            }
+            return;
+        }
         key = parts[^1];
-        var modPart = parts.Length > 1 ? parts[0] : "Ctrl";
+        var modPart = parts[0];
         modifier = modPart == "Ctrl" ? "Control" : modPart; // Win/Alt/Shift pass through
     }
 
-    // Options lists
-    public List<HotkeyOptionItem> HotkeyTypeOptions => new()
-    {
-        new("ModifierClick", TranslationManager.Instance["Hotkeys_TypeClick"]),
-        new("KeyCombo", TranslationManager.Instance["Hotkeys_TypeCombo"])
-    };
-
-    public List<HotkeyOptionItem> ModifierOptions =>
-        new List<string> { "Control", "Alt", "Shift", "Win" }
-        .Select(x => new HotkeyOptionItem(x, x)).ToList();
-
-    public List<HotkeyOptionItem> ClickModifierOptions =>
-        new List<string> { "Control", "Alt", "Shift", "Win" }
-        .Select(x => new HotkeyOptionItem(x, x)).ToList();
-
-    public List<HotkeyOptionItem> ClickCountOptions =>
-        new List<int> { 1, 2, 3 }
-        .Select(x => new HotkeyOptionItem(x, x.ToString())).ToList();
-
-    public List<HotkeyOptionItem> SelectIndexModifierOptions =>
-        new List<string> { "Control", "Alt", "Shift" }
-        .Select(x => new HotkeyOptionItem(x, x)).ToList();
-
-    public List<HotkeyOptionItem> KeyOptions =>
-        new List<string>
-        {
-            "Space", "Tab", "Enter", "Escape",
-            "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
-            "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
-            "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-            "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"
-        }
-        .Select(x => new HotkeyOptionItem(x, x)).ToList();
-
     public void Apply()
     {
-        _userSettings.ToggleWindowHotkey = new HotkeySetting
+        var hotkeys = _userSettings.Hotkeys;
+
+        hotkeys.ToggleWindowHotkey = new HotkeySetting
         {
-            Type = ToggleType,
-            ClickModifier = ToggleClickModifier,
-            ClickCount = ToggleClickCount,
-            Modifier = ToggleModifier,
-            Key = ToggleKey
+            Type = _toggleType,
+            ClickModifier = _toggleClickModifier,
+            ClickCount = _toggleClickCount,
+            Modifier = _toggleModifier,
+            Key = _toggleKey
         };
 
-        _userSettings.QuickSwitchHotkey = new HotkeySetting
+        hotkeys.QuickSwitchHotkey = new HotkeySetting
         {
-            Type = QuickSwitchType,
-            ClickModifier = QuickSwitchClickModifier,
-            ClickCount = QuickSwitchClickCount,
+            Type = "KeyCombo",
             Modifier = QuickSwitchModifier,
             Key = QuickSwitchKey
         };
 
-        _userSettings.SelectIndexModifier = SelectIndexModifier;
-        _userSettings.QuickNavTriggerOnDoubleClick = QuickNavTriggerOnDoubleClick;
-        _userSettings.QuickNavTriggerOnMiddleClick = QuickNavTriggerOnMiddleClick;
+        hotkeys.QuickNavTriggerOnDoubleClick = QuickNavTriggerOnDoubleClick;
+        hotkeys.QuickNavTriggerOnMiddleClick = QuickNavTriggerOnMiddleClick;
+
+        hotkeys.SelectJumpModifier = SelectJumpModifier;
+        hotkeys.NextItemHotkey = NextItemHotkey;
+        hotkeys.PreviousItemHotkey = PreviousItemHotkey;
+        hotkeys.ActionsMenuHotkey = ActionsMenuHotkey;
+        hotkeys.CompleteFromSelectionHotkey = CompleteFromSelectionHotkey;
+        hotkeys.QuickLookHotkey = QuickLookHotkey;
         _userSettings.Save();
 
         // Notify hook service process via IPC to reload settings!

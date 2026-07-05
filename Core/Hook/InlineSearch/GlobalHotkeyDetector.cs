@@ -24,14 +24,14 @@ public sealed class GlobalHotkeyDetector
     /// <summary>Call on WM_KEYUP / WM_SYSKEYUP to reset the "was released" flags.</summary>
     public void OnKeyUp(int vkCode)
     {
-        if (_settings.ToggleWindowHotkey?.Type == "ModifierClick" &&
-            KeyboardUtils.IsModifierKey(vkCode, _settings.ToggleWindowHotkey.ClickModifier))
+        if (_settings.Hotkeys.ToggleWindowHotkey?.Type == "ModifierClick" &&
+            KeyboardUtils.IsModifierKey(vkCode, _settings.Hotkeys.ToggleWindowHotkey.ClickModifier))
         {
             _modifierWasReleased = true;
         }
 
-        if (_settings.QuickSwitchHotkey?.Type == "ModifierClick" &&
-            KeyboardUtils.IsModifierKey(vkCode, _settings.QuickSwitchHotkey.ClickModifier))
+        if (_settings.Hotkeys.QuickSwitchHotkey?.Type == "ModifierClick" &&
+            KeyboardUtils.IsModifierKey(vkCode, _settings.Hotkeys.QuickSwitchHotkey.ClickModifier))
         {
             _quickSwitchModifierWasReleased = true;
         }
@@ -41,9 +41,9 @@ public sealed class GlobalHotkeyDetector
     {
         consumeKey = false;
         var triggered = false;
-        if (_settings.ToggleWindowHotkey?.Type == "ModifierClick")
+        if (_settings.Hotkeys.ToggleWindowHotkey?.Type == "ModifierClick")
         {
-            if (KeyboardUtils.IsModifierKey(vkCode, _settings.ToggleWindowHotkey.ClickModifier))
+            if (KeyboardUtils.IsModifierKey(vkCode, _settings.Hotkeys.ToggleWindowHotkey.ClickModifier))
             {
                 // Key-repeat: the key was never released since last press — ignore
                 if (!_modifierWasReleased)
@@ -54,7 +54,7 @@ public sealed class GlobalHotkeyDetector
                 if (vkCode == _lastModifierVkCode && elapsed > 100 && elapsed < 500)
                 {
                     _modifierClickCount++;
-                    if (_modifierClickCount >= _settings.ToggleWindowHotkey.ClickCount)
+                    if (_modifierClickCount >= _settings.Hotkeys.ToggleWindowHotkey.ClickCount)
                     {
                         _modifierClickCount = 0;
                         _lastModifierDownTime = 0;
@@ -80,12 +80,12 @@ public sealed class GlobalHotkeyDetector
                 _lastModifierVkCode = 0;
             }
         }
-        else if (_settings.ToggleWindowHotkey?.Type == "KeyCombo")
+        else if (_settings.Hotkeys.ToggleWindowHotkey?.Type == "KeyCombo")
         {
-            var targetVk = KeyboardUtils.GetKeyVirtualCode(_settings.ToggleWindowHotkey.Key);
+            var targetVk = KeyboardUtils.GetKeyVirtualCode(_settings.Hotkeys.ToggleWindowHotkey.Key);
             if (targetVk != 0 && vkCode == targetVk)
             {
-                if (KeyboardUtils.CheckModifiersMatch(_settings.ToggleWindowHotkey.Modifier))
+                if (KeyboardUtils.CheckModifiersMatch(_settings.Hotkeys.ToggleWindowHotkey.Modifier))
                 {
                     triggered = true;
                     consumeKey = true;
@@ -104,9 +104,9 @@ public sealed class GlobalHotkeyDetector
     {
         consumeKey = false;
         var triggered = false;
-        if (_settings.QuickSwitchHotkey?.Type == "ModifierClick")
+        if (_settings.Hotkeys.QuickSwitchHotkey?.Type == "ModifierClick")
         {
-            if (KeyboardUtils.IsModifierKey(vkCode, _settings.QuickSwitchHotkey.ClickModifier))
+            if (KeyboardUtils.IsModifierKey(vkCode, _settings.Hotkeys.QuickSwitchHotkey.ClickModifier))
             {
                 // Key-repeat: the key was never released since last press — ignore
                 if (!_quickSwitchModifierWasReleased)
@@ -117,7 +117,7 @@ public sealed class GlobalHotkeyDetector
                 if (vkCode == _lastQuickSwitchModifierVkCode && elapsed > 100 && elapsed < 500)
                 {
                     _quickSwitchModifierClickCount++;
-                    if (_quickSwitchModifierClickCount >= _settings.QuickSwitchHotkey.ClickCount)
+                    if (_quickSwitchModifierClickCount >= _settings.Hotkeys.QuickSwitchHotkey.ClickCount)
                     {
                         _quickSwitchModifierClickCount = 0;
                         _lastQuickSwitchModifierTime = 0;
@@ -143,12 +143,12 @@ public sealed class GlobalHotkeyDetector
                 _lastQuickSwitchModifierVkCode = 0;
             }
         }
-        else if (_settings.QuickSwitchHotkey?.Type == "KeyCombo")
+        else if (_settings.Hotkeys.QuickSwitchHotkey?.Type == "KeyCombo")
         {
-            var targetVk = KeyboardUtils.GetKeyVirtualCode(_settings.QuickSwitchHotkey.Key);
+            var targetVk = KeyboardUtils.GetKeyVirtualCode(_settings.Hotkeys.QuickSwitchHotkey.Key);
             if (targetVk != 0 && vkCode == targetVk)
             {
-                if (KeyboardUtils.CheckModifiersMatch(_settings.QuickSwitchHotkey.Modifier))
+                if (KeyboardUtils.CheckModifiersMatch(_settings.Hotkeys.QuickSwitchHotkey.Modifier))
                 {
                     triggered = true;
                 }
