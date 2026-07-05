@@ -15,7 +15,7 @@ public class DirectoryOpusPathCollector : IActivePathCollector
         return className.Equals("dopus.lister", StringComparison.OrdinalIgnoreCase);
     }
 
-    internal static readonly Dictionary<IntPtr, string> _lastActiveSides = new Dictionary<IntPtr, string>();
+    private static readonly Dictionary<IntPtr, string> _lastActiveSides = new Dictionary<IntPtr, string>();
 
     public string? TryGetPath(IntPtr activeHwnd, string activeClassName, IntPtr windowHwnd, string windowClassName, string processName)
     {

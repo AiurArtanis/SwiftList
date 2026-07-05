@@ -1,0 +1,4 @@
+{
+  "Plugins_DirectoryOpus_EnableInlineSearch": "启用内联搜索",
+  "Plugins_DirectoryOpus_EnableInlineSearchDesc": "允许在 Directory Opus 窗口中双击或按快捷键弹出内置搜索栏"
+}

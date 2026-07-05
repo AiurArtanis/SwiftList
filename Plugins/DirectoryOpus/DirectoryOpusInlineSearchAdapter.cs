@@ -186,77 +186,20 @@ public class DirectoryOpusInlineSearchAdapter : IInlineSearchAdapter
         rect = default;
         if (hwnd == IntPtr.Zero) return false;
 
+        // Dock over the whole lister window's bottom-right corner (same as the Total Commander plugin).
+        // Extended frame bounds excludes the drop shadow, matching the visible edge.
         var listerHwnd = GetListerWindow(hwnd);
-        var containers = Win32Helper.GetVisibleContainers(listerHwnd);
-        var targetHwnd = listerHwnd;
-
-        if (containers.Count > 0)
-        {
-            targetHwnd = containers[0];
-
-            containers.Sort((a, b) =>
-            {
-                Win32Helper.TryGetWindowRect(a, out var rA);
-                Win32Helper.TryGetWindowRect(b, out var rB);
-                if (Math.Abs(rA.Left - rB.Left) > 10)
-                {
-                    return rA.Left.CompareTo(rB.Left);
-                }
-                return rA.Top.CompareTo(rB.Top);
-            });
-
-            var activeIndex = -1;
-            for (var i = 0; i < containers.Count; i++)
-            {
-                if (Win32Helper.IsDescendant(containers[i], hwnd))
-                {
-                    activeIndex = i;
-                    break;
-                }
-            }
-
-            if (activeIndex == -1)
-            {
-                string? lastSideIndexStr;
-                lock (DirectoryOpusPathCollector._lastActiveSides)
-                {
-                    DirectoryOpusPathCollector._lastActiveSides.TryGetValue(listerHwnd, out lastSideIndexStr);
-                }
-
-                if (lastSideIndexStr != null && int.TryParse(lastSideIndexStr, out var targetIndex) && targetIndex < containers.Count)
-                {
-                    activeIndex = targetIndex;
-                }
-            }
-
-            if (activeIndex != -1 && activeIndex < containers.Count)
-            {
-                targetHwnd = containers[activeIndex];
-            }
-        }
-
         RECT nativeRect;
-        if (targetHwnd != listerHwnd)
-        {
-            if (GetWindowRect(targetHwnd, out nativeRect))
-            {
-                rect = new AdapterRect { Left = nativeRect.Left, Top = nativeRect.Top, Right = nativeRect.Right, Bottom = nativeRect.Bottom };
-                return true;
-            }
-        }
-
         if (DwmGetWindowAttribute(listerHwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out nativeRect, Marshal.SizeOf<RECT>()) == 0)
         {
             rect = new AdapterRect { Left = nativeRect.Left, Top = nativeRect.Top, Right = nativeRect.Right, Bottom = nativeRect.Bottom };
             return true;
         }
-
         if (GetWindowRect(listerHwnd, out nativeRect))
         {
             rect = new AdapterRect { Left = nativeRect.Left, Top = nativeRect.Top, Right = nativeRect.Right, Bottom = nativeRect.Bottom };
             return true;
         }
-
         return false;
     }
 

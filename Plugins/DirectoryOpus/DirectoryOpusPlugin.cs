@@ -1,5 +1,6 @@
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.DirectoryOpus;
 
@@ -7,23 +8,24 @@ public class DirectoryOpusPlugin : IPlugin, IConfigurable, ITranslationProvider
 {
     public string Name => "Directory Opus";
 
-    public IReadOnlyList<string> SupportedCultures => new[] { "zh-CN", "en-US" };
+    public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(System.Reflection.Assembly.GetExecutingAssembly());
+
+    private static readonly Dictionary<string, Dictionary<string, string>> Cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly object LockObj = new();
 
     public IReadOnlyDictionary<string, string> GetTranslations(string cultureName)
     {
-        if (cultureName.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+        lock (LockObj)
         {
-            return new Dictionary<string, string>
+            if (Cache.TryGetValue(cultureName, out var cached))
             {
-                { "Plugins_DirectoryOpus_EnableInlineSearch", "启用内联搜索" },
-                { "Plugins_DirectoryOpus_EnableInlineSearchDesc", "允许在 Directory Opus 窗口中双击或按快捷键弹出内置搜索栏" }
-            };
+                return cached;
+            }
+
+            var translations = TranslationService.LoadEmbeddedTranslations(System.Reflection.Assembly.GetExecutingAssembly(), cultureName, "Plugin");
+            Cache[cultureName] = translations;
+            return translations;
         }
-        return new Dictionary<string, string>
-        {
-            { "Plugins_DirectoryOpus_EnableInlineSearch", "Enable Inline Search" },
-            { "Plugins_DirectoryOpus_EnableInlineSearchDesc", "Allow double-clicking or pressing hotkeys in Directory Opus to summon inline search" }
-        };
     }
 
     public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
