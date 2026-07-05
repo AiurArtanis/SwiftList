@@ -253,6 +253,8 @@ public class SearchWindowSettings
     public double SearchBarWidth { get; set; } = 632;
     public double SearchBarHeight { get; set; } = 70;
     public double CornerRadius { get; set; } = 12;
+    // Base result-icon size for the quick window only (see UiMetrics); other windows use a fixed size.
+    public double ResultIconSize { get; set; } = 42;
     public double? Left { get; set; }
     public double? Top { get; set; }
 }

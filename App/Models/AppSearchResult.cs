@@ -27,7 +27,10 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     // Only genuine on-disk file/folder results get the preview window — excludes calculator/URL/env instant
     // results, plugin actions, apps, jump-to-path, list items, headers, empties, and the "show more" row.
     public bool CanPreview => ResultKind == "File" && FullPath != "__SHOW_MORE__";
-    public double ItemHeight => IsSearchSectionHeader ? UiMetrics.SearchSectionHeaderHeight : (IsListItem ? UiMetrics.ListItemHeight : UiMetrics.SearchResultItemHeight);
+    // A row must be at least as tall as its own icon plus the row border's own vertical margin (see
+    // UiMetrics.ResultRowVerticalMargin) -- otherwise the icon can exceed the row and either get clipped
+    // or force it to overflow past its allotted layout space.
+    public double ItemHeight => IsSearchSectionHeader ? UiMetrics.SearchSectionHeaderHeight : (IsListItem ? UiMetrics.ListItemHeight : Math.Max(UiMetrics.SearchResultItemHeight, UiMetrics.ResultIconSize + UiMetrics.ResultRowVerticalMargin));
 
     // Base visual metrics (inline/full windows use these — no scaling).
     public double NameFontSize => UiMetrics.ResultNameFontSize;
@@ -36,11 +39,18 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
 
     // Scaled variants — bound only in the quick window, so it alone grows/shrinks with the
     // configured search box height.
-    public double ScaledItemHeight => IsSearchSectionHeader ? UiMetrics.ScaledSearchSectionHeaderHeight : (IsListItem ? UiMetrics.ScaledListItemHeight : UiMetrics.ScaledSearchResultItemHeight);
+    public double ScaledItemHeight => IsSearchSectionHeader ? UiMetrics.ScaledSearchSectionHeaderHeight : (IsListItem ? UiMetrics.ScaledListItemHeight : Math.Max(UiMetrics.ScaledSearchResultItemHeight, UiMetrics.ScaledResultIconSize + UiMetrics.ResultRowVerticalMargin));
     public double ScaledNameFontSize => UiMetrics.ScaledResultNameFontSize;
     public double ScaledPathFontSize => UiMetrics.ScaledResultPathFontSize;
     public double ScaledResultIconSize => UiMetrics.ScaledResultIconSize;
-    public double InlineItemHeight => IsListItem ? ItemHeight : Math.Round(ItemHeight * 0.7);
+    // Uses the inline window's own (smaller) icon size rather than the main window's ItemHeight, so a
+    // normal row is never sized against an icon it doesn't actually show (see ScaledItemHeight above
+    // for why that mismatch matters).
+    public double InlineItemHeight => IsListItem
+        ? ItemHeight
+        : (IsSearchSectionHeader
+            ? Math.Round(ItemHeight * 0.7)
+            : Math.Max(UiMetrics.BaseInlineItemHeight, UiMetrics.InlineResultIconSize + UiMetrics.ResultRowVerticalMargin));
     public double ActionsHeaderHeight => Math.Round(ItemHeight * 0.7);
     public string DisplayPath => IsApplication ? ParentDir : FullPath;
     public uint PluginActionId { get; set; }

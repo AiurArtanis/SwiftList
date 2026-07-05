@@ -50,8 +50,10 @@ internal static class ShellImageListInterop
         get { try { return GetDpiForSystem() / 96.0; } catch { return 1.0; } }
     }
 
-    /// <summary>Target icon size in physical pixels for the current display scale.</summary>
-    private static int TargetPixels() => (int)Math.Ceiling(UiMetrics.ResultIconSize * DpiScale);
+    /// <summary>Target icon size in physical pixels for the current display scale. Takes the larger of
+    /// the fixed main-window size and the quick window's (user-configurable, scale-applied) size, so
+    /// whichever window ends up displaying icons largest still gets a crisp source bitmap.</summary>
+    private static int TargetPixels() => (int)Math.Ceiling(Math.Max(UiMetrics.ResultIconSize, UiMetrics.ScaledResultIconSize) * DpiScale);
 
     private static int CurrentShil() => TargetPixels() <= 48 ? SHIL_EXTRALARGE : SHIL_JUMBO;
 

@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using SwiftList.PluginSdk.Abstractions.Plugins;
-using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace SwiftList.Plugins.CoreExtensions.Preview;
 

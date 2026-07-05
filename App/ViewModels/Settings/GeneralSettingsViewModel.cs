@@ -248,6 +248,26 @@ public class GeneralSettingsViewModel : ViewModelBase
         }
     }
 
+    public double ResultIconSize
+    {
+        get => _userSettings.SearchWindow.ResultIconSize;
+        set
+        {
+            if (value < UiMetrics.MinQuickResultIconSize || value > UiMetrics.MaxQuickResultIconSize)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value),
+                    $"Icon size must be between {UiMetrics.MinQuickResultIconSize} and {UiMetrics.MaxQuickResultIconSize}.");
+            }
+            if (_userSettings.SearchWindow.ResultIconSize != value)
+            {
+                _userSettings.SearchWindow.ResultIconSize = value;
+                _userSettings.Save();
+                UiMetrics.QuickResultIconSize = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     public ICommand ResetLayoutCommand => new RelayCommand(ResetLayout);
 
     private void ResetLayout()
@@ -255,12 +275,15 @@ public class GeneralSettingsViewModel : ViewModelBase
         _userSettings.SearchWindow.SearchBarWidth = 632;
         _userSettings.SearchWindow.SearchBarHeight = 70;
         _userSettings.SearchWindow.CornerRadius = 12;
+        _userSettings.SearchWindow.ResultIconSize = 42;
         _userSettings.SearchWindow.Left = null;
         _userSettings.SearchWindow.Top = null;
         _userSettings.Save();
+        UiMetrics.ApplyScaleFromSettings();
 
         OnPropertyChanged(nameof(SearchBarWidth));
         OnPropertyChanged(nameof(SearchBarHeight));
         OnPropertyChanged(nameof(SearchWindowCornerRadius));
+        OnPropertyChanged(nameof(ResultIconSize));
     }
 }

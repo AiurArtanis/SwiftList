@@ -78,8 +78,17 @@ internal sealed class QuickSearchWindowLayoutManager
         {
             Interlocked.Exchange(ref _layoutUpdateQueued, 0);
 
-            var count = _window.ViewModel.Results.Count;
-            var resultsHeight = Math.Min(count, 9) * UiMetrics.ScaledSearchResultItemHeight;
+            // Sum each visible row's own height rather than assuming a uniform row size -- a section
+            // header, the "show more" row, or a row whose icon forces it to grow past the base height
+            // (see MinHeight in ListBox.xaml) would otherwise throw off a single-height-times-count guess,
+            // leaving stray blank space (or clipping) at the bottom of the list.
+            var results = _window.ViewModel.Results;
+            var visibleCount = Math.Min(results.Count, 9);
+            double resultsHeight = 0;
+            for (var i = 0; i < visibleCount; i++)
+            {
+                resultsHeight += results[i].ScaledItemHeight;
+            }
             _window.LstResults.Height = resultsHeight;
             _window.ResultsPanelControl.Height = resultsHeight;
 
