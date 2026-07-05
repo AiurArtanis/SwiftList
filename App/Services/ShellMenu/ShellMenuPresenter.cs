@@ -255,8 +255,6 @@ public class ShellMenuPresenter : IDisposable
 
     public void ExitActionsMode()
     {
-        _isInActionsMode = false;
-        _view.IsInActionsMode = false;
         _activeResult = null;
         foreach (var provider in PluginManager.Instance.DynamicProviders)
         {
@@ -271,8 +269,18 @@ public class ShellMenuPresenter : IDisposable
         _view.GridActions.Visibility = Visibility.Collapsed;
         _view.GridSearchResults.Visibility = Visibility.Visible;
         _view.UpdateActionsLayout();
+
+        // Restore the saved query while IsInActionsMode is still true, so a host window's own
+        // SearchTextBox.TextChanged handling (gated on IsInActionsMode, e.g. InlineSearchWindow's) treats
+        // this restoration as a no-op instead of mistaking it for new typing -- which would otherwise wipe
+        // the results selection and re-run the search, losing exactly which result/scroll position the
+        // user was on before entering the actions menu.
         _view.SearchTextBox.Text = _savedSearchQuery;
         _view.SearchTextBox.SelectAll();
+
+        _isInActionsMode = false;
+        _view.IsInActionsMode = false;
+
         if (_view.LstResults.SelectedItem != null)
         {
             _view.LstResults.ScrollIntoView(_view.LstResults.SelectedItem);

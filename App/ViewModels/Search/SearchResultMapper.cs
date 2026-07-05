@@ -54,7 +54,6 @@ public static class SearchResultMapper
         }
 
         var fileResultsCount = fileResults != null ? fileResults.Count : 0;
-        var hasInstantResults = uiResults.Any(x => x.IsInstantResult);
         if (uiResults.Count + fileResultsCount < 10 && fileResults != null)
         {
             for (var i = 0; i < fileResultsCount; i++)
@@ -74,11 +73,6 @@ public static class SearchResultMapper
             }
         }
 
-        if (!hasInstantResults)
-        {
-            SearchResultHelper.AddShowMoreResult(uiResults, query);
-        }
-
         var hasMoreAtEnd = fileResultsCount > 50;
         var endLimit = hasMoreAtEnd ? 50 : fileResultsCount;
 
@@ -93,7 +87,7 @@ public static class SearchResultMapper
             }
         }
 
-        if (hasMoreAtEnd && !hasInstantResults)
+        if (hasMoreAtEnd)
         {
             SearchResultHelper.AddShowMoreResult(uiResults, query);
         }

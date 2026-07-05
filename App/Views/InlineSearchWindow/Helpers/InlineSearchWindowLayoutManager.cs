@@ -67,7 +67,7 @@ public sealed class InlineSearchWindowLayoutManager
             UpdateShortcutHints();
             if (heightChanged)
                 _window.Positioner.PositionWindow();
-        }), DispatcherPriority.ContextIdle);
+        }), DispatcherPriority.Background);
     }
 
     public void UpdateActionsLayout()

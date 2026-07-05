@@ -58,6 +58,11 @@ public partial class InlineSearchWindow : Window, ISearchWindow
 
         SearchBox.SearchTextBox.TextChanged += (s, e) =>
         {
+            // While in Actions mode, ShellMenuPresenter owns this text (filtering the actions list, and
+            // restoring the saved query on exit) -- treating either as "new typing" here would wipe the
+            // results selection/scroll position the user had before entering the actions menu.
+            if (_menuPresenter.IsInActionsMode) return;
+
             if (_searchText != SearchBox.SearchTextBox.Text)
             {
                 _viewModel.IsInlineSearchContext = true;
@@ -85,6 +90,13 @@ public partial class InlineSearchWindow : Window, ISearchWindow
             if (IsVisible)
             {
                 _positioner.PositionWindow();
+
+                // Re-arm the results height fixup on becoming visible. QueueResultsLayoutUpdate's deferred
+                // callback bails out if the window isn't visible at the moment it finally runs (e.g. raced by
+                // a rapid show/hide), and nothing else ever retries it -- so without this, LstResults can be
+                // stuck at its XAML-default Height="0" (invisible) until some unrelated event happens to
+                // repopulate Results. Re-queuing here closes that gap regardless of what caused the miss.
+                _inputHandler.QueueResultsLayoutUpdate();
             }
 
         };
