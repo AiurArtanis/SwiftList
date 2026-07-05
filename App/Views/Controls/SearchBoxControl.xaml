@@ -54,7 +54,7 @@
                         </Style>
                     </Border.Style>
                     <Border.OpacityMask>
-                        <ImageBrush ImageSource="pack://application:,,,/SwiftList.App;component/logo.png"
+                        <ImageBrush ImageSource="pack://application:,,,/SwiftList.App;component/tray.png"
                                     RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border.OpacityMask>
                 </Border>
@@ -164,7 +164,7 @@
                         </Style>
                     </Border.Style>
                     <Border.OpacityMask>
-                        <ImageBrush ImageSource="pack://application:,,,/SwiftList.App;component/logo.png"
+                        <ImageBrush ImageSource="pack://application:,,,/SwiftList.App;component/tray.png"
                                     RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border.OpacityMask>
                 </Border>

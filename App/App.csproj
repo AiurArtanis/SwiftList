@@ -26,6 +26,7 @@
   <ItemGroup>
     <Resource Include="logo.png" />
     <Resource Include="logo.ico" />
+    <Resource Include="tray.png" />
   </ItemGroup>
 
 </Project>

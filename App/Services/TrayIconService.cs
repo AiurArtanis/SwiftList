@@ -82,7 +82,7 @@ public class TrayIconService : IDisposable
                 drawingColor = Color.FromArgb(mediaColor.A, mediaColor.R, mediaColor.G, mediaColor.B);
             }
 
-            var resourceUri = new Uri("pack://application:,,,/SwiftList.App;component/logo.png", UriKind.Absolute);
+            var resourceUri = new Uri("pack://application:,,,/SwiftList.App;component/tray.png", UriKind.Absolute);
             var resourceInfo = Application.GetResourceStream(resourceUri);
             if (resourceInfo == null) return;
 
