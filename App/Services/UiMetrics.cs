@@ -16,7 +16,7 @@ public static class UiMetrics
     // Base font/icon metrics used by the search result item template.
     public const double BaseResultNameFontSize = 14;
     public const double BaseResultPathFontSize = 11;
-    public const double BaseResultIconSize = 28;
+    public const double BaseResultIconSize = 42; // 28 + 50%
 
     private static double _scale = 1.0;
 
