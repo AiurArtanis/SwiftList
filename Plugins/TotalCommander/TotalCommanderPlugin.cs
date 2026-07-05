@@ -39,6 +39,14 @@ public class TotalCommanderPlugin : IPlugin, IConfigurable, ITranslationProvider
                 DescriptionKey = "Plugins_TotalCommander_EnableInlineSearchDesc",
                 FieldType = ConfigFieldType.Boolean,
                 DefaultValue = true
+            },
+            new PluginConfigField
+            {
+                Key = "EnableQuickNav",
+                LabelKey = "Plugins_TotalCommander_EnableQuickNav",
+                DescriptionKey = "Plugins_TotalCommander_EnableQuickNavDesc",
+                FieldType = ConfigFieldType.Boolean,
+                DefaultValue = true
             }
         }
     };

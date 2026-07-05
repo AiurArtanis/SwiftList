@@ -48,6 +48,14 @@ public class DirectoryOpusInlineSearchAdapter : IInlineSearchAdapter
                className.Equals("dopus.filedisplaycontainer", StringComparison.OrdinalIgnoreCase);
     }
 
+    public bool CanShowQuickNav(IntPtr hwndUnderCursor, string classNameUnderCursor)
+    {
+        if (!PluginSettingsService.GetSetting("SwiftList.Plugins.DirectoryOpus", "EnableQuickNav", true))
+            return false;
+
+        return CanTrigger(hwndUnderCursor, classNameUnderCursor);
+    }
+
     public string? GetSearchScope(IntPtr hwnd)
     {
         var collector = new DirectoryOpusPathCollector();
@@ -189,8 +197,7 @@ public class DirectoryOpusInlineSearchAdapter : IInlineSearchAdapter
         // Dock over the whole lister window's bottom-right corner (same as the Total Commander plugin).
         // Extended frame bounds excludes the drop shadow, matching the visible edge.
         var listerHwnd = GetListerWindow(hwnd);
-        RECT nativeRect;
-        if (DwmGetWindowAttribute(listerHwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out nativeRect, Marshal.SizeOf<RECT>()) == 0)
+        if (DwmGetWindowAttribute(listerHwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out var nativeRect, Marshal.SizeOf<RECT>()) == 0)
         {
             rect = new AdapterRect { Left = nativeRect.Left, Top = nativeRect.Top, Right = nativeRect.Right, Bottom = nativeRect.Bottom };
             return true;

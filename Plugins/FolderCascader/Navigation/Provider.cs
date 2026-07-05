@@ -13,11 +13,16 @@ public class Provider : IQuickNavigationProvider
 
     public bool CanShow(IntPtr activeHwnd, string processName, string className, bool isDesktop, int x, int y, MouseTriggerType triggerType)
     {
-        if (!string.Equals(processName, "explorer", StringComparison.OrdinalIgnoreCase) && !isDesktop)
+        if (string.Equals(processName, "explorer", StringComparison.OrdinalIgnoreCase) || isDesktop)
         {
-            return false;
+            return CanShowInExplorer(activeHwnd, x, y);
         }
 
+        return CanShowInOtherFileManager(activeHwnd, processName, className, x, y, triggerType);
+    }
+
+    private static bool CanShowInExplorer(IntPtr activeHwnd, int x, int y)
+    {
         var hwndUnderCursor = Win32Native.WindowFromPoint(new Win32Native.POINT(x, y));
         if (hwndUnderCursor == IntPtr.Zero) return false;
 
@@ -43,12 +48,30 @@ public class Provider : IQuickNavigationProvider
             }
         }
 
-        if (!Win32Native.IsActiveWindowFolderEmptySpace(activeHwnd))
-        {
-            return false;
-        }
+        return Win32Native.IsActiveWindowFolderEmptySpace(activeHwnd);
+    }
 
-        return true;
+    // Third-party file managers (Directory Opus, Total Commander, ...) integrate through their
+    // IInlineSearchAdapter instead of host-specific hit-testing here -- CanShowQuickNav reuses whatever
+    // "is this the host's file list" check the adapter already has for inline search's keyboard trigger.
+    //
+    // Restricted to middle-click: unlike Explorer (where empty space is detected precisely via the shell's
+    // selection count), these hosts give no reliable way to tell "clicked an item" from "clicked empty
+    // space", and double-clicking an item there already navigates into it -- popping this menu on top of
+    // that would be confusing. Middle-click carries no such default action in these hosts.
+    private static bool CanShowInOtherFileManager(IntPtr activeHwnd, string processName, string className, int x, int y, MouseTriggerType triggerType)
+    {
+        if (triggerType != MouseTriggerType.MiddleClick) return false;
+
+        var adapter = PluginSdk.Registries.InlineSearchAdapterRegistry.GetMatchingAdapter(activeHwnd, className, processName);
+        if (adapter == null || !adapter.IsFileExplorer) return false;
+
+        var hwndUnderCursor = Win32Native.WindowFromPoint(new Win32Native.POINT(x, y));
+        if (hwndUnderCursor == IntPtr.Zero) return false;
+
+        var sbClass = new StringBuilder(256);
+        Win32Native.GetClassName(hwndUnderCursor, sbClass, sbClass.Capacity);
+        return adapter.CanShowQuickNav(hwndUnderCursor, sbClass.ToString());
     }
 
     public bool CanProvide(ISearchResult result) => result != null && !string.IsNullOrEmpty(result.FullPath);

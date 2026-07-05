@@ -45,6 +45,15 @@ public interface IInlineSearchAdapter
     bool IsFileExplorer => false;
 
     /// <summary>
+    /// Determines whether the Quick Navigation menu may be shown for a mouse click that landed on
+    /// <paramref name="hwndUnderCursor"/> (of class <paramref name="classNameUnderCursor"/>) within this
+    /// host's window. Defaults to <see cref="CanTrigger"/> -- the same "is this the host's file list"
+    /// check inline search already uses for its keyboard hotkey -- since both represent the same question
+    /// ("is the user positioned over this host's file list").
+    /// </summary>
+    bool CanShowQuickNav(IntPtr hwndUnderCursor, string classNameUnderCursor) => CanTrigger(hwndUnderCursor, classNameUnderCursor);
+
+    /// <summary>
     /// Returns the full list of items currently available in the target control.
     /// When non-empty, the inline search filters this list instead of querying the
     /// global search service. Return an empty enumerable (default) to fall back to

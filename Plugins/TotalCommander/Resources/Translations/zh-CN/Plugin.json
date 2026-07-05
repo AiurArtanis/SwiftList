@@ -1,4 +1,6 @@
 {
   "Plugins_TotalCommander_EnableInlineSearch": "启用内联搜索",
-  "Plugins_TotalCommander_EnableInlineSearchDesc": "允许在 Total Commander 窗口中双击或按快捷键弹出内置搜索栏"
+  "Plugins_TotalCommander_EnableInlineSearchDesc": "允许在 Total Commander 窗口中双击或按快捷键弹出内置搜索栏",
+  "Plugins_TotalCommander_EnableQuickNav": "启用快速导航菜单",
+  "Plugins_TotalCommander_EnableQuickNavDesc": "允许在 Total Commander 的文件列表中中键点击弹出快速导航菜单"
 }

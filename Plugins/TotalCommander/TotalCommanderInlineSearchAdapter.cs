@@ -62,6 +62,14 @@ public class TotalCommanderInlineSearchAdapter : IInlineSearchAdapter
         return IsFileList(className);
     }
 
+    public bool CanShowQuickNav(IntPtr hwndUnderCursor, string classNameUnderCursor)
+    {
+        if (!PluginSettingsService.GetSetting("SwiftList.Plugins.TotalCommander", "EnableQuickNav", true))
+            return false;
+
+        return CanTrigger(hwndUnderCursor, classNameUnderCursor);
+    }
+
     public string? GetSearchScope(IntPtr hwnd)
     {
         var path = Win32Helper.QuerySourcePanelPath(hwnd);

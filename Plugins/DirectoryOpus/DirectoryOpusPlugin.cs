@@ -39,6 +39,14 @@ public class DirectoryOpusPlugin : IPlugin, IConfigurable, ITranslationProvider
                 DescriptionKey = "Plugins_DirectoryOpus_EnableInlineSearchDesc",
                 FieldType = ConfigFieldType.Boolean,
                 DefaultValue = true
+            },
+            new PluginConfigField
+            {
+                Key = "EnableQuickNav",
+                LabelKey = "Plugins_DirectoryOpus_EnableQuickNav",
+                DescriptionKey = "Plugins_DirectoryOpus_EnableQuickNavDesc",
+                FieldType = ConfigFieldType.Boolean,
+                DefaultValue = true
             }
         }
     };

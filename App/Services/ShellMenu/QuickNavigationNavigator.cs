@@ -8,7 +8,8 @@ public static class QuickNavigationNavigator
 {
     public static void NavigateOrOpen(string path)
     {
-        // Web-address favorites: straight to the default browser (no working dir / explorer navigation).
+        // Web-address favorites: straight to the default browser. No host file-manager adapter understands
+        // a URL as a filesystem path, so this must short-circuit before any adapter delegation below.
         if (Helpers.FavoriteUrlHelper.IsWebUrl(path))
         {
             try { Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true }); } catch { }
@@ -24,24 +25,28 @@ public static class QuickNavigationNavigator
                 Hwnd = tracker.ActiveHwnd.ToInt64(),
                 StringVal1 = path
             });
+            return;
         }
-        else if (Directory.Exists(path) && tracker.IsExplorerOrDesktopActive && !tracker.IsDesktop && tracker.ActiveHwnd != IntPtr.Zero)
+
+        // Delegate to whichever file-manager adapter matched the active host (Explorer, Directory Opus,
+        // Total Commander, ...) so a folder navigates that window and a file opens/selects there -- the
+        // same adapter inline search already uses to execute a result.
+        if (tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero
+            && tracker.ActiveInlineAdapter.ExecuteItem(tracker.ActiveHwnd, path, string.Empty))
         {
-            FileExecutor.TryLocateInExistingExplorer(path, tracker.ActiveHwnd);
+            return;
         }
-        else
+
+        try
         {
-            try
+            var workingDir = Path.GetDirectoryName(path);
+            Process.Start(new ProcessStartInfo
             {
-                var workingDir = Path.GetDirectoryName(path);
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = path,
-                    UseShellExecute = true,
-                    WorkingDirectory = string.IsNullOrEmpty(workingDir) ? "" : workingDir
-                });
-            }
-            catch { }
+                FileName = path,
+                UseShellExecute = true,
+                WorkingDirectory = string.IsNullOrEmpty(workingDir) ? "" : workingDir
+            });
         }
+        catch { }
     }
 }
