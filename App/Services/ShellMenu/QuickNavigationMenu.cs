@@ -34,9 +34,10 @@ public static class QuickNavigationMenu
             if (!provider.CanProvide(dummyResult)) continue;
             provider.ClearSession();
             foreach (var item in provider.GetMenuItems(dummyResult, IntPtr.Zero))
-                // Root entries are navigation categories (Favorites/History/drives), so don't attach the
-                // right-click action flyout here; only real files/folders in deeper levels get it.
-                contextMenu.Items.Add(item.IsSeparator ? new Separator() : CreateMenuItem(item, dummyResult, provider, contextMenu, enableRightClick: false));
+                // Root entries are navigation categories (Favorites/History/configured folders/drives), so
+                // don't attach the right-click action flyout here, and clicking/Enter must not execute or
+                // navigate anywhere either -- only real files/folders in deeper levels do that.
+                contextMenu.Items.Add(item.IsSeparator ? new Separator() : CreateMenuItem(item, dummyResult, provider, contextMenu, enableRightClick: false, isRootItem: true));
         }
 
         if (contextMenu.Items.Count == 0) return;
@@ -102,7 +103,7 @@ public static class QuickNavigationMenu
         contextMenu.IsOpen = true;
     }
 
-    private static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, bool enableRightClick = true)
+    private static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, bool enableRightClick = true, bool isRootItem = false)
     {
         var menuItem = new MenuItem { Header = item.Text, IsEnabled = !item.IsDisabled, Focusable = !item.IsDisabled };
 
@@ -170,6 +171,12 @@ public static class QuickNavigationMenu
 
         Action triggerAction = () =>
         {
+            // Root-level category entries (Favorites/History/configured folders) are pure navigation
+            // categories, not executable targets -- clicking/Enter must do nothing at all. Their contents
+            // are still reachable via submenu expansion (hover/keyboard-focus/right-arrow), which is wired
+            // independently of this action below.
+            if (isRootItem) return;
+
             contextMenu.IsOpen = false;
             (contextMenu.PlacementTarget as Window)?.Hide();
             Application.Current.Dispatcher.BeginInvoke(new Action(() =>
