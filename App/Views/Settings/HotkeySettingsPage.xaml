@@ -200,6 +200,26 @@
                         Value="{Binding QuickLookHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Alt+P"/>
                 </Grid>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="200"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_KeywordHistoryPrevious]}" VerticalAlignment="Center"/>
+                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
+                        Value="{Binding KeywordHistoryPreviousHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        DefaultValue="Alt+Up"/>
+                </Grid>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="200"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_KeywordHistoryNext]}" VerticalAlignment="Center"/>
+                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
+                        Value="{Binding KeywordHistoryNextHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        DefaultValue="Alt+Down"/>
+                </Grid>
 
                 <Border Style="{StaticResource SettingsGroupDivider}"/>
 

@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
@@ -9,91 +8,64 @@ namespace SwiftList.App.ViewModels.Settings;
 public class HistorySettingsViewModel : ViewModelBase
 {
     private readonly UserSettings _userSettings;
-    private string _searchText = string.Empty;
-    private readonly List<HistoryItemViewModel> _allItems = new();
+    private string _selectedTab = "Search";
+    private ICommand? _selectTabCommand;
 
     public HistorySettingsViewModel(UserSettings userSettings)
     {
         _userSettings = userSettings;
-        var entries = SearchHistoryStore.GetEntries();
-        foreach (var entry in entries)
+
+        SearchHistory = new HistoryListViewModel(
+            SearchHistoryStore.GetEntries,
+            MapSearchEntry,
+            () => _userSettings.EnableHistory,
+            v => _userSettings.EnableHistory = v);
+
+        KeywordHistory = new HistoryListViewModel(
+            KeywordHistoryStore.GetEntries,
+            MapKeywordEntry,
+            () => _userSettings.EnableKeywordHistory,
+            v => _userSettings.EnableKeywordHistory = v);
+    }
+
+    public string SelectedTab
+    {
+        get => _selectedTab;
+        set => SetProperty(ref _selectedTab, value);
+    }
+
+    public ICommand SelectTabCommand => _selectTabCommand ??= new RelayCommand<string>(tab => SelectedTab = tab);
+
+    public HistoryListViewModel SearchHistory { get; }
+    public HistoryListViewModel KeywordHistory { get; }
+
+    private const string FileIconGlyph = "";
+    private const string FolderIconGlyph = "";
+    private const string KeywordIconGlyph = "";
+
+    private static HistoryEntryViewModel MapSearchEntry(string path)
+    {
+        var isDir = Directory.Exists(path);
+        return new HistoryEntryViewModel
         {
-            var isDir = Directory.Exists(entry);
-            _allItems.Add(new HistoryItemViewModel
-            {
-                Path = entry,
-                Name = Path.GetFileName(entry) ?? entry,
-                IsDirectory = isDir
-            });
-        }
-
-        FilteredItems = new ObservableCollection<HistoryItemViewModel>(_allItems);
-        RemoveItemCommand = new RelayCommand<HistoryItemViewModel>(RemoveItem);
-        ClearAllCommand = new RelayCommand(ClearAll);
+            RawValue = path,
+            Primary = Path.GetFileName(path) is { Length: > 0 } name ? name : path,
+            Secondary = path,
+            IconGlyph = isDir ? FolderIconGlyph : FileIconGlyph
+        };
     }
 
-    public bool EnableHistory
+    private static HistoryEntryViewModel MapKeywordEntry(string keyword) => new()
     {
-        get => _userSettings.EnableHistory;
-        set
-        {
-            if (_userSettings.EnableHistory != value)
-            {
-                _userSettings.EnableHistory = value;
-                OnPropertyChanged();
-            }
-        }
-    }
+        RawValue = keyword,
+        Primary = keyword,
+        Secondary = string.Empty,
+        IconGlyph = KeywordIconGlyph
+    };
 
-    public ObservableCollection<HistoryItemViewModel> FilteredItems { get; }
-    public ICommand RemoveItemCommand { get; }
-    public ICommand ClearAllCommand { get; }
-
-    public string SearchText
+    public void Save()
     {
-        get => _searchText;
-        set
-        {
-            if (SetProperty(ref _searchText, value))
-            {
-                ApplyFilter();
-            }
-        }
+        SearchHistoryStore.SaveEntries(SearchHistory.GetEntriesToSave());
+        KeywordHistoryStore.SaveEntries(KeywordHistory.GetEntriesToSave());
     }
-
-    private void RemoveItem(HistoryItemViewModel? item)
-    {
-        if (item == null) return;
-        _allItems.Remove(item);
-        FilteredItems.Remove(item);
-    }
-
-    private void ClearAll()
-    {
-        _allItems.Clear();
-        FilteredItems.Clear();
-    }
-
-    private void ApplyFilter()
-    {
-        FilteredItems.Clear();
-        foreach (var item in _allItems)
-        {
-            if (string.IsNullOrEmpty(SearchText) ||
-                item.Path.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                item.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
-            {
-                FilteredItems.Add(item);
-            }
-        }
-    }
-
-    public void Save() => SearchHistoryStore.SaveEntries(_allItems.Select(x => x.Path));
-}
-
-public class HistoryItemViewModel : ViewModelBase
-{
-    public string Path { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public bool IsDirectory { get; set; }
 }

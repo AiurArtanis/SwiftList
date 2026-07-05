@@ -26,6 +26,7 @@ public class UserSettings
     public List<string> IgnoredPathRegexes { get; set; } = new();
     public List<string> BlacklistedProcesses { get; set; } = new();
     public bool EnableHistory { get; set; } = true;
+    public bool EnableKeywordHistory { get; set; } = true;
     public bool StartWithWindows { get; set; }
     public bool AutoElevateIfAdmin { get; set; }
     public bool AutoCheckUpdates { get; set; } = true;
@@ -232,6 +233,10 @@ public class HotkeyPageSettings
     public string QuickLookHotkey { get; set; } = "Alt+P";
     public bool QuickNavTriggerOnDoubleClick { get; set; } = true;
     public bool QuickNavTriggerOnMiddleClick { get; set; } = true;
+
+    // Cycle back/forward through KeywordHistoryStore entries in the quick window's search box.
+    public string KeywordHistoryPreviousHotkey { get; set; } = "Alt+Up";
+    public string KeywordHistoryNextHotkey { get; set; } = "Alt+Down";
 
     /// <summary>
     /// User overrides for plugin action hotkeys, keyed by plugin ID (the DLL file name without its

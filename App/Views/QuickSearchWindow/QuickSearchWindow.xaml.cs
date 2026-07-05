@@ -13,6 +13,7 @@ using Button = System.Windows.Controls.Button;
 using ListBox = System.Windows.Controls.ListBox;
 using Grid = System.Windows.Controls.Grid;
 using SwiftList.App.ViewModels.Search;
+using SwiftList.App.Views.QuickSearchWindow.Helpers;
 namespace SwiftList.App;
 
 public partial class QuickSearchWindow : Window, ISearchWindow
@@ -24,6 +25,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow
     private readonly QuickSearchWindowController _controller;
     private readonly QuickSearchWindowInputHandler _inputHandler;
     private readonly QuickSearchWindowLayoutManager _layoutManager;
+    internal QuickSearchKeywordHistoryController KeywordHistoryController { get; private set; } = null!;
 
     public QuickSearchWindow()
     {
@@ -101,6 +103,8 @@ public partial class QuickSearchWindow : Window, ISearchWindow
         LstActions.PreviewMouseLeftButtonUp += _menuPresenter.HandleActionsPreviewMouseLeftButtonUp;
 
         _viewModel.Results.CollectionChanged += (s, e) => _layoutManager.QueueResultsLayoutUpdate();
+
+        KeywordHistoryController = new QuickSearchKeywordHistoryController(this);
 
         LstResults.SelectionChanged += (s, e) =>
         {

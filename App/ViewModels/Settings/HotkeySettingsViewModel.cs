@@ -28,6 +28,8 @@ public class HotkeySettingsViewModel : ViewModelBase
         _actionsMenuHotkey = hotkeys.ActionsMenuHotkey;
         _completeFromSelectionHotkey = hotkeys.CompleteFromSelectionHotkey;
         _quickLookHotkey = hotkeys.QuickLookHotkey;
+        _keywordHistoryPreviousHotkey = hotkeys.KeywordHistoryPreviousHotkey;
+        _keywordHistoryNextHotkey = hotkeys.KeywordHistoryNextHotkey;
 
         PluginActionGroups = BuildPluginActionGroups(hotkeys.PluginActionHotkeys);
 
@@ -163,6 +165,20 @@ public class HotkeySettingsViewModel : ViewModelBase
         set => SetProperty(ref _quickLookHotkey, value);
     }
 
+    private string _keywordHistoryPreviousHotkey;
+    public string KeywordHistoryPreviousHotkey
+    {
+        get => _keywordHistoryPreviousHotkey;
+        set => SetProperty(ref _keywordHistoryPreviousHotkey, value);
+    }
+
+    private string _keywordHistoryNextHotkey;
+    public string KeywordHistoryNextHotkey
+    {
+        get => _keywordHistoryNextHotkey;
+        set => SetProperty(ref _keywordHistoryNextHotkey, value);
+    }
+
     public void Apply()
     {
         var hotkeys = _userSettings.Hotkeys;
@@ -179,6 +195,8 @@ public class HotkeySettingsViewModel : ViewModelBase
         hotkeys.ActionsMenuHotkey = ActionsMenuHotkey;
         hotkeys.CompleteFromSelectionHotkey = CompleteFromSelectionHotkey;
         hotkeys.QuickLookHotkey = QuickLookHotkey;
+        hotkeys.KeywordHistoryPreviousHotkey = KeywordHistoryPreviousHotkey;
+        hotkeys.KeywordHistoryNextHotkey = KeywordHistoryNextHotkey;
 
         var pluginActionHotkeys = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in PluginActionGroups)

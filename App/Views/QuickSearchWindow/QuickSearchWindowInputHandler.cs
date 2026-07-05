@@ -55,6 +55,18 @@ public class QuickSearchWindowInputHandler
             }
         }
         var actualKey = WpfUiHelper.GetActualKey(e);
+        if (WpfUiHelper.MatchesHotkey(settings.KeywordHistoryPreviousHotkey, Keyboard.Modifiers, actualKey))
+        {
+            _window.KeywordHistoryController.Navigate(previous: true);
+            e.Handled = true;
+            return;
+        }
+        if (WpfUiHelper.MatchesHotkey(settings.KeywordHistoryNextHotkey, Keyboard.Modifiers, actualKey))
+        {
+            _window.KeywordHistoryController.Navigate(previous: false);
+            e.Handled = true;
+            return;
+        }
         if (actualKey == Key.Enter)
         {
             var result = _window.LstResults.SelectedItem as AppSearchResult;

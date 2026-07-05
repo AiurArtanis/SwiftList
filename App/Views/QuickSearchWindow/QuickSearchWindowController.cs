@@ -190,6 +190,9 @@ public class QuickSearchWindowController
 
         _window.ViewModel.Monitor.StopStatusTimer();
 
+        try { KeywordHistoryStore.Record(_window.ViewModel.SearchQuery); } catch { }
+        _window.KeywordHistoryController.Reset();
+
         _window.ViewModel.SearchQuery = string.Empty;
         try
         {
