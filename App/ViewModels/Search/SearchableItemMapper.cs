@@ -22,6 +22,14 @@ public static class SearchableItemMapper
         }
     }
 
+    // Providers load on a background thread and a query issued before a given provider finishes is
+    // silently missing its items (see AddSearchableItemResults' cache-miss "continue" below) -- there is
+    // no synchronous "wait for everything" alternative without blocking the UI. Instead, a live search
+    // re-runs itself once more providers become available, so results stream in rather than staying
+    // incomplete for the rest of the session. Raised on a background thread; subscribers must marshal
+    // back to the UI thread themselves.
+    public static event Action? ProviderLoaded;
+
     private static string _lastFileFiltersSignature = string.Empty;
     private static string _lastCustomFoldersSignature = string.Empty;
 
@@ -80,6 +88,7 @@ public static class SearchableItemMapper
 
             var prefixMatches = new List<CacheEntry>();
             var containsMatches = new List<CacheEntry>();
+            var exactAliasMatches = new List<CacheEntry>();
             var aliasMatches = new List<CacheEntry>();
 
             foreach (var entry in entries)
@@ -129,6 +138,14 @@ public static class SearchableItemMapper
                     prefixMatches.Add(entry);
                 else if (title.Contains(activeQuery, StringComparison.OrdinalIgnoreCase))
                     containsMatches.Add(entry);
+                else if (entry.Aliases.Any(alias => string.Equals(alias, activeQuery, StringComparison.OrdinalIgnoreCase)))
+                {
+                    // An alias that equals the whole query (e.g. pinyin initials "jsq" for "计算器") is a far
+                    // stronger signal than the query merely appearing as a substring of a longer alias (e.g.
+                    // "xnjsq" for "性能监视器") or fuzzy-matching the title -- without separating this out, both
+                    // land in the same bucket below and whichever happens first in enumeration order wins.
+                    exactAliasMatches.Add(entry);
+                }
                 else
                 {
                     var highlights = new bool[title.Length];
@@ -144,7 +161,7 @@ public static class SearchableItemMapper
                 }
             }
 
-            var matches = prefixMatches.Concat(containsMatches).Concat(aliasMatches).Take(8);
+            var matches = prefixMatches.Concat(containsMatches).Concat(exactAliasMatches).Concat(aliasMatches).Take(8);
             foreach (var entry in matches)
             {
                 var item = entry.Item;
@@ -268,6 +285,10 @@ public static class SearchableItemMapper
             {
                 Core.Logger.Log($"[SearchableItemMapper] Error loading from provider '{provider.Name}': {ex.Message}", Core.LogLevel.Error);
                 _cache[id] = new List<CacheEntry>();
+            }
+            finally
+            {
+                ProviderLoaded?.Invoke();
             }
         }));
     }

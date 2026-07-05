@@ -21,12 +21,39 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
     private Visibility _resultsSeparatorVisibility = Visibility.Collapsed;
     private string? _searchScope;
     private bool _isInlineSearchContext;
+    private readonly System.Windows.Threading.DispatcherTimer _providerLoadedRefreshTimer;
+
     public SearchExecutionViewModel(QuickSearchViewModel mainVm, SearchService searchService)
     {
         _mainVm = mainVm;
         _engine = new SearchExecutionEngine(searchService);
         Results = new ObservableRangeCollection<AppSearchResult>();
+
+        // Coalesce multiple providers finishing their (background, unawaited) load in quick succession --
+        // e.g. right after app startup -- into a single re-run of the current query, instead of one
+        // re-run per provider.
+        _providerLoadedRefreshTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(150)
+        };
+        _providerLoadedRefreshTimer.Tick += (s, e) =>
+        {
+            _providerLoadedRefreshTimer.Stop();
+            if (!IsActionsMode && !string.IsNullOrWhiteSpace(_searchQuery))
+                DispatchSearch(_searchQuery);
+        };
+        SearchableItemMapper.ProviderLoaded += OnSearchableItemProviderLoaded;
     }
+
+    // Raised from a background thread (see SearchableItemMapper.ProviderLoaded) whenever a searchable-item
+    // provider finishes loading. A query issued before that point silently missed that provider's items
+    // (AddSearchableItemResults skips providers that aren't cached yet), so re-run the current query to let
+    // those items stream in -- ReplaceResults reconciles in place, so this doesn't reset/flicker the list.
+    private void OnSearchableItemProviderLoaded() => System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+    {
+        _providerLoadedRefreshTimer.Stop();
+        _providerLoadedRefreshTimer.Start();
+    }));
 
     public ObservableRangeCollection<AppSearchResult> Results { get; }
 
@@ -73,22 +100,24 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
                 }
                 else
                 {
-                    _engine.QueueSearch(
-                        value,
-                        SearchScope,
-                        IsInlineSearchContext,
-                        fileLimit: 51,
-                        appLimit: 51,
-                        resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, value, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
-                        state => IsSearching = state,
-                        (results, status, final) => ApplySearchResults(value, results, status, final),
-                        HandleLocalServiceUnavailable,
-                        shouldEmitInstantResults: () => Results.Count == 0
-                    );
+                    DispatchSearch(value);
                 }
             }
         }
     }
+
+    private void DispatchSearch(string value) => _engine.QueueSearch(
+        value,
+        SearchScope,
+        IsInlineSearchContext,
+        fileLimit: 51,
+        appLimit: 51,
+        resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, value, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
+        state => IsSearching = state,
+        (results, status, final) => ApplySearchResults(value, results, status, final),
+        HandleLocalServiceUnavailable,
+        shouldEmitInstantResults: () => Results.Count == 0
+    );
 
     public bool IsSearching
     {
@@ -267,5 +296,10 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
 
     public void CancelPendingSearch() => _engine.CancelPendingSearch();
 
-    public void Dispose() => _engine.Dispose();
+    public void Dispose()
+    {
+        SearchableItemMapper.ProviderLoaded -= OnSearchableItemProviderLoaded;
+        _providerLoadedRefreshTimer.Stop();
+        _engine.Dispose();
+    }
 }
