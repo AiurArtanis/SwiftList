@@ -140,10 +140,11 @@ public static class SearchableItemMapper
                     containsMatches.Add(entry);
                 else if (entry.Aliases.Any(alias => string.Equals(alias, activeQuery, StringComparison.OrdinalIgnoreCase)))
                 {
-                    // An alias that equals the whole query (e.g. pinyin initials "jsq" for "计算器") is a far
-                    // stronger signal than the query merely appearing as a substring of a longer alias (e.g.
-                    // "xnjsq" for "性能监视器") or fuzzy-matching the title -- without separating this out, both
-                    // land in the same bucket below and whichever happens first in enumeration order wins.
+                    // An alias that equals the whole query (e.g. pinyin initials matching a 3-character title
+                    // exactly) is a far stronger signal than the query merely appearing as a substring of a
+                    // longer alias (e.g. those same 3 letters buried inside a longer 5-character title's
+                    // initials) or fuzzy-matching the title -- without separating this out, both land in the
+                    // same bucket below and whichever happens first in enumeration order wins.
                     exactAliasMatches.Add(entry);
                 }
                 else
