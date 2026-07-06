@@ -61,6 +61,9 @@ public static class InlineSearchWindowNativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern int RegisterWindowMessage(string lpString);
+
     public const int GWL_EXSTYLE = -20;
     public const int GWL_HWNDPARENT = -8;
     public const int WS_EX_NOACTIVATE = 0x08000000;

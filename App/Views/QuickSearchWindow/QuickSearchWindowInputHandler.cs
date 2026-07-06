@@ -30,16 +30,6 @@ public class QuickSearchWindowInputHandler
             e.Handled = true;
             return;
         }
-        if (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None)
-        {
-            if (_window.LstResults.SelectedItem is AppSearchResult result && !result.IsEmptyResult && !result.IsSearchSectionHeader)
-            {
-                _window.MenuPresenter?.EnterActionsMode(result);
-            }
-            e.Handled = true;
-            return;
-        }
-
         if (e.Key == Key.Right && IsSearchCaretAtEnd())
         {
             if (_window.LstResults.SelectedItem is AppSearchResult result)

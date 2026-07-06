@@ -24,9 +24,10 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     public bool IsEmptyResult => ResultKind == "Empty";
     public bool IsInstantResult => ResultKind == "InstantResult";
     public bool IsListItem => ResultKind == "ListItem";
-    // Only genuine on-disk file/folder results get the preview window — excludes calculator/URL/env instant
-    // results, plugin actions, apps, jump-to-path, list items, headers, empties, and the "show more" row.
-    public bool CanPreview => ResultKind == "File" && FullPath != "__SHOW_MORE__";
+    // Genuine on-disk file/folder and application results get the preview window — excludes
+    // calculator/URL/env instant results, plugin actions, jump-to-path, list items, headers, empties,
+    // and the "show more" row.
+    public bool CanPreview => (ResultKind == "File" || ResultKind == "Application") && FullPath != "__SHOW_MORE__";
     // A row must be at least as tall as its own icon plus the row border's own vertical margin (see
     // UiMetrics.ResultRowVerticalMargin) -- otherwise the icon can exceed the row and either get clipped
     // or force it to overflow past its allotted layout space.

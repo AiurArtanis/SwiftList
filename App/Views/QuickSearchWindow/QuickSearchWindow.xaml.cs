@@ -125,6 +125,8 @@ public partial class QuickSearchWindow : Window, ISearchWindow
 
     public void UpdateShortcutHints() => _layoutManager.UpdateShortcutHints();
 
+    private static readonly int WM_TASKBARCREATED = Views.InlineSearchWindow.Helpers.InlineSearchWindowNativeMethods.RegisterWindowMessage("TaskbarCreated");
+
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         Logger.Log("[QuickSearchWindow] Window loaded. Registering hotkey and triggering index build.", LogLevel.Debug);
@@ -136,6 +138,19 @@ public partial class QuickSearchWindow : Window, ISearchWindow
             var exStyle = Views.InlineSearchWindow.Helpers.InlineSearchWindowNativeMethods.GetWindowLongPtr(hwnd, Views.InlineSearchWindow.Helpers.InlineSearchWindowNativeMethods.GWL_EXSTYLE);
             var newExStyle = new IntPtr(exStyle.ToInt64() | Views.InlineSearchWindow.Helpers.InlineSearchWindowNativeMethods.WS_EX_TOOLWINDOW);
             Views.InlineSearchWindow.Helpers.InlineSearchWindowNativeMethods.SetWindowLongPtr(hwnd, Views.InlineSearchWindow.Helpers.InlineSearchWindowNativeMethods.GWL_EXSTYLE, newExStyle);
+        }
+
+        // Re-add the tray icon if explorer.exe restarts mid-session (crash, shell update) -- Windows
+        // silently drops every previously-registered tray icon and broadcasts this message so still-
+        // running apps know to re-add theirs.
+        if (PresentationSource.FromVisual(this) is System.Windows.Interop.HwndSource hwndSource)
+        {
+            hwndSource.AddHook((IntPtr wnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) =>
+            {
+                if (msg == WM_TASKBARCREATED)
+                    _trayService?.HandleTaskbarCreated();
+                return IntPtr.Zero;
+            });
         }
 
         if (ThemeManager.Instance.ActiveTheme != null)

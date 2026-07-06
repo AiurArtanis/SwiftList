@@ -279,6 +279,23 @@ public class TrayIconService : IDisposable
     private void ShowSettingsWindow(string? targetSection = null) => App.ShowSettingsWindow(targetSection);
     private void ShowSearchWindow() => App.ShowSearchWindow();
 
+    // Explorer restarting (crash, or a shell update) silently wipes every previously-registered tray
+    // icon; Windows broadcasts WM_TASKBARCREATED so still-running apps know to re-add theirs. Toggling
+    // Visible off then on re-issues the underlying Shell_NotifyIcon add call.
+    public void HandleTaskbarCreated()
+    {
+        if (_notifyIcon == null) return;
+        try
+        {
+            _notifyIcon.Visible = false;
+            _notifyIcon.Visible = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[TrayIconService] Failed to re-add tray icon after TaskbarCreated: {ex.Message}", LogLevel.Error);
+        }
+    }
+
     private void UpdateCleanExitVisibility() => _wpfItemCleanExit?.Visibility = TrayCleanExitHelper.IsOnlyAppProcessRunning() ? Visibility.Visible : Visibility.Collapsed;
 
     public void Dispose()

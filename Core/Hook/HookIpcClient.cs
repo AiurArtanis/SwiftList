@@ -6,6 +6,11 @@ public sealed class HookIpcClient : IDisposable
 {
     private readonly string _serviceExePath;
     private readonly bool _autoElevate;
+    private bool _effectiveAutoElevate;
+    private int _consecutiveLaunchFailures;
+    // Retries every 5s (see RunLoop), so 3 misses covers ~15s of a stuck/denied elevation prompt
+    // before giving up on it for the rest of this session.
+    private const int MaxElevationFailuresBeforeFallback = 3;
     private Process? _hookProcess;
     private NamedPipeClientStream? _eventPipe;
     private NamedPipeClientStream? _cmdPipe;
@@ -70,6 +75,7 @@ public sealed class HookIpcClient : IDisposable
     {
         _serviceExePath = serviceExePath;
         _autoElevate = autoElevate;
+        _effectiveAutoElevate = autoElevate;
     }
 
     public void Start()
@@ -122,10 +128,24 @@ public sealed class HookIpcClient : IDisposable
                 if (_hookProcess == null)
                 {
                     Logger.Log("[HookIpcClient] Failed to launch hook process.", LogLevel.Error);
+
+                    if (_effectiveAutoElevate && ++_consecutiveLaunchFailures >= MaxElevationFailuresBeforeFallback)
+                    {
+                        // Repeated failures while elevating (e.g. the UAC prompt keeps getting denied,
+                        // or is being suppressed) would otherwise retry forever, popping a fresh prompt
+                        // every cycle -- global hotkeys not working at all is worse than losing the
+                        // elevated-only capabilities, so fall back to a non-elevated hook for the rest
+                        // of this session.
+                        Logger.Log($"[HookIpcClient] Hook process failed to launch elevated {_consecutiveLaunchFailures} times in a row; falling back to a non-elevated hook for this session.", LogLevel.Error);
+                        _effectiveAutoElevate = false;
+                        _consecutiveLaunchFailures = 0;
+                    }
+
                     await Task.Delay(5000, token);
                     continue;
                 }
 
+                _consecutiveLaunchFailures = 0;
                 ServiceProcessId = _hookProcess.Id;
                 Logger.Log($"[HookIpcClient] Hook process launched (PID {_hookProcess.Id}), connecting to Event and Cmd pipes...", LogLevel.Debug);
                 await Task.Delay(500, token);
@@ -285,7 +305,7 @@ public sealed class HookIpcClient : IDisposable
         }
     }
 
-    private Process? LaunchHookProcess() => HookProcessLauncher.Launch(_serviceExePath, _autoElevate);
+    private Process? LaunchHookProcess() => HookProcessLauncher.Launch(_serviceExePath, _effectiveAutoElevate);
 
     public void Dispose()
     {
