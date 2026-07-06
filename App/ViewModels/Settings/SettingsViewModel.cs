@@ -248,7 +248,11 @@ public class SettingsViewModel : ViewModelBase
         var isBusy = isServiceLifecycleBusy || isLocalDriveBusy || isNetworkBusy;
         Service.UpdateStatus(status);
         LocalDrive.UpdateStatus(status, settings);
-        NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses, isServiceLifecycleBusy || isLocalDriveBusy);
+        // Local NTFS indexing and network-drive crawling are independent RuntimeIndex instances on
+        // separate schedulers/threads -- no shared resource requires them to be mutually exclusive.
+        // Only gate network settings on the service's own lifecycle state, matching what LocalDrive
+        // gets (it never sees isNetworkBusy either).
+        NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses, isServiceLifecycleBusy);
         IsServiceReady = isServiceReady;
         IsBusy = isBusy;
         CanApply = !isBusy;
