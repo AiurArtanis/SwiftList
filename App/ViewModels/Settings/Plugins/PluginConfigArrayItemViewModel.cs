@@ -15,6 +15,12 @@ public class PluginConfigArrayItemViewModel : ViewModelBase
 
     public ICommand DeleteCommand { get; }
 
+    // Master-list summary: best-effort picks from the item's own sub-fields, since the schema
+    // varies per plugin (there's no dedicated "name"/"keyword" concept in PluginConfigField).
+    public PluginConfigFieldViewModel? TitleField => Children.FirstOrDefault(c => c.FieldType == ConfigFieldType.Text);
+    public PluginConfigFieldViewModel? BadgeField => Children.Where(c => c.FieldType == ConfigFieldType.Text).Skip(1).FirstOrDefault();
+    public PluginConfigFieldViewModel? IconField => Children.FirstOrDefault(c => c.IsIconField);
+
     public PluginConfigArrayItemViewModel(PluginConfigFieldViewModel parent, object? initialValue, Action onDelete)
     {
         _parent = parent;

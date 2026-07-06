@@ -42,6 +42,7 @@
   "Common_Add": "Add Item",
   "Common_Delete": "Delete",
   "Plugins_Config_TitleSuffix": "Configuration",
+  "Plugins_Config_UntitledItem": "(Untitled)",
   "Service_Title": "Service Status",
   "Service_Hint": "Manage the SwiftList search backend service.",
   "Service_Status": "Service Status:",

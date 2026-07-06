@@ -86,3 +86,53 @@ public class StringToVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => throw new NotImplementedException();
 }
+
+/// <summary>Converts any reference to Visibility (non-null -> Visible, null -> Collapsed).</summary>
+public class NullToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value != null ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>Converts an empty/whitespace string to a localized "untitled" placeholder.</summary>
+public class EmptyStringToPlaceholderConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var text = value as string;
+        return string.IsNullOrWhiteSpace(text) ? TranslationManager.Instance["Plugins_Config_UntitledItem"] : text!;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>Converts an array item's badge field VM to Visibility: Collapsed when the field is
+/// absent (no second Text sub-field in the schema) or its value is an empty/whitespace string.
+/// Binding straight to "BadgeField.Value" breaks the path (and silently falls back to the
+/// default Visible) whenever BadgeField itself is null, so this converts on the field object.</summary>
+public class BadgeFieldToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var text = (value as PluginConfigFieldViewModel)?.Value as string;
+        return string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>Reference-equality check for two bound values, used to highlight the active tab when
+/// tab identity is a live object (e.g. the selected plugin config Group) rather than a fixed string key.</summary>
+public class ReferenceEqualsConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        => values.Length == 2 && ReferenceEquals(values[0], values[1]);
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}

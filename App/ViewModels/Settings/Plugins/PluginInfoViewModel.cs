@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Windows.Input;
+using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 
 namespace SwiftList.App.ViewModels.Settings.Plugins;
@@ -91,6 +93,23 @@ public class PluginInfoViewModel : ViewModelBase
         get => _isExpanded;
         set => SetProperty(ref _isExpanded, value);
     }
+
+    // A plugin schema with 2+ top-level Group fields renders them as tabs (like the Hotkeys page)
+    // instead of stacking every group's contents vertically down the page. A single group, or none,
+    // isn't worth a tab bar, so those still render inline via ConfigFields as before.
+    public bool HasMultipleConfigGroups => ConfigFields.Count(f => f.IsGroup) > 1;
+    public List<PluginConfigFieldViewModel> ConfigGroups => ConfigFields.Where(f => f.IsGroup).ToList();
+    public List<PluginConfigFieldViewModel> NonGroupConfigFields => ConfigFields.Where(f => !f.IsGroup).ToList();
+
+    private PluginConfigFieldViewModel? _selectedConfigGroup;
+    public PluginConfigFieldViewModel? SelectedConfigGroup
+    {
+        get => _selectedConfigGroup ??= ConfigGroups.FirstOrDefault();
+        set => SetProperty(ref _selectedConfigGroup, value);
+    }
+
+    private ICommand? _selectConfigGroupCommand;
+    public ICommand SelectConfigGroupCommand => _selectConfigGroupCommand ??= new RelayCommand<PluginConfigFieldViewModel>(g => SelectedConfigGroup = g);
 }
 
 /// <summary>

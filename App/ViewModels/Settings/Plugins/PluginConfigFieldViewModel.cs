@@ -28,6 +28,11 @@ public class PluginConfigFieldViewModel : ViewModelBase
     public bool IsInteger => FieldType == ConfigFieldType.Integer;
     public bool IsChoice => FieldType == ConfigFieldType.Choice;
     public bool IsArray => FieldType == ConfigFieldType.Array;
+    // Object arrays (SubFields present) render as a master/detail list; scalar arrays (a plain
+    // list of strings/numbers/bools) render as a single-column compact list -- neither currently
+    // occurs without the other, but a plugin's schema decides which at declaration time.
+    public bool IsObjectArray => IsArray && SchemaField.SubFields is { Count: > 0 };
+    public bool IsScalarArray => IsArray && !IsObjectArray;
     public bool IsObject => FieldType == ConfigFieldType.Object;
     public bool IsGroup => FieldType == ConfigFieldType.Group;
     public bool IsStringList => FieldType == ConfigFieldType.StringList;
@@ -40,6 +45,14 @@ public class PluginConfigFieldViewModel : ViewModelBase
 
     public ObservableCollection<PluginConfigFieldViewModel> Children { get; } = new();
     public ObservableCollection<PluginConfigArrayItemViewModel> ArrayItems { get; } = new();
+
+    // The array item shown in the master/detail editor's right-hand panel.
+    private PluginConfigArrayItemViewModel? _selectedArrayItem;
+    public PluginConfigArrayItemViewModel? SelectedArrayItem
+    {
+        get => _selectedArrayItem;
+        set => SetProperty(ref _selectedArrayItem, value);
+    }
 
     public ICommand AddCommand { get; }
 
@@ -230,6 +243,8 @@ public class PluginConfigFieldViewModel : ViewModelBase
                     }
                 }
             }
+
+            SelectedArrayItem = ArrayItems.FirstOrDefault();
         }
     }
 
@@ -251,6 +266,7 @@ public class PluginConfigFieldViewModel : ViewModelBase
         }
 
         AddArrayItemViewModel(newItem);
+        SelectedArrayItem = ArrayItems[^1];
         SaveArrayFromChildren();
     }
 
@@ -259,7 +275,11 @@ public class PluginConfigFieldViewModel : ViewModelBase
         PluginConfigArrayItemViewModel? itemVM = null;
         itemVM = new PluginConfigArrayItemViewModel(this, itemValue, () =>
         {
+            var wasSelected = ReferenceEquals(SelectedArrayItem, itemVM);
+            var index = ArrayItems.IndexOf(itemVM!);
             ArrayItems.Remove(itemVM!);
+            if (wasSelected)
+                SelectedArrayItem = ArrayItems.Count > 0 ? ArrayItems[Math.Min(index, ArrayItems.Count - 1)] : null;
             SaveArrayFromChildren();
         });
         ArrayItems.Add(itemVM);
