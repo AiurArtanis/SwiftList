@@ -44,7 +44,17 @@ public class ExclusionSettingsViewModel : ViewModelBase
         EditPathCommand = new RelayCommand<ExclusionRuleItem>(EditPath);
         EditGlobCommand = new RelayCommand<ExclusionRuleItem>(EditGlob);
         EditRegexCommand = new RelayCommand<ExclusionRuleItem>(EditRegex);
+        SelectSubTabCommand = new RelayCommand<string>(tab => SelectedSubTab = tab);
     }
+
+    // Sub-tab navigation for the "Exclusions" tab nested inside the merged Index settings page.
+    private string _selectedSubTab = "Path";
+    public string SelectedSubTab
+    {
+        get => _selectedSubTab;
+        set => SetProperty(ref _selectedSubTab, value);
+    }
+    public ICommand SelectSubTabCommand { get; }
 
     public ObservableCollection<ExclusionRuleItem> ExcludedPaths { get; } = new();
     public ObservableCollection<ExclusionRuleItem> IgnoredGlobs { get; } = new();

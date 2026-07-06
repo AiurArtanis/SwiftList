@@ -73,7 +73,6 @@ public partial class SettingsWindow : Window
         PageService?.Visibility = tag == "Service" ? Visibility.Visible : Visibility.Collapsed;
 
         PageIndex.Visibility = tag == "Index" ? Visibility.Visible : Visibility.Collapsed;
-        PageExclusions.Visibility = tag == "Exclusions" ? Visibility.Visible : Visibility.Collapsed;
         PageGeneral.Visibility = tag == "General" ? Visibility.Visible : Visibility.Collapsed;
         PageHotkeys.Visibility = tag == "Hotkeys" ? Visibility.Visible : Visibility.Collapsed;
         PagePlugins.Visibility = tag == "Plugins" ? Visibility.Visible : Visibility.Collapsed;
