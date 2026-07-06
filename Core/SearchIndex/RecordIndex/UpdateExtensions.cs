@@ -168,6 +168,13 @@ public static class UpdateExtensions
     // a reverse parentFrn->rows map if orphan counts ever grow large.
     internal static void ReparentWaitingOrphans(this RuntimeIndex index, int newRow, UInt128 frn)
     {
+        // Only a directory can legitimately be the parent orphans are waiting for. Without this, a FRN
+        // that used to belong to a directory (deleted, or mid-rename with a never-arriving new-name
+        // record) can be reused by an unrelated FILE, and any orphan still waiting for that FRN would
+        // get wrongly attached to it.
+        if (!index.IsDirectory(newRow))
+            return;
+
         List<int>? waiting = null;
         foreach (var kv in index.OrphanParentFrns)
             if (kv.Value == frn)

@@ -72,10 +72,14 @@ public static class PathQueryExtensions
         {
             // Orphan: if its parent directory has since been indexed, resolve the real path via the true
             // parent FRN instead of pinning it at the drive root. (PathMemo is cleared on every update,
-            // so this re-resolves automatically once the late-arriving parent appears.)
+            // so this re-resolves automatically once the late-arriving parent appears.) Require the
+            // resolved row to actually be a directory -- otherwise a FRN reused by an unrelated FILE
+            // (e.g. after the real parent directory was deleted, or an abandoned rename) would get
+            // treated as a valid parent just because it matches the stashed FRN.
             if (index.OrphanParentFrns.TryGetValue(idx, out var parentFrn)
                 && index.TryGetIndexById(parentFrn, out var resolvedParent)
-                && resolvedParent != idx)
+                && resolvedParent != idx
+                && index.IsDirectory(resolvedParent))
                 path = Path.Combine(index.GetFullPath(resolvedParent), name);
             else
                 path = Path.Combine(index.SourceRoot, name);

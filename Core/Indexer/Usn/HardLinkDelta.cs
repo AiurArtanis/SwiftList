@@ -14,7 +14,7 @@ internal static class HardLinkDelta
     /// is already indexed it was removed; otherwise it was added.</summary>
     public static void ToggleLink(RuntimeIndex runtime, UInt128 frn, UInt128 parentFrn, string name, FileRecordFlags flags)
     {
-        if (RemoveMatching(runtime, frn, parentFrn, name))
+        if (RemoveMatching(runtime, frn, parentFrn, name, isRename: false))
             return;
         runtime.AppendHardLink(new FileRecord(frn, parentFrn, name, flags));
     }
@@ -28,10 +28,25 @@ internal static class HardLinkDelta
         runtime.AppendHardLink(new FileRecord(frn, parentFrn, name, flags));
     }
 
-    /// <summary>FILE_DELETE / RENAME_OLD_NAME: remove the row for this exact link.</summary>
+    /// <summary>FILE_DELETE: remove the row for this exact link, cascading to children if it's a directory.</summary>
     public static void RemoveLink(RuntimeIndex runtime, UInt128 frn, UInt128 parentFrn, string name)
     {
-        RemoveMatching(runtime, frn, parentFrn, name);
+        RemoveMatching(runtime, frn, parentFrn, name, isRename: false);
+        PruneIfUnused(runtime, frn);
+    }
+
+    /// <summary>RENAME_OLD_NAME: unlike a real delete, the FRN survives under a new name (a matching
+    /// RENAME_NEW_NAME follows), so a directory's children must NOT be cascade-removed. Re-orphan them
+    /// instead -- ReparentWaitingOrphans re-links them the moment AddLink adds the renamed row for the
+    /// same FRN.</summary>
+    public static void RemoveLinkForRename(RuntimeIndex runtime, UInt128 frn, UInt128 parentFrn, string name)
+    {
+        RemoveMatching(runtime, frn, parentFrn, name, isRename: true);
+        PruneIfUnused(runtime, frn);
+    }
+
+    private static void PruneIfUnused(RuntimeIndex runtime, UInt128 frn)
+    {
         if (runtime.RowsForFrn(frn).Count == 0)
         {
             runtime.DeltaIdToIndex.Remove(frn);
@@ -39,7 +54,7 @@ internal static class HardLinkDelta
         }
     }
 
-    private static bool RemoveMatching(RuntimeIndex runtime, UInt128 frn, UInt128 parentFrn, string name)
+    private static bool RemoveMatching(RuntimeIndex runtime, UInt128 frn, UInt128 parentFrn, string name, bool isRename)
     {
         foreach (var row in runtime.RowsForFrn(frn))
         {
@@ -48,7 +63,12 @@ internal static class HardLinkDelta
                 var wasDirectory = runtime.IsDirectory(row);
                 runtime.MarkRowDeleted(row);
                 if (wasDirectory)
-                    CascadeDeleteChildren(runtime, row);
+                {
+                    if (isRename)
+                        ReorphanChildren(runtime, row, frn);
+                    else
+                        CascadeDeleteChildren(runtime, row);
+                }
                 return true;
             }
         }
@@ -73,6 +93,24 @@ internal static class HardLinkDelta
             if (childIsDirectory)
                 CascadeDeleteChildren(runtime, childIdx);
         }
+    }
+
+    /// <summary>Only direct children need re-orphaning: grandchildren are still correctly linked to
+    /// their own (untouched) immediate parent row regardless of what the top directory is renamed to.</summary>
+    private static void ReorphanChildren(RuntimeIndex runtime, int parentIdx, UInt128 frn)
+    {
+        if (!runtime.ParentToChildren.TryGetValue(parentIdx, out var children) || children.Count == 0)
+            return;
+
+        foreach (var childIdx in children.ToArray())
+        {
+            if (runtime.IsDeleted(childIdx))
+                continue;
+            runtime.ParentIndexes[childIdx] = -1;
+            runtime.TrackOrphanParent(childIdx, -1, frn);
+        }
+        runtime.ParentToChildren.Remove(parentIdx);
+        runtime.PathMemo.Clear();
     }
 
     private static bool Matches(RuntimeIndex runtime, int row, UInt128 parentFrn, string name)

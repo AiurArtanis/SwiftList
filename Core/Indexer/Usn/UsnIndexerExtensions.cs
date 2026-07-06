@@ -42,7 +42,13 @@ public static class UsnIndexerExtensions
                 {
                     HardLinkDelta.ToggleLink(runtime, frn, parentFrn, linkName, linkFlags);
                 }
-                else if ((record.Reason & (Win32Api.USN_REASON_FILE_DELETE | Win32Api.USN_REASON_RENAME_OLD_NAME)) != 0)
+                else if ((record.Reason & Win32Api.USN_REASON_RENAME_OLD_NAME) != 0)
+                {
+                    // Unlike a real delete, the FRN survives under a new name (RENAME_NEW_NAME follows),
+                    // so a directory's children must not be cascade-removed here.
+                    HardLinkDelta.RemoveLinkForRename(runtime, frn, parentFrn, linkName);
+                }
+                else if ((record.Reason & Win32Api.USN_REASON_FILE_DELETE) != 0)
                 {
                     HardLinkDelta.RemoveLink(runtime, frn, parentFrn, linkName);
                 }
