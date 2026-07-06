@@ -88,8 +88,8 @@
                         <!-- Label & Description for simple inputs -->
                         <StackPanel Grid.Column="0" Grid.Row="0" VerticalAlignment="Center" Margin="0,0,12,0" 
                                     Visibility="{Binding IsSimpleField, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Visibility="{Binding Label, Converter={StaticResource StringToVis}}"/>
-                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,2,0,0" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" TextWrapping="Wrap" MaxWidth="320" Visibility="{Binding Label, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" MaxWidth="320" Margin="0,2,0,0" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
                         </StackPanel>
 
                         <!-- Field Controls for simple inputs -->
@@ -201,7 +201,7 @@
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
                             </StackPanel>
-                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" MaxWidth="600" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
                             
                             <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0">
                                 <ItemsControl ItemsSource="{Binding Children}"/>
@@ -214,7 +214,7 @@
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBlue}"/>
                             </StackPanel>
-                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" MaxWidth="600" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
                             
                             <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0">
                                 <ItemsControl ItemsSource="{Binding Children}"/>
@@ -229,7 +229,7 @@
                                     <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
                                 </StackPanel>
                             </Grid>
-                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                            <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" MaxWidth="600" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
 
                             <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0">
                                 <StackPanel>

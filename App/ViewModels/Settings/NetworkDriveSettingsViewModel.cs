@@ -22,6 +22,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
     private bool _hasPendingEdits;
     private bool _canEditRefreshModes = true;
     private bool _isBusy;
+    private readonly RefreshModeOption[] _refreshModeOptions;
 
     public NetworkDriveSettingsViewModel(SearchService searchService, UserSettings userSettings, Action onTriggerFastRefresh)
     {
@@ -30,9 +31,23 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
         _onTriggerFastRefresh = onTriggerFastRefresh;
         RebuildCommand = new RelayCommand(Rebuild, () => CanRebuild);
 
+        _refreshModeOptions =
+        [
+            new RefreshModeOption("Manual", TranslationManager.Instance["Network_ModeManual"]),
+            new RefreshModeOption("15Minutes", TranslationManager.Instance["Network_Mode15M"]),
+            new RefreshModeOption("Hourly", TranslationManager.Instance["Network_ModeHourly"]),
+            new RefreshModeOption("Daily", TranslationManager.Instance["Network_ModeDaily"])
+        ];
+
         TranslationManager.Instance.PropertyChanged += (s, e) =>
         {
-            OnPropertyChanged(nameof(RefreshModeOptions));
+            // Update labels in place -- the ComboBoxes' ItemsSource is bound to this same stable
+            // array/reference and never gets reassigned, so their SelectedValue is never disturbed.
+            _refreshModeOptions[0].Label = TranslationManager.Instance["Network_ModeManual"];
+            _refreshModeOptions[1].Label = TranslationManager.Instance["Network_Mode15M"];
+            _refreshModeOptions[2].Label = TranslationManager.Instance["Network_ModeHourly"];
+            _refreshModeOptions[3].Label = TranslationManager.Instance["Network_ModeDaily"];
+
             foreach (var item in NetworkDrives)
             {
                 item.NotifyLanguageChanged();
@@ -52,13 +67,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
     public bool IsBusy { get => _isBusy; set => SetProperty(ref _isBusy, value); }
     public bool IsWslPanelVisible => WslDrives.Count > 0;
 
-    public IReadOnlyList<RefreshModeOption> RefreshModeOptions => new[]
-    {
-        new RefreshModeOption("Manual", TranslationManager.Instance["Network_ModeManual"]),
-        new RefreshModeOption("15Minutes", TranslationManager.Instance["Network_Mode15M"]),
-        new RefreshModeOption("Hourly", TranslationManager.Instance["Network_ModeHourly"]),
-        new RefreshModeOption("Daily", TranslationManager.Instance["Network_ModeDaily"])
-    };
+    public IReadOnlyList<RefreshModeOption> RefreshModeOptions => _refreshModeOptions;
 
     public ICommand RebuildCommand { get; }
     public string IndexSummary { get => _indexSummary; set => SetProperty(ref _indexSummary, value); }
