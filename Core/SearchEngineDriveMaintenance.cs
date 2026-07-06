@@ -68,7 +68,13 @@ internal sealed class SearchEngineDriveMaintenance
         RefreshDrivesInStatus();
         _indexer.Status.IsMaintenanceBusy = _isRebuilding() || HasPendingRebuilds;
         PopulateCountsFromCache();
-        return _indexer.Status;
+        // Return a locked, deep-copied snapshot (UsnIndexer.SnapshotStatus), not the live, mutable Status
+        // object. PipeResponseBinarySerializer.WriteStatusAsync reads every drive's Files/Dirs/State
+        // TWICE (once to size the buffer, once to write it) with no lock held; a concurrent
+        // UpdateDriveProgress call from a scanner thread (running under LockObj) mutating the same
+        // objects between those two passes produced a torn, internally-inconsistent snapshot -- visible
+        // in the UI as the item count flickering up and down during a rebuild instead of only increasing.
+        return _indexer.SnapshotStatus();
     }
 
     public bool RebuildDriveIndex(string drive)
