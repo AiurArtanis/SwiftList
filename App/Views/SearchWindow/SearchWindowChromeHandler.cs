@@ -83,6 +83,13 @@ public class SearchWindowChromeHandler
             }
             _window.MaxWidth = workingArea.Width * dpiScaleX;   // physical (system-DPI space) -> DIP
             _window.MaxHeight = workingArea.Height * dpiScaleY;
+
+            // WPF maximizes a WindowStyle=None window to the monitor's full bounds (top-left included),
+            // not the work area -- MaxWidth/MaxHeight alone only shrinks it, leaving the shrunk edge
+            // (wherever the taskbar/excluded area is) as a visible gap unless Left/Top are pinned to the
+            // work area's own origin too.
+            _window.Left = workingArea.Left * dpiScaleX;
+            _window.Top = workingArea.Top * dpiScaleY;
         }
         else
         {
