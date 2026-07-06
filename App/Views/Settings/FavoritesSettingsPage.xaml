@@ -67,7 +67,8 @@
                         </Grid.ColumnDefinitions>
                         
                         <TextBlock Text="&#xE71B;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                   Foreground="{DynamicResource AccentColor}" VerticalAlignment="Center" ToolTip="Favorite"/>
+                                   Foreground="{DynamicResource AccentColor}" VerticalAlignment="Center"
+                                   ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_StarTooltip]}"/>
                         
                         <TextBlock Grid.Column="1" Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"

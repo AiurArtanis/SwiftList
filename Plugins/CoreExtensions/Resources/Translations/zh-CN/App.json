@@ -23,6 +23,7 @@
   "Favorites_RemoveTooltip": "删除此项",
   "Favorites_BrowseFolderTooltip": "浏览文件夹",
   "Favorites_BrowseFileTooltip": "浏览文件",
+  "Favorites_StarTooltip": "收藏项",
   "Search_ResultFavorite": "收藏",
   "Settings_History_Hint": "管理与过滤您在 SwiftList 中的搜索历史和最近打开项，对它们进行删除或清空。",
   "Settings_History_KeywordHint": "管理与过滤您在快速窗口中输入过的搜索关键字，对它们进行删除或清空。",

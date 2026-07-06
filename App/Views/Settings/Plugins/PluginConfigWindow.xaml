@@ -185,7 +185,7 @@
                                             <Setter Property="ContentTemplate">
                                                 <Setter.Value>
                                                     <DataTemplate>
-                                                        <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Value, Mode=TwoWay}" Width="180"/>
+                                                        <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Value, Mode=TwoWay}" MinWidth="180"/>
                                                     </DataTemplate>
                                                 </Setter.Value>
                                             </Setter>
