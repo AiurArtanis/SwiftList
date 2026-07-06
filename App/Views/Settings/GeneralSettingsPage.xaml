@@ -45,7 +45,7 @@
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel>
+        <StackPanel Grid.IsSharedSizeScope="True">
             <TextBlock Style="{StaticResource SettingsSectionTitle}" 
                         Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_Title]}"/>
             <TextBlock Style="{StaticResource SettingsHintText}" 
@@ -76,10 +76,10 @@
                     
                     <Grid Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="180"/>
-                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                            <ColumnDefinition Width="Auto" MinWidth="150"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LogLevel]}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LogLevel]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                         <ComboBox Grid.Column="1"
                                   Style="{StaticResource SettingsComboBox}"
                                   ItemsSource="{Binding General.LogLevelOptions}"
@@ -92,10 +92,10 @@
                     
                     <Grid Margin="0,4,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="180"/>
-                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                            <ColumnDefinition Width="Auto" MinWidth="150"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LangSelect]}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LangSelect]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                         <ComboBox Grid.Column="1"
                                   Style="{StaticResource SettingsComboBox}"
                                   ItemsSource="{Binding General.LanguageOptions}"
@@ -109,10 +109,10 @@
                     
                     <Grid Margin="0,4,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="180"/>
-                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                            <ColumnDefinition Width="Auto" MinWidth="150"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ThemeSelect]}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ThemeSelect]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                         <ComboBox Grid.Column="1"
                                   Style="{StaticResource SettingsComboBox}"
                                   ItemsSource="{Binding General.ThemeOptions}"
@@ -132,43 +132,43 @@
                 <StackPanel>
                     <Grid Margin="0,4,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
                             <ColumnDefinition Width="150"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutWidth]}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutWidth]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.SearchBarWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
                     </Grid>
 
                     <Grid Margin="0,8,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
                             <ColumnDefinition Width="150"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutHeight]}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutHeight]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.SearchBarHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
                     </Grid>
 
                     <Grid Margin="0,8,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
                             <ColumnDefinition Width="150"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutCornerRadius]}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutCornerRadius]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.SearchWindowCornerRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
                     </Grid>
 
                     <Grid Margin="0,8,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
                             <ColumnDefinition Width="150"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutIconSize]}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutIconSize]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                         <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.ResultIconSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
                     </Grid>
 
                     <Grid Margin="0,16,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
                             <ColumnDefinition Width="150"/>
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutReset]}"

@@ -86,8 +86,7 @@
                     </Grid>
 
                     <!-- Update Progress Bar -->
-                    <ProgressBar x:Name="PbUpdate" Height="8" Margin="0,12,0,0" Visibility="Collapsed"
-                                 Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource ContentBg}"/>
+                    <ProgressBar x:Name="PbUpdate" Margin="0,12,0,0" Visibility="Collapsed"/>
 
                     <!-- Warning Tip for Non-Admins -->
                     <TextBlock x:Name="TxtNoAdminWarning" Visibility="Collapsed"

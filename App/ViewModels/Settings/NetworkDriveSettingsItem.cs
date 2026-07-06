@@ -32,6 +32,14 @@ public class NetworkDriveSettingsItem : ViewModelBase
         get => _refreshMode;
         set
         {
+            if (string.IsNullOrEmpty(value))
+            {
+                // WPF's ComboBox transiently pushes SelectedValue=null through this TwoWay binding
+                // while its ItemsSource is being rebuilt (e.g. RefreshModeOptions refreshing labels
+                // on a language change). Reject it and re-raise so the combo re-syncs to the real value.
+                OnPropertyChanged(nameof(RefreshMode));
+                return;
+            }
             if (SetProperty(ref _refreshMode, value))
                 OnPropertyChanged(nameof(RefreshModeText));
         }

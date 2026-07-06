@@ -18,7 +18,7 @@
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="0,0,10,0">
+        <StackPanel Margin="0,0,10,0" Grid.IsSharedSizeScope="True">
             <TextBlock Style="{StaticResource SettingsSectionTitle}"
                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_Title]}"/>
             <TextBlock Style="{StaticResource SettingsHintText}"
@@ -100,11 +100,11 @@
 
                 <Grid Margin="0,4,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ToggleLabel]}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ToggleLabel]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
                         Value="{Binding ToggleHotkeyValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         RequireModifier="True" AllowBareModifier="True" DefaultValue="Ctrl"/>
@@ -125,10 +125,10 @@
 
                 <Grid Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickSwitchLabel]}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickSwitchLabel]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
                         Value="{Binding QuickSwitchComboHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         RequireModifier="True" DefaultValue="Ctrl+G"/>
@@ -139,30 +139,30 @@
 
                 <Grid Margin="0,4,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectNextItem]}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectNextItem]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
                         Value="{Binding NextItemHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Ctrl+N"/>
                 </Grid>
                 <Grid Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectPreviousItem]}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectPreviousItem]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
                         Value="{Binding PreviousItemHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Ctrl+P"/>
                 </Grid>
                 <Grid Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectJumpItem]}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectJumpItem]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                         <ctrl:HotkeyRecorderControl Width="90" Height="26"
                             Value="{Binding SelectJumpModifier, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -172,50 +172,50 @@
                 </Grid>
                 <Grid Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectActions]}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectActions]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
                         Value="{Binding ActionsMenuHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Ctrl+O"/>
                 </Grid>
                 <Grid Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectComplete]}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectComplete]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
                         Value="{Binding CompleteFromSelectionHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Ctrl+Tab"/>
                 </Grid>
                 <Grid Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectQuickLook]}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectQuickLook]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
                         Value="{Binding QuickLookHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Alt+P"/>
                 </Grid>
                 <Grid Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_KeywordHistoryPrevious]}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_KeywordHistoryPrevious]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
                         Value="{Binding KeywordHistoryPreviousHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Alt+Up"/>
                 </Grid>
                 <Grid Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_KeywordHistoryNext]}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_KeywordHistoryNext]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
                         Value="{Binding KeywordHistoryNextHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Alt+Down"/>
@@ -259,10 +259,10 @@
                                         <DataTemplate>
                                             <Grid Margin="0,8,0,0">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="180"/>
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                                                     <ColumnDefinition Width="200"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding DisplayName}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                                                 <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
                                                     Value="{Binding HotkeyValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                     DefaultValue="{Binding DefaultHotkey}"/>
