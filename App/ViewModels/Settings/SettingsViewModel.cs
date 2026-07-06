@@ -32,8 +32,8 @@ public class SettingsViewModel : ViewModelBase
         General = new GeneralSettingsViewModel(_userSettings);
         Exclusions = new ExclusionSettingsViewModel(_userSettings);
         Plugins = new PluginManagementViewModel(_userSettings);
-        Hotkeys = new HotkeySettingsViewModel(_userSettings);
         Blacklist = new BlacklistSettingsViewModel(_userSettings);
+        Hotkeys = new HotkeySettingsViewModel(_userSettings, Blacklist);
         History = new HistorySettingsViewModel(_userSettings);
         Favorites = new FavoritesSettingsViewModel(_userSettings);
         RefreshCommand = new RelayCommand(Refresh);

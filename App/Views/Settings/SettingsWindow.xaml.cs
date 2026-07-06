@@ -79,6 +79,5 @@ public partial class SettingsWindow : Window
         PageHistory.Visibility = tag == "History" ? Visibility.Visible : Visibility.Collapsed;
         PageFavorites.Visibility = tag == "Favorites" ? Visibility.Visible : Visibility.Collapsed;
         PageAbout.Visibility = tag == "About" ? Visibility.Visible : Visibility.Collapsed;
-        PageBlacklist?.Visibility = tag == "Blacklist" ? Visibility.Visible : Visibility.Collapsed;
     }
 }

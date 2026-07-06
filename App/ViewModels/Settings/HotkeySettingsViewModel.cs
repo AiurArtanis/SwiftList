@@ -10,9 +10,10 @@ public class HotkeySettingsViewModel : ViewModelBase
 {
     private readonly UserSettings _userSettings;
 
-    public HotkeySettingsViewModel(UserSettings userSettings)
+    public HotkeySettingsViewModel(UserSettings userSettings, BlacklistSettingsViewModel blacklist)
     {
         _userSettings = userSettings;
+        Blacklist = blacklist;
         var hotkeys = _userSettings.Hotkeys;
 
         // Initialize local bindings from user settings
@@ -55,6 +56,9 @@ public class HotkeySettingsViewModel : ViewModelBase
 
     private ICommand? _selectTabCommand;
     public ICommand SelectTabCommand => _selectTabCommand ??= new RelayCommand<string>(tab => SelectedTab = tab);
+
+    // Process blacklist, nested here as a third tab (Global/PluginActions/Blacklist share this page now).
+    public BlacklistSettingsViewModel Blacklist { get; }
 
     public List<PluginActionGroupViewModel> PluginActionGroups { get; }
 
