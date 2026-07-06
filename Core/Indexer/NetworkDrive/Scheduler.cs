@@ -220,10 +220,21 @@ internal sealed class Scheduler : IDisposable
         }
         finally
         {
+            // If Configure/StartRefresh replaced _refreshCts while this loop was still running (e.g. a
+            // manual "rebuild" clicked while the drive's own initial scan was in flight), this loop's
+            // `token` is now permanently cancelled, so the while condition above exits without ever
+            // consuming a fresh pending request queued against the *new* token. Left alone, that request
+            // is silently dropped and the drive's status stays stuck at "indexing" forever (nothing else
+            // re-triggers a Manual-mode drive). Re-queue it through the normal path so it runs against
+            // whatever token is current now.
+            bool stillPending;
             lock (_gate)
             {
                 _refreshingDrives.Remove(drive);
+                stillPending = _pendingRefreshDrives.Remove(drive);
             }
+            if (stillPending)
+                QueueRefreshDrive(drive, "pending changes");
         }
     }
 
