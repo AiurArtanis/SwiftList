@@ -123,6 +123,23 @@ public static class QueryExtensions
             }
         }
 
+        // Rows appended live via the one-to-many hard-link path (HardLinkDelta, USN incremental
+        // create/rename) never touch DeltaIdToIndex, so without this, anything created after the
+        // initial index build could never be resolved as a parent for children created inside it
+        // afterward -- ResolveParentIndex would orphan them, and GetFullPath's orphan recovery (which
+        // also calls this method) could never heal them either, leaving paths pinned at the drive root.
+        if (index.HardLinkDeltaRows.TryGetValue(id, out var rows))
+        {
+            foreach (var row in rows)
+            {
+                if (!index.IsDeleted(row))
+                {
+                    idx = row;
+                    return true;
+                }
+            }
+        }
+
         idx = -1;
         return false;
     }

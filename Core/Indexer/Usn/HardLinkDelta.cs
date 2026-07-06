@@ -45,11 +45,34 @@ internal static class HardLinkDelta
         {
             if (Matches(runtime, row, parentFrn, name))
             {
+                var wasDirectory = runtime.IsDirectory(row);
                 runtime.MarkRowDeleted(row);
+                if (wasDirectory)
+                    CascadeDeleteChildren(runtime, row);
                 return true;
             }
         }
         return false;
+    }
+
+    /// <summary>A directory's own USN delete record says nothing about its children, so without this
+    /// they'd stay indexed as live rows forever (until a full rebuild) -- still searchable, and immune
+    /// to further updates since nothing else ever revisits them.</summary>
+    private static void CascadeDeleteChildren(RuntimeIndex runtime, int parentIdx)
+    {
+        if (!runtime.ParentToChildren.TryGetValue(parentIdx, out var children) || children.Count == 0)
+            return;
+
+        // MarkRowDeleted removes the child from this very list, so iterate a snapshot.
+        foreach (var childIdx in children.ToArray())
+        {
+            if (runtime.IsDeleted(childIdx))
+                continue;
+            var childIsDirectory = runtime.IsDirectory(childIdx);
+            runtime.MarkRowDeleted(childIdx);
+            if (childIsDirectory)
+                CascadeDeleteChildren(runtime, childIdx);
+        }
     }
 
     private static bool Matches(RuntimeIndex runtime, int row, UInt128 parentFrn, string name)

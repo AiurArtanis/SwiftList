@@ -32,7 +32,10 @@ public static class FileRecordStoreSerializer
     // so existing installs rebuild once and pick up full hard-link paths.
     // v10: force one rebuild to purge records orphaned by incremental USN updates (parent collapsed to a
     // self-parent, shown under the drive root). New caches keep the true parent FRN so it can't recur.
-    public const int Version = 10;
+    // v11: force one rebuild to purge children of deleted directories that were never cascade-removed
+    // (HardLinkDelta.RemoveLink only marked the directory's own row deleted). Fixed going forward, but
+    // existing caches already have the orphaned rows baked in and won't self-heal without a rebuild.
+    public const int Version = 11;
 
     public static string GetBasePath(string cacheDir, string sourceKey) => Path.Combine(cacheDir, sourceKey.ToLowerInvariant());
 
