@@ -244,15 +244,26 @@ public class SettingsViewModel : ViewModelBase
         var isServiceReady = status.State != "error";
         var isLocalDriveBusy = status.Drives.Any(d => d.State is "indexing" or "pending");
         var isNetworkBusy = networkStatuses.Any(s => s.State is "indexing" or "pending");
-        var isServiceLifecycleBusy = status.State is "indexing" or "loading-cache" or "pending" || status.IsMaintenanceBusy && !isLocalDriveBusy;
-        var isBusy = isServiceLifecycleBusy || isLocalDriveBusy || isNetworkBusy;
+        // "indexing"/"pending" are set on this shared status both for the real startup scan AND for a
+        // later on-demand single-drive rebuild (SearchEngineDriveMaintenance.ForceRebuildDrive) -- the
+        // two are indistinguishable from status.State alone. Only "loading-cache" is unambiguous (it only
+        // ever happens once, before the settings page's own data -- local drives, machine settings -- has
+        // even loaded, so nothing is safe to save yet); "indexing"/"pending"/IsMaintenanceBusy always
+        // coincide with isLocalDriveBusy being true too, so treat those as local-drive-specific busy-ness,
+        // not general service-lifecycle busy-ness.
+        var isServiceLifecycleBusy = status.State == "loading-cache"
+            || (!isLocalDriveBusy && (status.State is "indexing" or "pending" || status.IsMaintenanceBusy));
         Service.UpdateStatus(status);
+        // Each side's own panel is gated ONLY on the service's lifecycle state plus its own busy-ness --
+        // local indexing must never disable network's controls and vice versa (LocalDrive.UpdateStatus
+        // below already only looks at local `status`; NetworkDriveSettingsViewModel.RefreshNetworkDrives
+        // separately layers in its own isNetworkBusy-equivalent check from `networkStatuses` internally).
         LocalDrive.UpdateStatus(status, settings);
-        // Local NTFS indexing and network-drive crawling are independent RuntimeIndex instances on
-        // separate schedulers/threads -- no shared resource requires them to be mutually exclusive.
-        // Only gate network settings on the service's own lifecycle state, matching what LocalDrive
-        // gets (it never sees isNetworkBusy either).
         NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses, isServiceLifecycleBusy);
+        // The shared Apply/OK button is different: it commits both sides' settings in one shot, so it
+        // should stay disabled while EITHER side is busy, even though neither side blocks the other's own
+        // panel controls.
+        var isBusy = isServiceLifecycleBusy || isLocalDriveBusy || isNetworkBusy;
         IsServiceReady = isServiceReady;
         IsBusy = isBusy;
         CanApply = !isBusy;
