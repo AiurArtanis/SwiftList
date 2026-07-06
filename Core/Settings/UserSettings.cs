@@ -36,6 +36,7 @@ public class UserSettings
     public string Theme { get; set; } = "Light";
     public HotkeyPageSettings Hotkeys { get; set; } = new();
     public SearchWindowSettings SearchWindow { get; set; } = new();
+    public PreviewWindowSettings PreviewWindow { get; set; } = new();
 
     private static string GetDefaultSystemLanguage()
     {
@@ -262,5 +263,14 @@ public class SearchWindowSettings
     public double ResultIconSize { get; set; } = 42;
     public double? Left { get; set; }
     public double? Top { get; set; }
+}
+
+public class PreviewWindowSettings
+{
+    // Defaults match the default search bar height (70) plus a fully-expanded 9-item results list
+    // (9 * BaseSearchResultItemHeight = 459) -- see UiMetrics -- so the preview window's height is
+    // predictable and doesn't change with however many results happen to be showing right now.
+    public double Width { get; set; } = 400;
+    public double Height { get; set; } = 529;
 }
 

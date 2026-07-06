@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
@@ -5,6 +6,9 @@ namespace SwiftList.App.Services;
 
 public class QuickLookManager
 {
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
     private static readonly Lazy<QuickLookManager> _instance = new(() => new QuickLookManager());
     public static QuickLookManager Instance => _instance.Value;
 
@@ -109,7 +113,26 @@ public class QuickLookManager
 
     private void Owner_LocationChanged(object? sender, EventArgs e) => PositionWindow();
     private void Owner_SizeChanged(object? sender, SizeChangedEventArgs e) => PositionWindow();
-    private void Owner_Deactivated(object? sender, EventArgs e) => Hide();
+
+    private void Owner_Deactivated(object? sender, EventArgs e)
+    {
+        // A real (HwndHost) preview -- e.g. a native document/media preview handler -- needs actual focus
+        // to be interactive (scrolling, playback controls), so clicking into it deactivates the owner for
+        // real. Without this check, that click would immediately hide the very preview the user just
+        // clicked into. Only hide when something outside this process took the foreground.
+        if (IsForegroundWindowInThisProcess())
+            return;
+        Hide();
+    }
+
+    private static bool IsForegroundWindowInThisProcess()
+    {
+        var fg = GetForegroundWindow();
+        if (fg == IntPtr.Zero)
+            return false;
+        GetWindowThreadProcessId(fg, out var pid);
+        return pid == (uint)Environment.ProcessId;
+    }
 
     private void OnSessionOwnerClosed(object? sender, EventArgs e)
     {
@@ -133,9 +156,13 @@ public class QuickLookManager
             var ownerLeft = _owner.Left;
             var ownerTop = _owner.Top;
             var ownerWidth = _owner.ActualWidth;
-            var ownerHeight = _owner.ActualHeight;
 
-            _window.Height = ownerHeight;
+            // Fixed, user-configurable size (General settings page) rather than mirroring the owner's
+            // current ActualHeight -- the owner auto-sizes to however many results are actually showing,
+            // so a preview window that copied it would resize unpredictably every time the result count
+            // changed instead of staying the same size like a real preview pane.
+            _window.Width = UiMetrics.PreviewWindowWidth;
+            _window.Height = UiMetrics.PreviewWindowHeight;
 
             // Use the work area of the monitor the owner is actually on -- not the primary monitor --
             // so the right/left placement flip is correct when the search window sits on a secondary screen.

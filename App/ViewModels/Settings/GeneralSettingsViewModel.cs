@@ -17,6 +17,7 @@ public class GeneralSettingsViewModel : ViewModelBase
     public GeneralSettingsViewModel(UserSettings userSettings)
     {
         _userSettings = userSettings;
+        PreviewWindow = new PreviewWindowSettingsViewModel(userSettings);
 
         _selectedLogLevel = LogLevelOptions.FirstOrDefault(o => o.Value == SettingsOptionGenerator.NormalizeLogLevel(_userSettings.LogLevel))
                             ?? LogLevelOptions[2]; // Default to Info
@@ -286,4 +287,6 @@ public class GeneralSettingsViewModel : ViewModelBase
         OnPropertyChanged(nameof(SearchWindowCornerRadius));
         OnPropertyChanged(nameof(ResultIconSize));
     }
+
+    public PreviewWindowSettingsViewModel PreviewWindow { get; }
 }

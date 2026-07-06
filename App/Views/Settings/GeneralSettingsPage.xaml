@@ -178,6 +178,45 @@
                     </Grid>
                 </StackPanel>
             </Border>
+
+            <TextBlock Style="{StaticResource SettingsSectionTitle}"
+                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowTitle]}"
+                        Margin="0,20,0,4"/>
+            <TextBlock Style="{StaticResource SettingsHintText}"
+                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowHint]}"/>
+
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowWidth]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.PreviewWindow.Width, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                    </Grid>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowHeight]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.PreviewWindow.Height, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                    </Grid>
+
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowReset]}"
+                                Command="{Binding General.PreviewWindow.ResetCommand}"
+                                Style="{StaticResource SettingsButton}"
+                                Margin="0" HorizontalAlignment="Left"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

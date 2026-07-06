@@ -34,8 +34,16 @@ public static class UiMetrics
     public const double MinQuickResultIconSize = 16;
     public const double MaxQuickResultIconSize = 64;
 
+    // Range for the user-configurable QuickLook preview window size (General settings page).
+    public const double MinPreviewWindowWidth = 250;
+    public const double MaxPreviewWindowWidth = 900;
+    public const double MinPreviewWindowHeight = 250;
+    public const double MaxPreviewWindowHeight = 1200;
+
     private static double _scale = 1.0;
     private static double _quickResultIconSize = BaseResultIconSize;
+    private static double _previewWindowWidth = 400;
+    private static double _previewWindowHeight = 529;
 
     /// <summary>
     /// Global UI scale factor. Result rows, fonts and icons multiply their
@@ -66,14 +74,34 @@ public static class UiMetrics
         set => _quickResultIconSize = Math.Clamp(value, MinQuickResultIconSize, MaxQuickResultIconSize);
     }
 
-    /// <summary>Loads the current search bar height and quick-window icon size from settings and applies them.</summary>
+    /// <summary>QuickLook preview window size. User-configurable (General settings page); fixed rather
+    /// than derived from the owner window's current height so it doesn't change with however many
+    /// results happen to be showing right now.</summary>
+    public static double PreviewWindowWidth
+    {
+        get => _previewWindowWidth;
+        set => _previewWindowWidth = Math.Clamp(value, MinPreviewWindowWidth, MaxPreviewWindowWidth);
+    }
+
+    public static double PreviewWindowHeight
+    {
+        get => _previewWindowHeight;
+        set => _previewWindowHeight = Math.Clamp(value, MinPreviewWindowHeight, MaxPreviewWindowHeight);
+    }
+
+    /// <summary>Loads the current search bar height, quick-window icon size, and preview window size
+    /// from settings and applies them.</summary>
     public static void ApplyScaleFromSettings()
     {
-        var settings = UserSettings.Load().SearchWindow;
-        try { UpdateScaleFromSearchBarHeight(settings.SearchBarHeight); }
+        var settings = UserSettings.Load();
+        try { UpdateScaleFromSearchBarHeight(settings.SearchWindow.SearchBarHeight); }
         catch { /* fall back to current scale */ }
-        try { QuickResultIconSize = settings.ResultIconSize; }
+        try { QuickResultIconSize = settings.SearchWindow.ResultIconSize; }
         catch { /* fall back to current icon size */ }
+        try { PreviewWindowWidth = settings.PreviewWindow.Width; }
+        catch { /* fall back to current preview width */ }
+        try { PreviewWindowHeight = settings.PreviewWindow.Height; }
+        catch { /* fall back to current preview height */ }
     }
 
     // ── Base metrics (used everywhere by default: inline window, full window, action menu) ──
