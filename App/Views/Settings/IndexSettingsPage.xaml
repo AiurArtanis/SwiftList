@@ -669,32 +669,6 @@
                             </Border.Style>
                         </Border>
                     </StackPanel>
-                    <StackPanel>
-                        <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_AboutTitle]}"
-                                Command="{Binding Exclusions.SelectSubTabCommand}" CommandParameter="About">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Exclusions.SelectedSubTab}" Value="About">
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-                                            <Setter Property="FontWeight" Value="SemiBold"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Border>
-                            <Border.Style>
-                                <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Exclusions.SelectedSubTab}" Value="About">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
-                    </StackPanel>
                 </StackPanel>
                 <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
 
@@ -811,28 +785,6 @@
                                         Style="{StaticResource PrimarySettingsButton}"
                                         Command="{Binding Exclusions.ApplyRegexesTextCommand}"/>
                             </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- Sub-tab: About -->
-                <StackPanel>
-                    <StackPanel.Style>
-                        <Style TargetType="StackPanel">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Exclusions.SelectedSubTab}" Value="About">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </StackPanel.Style>
-                    <Border Style="{StaticResource SettingsCard}">
-                        <StackPanel>
-                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_AboutDesc1]}"
-                                       Style="{StaticResource SettingsHintText}" TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_AboutDesc2]}"
-                                       Style="{StaticResource SettingsHintText}" TextWrapping="Wrap" Margin="0,5,0,0"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
