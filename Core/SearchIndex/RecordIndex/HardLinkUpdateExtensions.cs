@@ -35,7 +35,7 @@ internal static class HardLinkUpdateExtensions
     internal static int AppendHardLink(this RuntimeIndex index, FileRecord record)
     {
         var idx = index.Count;
-        index.AddColumns(record.Id, record.Name, record.Flags);
+        index.AddColumns(record.Id, record.Name, record.Flags, record.Size, record.CreationTimeUtc, record.LastWriteTimeUtc, record.LastAccessTimeUtc);
 
         var parentIndex = index.ResolveParentIndex(record.Id, record.ParentId);
         index.ParentIndexes.Add(parentIndex);
@@ -76,6 +76,16 @@ internal static class HardLinkUpdateExtensions
 
         index.PathMemo.Clear();
         return idx;
+    }
+
+    /// <summary>Refreshes a row's Size/timestamp columns in place (e.g. after a USN content-only change)
+    /// without touching its name, parent, or flags.</summary>
+    internal static void UpdateMetadata(this RuntimeIndex index, int idx, long size, long creationTimeUtc, long lastWriteTimeUtc, long lastAccessTimeUtc)
+    {
+        index.Sizes[idx] = size;
+        index.CreationTimes[idx] = creationTimeUtc;
+        index.LastWriteTimes[idx] = lastWriteTimeUtc;
+        index.LastAccessTimes[idx] = lastAccessTimeUtc;
     }
 
     /// <summary>Marks a single row deleted (one hard link removed) without touching the FRN's other rows.</summary>

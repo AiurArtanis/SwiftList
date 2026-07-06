@@ -149,10 +149,12 @@ internal sealed class TreeBuilder
         isDirectory = false;
         fullPath = string.Empty;
 
+        FileInfo info;
         FileAttributes attributes;
         try
         {
-            attributes = File.GetAttributes(child);
+            info = new FileInfo(child);
+            attributes = info.Attributes;
         }
         catch
         {
@@ -171,11 +173,22 @@ internal sealed class TreeBuilder
         fullPath = PathHelpers.NormalizePath(logicalPath, isDirectory);
         var id = PathHelpers.HashPath64(fullPath);
         var flags = FileRecordFlagsHelper.FromAttributes(attributes);
+        // Length can still throw on a flaky network share even though Attributes just succeeded; that's
+        // supplementary metadata, not worth failing the whole record over.
+        long size = 0;
+        if (!isDirectory)
+        {
+            try { size = info.Length; } catch { }
+        }
         var fileRecord = new FileRecord(
             id,
             parentId,
             _namePool.Get(name),
-            flags);
+            flags,
+            size,
+            info.CreationTimeUtc.ToFileTimeUtc(),
+            info.LastWriteTimeUtc.ToFileTimeUtc(),
+            info.LastAccessTimeUtc.ToFileTimeUtc());
         record = new NetworkWalkRecord(fileRecord, attributes);
         return WalkRecordResult.Success;
     }

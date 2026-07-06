@@ -43,8 +43,13 @@ internal static class FolderDriveScanner
         foreach (var entry in entries)
         {
             token.ThrowIfCancellationRequested();
+            FileInfo info;
             FileAttributes attrs;
-            try { attrs = File.GetAttributes(entry); }
+            try
+            {
+                info = new FileInfo(entry);
+                attrs = info.Attributes;
+            }
             catch { continue; }
 
             if ((attrs & FileAttributes.ReparsePoint) != 0)
@@ -58,7 +63,9 @@ internal static class FolderDriveScanner
 
             var id = (UInt128)PathHelpers.HashPath64(logicalPath);
             var flags = FileRecordFlagsHelper.FromAttributes(attrs);
-            store.Records.Add(new FileRecord(id, parentId, name, flags));
+            var size = isDir ? 0 : info.Length;
+            store.Records.Add(new FileRecord(id, parentId, name, flags, size,
+                info.CreationTimeUtc.ToFileTimeUtc(), info.LastWriteTimeUtc.ToFileTimeUtc(), info.LastAccessTimeUtc.ToFileTimeUtc()));
             if (isDir) dirs++;
             else files++;
             if (((files + dirs) & 4095) == 0)

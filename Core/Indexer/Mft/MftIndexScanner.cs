@@ -53,7 +53,7 @@ internal static class MftIndexScanner
         long processed = 0;
         const int ChunkBytes = 8 * 1024 * 1024;
         var buf = new byte[ChunkBytes];
-        var names = new List<(UInt128 parent, string name)>(4);
+        var names = new List<(UInt128 parent, string name, long size)>(4);
 
         foreach (var (lcn, clusters) in extents)
         {
@@ -92,7 +92,8 @@ internal static class MftIndexScanner
                     var isDir = !isExtension && (headerFlags & 0x02) != 0;
 
                     names.Clear();
-                    var stdAttrs = MftParser.CollectNames(buf, r, (int)recordSize, names);
+                    var stdAttrs = MftParser.CollectNames(buf, r, (int)recordSize, names,
+                        out var creationTimeUtc, out var lastWriteTimeUtc, out var lastAccessTimeUtc);
 
                     if (names.Count == 0)
                         continue;
@@ -102,9 +103,10 @@ internal static class MftIndexScanner
                         attrs |= FileAttributes.Directory;
                     var flags = FileRecordFlagsHelper.FromAttributes(attrs);
 
-                    foreach (var (parent, name) in names)
+                    foreach (var (parent, name, size) in names)
                     {
-                        records.Add(new FileRecord(owner, parent, namePool.Get(name), flags));
+                        records.Add(new FileRecord(owner, parent, namePool.Get(name), flags, isDir ? 0 : size,
+                            creationTimeUtc, lastWriteTimeUtc, lastAccessTimeUtc));
                         if (isDir) dirs++; else files++;
                     }
                 }

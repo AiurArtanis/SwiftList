@@ -35,7 +35,9 @@ public static class FileRecordStoreSerializer
     // v11: force one rebuild to purge children of deleted directories that were never cascade-removed
     // (HardLinkDelta.RemoveLink only marked the directory's own row deleted). Fixed going forward, but
     // existing caches already have the orphaned rows baked in and won't self-heal without a rebuild.
-    public const int Version = 11;
+    // v12: records gained Size and Creation/LastWrite/LastAccess timestamps. Existing caches don't carry
+    // this data at all, so force one rebuild to populate it instead of leaving old rows permanently zeroed.
+    public const int Version = 12;
 
     public static string GetBasePath(string cacheDir, string sourceKey) => Path.Combine(cacheDir, sourceKey.ToLowerInvariant());
 
@@ -104,6 +106,10 @@ public static class FileRecordStoreSerializer
                 recordWriter.Write((ulong)record.ParentId);
                 recordWriter.Write((ulong)(record.ParentId >> 64));
                 recordWriter.Write((ushort)record.Flags);
+                recordWriter.Write(record.Size);
+                recordWriter.Write(record.CreationTimeUtc);
+                recordWriter.Write(record.LastWriteTimeUtc);
+                recordWriter.Write(record.LastAccessTimeUtc);
             }
         }
 
@@ -193,11 +199,19 @@ public static class FileRecordStoreSerializer
                     var id = new UInt128(idHigh, idLow);
                     var parentId = new UInt128(parentIdHigh, parentIdLow);
                     var flags = (FileRecordFlags)reader.ReadUInt16();
+                    var size = reader.ReadInt64();
+                    var creationTimeUtc = reader.ReadInt64();
+                    var lastWriteTimeUtc = reader.ReadInt64();
+                    var lastAccessTimeUtc = reader.ReadInt64();
                     store.Records.Add(new FileRecord(
                         id,
                         parentId,
                         i < names.Count ? names[i] : string.Empty,
-                        flags));
+                        flags,
+                        size,
+                        creationTimeUtc,
+                        lastWriteTimeUtc,
+                        lastAccessTimeUtc));
                 }
             }
 

@@ -19,6 +19,10 @@ public sealed class RuntimeIndex
     private readonly List<int> _nameIds = new();
     private readonly List<byte> _flags = new();
     private readonly List<ulong> _charMasks = new();
+    private readonly List<long> _sizes = new();
+    private readonly List<long> _creationTimes = new();
+    private readonly List<long> _lastWriteTimes = new();
+    private readonly List<long> _lastAccessTimes = new();
     private int[] _aliasIndices = Array.Empty<int>();
     private string[][] _aliasValues = Array.Empty<string[]>();
     private byte[][] _aliasProviderIds = Array.Empty<byte[]>();
@@ -47,6 +51,10 @@ public sealed class RuntimeIndex
     internal List<int> NameIds => _nameIds;
     internal List<byte> Flags => _flags;
     internal List<ulong> CharMasks => _charMasks;
+    internal List<long> Sizes => _sizes;
+    internal List<long> CreationTimes => _creationTimes;
+    internal List<long> LastWriteTimes => _lastWriteTimes;
+    internal List<long> LastAccessTimes => _lastAccessTimes;
     internal int LoadedCount
     {
         get => _loadedCount;
@@ -117,6 +125,10 @@ public sealed class RuntimeIndex
         _names.Clear();
         _flags.Clear();
         _charMasks.Clear();
+        _sizes.Clear();
+        _creationTimes.Clear();
+        _lastWriteTimes.Clear();
+        _lastAccessTimes.Clear();
         _deltaIdToIndex.Clear();
         _aliasIndices = Array.Empty<int>();
         _aliasValues = Array.Empty<string[]>();
@@ -163,7 +175,11 @@ public sealed class RuntimeIndex
             this.AddColumns(
                 record.Id,
                 record.Name,
-                record.Flags);
+                record.Flags,
+                record.Size,
+                record.CreationTimeUtc,
+                record.LastWriteTimeUtc,
+                record.LastAccessTimeUtc);
             parentIds.Add(record.ParentId);
 
             var aliases = this.GenerateAliases(record.Name, out var providerIds);

@@ -64,12 +64,17 @@ internal static class MftParser
 
     /// <summary>
     /// Walks a FILE record's attributes: collects every resident $FILE_NAME (excluding DOS-only 8.3
-    /// short names) as (parentReference, name) into <paramref name="names"/>, and returns the
-    /// $STANDARD_INFORMATION file attributes (hidden/system/etc).
+    /// short names) as (parentReference, name, realSize) into <paramref name="names"/>, and returns the
+    /// $STANDARD_INFORMATION file attributes (hidden/system/etc) plus its Creation/LastWrite/LastAccess
+    /// FILETIMEs (shared by every hard-linked name, unlike size which $FILE_NAME tracks per link).
     /// </summary>
-    internal static uint CollectNames(byte[] buf, int recOff, int recLen, List<(UInt128 parent, string name)> names)
+    internal static uint CollectNames(byte[] buf, int recOff, int recLen, List<(UInt128 parent, string name, long size)> names,
+        out long creationTimeUtc, out long lastWriteTimeUtc, out long lastAccessTimeUtc)
     {
         uint stdAttrs = 0;
+        creationTimeUtc = 0;
+        lastWriteTimeUtc = 0;
+        lastAccessTimeUtc = 0;
         int a = BitConverter.ToUInt16(buf, recOff + 0x14);
         while (a + 8 <= recLen)
         {
@@ -84,7 +89,12 @@ internal static class MftParser
             {
                 var vo = BitConverter.ToUInt16(buf, recOff + a + 0x14);
                 if (a + vo + 0x24 <= recLen)
+                {
+                    creationTimeUtc = BitConverter.ToInt64(buf, recOff + a + vo + 0x00);
+                    lastWriteTimeUtc = BitConverter.ToInt64(buf, recOff + a + vo + 0x08);
+                    lastAccessTimeUtc = BitConverter.ToInt64(buf, recOff + a + vo + 0x18);
                     stdAttrs = BitConverter.ToUInt32(buf, recOff + a + vo + 0x20);
+                }
             }
             else if (type == 0x30 && resident) // $FILE_NAME
             {
@@ -96,9 +106,10 @@ internal static class MftParser
                     if (ns != 2)
                     {
                         UInt128 parent = (ulong)BitConverter.ToInt64(buf, vp);
+                        var size = BitConverter.ToInt64(buf, vp + 0x30); // real (logical) size
                         int nameLen = buf[vp + 0x40];
                         if (vp + 0x42 + nameLen * 2 <= recOff + recLen)
-                            names.Add((parent, Encoding.Unicode.GetString(buf, vp + 0x42, nameLen * 2)));
+                            names.Add((parent, Encoding.Unicode.GetString(buf, vp + 0x42, nameLen * 2), size));
                     }
                 }
             }

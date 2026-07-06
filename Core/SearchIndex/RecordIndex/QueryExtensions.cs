@@ -18,6 +18,14 @@ public static class QueryExtensions
 
     public static FileRecordFlags GetFlags(this RuntimeIndex index, int i) => (FileRecordFlags)index.Flags[i];
 
+    public static long GetSize(this RuntimeIndex index, int i) => index.Sizes[i];
+
+    public static long GetCreationTimeUtc(this RuntimeIndex index, int i) => index.CreationTimes[i];
+
+    public static long GetLastWriteTimeUtc(this RuntimeIndex index, int i) => index.LastWriteTimes[i];
+
+    public static long GetLastAccessTimeUtc(this RuntimeIndex index, int i) => index.LastAccessTimes[i];
+
     public static bool IsDirectory(this RuntimeIndex index, int i) => (((FileRecordFlags)index.Flags[i]) & FileRecordFlags.Directory) != 0;
 
     public static bool IsDeleted(this RuntimeIndex index, int i) => (((FileRecordFlags)index.Flags[i]) & FileRecordFlags.Deleted) != 0;
@@ -31,7 +39,15 @@ public static class QueryExtensions
         return index.HasAlias.Get(i);
     }
 
-    public static FileRecord GetRecord(this RuntimeIndex index, int i) => new FileRecord(index.Ids[i], index.GetParentId(i), index.GetName(i), (FileRecordFlags)index.Flags[i]);
+    public static FileRecord GetRecord(this RuntimeIndex index, int i) => new FileRecord(
+        index.Ids[i],
+        index.GetParentId(i),
+        index.GetName(i),
+        (FileRecordFlags)index.Flags[i],
+        index.Sizes[i],
+        index.CreationTimes[i],
+        index.LastWriteTimes[i],
+        index.LastAccessTimes[i]);
 
     public static bool TryGetAliases(this RuntimeIndex index, int i, out string[] aliases) => index.TryGetAliases(i, out aliases, out _);
 

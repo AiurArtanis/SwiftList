@@ -35,6 +35,10 @@ public static class UpdateExtensions
             index.TrackOrphanParent(oldIndex, newParentIndex, record.ParentId);
             index.NameIds[oldIndex] = index.Names.GetId(name);
             index.Flags[oldIndex] = (byte)record.Flags;
+            index.Sizes[oldIndex] = record.Size;
+            index.CreationTimes[oldIndex] = record.CreationTimeUtc;
+            index.LastWriteTimes[oldIndex] = record.LastWriteTimeUtc;
+            index.LastAccessTimes[oldIndex] = record.LastAccessTimeUtc;
             var newAliases = index.GenerateAliases(name, out var newProviderIds);
             if (newAliases != null && newAliases.Length > 0)
             {
@@ -83,7 +87,11 @@ public static class UpdateExtensions
         index.AddColumns(
             record.Id,
             name,
-            record.Flags);
+            record.Flags,
+            record.Size,
+            record.CreationTimeUtc,
+            record.LastWriteTimeUtc,
+            record.LastAccessTimeUtc);
         index.DeltaIdToIndex[record.Id] = idx;
 
         var parentIndex = index.ResolveParentIndex(record.Id, record.ParentId);
@@ -159,6 +167,10 @@ public static class UpdateExtensions
         index.NameIds.Capacity = Math.Max(index.NameIds.Capacity, capacity);
         index.Flags.Capacity = Math.Max(index.Flags.Capacity, capacity);
         index.CharMasks.Capacity = Math.Max(index.CharMasks.Capacity, capacity);
+        index.Sizes.Capacity = Math.Max(index.Sizes.Capacity, capacity);
+        index.CreationTimes.Capacity = Math.Max(index.CreationTimes.Capacity, capacity);
+        index.LastWriteTimes.Capacity = Math.Max(index.LastWriteTimes.Capacity, capacity);
+        index.LastAccessTimes.Capacity = Math.Max(index.LastAccessTimes.Capacity, capacity);
     }
 
     // A parent FRN that earlier out-of-order rows were orphaned waiting for just appeared at newRow: link
@@ -202,14 +214,23 @@ public static class UpdateExtensions
         index.NameIds.TrimExcess();
         index.Flags.TrimExcess();
         index.CharMasks.TrimExcess();
+        index.Sizes.TrimExcess();
+        index.CreationTimes.TrimExcess();
+        index.LastWriteTimes.TrimExcess();
+        index.LastAccessTimes.TrimExcess();
     }
 
-    internal static void AddColumns(this RuntimeIndex index, UInt128 id, string name, FileRecordFlags flags)
+    internal static void AddColumns(this RuntimeIndex index, UInt128 id, string name, FileRecordFlags flags,
+        long size = 0, long creationTimeUtc = 0, long lastWriteTimeUtc = 0, long lastAccessTimeUtc = 0)
     {
         index.Ids.Add(id);
         index.NameIds.Add(index.Names.GetId(name));
         index.Flags.Add((byte)flags);
         index.CharMasks.Add(FzfAlgorithm.GetCharMask(name));
+        index.Sizes.Add(size);
+        index.CreationTimes.Add(creationTimeUtc);
+        index.LastWriteTimes.Add(lastWriteTimeUtc);
+        index.LastAccessTimes.Add(lastAccessTimeUtc);
     }
 
     internal static string[]? GenerateAliases(this RuntimeIndex index, string name, out byte[] providerIds)

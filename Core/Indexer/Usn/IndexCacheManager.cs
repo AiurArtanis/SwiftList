@@ -37,7 +37,7 @@ internal static class IndexCacheManager
     public static FileRecordStore CreateStoreFromDriveData(
         string drive,
         UInt128 rootFrn,
-        Dictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)> searchItems,
+        Dictionary<UInt128, ReFsItem> searchItems,
         long nextUsn,
         ulong journalId)
     {
@@ -51,7 +51,11 @@ internal static class IndexCacheManager
                 kvp.Key,
                 kvp.Value.ParentFrn,
                 namePool.Get(kvp.Value.Name),
-                flags));
+                flags,
+                kvp.Value.Size,
+                kvp.Value.CreationTimeUtc,
+                kvp.Value.LastWriteTimeUtc,
+                kvp.Value.LastAccessTimeUtc));
         }
 
         return store;

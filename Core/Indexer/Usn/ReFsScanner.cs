@@ -6,6 +6,10 @@ using Microsoft.Win32.SafeHandles;
 
 namespace SwiftList.Core.Indexer.Usn;
 
+// FILETIME-format timestamps (100ns since 1601-01-01 UTC), read straight out of the
+// FILE_ID_EXTD_DIR_INFO buffer GetFileInformationByHandleEx already returns per entry.
+internal readonly record struct ReFsItem(string Name, UInt128 ParentFrn, bool IsDir, long Size, long CreationTimeUtc, long LastWriteTimeUtc, long LastAccessTimeUtc);
+
 public static class ReFsScanner
 {
     internal static UsnDriveIndexResult? ScanDrive(
@@ -40,10 +44,10 @@ public static class ReFsScanner
 
     // Slow path: parallel BFS using Channel<UInt128> as the work queue.
     // Workers await new items (no spin); termination via channel.Writer.TryComplete() when inFlight hits 0.
-    private static Dictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)>? ScanParallel(
+    private static Dictionary<UInt128, ReFsItem>? ScanParallel(
         SafeFileHandle volumeHandle, UInt128 rootFrn, Action<int, int>? onProgress)
     {
-        var items = new ConcurrentDictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)>(8, 32768);
+        var items = new ConcurrentDictionary<UInt128, ReFsItem>(8, 32768);
         var channel = Channel.CreateUnbounded<UInt128>(new UnboundedChannelOptions { SingleReader = false });
         channel.Writer.TryWrite(rootFrn);
         var inFlight = 1;
@@ -76,7 +80,7 @@ public static class ReFsScanner
             return null;
         }
 
-        return new Dictionary<UInt128, (string, UInt128, bool)>(items);
+        return new Dictionary<UInt128, ReFsItem>(items);
     }
 
     // Open one directory by file ID and enumerate its direct children.
@@ -84,7 +88,7 @@ public static class ReFsScanner
     private static void ProcessDir(
         SafeFileHandle volumeHandle,
         UInt128 dirId,
-        ConcurrentDictionary<UInt128, (string Name, UInt128 ParentFrn, bool IsDir)> items,
+        ConcurrentDictionary<UInt128, ReFsItem> items,
         Action<int, int>? onProgress,
         ref int files,
         ref int dirs,
@@ -113,6 +117,11 @@ public static class ReFsScanner
                 while (true)
                 {
                     var nextOff = (uint)Marshal.ReadInt32(cur, 0);
+                    // FILE_ID_EXTD_DIR_INFO: already-fetched fields, no extra I/O to read them.
+                    var creationTimeUtc = Marshal.ReadInt64(cur, 8);
+                    var lastAccessTimeUtc = Marshal.ReadInt64(cur, 16);
+                    var lastWriteTimeUtc = Marshal.ReadInt64(cur, 24);
+                    var size = Marshal.ReadInt64(cur, 40);
                     var attrs = (uint)Marshal.ReadInt32(cur, 56);
                     var nameLen = (uint)Marshal.ReadInt32(cur, 60);
                     var idLow = (ulong)Marshal.ReadInt64(cur, 72);
@@ -122,7 +131,8 @@ public static class ReFsScanner
                     if (name != "." && name != "..")
                     {
                         var isDir = (attrs & 0x10) != 0;
-                        if (items.TryAdd(fileId, (name!, dirId, isDir)))
+                        var item = new ReFsItem(name!, dirId, isDir, isDir ? 0 : size, creationTimeUtc, lastWriteTimeUtc, lastAccessTimeUtc);
+                        if (items.TryAdd(fileId, item))
                         {
                             if (isDir)
                             {

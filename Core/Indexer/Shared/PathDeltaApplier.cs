@@ -26,10 +26,12 @@ internal static class PathDeltaApplier
 
     private static bool UpsertPath(RuntimeIndex runtime, UInt128 rootId, string root, string path, bool includeChildren, ExclusionRuleSet? exclusionRules)
     {
+        FileInfo info;
         FileAttributes attributes;
         try
         {
-            attributes = File.GetAttributes(path);
+            info = new FileInfo(path);
+            attributes = info.Attributes;
         }
         catch
         {
@@ -59,11 +61,16 @@ internal static class PathDeltaApplier
             ? rootId
             : (UInt128)PathHelpers.HashPath64(PathHelpers.NormalizePath(parentPath, true));
 
+        var size = isDirectory ? 0 : info.Length;
         runtime.Upsert(new FileRecord(
             (UInt128)PathHelpers.HashPath64(normalized),
             parentId,
             name,
-            isDirectory ? FileRecordFlags.Directory : FileRecordFlags.None));
+            FileRecordFlagsHelper.FromAttributes(attributes),
+            size,
+            info.CreationTimeUtc.ToFileTimeUtc(),
+            info.LastWriteTimeUtc.ToFileTimeUtc(),
+            info.LastAccessTimeUtc.ToFileTimeUtc()));
 
         if (includeChildren && isDirectory)
             UpsertDirectoryChildren(runtime, rootId, root, normalized, exclusionRules);

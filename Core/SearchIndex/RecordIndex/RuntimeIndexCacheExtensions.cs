@@ -110,12 +110,16 @@ internal static class RuntimeIndexCacheExtensions
                 var parentIdLow = recordReader.ReadUInt64();
                 var parentIdHigh = recordReader.ReadUInt64();
                 var flags = (FileRecordFlags)recordReader.ReadUInt16();
+                var size = recordReader.ReadInt64();
+                var creationTimeUtc = recordReader.ReadInt64();
+                var lastWriteTimeUtc = recordReader.ReadInt64();
+                var lastAccessTimeUtc = recordReader.ReadInt64();
 
                 var id = new UInt128(idHigh, idLow);
                 var parentId = new UInt128(parentIdHigh, parentIdLow);
 
                 var indexVal = index.Count;
-                index.AddColumns(id, name, flags);
+                index.AddColumns(id, name, flags, size, creationTimeUtc, lastWriteTimeUtc, lastAccessTimeUtc);
                 parentIds.Add(parentId);
 
                 var aliases = index.GenerateAliases(name, out var providerIds);
