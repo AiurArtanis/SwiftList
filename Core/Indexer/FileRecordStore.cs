@@ -54,6 +54,36 @@ public static class FileRecordFlagsHelper
     }
 }
 
+// Converts the platform's native FILETIME/DateTime timestamps (100ns resolution, since 1601) down to
+// whole-second Unix time (uint, since 1970). A search tool has no use for sub-second precision, and
+// halving each stored timestamp from 8 to 4 bytes matters across millions of indexed rows. Range is
+// 1970-01-01 through 2106-02-07; anything outside that (no real file should be) clamps to the nearest end.
+public static class FileTimeHelper
+{
+    private static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    public static uint ToUnixSeconds(DateTime utc)
+    {
+        var seconds = (utc - UnixEpoch).TotalSeconds;
+        return seconds <= 0 ? 0u : seconds >= uint.MaxValue ? uint.MaxValue : (uint)seconds;
+    }
+
+    // For MFT/ReFS scanners, which read a raw FILETIME long straight out of an on-disk buffer.
+    public static uint FileTimeToUnixSeconds(long fileTimeUtc)
+    {
+        if (fileTimeUtc <= 0)
+            return 0;
+        try
+        {
+            return ToUnixSeconds(DateTime.FromFileTimeUtc(fileTimeUtc));
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return 0;
+        }
+    }
+}
+
 public readonly struct FileRecord
 {
     public FileRecord(
@@ -62,18 +92,18 @@ public readonly struct FileRecord
         string name,
         FileRecordFlags flags,
         long size = 0,
-        long creationTimeUtc = 0,
-        long lastWriteTimeUtc = 0,
-        long lastAccessTimeUtc = 0)
+        uint creationTimeUnixSeconds = 0,
+        uint lastWriteTimeUnixSeconds = 0,
+        uint lastAccessTimeUnixSeconds = 0)
     {
         Id = id;
         ParentId = parentId;
         Name = name;
         Flags = flags;
         Size = size;
-        CreationTimeUtc = creationTimeUtc;
-        LastWriteTimeUtc = lastWriteTimeUtc;
-        LastAccessTimeUtc = lastAccessTimeUtc;
+        CreationTimeUnixSeconds = creationTimeUnixSeconds;
+        LastWriteTimeUnixSeconds = lastWriteTimeUnixSeconds;
+        LastAccessTimeUnixSeconds = lastAccessTimeUnixSeconds;
     }
 
     public UInt128 Id { get; }
@@ -82,12 +112,10 @@ public readonly struct FileRecord
     public FileRecordFlags Flags { get; }
     // Logical (apparent) size in bytes. Always 0 for directories.
     public long Size { get; }
-    // FILETIME format (100ns intervals since 1601-01-01 UTC) -- the native representation for both
-    // NTFS $STANDARD_INFORMATION and Win32's GetFileAttributesEx, so every source can store its raw
-    // value with no conversion. Use DateTime.FromFileTimeUtc to convert for display.
-    public long CreationTimeUtc { get; }
-    public long LastWriteTimeUtc { get; }
-    public long LastAccessTimeUtc { get; }
+    // Whole-second Unix time (UTC). See FileTimeHelper for the precision/range trade-off.
+    public uint CreationTimeUnixSeconds { get; }
+    public uint LastWriteTimeUnixSeconds { get; }
+    public uint LastAccessTimeUnixSeconds { get; }
     public bool IsDirectory => (Flags & FileRecordFlags.Directory) != 0;
     public bool IsDeleted => (Flags & FileRecordFlags.Deleted) != 0;
 }

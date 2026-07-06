@@ -36,9 +36,9 @@ public static class UpdateExtensions
             index.NameIds[oldIndex] = index.Names.GetId(name);
             index.Flags[oldIndex] = (byte)record.Flags;
             index.Sizes[oldIndex] = record.Size;
-            index.CreationTimes[oldIndex] = record.CreationTimeUtc;
-            index.LastWriteTimes[oldIndex] = record.LastWriteTimeUtc;
-            index.LastAccessTimes[oldIndex] = record.LastAccessTimeUtc;
+            index.CreationTimes[oldIndex] = record.CreationTimeUnixSeconds;
+            index.LastWriteTimes[oldIndex] = record.LastWriteTimeUnixSeconds;
+            index.LastAccessTimes[oldIndex] = record.LastAccessTimeUnixSeconds;
             var newAliases = index.GenerateAliases(name, out var newProviderIds);
             if (newAliases != null && newAliases.Length > 0)
             {
@@ -89,9 +89,9 @@ public static class UpdateExtensions
             name,
             record.Flags,
             record.Size,
-            record.CreationTimeUtc,
-            record.LastWriteTimeUtc,
-            record.LastAccessTimeUtc);
+            record.CreationTimeUnixSeconds,
+            record.LastWriteTimeUnixSeconds,
+            record.LastAccessTimeUnixSeconds);
         index.DeltaIdToIndex[record.Id] = idx;
 
         var parentIndex = index.ResolveParentIndex(record.Id, record.ParentId);
@@ -221,7 +221,7 @@ public static class UpdateExtensions
     }
 
     internal static void AddColumns(this RuntimeIndex index, UInt128 id, string name, FileRecordFlags flags,
-        long size = 0, long creationTimeUtc = 0, long lastWriteTimeUtc = 0, long lastAccessTimeUtc = 0)
+        long size = 0, uint creationTimeUtc = 0, uint lastWriteTimeUtc = 0, uint lastAccessTimeUtc = 0)
     {
         index.Ids.Add(id);
         index.NameIds.Add(index.Names.GetId(name));

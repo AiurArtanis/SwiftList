@@ -35,7 +35,7 @@ internal static class HardLinkUpdateExtensions
     internal static int AppendHardLink(this RuntimeIndex index, FileRecord record)
     {
         var idx = index.Count;
-        index.AddColumns(record.Id, record.Name, record.Flags, record.Size, record.CreationTimeUtc, record.LastWriteTimeUtc, record.LastAccessTimeUtc);
+        index.AddColumns(record.Id, record.Name, record.Flags, record.Size, record.CreationTimeUnixSeconds, record.LastWriteTimeUnixSeconds, record.LastAccessTimeUnixSeconds);
 
         var parentIndex = index.ResolveParentIndex(record.Id, record.ParentId);
         index.ParentIndexes.Add(parentIndex);
@@ -80,7 +80,7 @@ internal static class HardLinkUpdateExtensions
 
     /// <summary>Refreshes a row's Size/timestamp columns in place (e.g. after a USN content-only change)
     /// without touching its name, parent, or flags.</summary>
-    internal static void UpdateMetadata(this RuntimeIndex index, int idx, long size, long creationTimeUtc, long lastWriteTimeUtc, long lastAccessTimeUtc)
+    internal static void UpdateMetadata(this RuntimeIndex index, int idx, long size, uint creationTimeUtc, uint lastWriteTimeUtc, uint lastAccessTimeUtc)
     {
         index.Sizes[idx] = size;
         index.CreationTimes[idx] = creationTimeUtc;

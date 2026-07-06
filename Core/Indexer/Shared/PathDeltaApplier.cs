@@ -68,9 +68,9 @@ internal static class PathDeltaApplier
             name,
             FileRecordFlagsHelper.FromAttributes(attributes),
             size,
-            info.CreationTimeUtc.ToFileTimeUtc(),
-            info.LastWriteTimeUtc.ToFileTimeUtc(),
-            info.LastAccessTimeUtc.ToFileTimeUtc()));
+            FileTimeHelper.ToUnixSeconds(info.CreationTimeUtc),
+            FileTimeHelper.ToUnixSeconds(info.LastWriteTimeUtc),
+            FileTimeHelper.ToUnixSeconds(info.LastAccessTimeUtc)));
 
         if (includeChildren && isDirectory)
             UpsertDirectoryChildren(runtime, rootId, root, normalized, exclusionRules);

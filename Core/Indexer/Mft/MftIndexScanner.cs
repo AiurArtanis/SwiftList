@@ -102,11 +102,14 @@ internal static class MftIndexScanner
                     if (isDir)
                         attrs |= FileAttributes.Directory;
                     var flags = FileRecordFlagsHelper.FromAttributes(attrs);
+                    var creationUnixSeconds = FileTimeHelper.FileTimeToUnixSeconds(creationTimeUtc);
+                    var lastWriteUnixSeconds = FileTimeHelper.FileTimeToUnixSeconds(lastWriteTimeUtc);
+                    var lastAccessUnixSeconds = FileTimeHelper.FileTimeToUnixSeconds(lastAccessTimeUtc);
 
                     foreach (var (parent, name, size) in names)
                     {
                         records.Add(new FileRecord(owner, parent, namePool.Get(name), flags, isDir ? 0 : size,
-                            creationTimeUtc, lastWriteTimeUtc, lastAccessTimeUtc));
+                            creationUnixSeconds, lastWriteUnixSeconds, lastAccessUnixSeconds));
                         if (isDir) dirs++; else files++;
                     }
                 }

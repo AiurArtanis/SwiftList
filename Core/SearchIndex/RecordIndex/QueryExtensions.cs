@@ -20,11 +20,11 @@ public static class QueryExtensions
 
     public static long GetSize(this RuntimeIndex index, int i) => index.Sizes[i];
 
-    public static long GetCreationTimeUtc(this RuntimeIndex index, int i) => index.CreationTimes[i];
+    public static uint GetCreationTimeUnixSeconds(this RuntimeIndex index, int i) => index.CreationTimes[i];
 
-    public static long GetLastWriteTimeUtc(this RuntimeIndex index, int i) => index.LastWriteTimes[i];
+    public static uint GetLastWriteTimeUnixSeconds(this RuntimeIndex index, int i) => index.LastWriteTimes[i];
 
-    public static long GetLastAccessTimeUtc(this RuntimeIndex index, int i) => index.LastAccessTimes[i];
+    public static uint GetLastAccessTimeUnixSeconds(this RuntimeIndex index, int i) => index.LastAccessTimes[i];
 
     public static bool IsDirectory(this RuntimeIndex index, int i) => (((FileRecordFlags)index.Flags[i]) & FileRecordFlags.Directory) != 0;
 

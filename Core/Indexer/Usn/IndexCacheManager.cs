@@ -53,9 +53,9 @@ internal static class IndexCacheManager
                 namePool.Get(kvp.Value.Name),
                 flags,
                 kvp.Value.Size,
-                kvp.Value.CreationTimeUtc,
-                kvp.Value.LastWriteTimeUtc,
-                kvp.Value.LastAccessTimeUtc));
+                FileTimeHelper.FileTimeToUnixSeconds(kvp.Value.CreationTimeUtc),
+                FileTimeHelper.FileTimeToUnixSeconds(kvp.Value.LastWriteTimeUtc),
+                FileTimeHelper.FileTimeToUnixSeconds(kvp.Value.LastAccessTimeUtc)));
         }
 
         return store;

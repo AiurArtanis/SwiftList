@@ -20,9 +20,9 @@ public sealed class RuntimeIndex
     private readonly List<byte> _flags = new();
     private readonly List<ulong> _charMasks = new();
     private readonly List<long> _sizes = new();
-    private readonly List<long> _creationTimes = new();
-    private readonly List<long> _lastWriteTimes = new();
-    private readonly List<long> _lastAccessTimes = new();
+    private readonly List<uint> _creationTimes = new();
+    private readonly List<uint> _lastWriteTimes = new();
+    private readonly List<uint> _lastAccessTimes = new();
     private int[] _aliasIndices = Array.Empty<int>();
     private string[][] _aliasValues = Array.Empty<string[]>();
     private byte[][] _aliasProviderIds = Array.Empty<byte[]>();
@@ -52,9 +52,9 @@ public sealed class RuntimeIndex
     internal List<byte> Flags => _flags;
     internal List<ulong> CharMasks => _charMasks;
     internal List<long> Sizes => _sizes;
-    internal List<long> CreationTimes => _creationTimes;
-    internal List<long> LastWriteTimes => _lastWriteTimes;
-    internal List<long> LastAccessTimes => _lastAccessTimes;
+    internal List<uint> CreationTimes => _creationTimes;
+    internal List<uint> LastWriteTimes => _lastWriteTimes;
+    internal List<uint> LastAccessTimes => _lastAccessTimes;
     internal int LoadedCount
     {
         get => _loadedCount;
@@ -177,9 +177,9 @@ public sealed class RuntimeIndex
                 record.Name,
                 record.Flags,
                 record.Size,
-                record.CreationTimeUtc,
-                record.LastWriteTimeUtc,
-                record.LastAccessTimeUtc);
+                record.CreationTimeUnixSeconds,
+                record.LastWriteTimeUnixSeconds,
+                record.LastAccessTimeUnixSeconds);
             parentIds.Add(record.ParentId);
 
             var aliases = this.GenerateAliases(record.Name, out var providerIds);

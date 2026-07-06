@@ -65,7 +65,7 @@ internal static class FolderDriveScanner
             var flags = FileRecordFlagsHelper.FromAttributes(attrs);
             var size = isDir ? 0 : info.Length;
             store.Records.Add(new FileRecord(id, parentId, name, flags, size,
-                info.CreationTimeUtc.ToFileTimeUtc(), info.LastWriteTimeUtc.ToFileTimeUtc(), info.LastAccessTimeUtc.ToFileTimeUtc()));
+                FileTimeHelper.ToUnixSeconds(info.CreationTimeUtc), FileTimeHelper.ToUnixSeconds(info.LastWriteTimeUtc), FileTimeHelper.ToUnixSeconds(info.LastAccessTimeUtc)));
             if (isDir) dirs++;
             else files++;
             if (((files + dirs) & 4095) == 0)

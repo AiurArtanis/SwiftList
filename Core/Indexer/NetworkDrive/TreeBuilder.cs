@@ -186,9 +186,9 @@ internal sealed class TreeBuilder
             _namePool.Get(name),
             flags,
             size,
-            info.CreationTimeUtc.ToFileTimeUtc(),
-            info.LastWriteTimeUtc.ToFileTimeUtc(),
-            info.LastAccessTimeUtc.ToFileTimeUtc());
+            FileTimeHelper.ToUnixSeconds(info.CreationTimeUtc),
+            FileTimeHelper.ToUnixSeconds(info.LastWriteTimeUtc),
+            FileTimeHelper.ToUnixSeconds(info.LastAccessTimeUtc));
         record = new NetworkWalkRecord(fileRecord, attributes);
         return WalkRecordResult.Success;
     }

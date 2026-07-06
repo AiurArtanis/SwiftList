@@ -96,7 +96,7 @@ public static class UsnIndexerExtensions
     // snapshot, since a later record for the same FRN could have renamed/deleted it in the meantime.
     private static void RefreshMetadata(UsnIndexer indexer, RuntimeIndex runtime, HashSet<UInt128> frns)
     {
-        var results = new List<(UInt128 Frn, long Size, long CreationTimeUtc, long LastWriteTimeUtc, long LastAccessTimeUtc)>(frns.Count);
+        var results = new List<(UInt128 Frn, long Size, uint CreationTimeUtc, uint LastWriteTimeUtc, uint LastAccessTimeUtc)>(frns.Count);
         foreach (var frn in frns)
         {
             // Hard links share one $STANDARD_INFORMATION (and $DATA stream), so a single stat via any
@@ -119,7 +119,7 @@ public static class UsnIndexerExtensions
 
             var isDirectory = (info.Attributes & FileAttributes.Directory) != 0;
             results.Add((frn, isDirectory ? 0 : info.Length,
-                info.CreationTimeUtc.ToFileTimeUtc(), info.LastWriteTimeUtc.ToFileTimeUtc(), info.LastAccessTimeUtc.ToFileTimeUtc()));
+                FileTimeHelper.ToUnixSeconds(info.CreationTimeUtc), FileTimeHelper.ToUnixSeconds(info.LastWriteTimeUtc), FileTimeHelper.ToUnixSeconds(info.LastAccessTimeUtc)));
         }
 
         if (results.Count == 0)
