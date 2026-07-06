@@ -59,6 +59,24 @@ public static class SearchInputHelper
             return true;
         }
 
+        // The results list also accepts the user's configurable next/previous-item hotkeys (not just the
+        // literal arrow keys above); the actions list should match so a custom binding still works once
+        // the menu is open instead of silently falling through to move the hidden results-list selection.
+        var actualKey = WpfUiHelper.GetActualKey(e);
+        var settings = UserSettings.Load().Hotkeys;
+        if (WpfUiHelper.MatchesHotkey(settings.NextItemHotkey, Keyboard.Modifiers, actualKey))
+        {
+            menuPresenter.NavigateActionsList(1);
+            e.Handled = true;
+            return true;
+        }
+        if (WpfUiHelper.MatchesHotkey(settings.PreviousItemHotkey, Keyboard.Modifiers, actualKey))
+        {
+            menuPresenter.NavigateActionsList(-1);
+            e.Handled = true;
+            return true;
+        }
+
         if (e.Key == Key.Enter)
         {
             menuPresenter.ExecuteSelectedAction();

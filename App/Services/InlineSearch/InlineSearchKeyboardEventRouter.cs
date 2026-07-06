@@ -114,13 +114,7 @@ internal sealed class InlineSearchKeyboardEventRouter
                     return;
                 }
 
-                if (window.LstResults.Items.Count > 0)
-                {
-                    var prev = window.LstResults.SelectedIndex - 1;
-                    if (prev >= 0)
-                        window.LstResults.SelectedIndex = prev;
-                    window.LstResults.ScrollIntoView(window.LstResults.SelectedItem);
-                }
+                MoveResultSelection(window, -1);
             }));
 
         _keyboardHook.OnDownPressed += () => Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -133,15 +127,32 @@ internal sealed class InlineSearchKeyboardEventRouter
                     return;
                 }
 
-                if (window.LstResults.Items.Count > 0)
-                {
-                    var next = window.LstResults.SelectedIndex + 1;
-                    if (next < window.LstResults.Items.Count)
-                        window.LstResults.SelectedIndex = next;
-                    window.LstResults.ScrollIntoView(window.LstResults.SelectedItem);
-                }
+                MoveResultSelection(window, 1);
             }));
 
         _keyboardHook.OnCtrlNumberPressed += num => Application.Current.Dispatcher.BeginInvoke(new Action(() => _getWindow()?.LaunchByShortcutIndex(num)));
+    }
+
+    // Wraps like the actions list's NavigateActionsList (ShellMenuPresenter.cs) -- past the last item
+    // goes back to the first, and vice versa -- matching InlineSearchWindowInputHandler.MoveResultSelection,
+    // used when the window doesn't have WPF focus and this global hook drives it instead.
+    private static void MoveResultSelection(InlineSearchWindow window, int direction)
+    {
+        var count = window.LstResults.Items.Count;
+        if (count == 0) return;
+        var index = window.LstResults.SelectedIndex;
+        var originalIndex = index;
+
+        do
+        {
+            index = (index + direction + count) % count;
+            if (index == originalIndex) break;
+            if (window.LstResults.Items[index] is AppSearchResult item && !item.IsEmptyResult && !item.IsSearchSectionHeader)
+            {
+                window.LstResults.SelectedIndex = index;
+                window.LstResults.ScrollIntoView(window.LstResults.SelectedItem);
+                break;
+            }
+        } while (true);
     }
 }

@@ -198,21 +198,24 @@ public class QuickSearchWindowInputHandler
     }
     private void MoveResultSelection(int direction)
     {
+        // Wraps like the actions list's NavigateActionsList (ShellMenuPresenter.cs) -- past the last
+        // item goes back to the first, and vice versa.
         var count = _window.LstResults.Items.Count;
         if (count == 0) return;
         var index = _window.LstResults.SelectedIndex;
-        for (var i = 0; i < count; i++)
+        var originalIndex = index;
+
+        do
         {
-            index += direction;
-            if (index < 0 || index >= count)
-                break;
+            index = (index + direction + count) % count;
+            if (index == originalIndex) break;
             if (_window.LstResults.Items[index] is AppSearchResult item && !item.IsEmptyResult && !item.IsSearchSectionHeader)
             {
                 _window.LstResults.SelectedIndex = index;
                 _window.LstResults.ScrollIntoView(_window.LstResults.SelectedItem);
                 break;
             }
-        }
+        } while (true);
     }
     private static string GetCompletionText(AppSearchResult result)
     {
