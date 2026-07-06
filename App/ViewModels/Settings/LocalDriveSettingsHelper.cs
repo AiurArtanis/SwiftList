@@ -77,4 +77,6 @@ public class LocalDriveSettingsItem : ViewModelBase
         LocalDriveRowAction.Delete => TranslationManager.Instance["Local_RowDeleteBtn"],
         _ => string.Empty
     };
+
+    public void NotifyLanguageChanged() => OnPropertyChanged(nameof(RowActionText));
 }

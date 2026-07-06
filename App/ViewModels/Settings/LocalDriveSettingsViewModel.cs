@@ -27,6 +27,15 @@ public class LocalDriveSettingsViewModel : ViewModelBase
         _searchService = searchService;
         _onTriggerFastRefresh = onTriggerFastRefresh;
         RebuildCommand = new RelayCommand(Rebuild, () => CanRebuild);
+
+        // RowActionText only re-evaluates when RowAction itself changes value, so a language switch
+        // otherwise leaves the per-row Rebuild/Delete button text stuck in the old language until the
+        // action type actually changes (which may never happen while the page is open).
+        TranslationManager.Instance.PropertyChanged += (s, e) =>
+        {
+            foreach (var item in LocalDrives)
+                item.NotifyLanguageChanged();
+        };
     }
 
     public ObservableCollection<LocalDriveSettingsItem> LocalDrives { get; } = new();
