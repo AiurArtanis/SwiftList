@@ -41,6 +41,17 @@ public class LocalDriveSettingsViewModel : ViewModelBase
     public ObservableCollection<LocalDriveSettingsItem> LocalDrives { get; } = new();
     public ICommand RebuildCommand { get; }
 
+    // Tab navigation for the merged "Index" settings page (Local/Network share one page now).
+    private string _selectedTab = "Local";
+    public string SelectedTab
+    {
+        get => _selectedTab;
+        set => SetProperty(ref _selectedTab, value);
+    }
+
+    private ICommand? _selectTabCommand;
+    public ICommand SelectTabCommand => _selectTabCommand ??= new RelayCommand<string>(tab => SelectedTab = tab);
+
     public string IndexSummary
     {
         get => _indexSummary;

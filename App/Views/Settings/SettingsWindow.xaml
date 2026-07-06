@@ -74,13 +74,7 @@
                             <ListBoxItem Tag="Index">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE8EF;" FontFamily="Segoe MDL2 Assets" Margin="0,0,12,0"/>
-                                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_LocalDrive]}"/>
-                                </StackPanel>
-                            </ListBoxItem>
-                            <ListBoxItem Tag="Network">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" Margin="0,0,12,0"/>
-                                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_NetworkDrive]}"/>
+                                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Index]}"/>
                                 </StackPanel>
                             </ListBoxItem>
                             <ListBoxItem Tag="Exclusions">
@@ -136,8 +130,7 @@
 
                     <Grid Grid.Column="1" Margin="24,20,24,16">
                         <settings:ServiceSettingsPage x:Name="PageService" Visibility="Collapsed"/>
-                        <settings:LocalDriveSettingsPage x:Name="PageIndex"/>
-                        <settings:NetworkDriveSettingsPage x:Name="PageNetwork" Visibility="Collapsed"/>
+                        <settings:IndexSettingsPage x:Name="PageIndex"/>
                         <settings:ExclusionSettingsPage x:Name="PageExclusions" Visibility="Collapsed"/>
                         <settings:GeneralSettingsPage x:Name="PageGeneral" Visibility="Collapsed"/>
                         <settings:HotkeySettingsPage x:Name="PageHotkeys" Visibility="Collapsed"

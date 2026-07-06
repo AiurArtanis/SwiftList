@@ -262,6 +262,10 @@ public class SettingsViewModel : ViewModelBase
         // signals that network data or connectivity isn't ready). The only thing that legitimately blocks
         // network settings from a "service" perspective is not being able to reach the service at all.
         NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses, !isServiceReady);
+        // The WSL tab hides itself once its drive list empties out (e.g. the last distro was removed).
+        // If it was the active tab, fall back to Network so the page never lands on a hidden tab.
+        if (LocalDrive.SelectedTab == "Wsl" && !NetworkDrive.IsWslPanelVisible)
+            LocalDrive.SelectedTab = "Network";
         // The shared Apply/OK button is different: it commits both sides' settings in one shot, so it
         // should stay disabled while EITHER side is busy, even though neither side blocks the other's own
         // panel controls.
