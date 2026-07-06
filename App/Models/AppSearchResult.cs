@@ -82,7 +82,6 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
             // File icon (document shape)
             : "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z");
 
-    private static readonly SemaphoreSlim _dateModifiedSemaphore = new(8);
     private static readonly SemaphoreSlim _iconSemaphore = new(4);
 
     private System.Windows.Media.ImageSource? _icon;
@@ -177,69 +176,45 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         }
     }
 
-    // Lazy-loaded File Date Modified
-    private DateTime? _dateModified;
-    private bool _dateModifiedLoadingStarted;
+    // Lazy-loaded file metadata (Size, Created/Modified/Accessed timestamps) -- one stat call feeds
+    // all four, since they're only ever needed together (sorting, or the DateModified column). The
+    // actual loading lives in FileMetadataLoader to keep this file under the line-count limit.
+    private readonly FileMetadataLoader _metadataLoader = new();
+
+    public long Size
+    {
+        get { EnsureFileMetadataLoading(); return _metadataLoader.Size; }
+    }
+
+    public DateTime DateCreated
+    {
+        get { EnsureFileMetadataLoading(); return _metadataLoader.DateCreated; }
+    }
+
     public DateTime DateModified
     {
-        get
-        {
-            if (_dateModified.HasValue) return _dateModified.Value;
-            if (!_dateModifiedLoadingStarted)
-            {
-                _dateModifiedLoadingStarted = true;
-                LoadDateModifiedAsync();
-            }
-            return DateTime.MinValue;
-        }
+        get { EnsureFileMetadataLoading(); return _metadataLoader.DateModified; }
     }
 
-    private void LoadDateModifiedAsync()
+    public DateTime DateAccessed
     {
-        var pathCopy = FullPath;
-        var isDirCopy = IsDir;
-        Task.Run(async () =>
-        {
-            await _dateModifiedSemaphore.WaitAsync();
-            try
-            {
-                var dt = DateTime.MinValue;
-                if (isDirCopy)
-                {
-                    if (System.IO.Directory.Exists(pathCopy))
-                        dt = System.IO.Directory.GetLastWriteTime(pathCopy);
-                }
-                else
-                {
-                    if (System.IO.File.Exists(pathCopy))
-                        dt = System.IO.File.GetLastWriteTime(pathCopy);
-                }
-
-                var app = System.Windows.Application.Current;
-                if (app != null)
-                {
-                    _ = app.Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        _dateModified = dt;
-                        OnPropertyChanged(nameof(DateModified));
-                        OnPropertyChanged(nameof(DateModifiedText));
-                    }), System.Windows.Threading.DispatcherPriority.Background);
-                }
-                else
-                {
-                    _dateModified = dt;
-                }
-            }
-            catch
-            {
-                _dateModified = DateTime.MinValue;
-            }
-            finally
-            {
-                _dateModifiedSemaphore.Release();
-            }
-        });
+        get { EnsureFileMetadataLoading(); return _metadataLoader.DateAccessed; }
     }
+
+    private void EnsureFileMetadataLoading() => EnsureFileMetadataLoadedAsync();
+
+    // A caller that needs the *real* values before proceeding (e.g. a query-driven sort by Size or a
+    // date field) should await this instead of just reading the properties above -- those return
+    // placeholder defaults (0 / DateTime.MinValue) until this task completes, which is silently wrong
+    // for a sort computed the instant results first render (before any stat call has even started).
+    public Task EnsureFileMetadataLoadedAsync() => _metadataLoader.EnsureLoadedAsync(FullPath, IsDir, () =>
+    {
+        OnPropertyChanged(nameof(Size));
+        OnPropertyChanged(nameof(DateCreated));
+        OnPropertyChanged(nameof(DateModified));
+        OnPropertyChanged(nameof(DateAccessed));
+        OnPropertyChanged(nameof(DateModifiedText));
+    });
 
     public string DateModifiedText
     {

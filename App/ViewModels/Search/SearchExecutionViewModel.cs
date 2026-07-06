@@ -1,4 +1,3 @@
-using System.IO;
 using System.Windows;
 using SwiftList.Core;
 using SwiftList.App.Services;
@@ -12,6 +11,7 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
     private readonly SearchExecutionEngine _engine;
 
     private string _searchQuery = null!;
+    private IReadOnlyList<QuerySortDirective> _querySortDirectives = Array.Empty<QuerySortDirective>();
     private bool _isSearching;
     private bool _isResultsListEnabled = true;
     private AppSearchResult? _selectedResult;
@@ -106,18 +106,31 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void DispatchSearch(string value) => _engine.QueueSearch(
-        value,
-        SearchScope,
-        IsInlineSearchContext,
-        fileLimit: 51,
-        appLimit: 51,
-        resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, value, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
-        state => IsSearching = state,
-        (results, status, final) => ApplySearchResults(value, results, status, final),
-        HandleLocalServiceUnavailable,
-        shouldEmitInstantResults: () => Results.Count == 0
-    );
+    private void DispatchSearch(string value)
+    {
+        var cleanQuery = SearchQuerySortParser.Strip(value, out var sortDirectives);
+        _querySortDirectives = sortDirectives;
+
+        if (string.IsNullOrWhiteSpace(cleanQuery))
+        {
+            _engine.CancelPendingSearch();
+            PerformSearch(string.Empty);
+            return;
+        }
+
+        _engine.QueueSearch(
+            cleanQuery,
+            SearchScope,
+            IsInlineSearchContext,
+            fileLimit: 51,
+            appLimit: 51,
+            resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, cleanQuery, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
+            state => IsSearching = state,
+            (results, status, final) => ApplySearchResults(value, results, status, final),
+            HandleLocalServiceUnavailable,
+            shouldEmitInstantResults: () => Results.Count == 0
+        );
+    }
 
     public bool IsSearching
     {
@@ -158,58 +171,12 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
             IsSearching = false;
             ReplaceResults(Array.Empty<AppSearchResult>());
 
-            var tracker = InlineSearchManager.Instance.ExplorerTracker;
-            var lastPath = tracker.LastActiveExplorerPath;
-            var isDialog = tracker.IsActiveWindowDialog;
-            var dirExists = !string.IsNullOrEmpty(lastPath) &&
-                            (Directory.Exists(lastPath) ||
-                             (lastPath.Length >= 3 && lastPath[1] == ':' && lastPath[2] == '\\' && char.IsLetter(lastPath[0])));
-
-            var searchScopeTrimmed = SearchScope?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var lastPathTrimmed = lastPath?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var isSamePath = string.Equals(searchScopeTrimmed, lastPathTrimmed, StringComparison.OrdinalIgnoreCase);
-
-            Logger.Log($"[Diagnosis] SearchScope='{SearchScope}', isDialog={isDialog}, lastPath='{lastPath}', dirExists={dirExists}, isSamePath={isSamePath}", LogLevel.Debug);
-
-            if (IsInlineSearchContext && isDialog && dirExists && !string.IsNullOrEmpty(lastPath) && (string.IsNullOrEmpty(SearchScope) || !isSamePath))
+            var suggestion = ExplorerJumpSuggestionHelper.TryBuildSuggestion(IsInlineSearchContext, SearchScope);
+            if (suggestion != null)
             {
-                string? targetName = null;
-                var className = tracker.LastActiveExplorerClassName;
-                if (className != null)
-                {
-                    var collectors = PluginSdk.Registries.ActivePathCollectorRegistry.GetCollectors();
-                    foreach (var collector in collectors)
-                    {
-                        if (collector.CanHandle(className))
-                        {
-                            targetName = collector.TargetName;
-                            break;
-                        }
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(targetName))
-                {
-                    var displayName = targetName;
-
-                    ReplaceResults(new[]
-                    {
-                        new AppSearchResult
-                        {
-                            Name = displayName,
-                            FullPath = lastPath,
-                            ParentDir = lastPath,
-                            IsDir = true,
-                            Drive = string.Empty,
-                            ResultKind = "JumpToExplorerPath",
-                            Index = 0,
-                            SearchQuery = string.Empty
-                        }
-                    });
-
-                    ResultsPanelVisibility = Visibility.Visible;
-                    ResultsSeparatorVisibility = Visibility.Visible;
-                }
+                ReplaceResults(new[] { suggestion });
+                ResultsPanelVisibility = Visibility.Visible;
+                ResultsSeparatorVisibility = Visibility.Visible;
             }
             else
             {
@@ -229,13 +196,22 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        var cleanQuery = SearchQuerySortParser.Strip(query, out var sortDirectives);
+        _querySortDirectives = sortDirectives;
+
+        if (string.IsNullOrWhiteSpace(cleanQuery))
+        {
+            PerformSearch(string.Empty);
+            return;
+        }
+
         _engine.PerformSearch(
-            query,
+            cleanQuery,
             SearchScope,
             IsInlineSearchContext,
             fileLimit: 51,
             appLimit: 51,
-            resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, query, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
+            resultMapper: (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, cleanQuery, IsInlineSearchContext ? null : SearchScope, contextDir, IsInlineSearchContext),
             state => IsSearching = state,
             (results, status, final) => ApplySearchResults(query, results, status, final),
             HandleLocalServiceUnavailable,
@@ -249,6 +225,17 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
     {
         if (SearchQuery != query)
             return;
+
+        if (_querySortDirectives.Count > 0)
+        {
+            uiResults = SearchResultSorter.SortByQueryDirectives(uiResults, _querySortDirectives).ToList();
+            var directivesSnapshot = _querySortDirectives;
+            var resultsSnapshot = uiResults;
+            _ = SearchResultSorter.RefreshAfterMetadataLoadedAsync(
+                resultsSnapshot,
+                () => SearchQuery == query && ReferenceEquals(_querySortDirectives, directivesSnapshot),
+                () => ReplaceResults(SearchResultSorter.SortByQueryDirectives(resultsSnapshot, directivesSnapshot).ToList()));
+        }
 
         // ReplaceResults reconciles row-by-row and no-ops when nothing changed, so no pre-check needed.
         ReplaceResults(uiResults);

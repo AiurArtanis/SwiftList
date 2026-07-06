@@ -144,8 +144,23 @@ public class SearchViewModel : ViewModelBase, IDisposable
     // Typing Debounce & Search logic
     // ==========================================
 
-    private void OnAdvancedQueryChanged(string query) => _searchEngine.QueueSearch(
-            query,
+    private void OnAdvancedQueryChanged(string query)
+    {
+        var cleanQuery = SearchQuerySortParser.Strip(query, out var sortDirectives);
+        _querySortDirectives = sortDirectives;
+
+        if (string.IsNullOrWhiteSpace(cleanQuery))
+        {
+            _searchEngine.CancelPendingSearch();
+            IsSearching = false;
+            _allResults.Clear();
+            ApplyFiltersAndRender();
+            LoadingPanelVisibility = Visibility.Collapsed;
+            return;
+        }
+
+        _searchEngine.QueueSearch(
+            cleanQuery,
             searchScope: null,
             isInlineSearchContext: false,
             fileLimit: FullSearchFileLimit,
@@ -157,7 +172,7 @@ public class SearchViewModel : ViewModelBase, IDisposable
                 {
                     for (var i = 0; i < fileResults.Count; i++)
                     {
-                        results.Add(SearchResultMapper.CreateUiResult(fileResults[i], query, results.Count, isApplication: false, scope: null));
+                        results.Add(SearchResultMapper.CreateUiResult(fileResults[i], cleanQuery, results.Count, isApplication: false, scope: null));
                     }
                 }
                 return results;
@@ -168,13 +183,30 @@ public class SearchViewModel : ViewModelBase, IDisposable
                 _serviceStatus.ClearReconnectState();
                 LoadingPanelVisibility = Visibility.Collapsed;
                 IsSearchBoxEnabled = true;
-                _allResults = results;
+                // This window has its own "no results" hint (ShowNoResultsHint, keyed off an empty
+                // FilteredResults) -- the shared engine's synthetic "Empty" placeholder row is meant
+                // for the quick/inline windows, which have no such hint and render it inline instead.
+                // Left in here, it counts toward FilteredResults.Count and shows up as a real grid row.
+                var filteredResults = results.Where(r => !r.IsEmptyResult).ToList();
+                _allResults = filteredResults;
                 ApplyFiltersAndRender();
+                // Size/date sort keys are lazily stat'd in the background, so the sort just applied
+                // above is mostly comparing unloaded placeholders -- wait for real values, then
+                // re-render once, unless a newer search has since replaced _allResults.
+                if (_querySortDirectives.Count > 0)
+                {
+                    var directivesSnapshot = _querySortDirectives;
+                    _ = SearchResultSorter.RefreshAfterMetadataLoadedAsync(
+                        filteredResults,
+                        () => ReferenceEquals(_allResults, filteredResults) && ReferenceEquals(_querySortDirectives, directivesSnapshot),
+                        ApplyFiltersAndRender);
+                }
                 if (final)
                     IsSearching = false;
             },
             () => _serviceStatus.CheckServiceStatusOnStartup()
         );
+    }
 
     internal void PerformSearch(string query)
     {
@@ -193,6 +225,7 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
     private string _currentSortColumn = string.Empty;
     private bool _isSortAscending = true;
+    private IReadOnlyList<QuerySortDirective> _querySortDirectives = Array.Empty<QuerySortDirective>();
 
     public bool IsSortAscending => _isSortAscending;
 
@@ -227,8 +260,10 @@ public class SearchViewModel : ViewModelBase, IDisposable
             }
         }
 
-        // Apply sorting
-        resultsList = SearchResultSorter.Sort(resultsList, _currentSortColumn, _isSortAscending);
+        // A typed ":[SCMA]" sort suffix takes priority over the column-header sort state.
+        resultsList = _querySortDirectives.Count > 0
+            ? SearchResultSorter.SortByQueryDirectives(resultsList, _querySortDirectives)
+            : SearchResultSorter.Sort(resultsList, _currentSortColumn, _isSortAscending);
 
         var finalResults = resultsList.ToList();
         FilteredResults.ReplaceRange(finalResults);
