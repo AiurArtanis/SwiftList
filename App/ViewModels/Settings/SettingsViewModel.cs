@@ -250,16 +250,18 @@ public class SettingsViewModel : ViewModelBase
         // ever happens once, before the settings page's own data -- local drives, machine settings -- has
         // even loaded, so nothing is safe to save yet); "indexing"/"pending"/IsMaintenanceBusy always
         // coincide with isLocalDriveBusy being true too, so treat those as local-drive-specific busy-ness,
-        // not general service-lifecycle busy-ness.
-        var isServiceLifecycleBusy = status.State == "loading-cache"
+        // not general service-lifecycle busy-ness. Being unable to reach the service at all is the other
+        // unambiguous case -- nothing is safe to apply then either.
+        var isServiceLifecycleBusy = !isServiceReady || status.State == "loading-cache"
             || (!isLocalDriveBusy && (status.State is "indexing" or "pending" || status.IsMaintenanceBusy));
         Service.UpdateStatus(status);
-        // Each side's own panel is gated ONLY on the service's lifecycle state plus its own busy-ness --
-        // local indexing must never disable network's controls and vice versa (LocalDrive.UpdateStatus
-        // below already only looks at local `status`; NetworkDriveSettingsViewModel.RefreshNetworkDrives
-        // separately layers in its own isNetworkBusy-equivalent check from `networkStatuses` internally).
         LocalDrive.UpdateStatus(status, settings);
-        NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses, isServiceLifecycleBusy);
+        // Network settings come from UserSettings.Load() (a separate local file, read once at startup)
+        // and network indexing is its own subsystem -- neither depends on the local USN indexer's own
+        // lifecycle (loading-cache/indexing/pending/IsMaintenanceBusy are all local-indexer-specific, not
+        // signals that network data or connectivity isn't ready). The only thing that legitimately blocks
+        // network settings from a "service" perspective is not being able to reach the service at all.
+        NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses, !isServiceReady);
         // The shared Apply/OK button is different: it commits both sides' settings in one shot, so it
         // should stay disabled while EITHER side is busy, even though neither side blocks the other's own
         // panel controls.
