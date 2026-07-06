@@ -7,6 +7,7 @@
         xmlns:services="clr-namespace:SwiftList.App.Services"
         Title="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Title]}"
         Height="650" Width="900"
+        MinHeight="520" MinWidth="760"
         WindowStartupLocation="CenterScreen"
         Background="Transparent"
         AllowsTransparency="True"
