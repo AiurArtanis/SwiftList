@@ -14,6 +14,17 @@ public class GeneralSettingsViewModel : ViewModelBase
     private IReadOnlyList<LanguageOption>? _languageOptions;
     private IReadOnlyList<ThemeOption>? _themeOptions;
 
+    // Tab navigation for the System/Layout/Preview Window split of this page.
+    private string _selectedTab = "System";
+    public string SelectedTab
+    {
+        get => _selectedTab;
+        set => SetProperty(ref _selectedTab, value);
+    }
+
+    private ICommand? _selectTabCommand;
+    public ICommand SelectTabCommand => _selectTabCommand ??= new RelayCommand<string>(tab => SelectedTab = tab);
+
     public GeneralSettingsViewModel(UserSettings userSettings)
     {
         _userSettings = userSettings;

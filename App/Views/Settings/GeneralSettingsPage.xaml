@@ -46,16 +46,109 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Grid.IsSharedSizeScope="True">
-            <TextBlock Style="{StaticResource SettingsSectionTitle}" 
+            <TextBlock Style="{StaticResource SettingsSectionTitle}"
                         Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_Title]}"/>
-            <TextBlock Style="{StaticResource SettingsHintText}" 
+            <TextBlock Style="{StaticResource SettingsHintText}"
                         Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_Hint]}"/>
+
+            <!-- Tab header row -->
+            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                <StackPanel Margin="0,0,28,0">
+                    <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SysTitle]}"
+                            Command="{Binding General.SelectTabCommand}" CommandParameter="System">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="System">
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Border>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="System">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                </StackPanel>
+                <StackPanel Margin="0,0,28,0">
+                    <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutTitle]}"
+                            Command="{Binding General.SelectTabCommand}" CommandParameter="Layout">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="Layout">
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Border>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="Layout">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                </StackPanel>
+                <StackPanel>
+                    <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowTitle]}"
+                            Command="{Binding General.SelectTabCommand}" CommandParameter="PreviewWindow">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewWindow">
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Border>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewWindow">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+            <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
+
+            <!-- Tab: System -->
+            <StackPanel>
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding General.SelectedTab}" Value="System">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
 
             <Border Style="{StaticResource SettingsCard}">
                 <StackPanel>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SysTitle]}" 
-                               FontWeight="SemiBold" FontSize="13"  Margin="0,0,0,10"/>
-                    
                     <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_Startup]}"
                                IsChecked="{Binding General.StartWithWindows, Mode=TwoWay}"
                                Margin="0,4"/>
@@ -121,12 +214,23 @@
                     </Grid>
                 </StackPanel>
             </Border>
+            </StackPanel>
 
-            <TextBlock Style="{StaticResource SettingsSectionTitle}" 
-                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutTitle]}"
-                        Margin="0,20,0,4"/>
-            <TextBlock Style="{StaticResource SettingsHintText}" 
-                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutHint]}"/>
+            <!-- Tab: Layout -->
+            <StackPanel>
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding General.SelectedTab}" Value="Layout">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+
+                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
+                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutHint]}"/>
 
             <Border Style="{StaticResource SettingsCard}">
                 <StackPanel>
@@ -178,12 +282,23 @@
                     </Grid>
                 </StackPanel>
             </Border>
+            </StackPanel>
 
-            <TextBlock Style="{StaticResource SettingsSectionTitle}"
-                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowTitle]}"
-                        Margin="0,20,0,4"/>
-            <TextBlock Style="{StaticResource SettingsHintText}"
-                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowHint]}"/>
+            <!-- Tab: Preview Window -->
+            <StackPanel>
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewWindow">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+
+                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
+                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowHint]}"/>
 
             <Border Style="{StaticResource SettingsCard}">
                 <StackPanel>
@@ -217,6 +332,7 @@
                     </Grid>
                 </StackPanel>
             </Border>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
