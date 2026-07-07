@@ -12,7 +12,8 @@ public enum SearchRequestId : byte
     SearchDir = 6,
     RebuildDrive = 7,
     DeleteDriveIndex = 8,
-    Initialize = 10
+    Initialize = 10,
+    GetFileMetadata = 11
 }
 
 public struct SearchRequestMessage
@@ -25,4 +26,5 @@ public struct SearchRequestMessage
     public string? Drive { get; set; }
     public MachineSettings? MachineSettings { get; set; }
     public List<string>? DisabledAliasComponents { get; set; }
+    public List<string>? FilePaths { get; set; }
 }

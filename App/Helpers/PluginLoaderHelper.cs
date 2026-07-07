@@ -54,7 +54,7 @@ public static class PluginLoaderHelper
                 if (pluginInstance != null)
                 {
                     pluginName = pluginInstance.Name;
-                    
+
                 }
             }
 
@@ -219,6 +219,11 @@ public static class PluginLoaderHelper
         {
             var id = MakeId(dllName, PluginComponentType.ThumbnailProvider, prov.GetType().Name);
             components.Add(new PluginComponentViewModel(id, PluginComponentType.ThumbnailProvider, prov.Name, !disabledSet.Contains(id)));
+        }
+        foreach (var prov in manager.AllQueryTokenProviders.Where(p => p.GetType().Assembly == assembly))
+        {
+            var id = MakeId(dllName, PluginComponentType.QueryTokenProvider, prov.Id);
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.QueryTokenProvider, prov.Name, !disabledSet.Contains(id)));
         }
         foreach (var prov in manager.AllTranslationProviders.Where(p => p.GetType().Assembly == assembly))
         {

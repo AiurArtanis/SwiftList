@@ -147,6 +147,13 @@ internal static class PluginLoader
                     registry.AddThumbnailProvider(provider);
                     Logger.Log($"[PluginManager] Loaded thumbnail provider: '{type.Name}' from {fileName}");
                 }
+
+                if (typeof(PluginSdk.Abstractions.Plugins.IQueryTokenProvider).IsAssignableFrom(type))
+                {
+                    var provider = (PluginSdk.Abstractions.Plugins.IQueryTokenProvider)Activator.CreateInstance(type)!;
+                    registry.AddQueryTokenProvider(provider);
+                    Logger.Log($"[PluginManager] Loaded query token provider: '{type.Name}' from {fileName}");
+                }
             }
         }
         catch (Exception ex)

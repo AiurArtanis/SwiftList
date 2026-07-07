@@ -44,7 +44,9 @@ public class SidebarFilterItem
     public string? IconKey { get; set; }
 
     /// <summary>
-    /// Predicate to execute on a search result to check if it matches this filter.
+    /// Batch predicate to narrow a result set down to what matches this filter. Takes the full
+    /// list at once (not one item at a time) so an implementation that needs metadata (size,
+    /// dates) can fetch it for every item in a single batched call instead of one lookup per item.
     /// </summary>
-    public Func<ISearchResult, bool>? FilterPredicate { get; set; }
+    public Func<IReadOnlyList<ISearchResult>, Task<IReadOnlyList<ISearchResult>>>? FilterPredicate { get; set; }
 }

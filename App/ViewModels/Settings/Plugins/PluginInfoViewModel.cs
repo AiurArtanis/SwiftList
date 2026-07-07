@@ -23,6 +23,7 @@ public enum PluginComponentType
     FilePreviewProvider,
     QuickNavigationProvider,
     ThumbnailProvider,
+    QueryTokenProvider,
     /// <summary>Translation providers are displayed read-only; they cannot be disabled.</summary>
     TranslationProvider,
     /// <summary>Theme providers are displayed read-only; they cannot be disabled.</summary>

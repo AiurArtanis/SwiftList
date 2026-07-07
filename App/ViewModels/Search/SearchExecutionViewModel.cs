@@ -11,7 +11,7 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
     private readonly SearchExecutionEngine _engine;
 
     private string _searchQuery = null!;
-    private IReadOnlyList<QuerySortDirective> _querySortDirectives = Array.Empty<QuerySortDirective>();
+    private IReadOnlyList<string> _queryTokens = Array.Empty<string>();
     private bool _isSearching;
     private bool _isResultsListEnabled = true;
     private AppSearchResult? _selectedResult;
@@ -108,8 +108,8 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
 
     private void DispatchSearch(string value)
     {
-        var cleanQuery = SearchQuerySortParser.Strip(value, out var sortDirectives);
-        _querySortDirectives = sortDirectives;
+        var cleanQuery = SearchQuerySortParser.Strip(value, out var tokens);
+        _queryTokens = tokens;
 
         if (string.IsNullOrWhiteSpace(cleanQuery))
         {
@@ -196,8 +196,8 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var cleanQuery = SearchQuerySortParser.Strip(query, out var sortDirectives);
-        _querySortDirectives = sortDirectives;
+        var cleanQuery = SearchQuerySortParser.Strip(query, out var tokens);
+        _queryTokens = tokens;
 
         if (string.IsNullOrWhiteSpace(cleanQuery))
         {
@@ -226,15 +226,14 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
         if (SearchQuery != query)
             return;
 
-        if (_querySortDirectives.Count > 0)
+        // Token providers (e.g. the built-in ":[SCMA]"/".ext" sort+filter plugin) run async -- they
+        // may fetch metadata over IPC -- so their effect lands via a follow-up ReplaceResults rather
+        // than this render. Skipped if a newer search has since taken over.
+        if (_queryTokens.Count > 0)
         {
-            uiResults = SearchResultSorter.SortByQueryDirectives(uiResults, _querySortDirectives).ToList();
-            var directivesSnapshot = _querySortDirectives;
+            var tokensSnapshot = _queryTokens;
             var resultsSnapshot = uiResults;
-            _ = SearchResultSorter.RefreshAfterMetadataLoadedAsync(
-                resultsSnapshot,
-                () => SearchQuery == query && ReferenceEquals(_querySortDirectives, directivesSnapshot),
-                () => ReplaceResults(SearchResultSorter.SortByQueryDirectives(resultsSnapshot, directivesSnapshot).ToList()));
+            _ = DispatchTokensAsync(query, resultsSnapshot, tokensSnapshot);
         }
 
         // ReplaceResults reconciles row-by-row and no-ops when nothing changed, so no pre-check needed.
@@ -245,6 +244,14 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
         ResultsSeparatorVisibility = hasResults ? Visibility.Visible : Visibility.Collapsed;
         _mainVm.Monitor.StatusBarVisibility = Visibility.Visible;
         _mainVm.Monitor.StatusText = statusText;
+    }
+
+    private async Task DispatchTokensAsync(string query, List<AppSearchResult> resultsSnapshot, IReadOnlyList<string> tokensSnapshot)
+    {
+        var dispatched = await QueryTokenDispatcher.ApplyAsync(resultsSnapshot, tokensSnapshot);
+        if (SearchQuery != query || !ReferenceEquals(_queryTokens, tokensSnapshot))
+            return;
+        ReplaceResults(dispatched);
     }
 
     private static bool ItemsEqual(AppSearchResult a, AppSearchResult b) =>

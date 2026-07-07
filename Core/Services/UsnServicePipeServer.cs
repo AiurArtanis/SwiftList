@@ -3,6 +3,7 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 
 namespace SwiftList.Core.Services;
+
 using SwiftList.Core;
 
 public sealed class UsnServicePipeServer : IDisposable
@@ -258,6 +259,11 @@ public sealed class UsnServicePipeServer : IDisposable
                     Logger.Log("[UsnService] Received SET_MACHINE_SETTINGS request.");
                     _engine?.UpdateMachineSettings(settings);
                     return new PipeResponse { Kind = PipeResponseKind.Ok };
+
+                case SearchRequestId.GetFileMetadata:
+                    var paths = msg.FilePaths ?? new List<string>();
+                    var metadata = _engine?.GetFileMetadataBatch(paths) ?? new Dictionary<string, FileMetadataEntry>();
+                    return new PipeResponse { Kind = PipeResponseKind.FileMetadata, FileMetadata = metadata };
             }
 
             return new PipeResponse { Kind = PipeResponseKind.Error, Message = "Unknown command" };
@@ -279,6 +285,7 @@ public sealed class UsnServicePipeServer : IDisposable
         PipeResponseKind.Error => PipeResponseBinarySerializer.WriteErrorAsync(stream, response.Message, token),
         PipeResponseKind.Status => PipeResponseBinarySerializer.WriteStatusAsync(stream, response.Status ?? new Indexer.Usn.UsnIndexer.IndexerStatus { State = "error" }, token),
         PipeResponseKind.MachineSettings => PipeResponseBinarySerializer.WriteMachineSettingsAsync(stream, response.MachineSettings ?? new MachineSettings(), token),
+        PipeResponseKind.FileMetadata => PipeResponseBinarySerializer.WriteFileMetadataAsync(stream, response.FileMetadata ?? new Dictionary<string, FileMetadataEntry>(), token),
         _ => PipeResponseBinarySerializer.WriteErrorAsync(stream, "Unknown response kind", token)
     };
 

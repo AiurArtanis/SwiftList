@@ -308,6 +308,7 @@
   "Plugins_TypeTranslationProvider": "语言包",
   "Plugins_TypeThemeProvider": "主题包",
   "Plugins_TypeThumbnailProvider": "缩略图提供者",
+  "Plugins_TypeQueryTokenProvider": "查询修饰符",
   "CoreExtensions_Config_ThumbnailExtensionsLabel": "缩略图文件后缀名",
   "CoreExtensions_Config_ThumbnailExtensionsDesc": "需要提取缩略图的扩展名列表，每行一个（以 '.' 开头，如 .jpg）",
   "CoreExtensions_Config_ThumbnailGroupLabel": "文件缩略图",

@@ -19,4 +19,5 @@ internal interface PluginRegistry
     void AddFilePreviewProvider(IFilePreviewProvider provider);
     void AddQuickNavigationProvider(IQuickNavigationProvider provider);
     void AddThumbnailProvider(IThumbnailProvider provider);
+    void AddQueryTokenProvider(IQueryTokenProvider provider);
 }

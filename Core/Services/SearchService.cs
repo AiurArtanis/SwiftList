@@ -226,6 +226,16 @@ public class SearchService : IDisposable
         return resp.Kind == PipeResponseKind.Ok;
     }
 
+    // In-memory index lookup only (no disk I/O) -- paths the service isn't tracking are simply
+    // absent from the result, not an error; the caller is expected to fall back to a live stat.
+    public async Task<Dictionary<string, FileMetadataEntry>> GetFileMetadataBatchAsync(IReadOnlyList<string> paths, CancellationToken token = default)
+    {
+        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.GetFileMetadata, FilePaths = paths.ToList() }, token).ConfigureAwait(false);
+        if (resp.Kind == PipeResponseKind.FileMetadata && resp.FileMetadata != null) return resp.FileMetadata;
+        if (resp.Kind == PipeResponseKind.Error) Logger.Log($"[SearchService] GetFileMetadataBatch failed: {resp.Message}", LogLevel.Error);
+        return new Dictionary<string, FileMetadataEntry>(StringComparer.OrdinalIgnoreCase);
+    }
+
     private async Task<PipeResponse> SendPipeCommandAsync(SearchRequestMessage msg, CancellationToken token)
     {
         try

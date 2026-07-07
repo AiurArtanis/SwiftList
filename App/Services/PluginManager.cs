@@ -32,6 +32,7 @@ public class PluginManager : PluginRegistry
     private readonly List<PluginSdk.Abstractions.Plugins.IFilePreviewProvider> _previewProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.IQuickNavigationProvider> _quickNavigationProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.IThumbnailProvider> _thumbnailProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IQueryTokenProvider> _queryTokenProviders = new();
     private uint _nextRuntimeActionId = 0x80000000;
 
     private readonly ComponentFilter _filter = new();
@@ -104,6 +105,7 @@ public class PluginManager : PluginRegistry
     void PluginRegistry.AddFilePreviewProvider(PluginSdk.Abstractions.Plugins.IFilePreviewProvider p) => _previewProviders.Add(p);
     void PluginRegistry.AddQuickNavigationProvider(PluginSdk.Abstractions.Plugins.IQuickNavigationProvider p) => _quickNavigationProviders.Add(p);
     void PluginRegistry.AddThumbnailProvider(PluginSdk.Abstractions.Plugins.IThumbnailProvider p) => _thumbnailProviders.Add(p);
+    void PluginRegistry.AddQueryTokenProvider(PluginSdk.Abstractions.Plugins.IQueryTokenProvider p) => _queryTokenProviders.Add(p);
 
     // ── Public API ────────────────────────────────────────────────────────
 
@@ -177,6 +179,9 @@ public class PluginManager : PluginRegistry
         => _thumbnailProviders
             .Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.ThumbnailProvider, p.GetType().Name));
 
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IQueryTokenProvider> QueryTokenProviders
+        => _queryTokenProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.QueryTokenProvider, p.Id));
+
     // ── Unfiltered collections (settings UI ?show disabled as unchecked) ─
 
     public IEnumerable<PluginSdk.Abstractions.Plugins.IFilePreviewProvider> AllFilePreviewProviders => _previewProviders;
@@ -190,6 +195,7 @@ public class PluginManager : PluginRegistry
     public IEnumerable<PluginSdk.Abstractions.Plugins.IResultColumnProvider> AllResultColumnProviders => _resultColumnProviders;
     public IEnumerable<PluginSdk.Abstractions.Plugins.ITranslationProvider> AllTranslationProviders => _translationProviders;
     public IEnumerable<PluginSdk.Abstractions.Plugins.IThemeProvider> AllThemeProviders => _themeProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IQueryTokenProvider> AllQueryTokenProviders => _queryTokenProviders;
 
     // ── Search and execution ──────────────────────────────────────────────
 
@@ -234,5 +240,4 @@ internal class SimpleSearchResult : PluginSdk.Abstractions.ISearchResult
     public string ContextDirectory { get; set; } = string.Empty;
     public bool IsDir { get; set; }
     public bool IsApplication { get; set; }
-    public DateTime DateModified { get; set; } = DateTime.Now;
 }

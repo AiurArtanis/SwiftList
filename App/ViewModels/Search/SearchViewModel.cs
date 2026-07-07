@@ -22,17 +22,12 @@ public class SearchViewModel : ViewModelBase, IDisposable
     private string _resultCountText = "";
     private bool _isSearching;
     private bool _isResultsListEnabled = true;
+    // Deliberately does not toggle IsResultsListEnabled while searching -- that used to disable the
+    // list mid-search, which caused a Win32 disabled-theme flash and blocked immediate navigation.
     public bool IsSearching
     {
         get => _isSearching;
-        private set
-        {
-            if (SetProperty(ref _isSearching, value))
-            {
-                // Keep list enabled during search to prevent Win32 system disabled theme flash and allow immediate navigation
-                // IsResultsListEnabled = !value;
-            }
-        }
+        private set => SetProperty(ref _isSearching, value);
     }
 
     public bool IsResultsListEnabled
@@ -101,8 +96,6 @@ public class SearchViewModel : ViewModelBase, IDisposable
         }
     }
 
-
-
     public string ResultCountText
     {
         get => _resultCountText;
@@ -146,16 +139,12 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
     private void OnAdvancedQueryChanged(string query)
     {
-        var cleanQuery = SearchQuerySortParser.Strip(query, out var sortDirectives);
-        _querySortDirectives = sortDirectives;
+        var cleanQuery = SearchQuerySortParser.Strip(query, out var tokens);
+        _queryTokens = tokens;
 
         if (string.IsNullOrWhiteSpace(cleanQuery))
         {
-            _searchEngine.CancelPendingSearch();
-            IsSearching = false;
-            _allResults.Clear();
-            ApplyFiltersAndRender();
-            LoadingPanelVisibility = Visibility.Collapsed;
+            ClearResults();
             return;
         }
 
@@ -190,17 +179,11 @@ public class SearchViewModel : ViewModelBase, IDisposable
                 var filteredResults = results.Where(r => !r.IsEmptyResult).ToList();
                 _allResults = filteredResults;
                 ApplyFiltersAndRender();
-                // Size/date sort keys are lazily stat'd in the background, so the sort just applied
-                // above is mostly comparing unloaded placeholders -- wait for real values, then
-                // re-render once, unless a newer search has since replaced _allResults.
-                if (_querySortDirectives.Count > 0)
-                {
-                    var directivesSnapshot = _querySortDirectives;
-                    _ = SearchResultSorter.RefreshAfterMetadataLoadedAsync(
-                        filteredResults,
-                        () => ReferenceEquals(_allResults, filteredResults) && ReferenceEquals(_querySortDirectives, directivesSnapshot),
-                        ApplyFiltersAndRender);
-                }
+                // Token providers (e.g. the built-in ":[SCMA]"/".ext" sort+filter plugin) run async --
+                // they may fetch metadata over IPC -- so their effect lands via a follow-up re-render
+                // rather than the render just above. Skipped if a newer search has since taken over.
+                if (_queryTokens.Count > 0)
+                    _ = RefreshAfterTokenDispatchAsync(filteredResults, _queryTokens);
                 if (final)
                     IsSearching = false;
             },
@@ -208,24 +191,38 @@ public class SearchViewModel : ViewModelBase, IDisposable
         );
     }
 
+    private async Task RefreshAfterTokenDispatchAsync(List<AppSearchResult> resultsSnapshot, IReadOnlyList<string> tokensSnapshot)
+    {
+        var dispatched = await QueryTokenDispatcher.ApplyAsync(resultsSnapshot, tokensSnapshot);
+        if (!ReferenceEquals(_allResults, resultsSnapshot) || !ReferenceEquals(_queryTokens, tokensSnapshot))
+            return;
+        _allResults = dispatched;
+        ApplyFiltersAndRender();
+    }
+
     internal void PerformSearch(string query)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            _searchEngine.CancelPendingSearch();
-            IsSearching = false;
-            _allResults.Clear();
-            ApplyFiltersAndRender();
-            LoadingPanelVisibility = Visibility.Collapsed;
+            ClearResults();
             return;
         }
 
         OnAdvancedQueryChanged(query);
     }
 
+    private void ClearResults()
+    {
+        _searchEngine.CancelPendingSearch();
+        IsSearching = false;
+        _allResults.Clear();
+        ApplyFiltersAndRender();
+        LoadingPanelVisibility = Visibility.Collapsed;
+    }
+
     private string _currentSortColumn = string.Empty;
     private bool _isSortAscending = true;
-    private IReadOnlyList<QuerySortDirective> _querySortDirectives = Array.Empty<QuerySortDirective>();
+    private IReadOnlyList<string> _queryTokens = Array.Empty<string>();
 
     public bool IsSortAscending => _isSortAscending;
 
@@ -245,27 +242,30 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
     public void OnDynamicFilterChanged() => ApplyFiltersAndRender();
 
+    private readonly DynamicFilterCoordinator _dynamicFilterCoordinator = new();
+
     private void ApplyFiltersAndRender()
     {
         if (_allResults == null) return;
-        var resultsList = _allResults.AsEnumerable();
 
-        // Apply all active dynamic plugin sidebar filters
-        foreach (var group in DynamicSidebarGroups)
-        {
-            if (group.SelectedItem != null && group.SelectedItem.FilterPredicate != null)
-            {
-                var predicate = group.SelectedItem.FilterPredicate;
-                resultsList = resultsList.Where(res => predicate(res));
-            }
-        }
+        var activeFilters = DynamicSidebarGroups
+            .Select(g => g.SelectedItem?.FilterPredicate)
+            .Where(p => p != null)
+            .Select(p => p!)
+            .ToList();
 
-        // A typed ":[SCMA]" sort suffix takes priority over the column-header sort state.
-        resultsList = _querySortDirectives.Count > 0
-            ? SearchResultSorter.SortByQueryDirectives(resultsList, _querySortDirectives)
-            : SearchResultSorter.Sort(resultsList, _currentSortColumn, _isSortAscending);
+        // Query-token providers (sort/filter/etc) have already been applied to _allResults by the
+        // time this runs -- this only handles the column-header sort and dynamic sidebar filters.
+        _dynamicFilterCoordinator.Apply(
+            _allResults,
+            activeFilters,
+            results => SearchResultSorter.Sort(results, _currentSortColumn, _isSortAscending).ToList(),
+            () => _allResults,
+            RenderFinal);
+    }
 
-        var finalResults = resultsList.ToList();
+    private void RenderFinal(List<AppSearchResult> finalResults)
+    {
         FilteredResults.ReplaceRange(finalResults);
         ResultCountText = string.Format(TranslationManager.Instance["Search_Total"], finalResults.Count);
         OnPropertyChanged(nameof(ShowNoResultsHint));

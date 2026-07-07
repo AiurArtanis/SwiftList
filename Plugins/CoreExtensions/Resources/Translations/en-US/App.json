@@ -308,6 +308,7 @@
   "Plugins_TypeTranslationProvider": "Language Packs",
   "Plugins_TypeThemeProvider": "Theme Packs",
   "Plugins_TypeThumbnailProvider": "Thumbnail Provider",
+  "Plugins_TypeQueryTokenProvider": "Query Modifier",
   "CoreExtensions_Config_ThumbnailExtensionsLabel": "Thumbnail File Extensions",
   "CoreExtensions_Config_ThumbnailExtensionsDesc": "List of extensions to extract thumbnails for, one per line (starts with '.', e.g. .jpg)",
   "CoreExtensions_Config_ThumbnailGroupLabel": "File Thumbnails",

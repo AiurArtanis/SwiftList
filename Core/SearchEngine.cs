@@ -77,6 +77,8 @@ public class SearchEngine : IDisposable
         }
     }
 
+    public Dictionary<string, FileMetadataEntry> GetFileMetadataBatch(IReadOnlyList<string> paths) => _indexer.GetFileMetadataBatch(paths);
+
     public UsnIndexer.IndexerStatus GetStatus()
     {
         _indexer.Status.IsMaintenanceBusy = _isRebuilding || _drives.HasPendingRebuilds;

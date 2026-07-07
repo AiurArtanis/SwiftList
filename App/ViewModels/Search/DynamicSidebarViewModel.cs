@@ -60,5 +60,5 @@ public class DynamicSidebarItemViewModel
     public string IconString => !string.IsNullOrEmpty(_item.IconKey) ? _item.IconKey : "◆";
     public string? IconData => _item.IconData;
     public bool HasIconData => !string.IsNullOrEmpty(_item.IconData);
-    public Func<ISearchResult, bool>? FilterPredicate => _item.FilterPredicate;
+    public Func<IReadOnlyList<ISearchResult>, Task<IReadOnlyList<ISearchResult>>>? FilterPredicate => _item.FilterPredicate;
 }

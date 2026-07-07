@@ -9,7 +9,8 @@ public enum PipeResponseKind : byte
     Ok = 1,
     Error = 2,
     Status = 3,
-    MachineSettings = 4
+    MachineSettings = 4,
+    FileMetadata = 5
 }
 public readonly struct PipeResponse
 {
@@ -17,6 +18,7 @@ public readonly struct PipeResponse
     public string Message { get; init; }
     public UsnIndexer.IndexerStatus? Status { get; init; }
     public MachineSettings? MachineSettings { get; init; }
+    public Dictionary<string, FileMetadataEntry>? FileMetadata { get; init; }
     public bool IsOk => Kind != PipeResponseKind.Error;
 }
 public static class PipeResponseBinarySerializer
@@ -32,6 +34,8 @@ public static class PipeResponseBinarySerializer
         => WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.Status, Status = status }, token);
     public static Task WriteMachineSettingsAsync(Stream stream, MachineSettings settings, CancellationToken token = default)
         => WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.MachineSettings, MachineSettings = settings }, token);
+    public static Task WriteFileMetadataAsync(Stream stream, Dictionary<string, FileMetadataEntry> metadata, CancellationToken token = default)
+        => WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.FileMetadata, FileMetadata = metadata }, token);
     public static async Task<PipeResponse> ReadAsync(Stream stream, CancellationToken token = default)
     {
         var magic = await ReadInt32Async(stream, token).ConfigureAwait(false);
@@ -54,8 +58,9 @@ public static class PipeResponseBinarySerializer
         {
             PipeResponseKind.Ok => new PipeResponse { Kind = kind },
             PipeResponseKind.Error => new PipeResponse { Kind = kind, Message = ReadString(payload, ref offset) },
-            PipeResponseKind.Status => new PipeResponse { Kind = kind, Status = ReadStatus(payload, ref offset) },
+            PipeResponseKind.Status => new PipeResponse { Kind = kind, Status = PipeResponseStatusSerializer.Read(payload, ref offset) },
             PipeResponseKind.MachineSettings => new PipeResponse { Kind = kind, MachineSettings = ReadMachineSettings(payload, ref offset) },
+            PipeResponseKind.FileMetadata => new PipeResponse { Kind = kind, FileMetadata = ReadFileMetadata(payload, ref offset) },
             _ => throw new InvalidDataException($"Unknown pipe response kind: {kind}.")
         };
     }
@@ -69,10 +74,13 @@ public static class PipeResponseBinarySerializer
                 payloadSize += GetStringByteCount(response.Message) + 5;
                 break;
             case PipeResponseKind.Status:
-                payloadSize += CalculateStatusSize(response.Status ?? new UsnIndexer.IndexerStatus { State = "error" });
+                payloadSize += PipeResponseStatusSerializer.CalculateSize(response.Status ?? new UsnIndexer.IndexerStatus { State = "error" });
                 break;
             case PipeResponseKind.MachineSettings:
                 payloadSize += CalculateSettingsSize(response.MachineSettings ?? new MachineSettings());
+                break;
+            case PipeResponseKind.FileMetadata:
+                payloadSize += CalculateFileMetadataSize(response.FileMetadata ?? new Dictionary<string, FileMetadataEntry>());
                 break;
         }
         var totalSize = 12 + payloadSize; // Magic(4) + Version(4) + Length(4) + Payload
@@ -89,10 +97,13 @@ public static class PipeResponseBinarySerializer
                     WriteString(span, ref offset, response.Message);
                     break;
                 case PipeResponseKind.Status:
-                    WriteStatus(span, ref offset, response.Status ?? new UsnIndexer.IndexerStatus { State = "error" });
+                    PipeResponseStatusSerializer.Write(span, ref offset, response.Status ?? new UsnIndexer.IndexerStatus { State = "error" });
                     break;
                 case PipeResponseKind.MachineSettings:
                     WriteMachineSettings(span, ref offset, response.MachineSettings ?? new MachineSettings());
+                    break;
+                case PipeResponseKind.FileMetadata:
+                    WriteFileMetadata(span, ref offset, response.FileMetadata ?? new Dictionary<string, FileMetadataEntry>());
                     break;
             }
 
@@ -110,28 +121,8 @@ public static class PipeResponseBinarySerializer
         }
     }
 
-    private static int GetStringByteCount(string? str) => Encoding.UTF8.GetByteCount(str ?? string.Empty);
+    internal static int GetStringByteCount(string? str) => Encoding.UTF8.GetByteCount(str ?? string.Empty);
 
-    private static int CalculateStatusSize(UsnIndexer.IndexerStatus status)
-    {
-        var size = GetStringByteCount(status.State) + 5;
-        size += 21; // Progress(4) + TotalFiles(4) + TotalDirs(4) + ElapsedTime(8) + IsMaintenanceBusy(1)
-        size += 4;  // ActiveDrives count
-        foreach (var drive in status.ActiveDrives)
-            size += GetStringByteCount(drive) + 5;
-
-        size += 4;  // Drives count
-        foreach (var drive in status.Drives)
-        {
-            size += GetStringByteCount(drive.Drive) + 5;
-            size += 1; // Enabled
-            size += GetStringByteCount(drive.Kind) + 5;
-            size += GetStringByteCount(drive.State) + 5;
-            size += 8; // Files(4) + Dirs(4)
-            size += GetStringByteCount(drive.CachePath) + 5;
-        }
-        return size;
-    }
     private static int CalculateSettingsSize(MachineSettings settings)
     {
         var size = 4; // Count
@@ -139,7 +130,16 @@ public static class PipeResponseBinarySerializer
             size += GetStringByteCount(drive) + 5;
         return size;
     }
-    private static void WriteString(Span<byte> buffer, ref int offset, string? str)
+
+    private static int CalculateFileMetadataSize(Dictionary<string, FileMetadataEntry> metadata)
+    {
+        var size = 4; // Count
+        foreach (var (path, entry) in metadata)
+            size += GetStringByteCount(path) + 5 + 20; // Size(8) + 3 timestamps(4 each)
+        return size;
+    }
+
+    internal static void WriteString(Span<byte> buffer, ref int offset, string? str)
     {
         var s = str ?? string.Empty;
         var len = Encoding.UTF8.GetByteCount(s);
@@ -147,38 +147,7 @@ public static class PipeResponseBinarySerializer
         Encoding.UTF8.GetBytes(s, buffer.Slice(offset));
         offset += len;
     }
-    private static void WriteStatus(Span<byte> span, ref int offset, UsnIndexer.IndexerStatus status)
-    {
-        WriteString(span, ref offset, status.State);
-        BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), status.Progress);
-        offset += 4;
-        BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), status.TotalFiles);
-        offset += 4;
-        BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), status.TotalDirs);
-        offset += 4;
-        BinaryPrimitives.WriteDoubleLittleEndian(span.Slice(offset), status.ElapsedTime);
-        offset += 8;
-        span[offset++] = (byte)(status.IsMaintenanceBusy ? 1 : 0);
-        BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), status.ActiveDrives.Count);
-        offset += 4;
-        foreach (var drive in status.ActiveDrives)
-            WriteString(span, ref offset, drive);
 
-        BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), status.Drives.Count);
-        offset += 4;
-        foreach (var drive in status.Drives)
-        {
-            WriteString(span, ref offset, drive.Drive);
-            span[offset++] = (byte)(drive.Enabled ? 1 : 0);
-            WriteString(span, ref offset, drive.Kind);
-            WriteString(span, ref offset, drive.State);
-            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), drive.Files);
-            offset += 4;
-            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), drive.Dirs);
-            offset += 4;
-            WriteString(span, ref offset, drive.CachePath);
-        }
-    }
     private static void WriteMachineSettings(Span<byte> span, ref int offset, MachineSettings settings)
     {
         BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), settings.LocalDrives.Count);
@@ -186,50 +155,23 @@ public static class PipeResponseBinarySerializer
         foreach (var drive in settings.LocalDrives)
             WriteString(span, ref offset, drive);
     }
-    private static UsnIndexer.IndexerStatus ReadStatus(byte[] payload, ref int offset)
+
+    private static void WriteFileMetadata(Span<byte> span, ref int offset, Dictionary<string, FileMetadataEntry> metadata)
     {
-        var status = new UsnIndexer.IndexerStatus
-        {
-            State = ReadString(payload, ref offset),
-            Progress = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset)),
-            TotalFiles = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset + 4)),
-            TotalDirs = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset + 8)),
-            ElapsedTime = BinaryPrimitives.ReadDoubleLittleEndian(payload.AsSpan(offset + 12)),
-            IsMaintenanceBusy = payload[offset + 20] != 0
-        };
-        offset += 21;
-
-        var activeCount = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
+        BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), metadata.Count);
         offset += 4;
-        for (var i = 0; i < activeCount; i++)
-            status.ActiveDrives.Add(ReadString(payload, ref offset));
-
-        var driveCount = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
-        offset += 4;
-        for (var i = 0; i < driveCount; i++)
+        foreach (var (path, entry) in metadata)
         {
-            var drive = ReadString(payload, ref offset);
-            var enabled = payload[offset++] != 0;
-            var kind = ReadString(payload, ref offset);
-            var state = ReadString(payload, ref offset);
-            var files = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
+            WriteString(span, ref offset, path);
+            BinaryPrimitives.WriteInt64LittleEndian(span.Slice(offset), entry.Size);
+            offset += 8;
+            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset), entry.CreationTimeUnixSeconds);
             offset += 4;
-            var dirs = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
+            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset), entry.LastWriteTimeUnixSeconds);
             offset += 4;
-            var cachePath = ReadString(payload, ref offset);
-
-            status.Drives.Add(new UsnIndexer.DriveIndexStatus
-            {
-                Drive = drive,
-                Enabled = enabled,
-                Kind = kind,
-                State = state,
-                Files = files,
-                Dirs = dirs,
-                CachePath = cachePath
-            });
+            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset), entry.LastAccessTimeUnixSeconds);
+            offset += 4;
         }
-        return status;
     }
 
     private static MachineSettings ReadMachineSettings(byte[] payload, ref int offset)
@@ -240,6 +182,27 @@ public static class PipeResponseBinarySerializer
         for (var i = 0; i < count; i++)
             settings.LocalDrives.Add(ReadString(payload, ref offset));
         return settings;
+    }
+
+    private static Dictionary<string, FileMetadataEntry> ReadFileMetadata(byte[] payload, ref int offset)
+    {
+        var count = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
+        offset += 4;
+        var metadata = new Dictionary<string, FileMetadataEntry>(count, StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < count; i++)
+        {
+            var path = ReadString(payload, ref offset);
+            var size = BinaryPrimitives.ReadInt64LittleEndian(payload.AsSpan(offset));
+            offset += 8;
+            var created = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(offset));
+            offset += 4;
+            var modified = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(offset));
+            offset += 4;
+            var accessed = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(offset));
+            offset += 4;
+            metadata[path] = new FileMetadataEntry(size, created, modified, accessed);
+        }
+        return metadata;
     }
 
     private static void Write7BitEncodedInt(Span<byte> destination, ref int offset, int value)
@@ -268,7 +231,7 @@ public static class PipeResponseBinarySerializer
         throw new FormatException("Invalid 7-bit encoded integer.");
     }
 
-    private static string ReadString(byte[] buffer, ref int offset)
+    internal static string ReadString(byte[] buffer, ref int offset)
     {
         var length = Read7BitEncodedInt(buffer, ref offset);
         if (length == 0) return string.Empty;

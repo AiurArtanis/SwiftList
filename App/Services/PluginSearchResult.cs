@@ -16,5 +16,4 @@ public class PluginSearchResult : ISearchResult
     public string ContextDirectory { get; }
     public bool IsDir => false;
     public bool IsApplication => false;
-    public DateTime DateModified => DateTime.MinValue;
 }

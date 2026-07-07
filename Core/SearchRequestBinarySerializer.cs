@@ -27,6 +27,9 @@ public static class SearchRequestBinarySerializer
             case SearchRequestId.SearchDir:
                 payloadSize += 8 + GetStringByteCount(msg.DirectoryFilter) + 5 + GetStringByteCount(msg.Query) + 5 + CalculateStringListSize(msg.DisabledAliasComponents);
                 break;
+            case SearchRequestId.GetFileMetadata:
+                payloadSize += CalculateStringListSize(msg.FilePaths);
+                break;
         }
 
         var totalSize = 12 + payloadSize; // Magic(4) + Version(4) + Length(4) + Payload
@@ -62,6 +65,9 @@ public static class SearchRequestBinarySerializer
                     WriteString(span, ref offset, msg.DirectoryFilter);
                     WriteString(span, ref offset, msg.Query);
                     WriteStringList(span, ref offset, msg.DisabledAliasComponents);
+                    break;
+                case SearchRequestId.GetFileMetadata:
+                    WriteStringList(span, ref offset, msg.FilePaths);
                     break;
             }
 
@@ -124,6 +130,9 @@ public static class SearchRequestBinarySerializer
                 msg.DirectoryFilter = ReadString(payload, ref offset);
                 msg.Query = ReadString(payload, ref offset);
                 msg.DisabledAliasComponents = ReadStringList(payload, ref offset);
+                break;
+            case SearchRequestId.GetFileMetadata:
+                msg.FilePaths = ReadStringList(payload, ref offset);
                 break;
         }
 
