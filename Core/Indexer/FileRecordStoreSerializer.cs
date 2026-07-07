@@ -40,7 +40,14 @@ public static class FileRecordStoreSerializer
     // use for sub-second precision, and it roughly halves the timestamps' footprint across millions of
     // rows). Existing caches don't carry this data at all, so force one rebuild to populate it instead of
     // leaving old rows permanently zeroed.
-    public const int Version = 12;
+    // v13: fixed incremental USN/watcher updates leaving Size/timestamps at zero for a file created and
+    // left empty (no data ever written) or a plain rename/move (no other attribute change) -- see
+    // UsnIndexerExtensions.MetadataRefreshReasons. Caches built before this fix can have real files stuck
+    // at CreatedUtc=0, which GetRecentFiles reads as "created at the Unix epoch" and filters out of every
+    // age-windowed query; force one rebuild so the full FileInfo-based walk (which always stats correctly)
+    // repopulates them. Shared by both the local-drive cache (LocalDriveCacheLocator) and the network/WSL
+    // cache (NetworkDriveCacheLocator), so both get swept.
+    public const int Version = 13;
 
     public static string GetBasePath(string cacheDir, string sourceKey) => Path.Combine(cacheDir, sourceKey.ToLowerInvariant());
 

@@ -9,9 +9,16 @@ public static class UsnIndexerExtensions
     // Reasons that mean the file's data/attributes changed in a way that can affect Size or the three
     // tracked timestamps. None of these carry the actual values on the USN record itself, so handling
     // them means an extra re-stat, unlike the name-index reasons above which the record already covers.
-    private const uint MetadataRefreshReasons = Win32Api.USN_REASON_DATA_EXTEND | Win32Api.USN_REASON_DATA_OVERWRITE
-        | Win32Api.USN_REASON_DATA_TRUNCATION | Win32Api.USN_REASON_BASIC_INFO_CHANGE
-        | Win32Api.USN_REASON_COMPRESSION_CHANGE | Win32Api.USN_REASON_ENCRYPTION_CHANGE;
+    // FILE_CREATE and RENAME_NEW_NAME are included too: HardLinkDelta.AddLink always appends a brand-new
+    // row with Size/timestamps defaulted to zero, whether or not any sibling row for the same FRN already
+    // had real stat data -- a create-and-immediately-write burst or a rename-with-attribute-change happens
+    // to carry a DATA_*/BASIC_INFO_CHANGE reason in the same record and self-corrects, but a file created
+    // and left empty, or a plain rename/move with no other change, doesn't. Left unhandled, that file's
+    // Size and Creation/LastWrite/LastAccess time all stay at zero, which GetRecentFiles reads as "created
+    // at the Unix epoch" and filters out of every age-windowed query.
+    private const uint MetadataRefreshReasons = Win32Api.USN_REASON_FILE_CREATE | Win32Api.USN_REASON_RENAME_NEW_NAME
+        | Win32Api.USN_REASON_DATA_EXTEND | Win32Api.USN_REASON_DATA_OVERWRITE | Win32Api.USN_REASON_DATA_TRUNCATION
+        | Win32Api.USN_REASON_BASIC_INFO_CHANGE | Win32Api.USN_REASON_COMPRESSION_CHANGE | Win32Api.USN_REASON_ENCRYPTION_CHANGE;
 
     public static long CatchUpDrive(this UsnIndexer indexer, string drive, ulong journalId, long startUsn)
     {
@@ -68,10 +75,9 @@ public static class UsnIndexerExtensions
                 }
 
                 // Unlike name-index changes, Size/timestamps are never carried by the USN record itself
-                // (USN_RECORD has no such fields), so a content/attribute-only change needs an actual
-                // re-stat -- including right after FILE_CREATE, since a create-and-immediately-write burst
-                // arrives as one record with both reasons set and AddLink alone leaves them at zero. Just
-                // collect which FRNs need it here; the actual I/O happens after this lock is released.
+                // (USN_RECORD has no such fields), so any of these reasons -- including a plain create --
+                // needs an actual re-stat, since AddLink alone leaves them at zero. Just collect which
+                // FRNs need it here; the actual I/O happens after this lock is released.
                 if ((record.Reason & MetadataRefreshReasons) != 0 && (record.Reason & Win32Api.USN_REASON_FILE_DELETE) == 0)
                     pendingMetadataFrns.Add(frn);
             }
