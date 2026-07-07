@@ -37,6 +37,7 @@ public class UserSettings
     public HotkeyPageSettings Hotkeys { get; set; } = new();
     public SearchWindowSettings SearchWindow { get; set; } = new();
     public PreviewWindowSettings PreviewWindow { get; set; } = new();
+    public MainWindowSettings MainWindow { get; set; } = new();
 
     private static string GetDefaultSystemLanguage()
     {
@@ -272,5 +273,14 @@ public class PreviewWindowSettings
     // predictable and doesn't change with however many results happen to be showing right now.
     public double Width { get; set; } = 400;
     public double Height { get; set; } = 529;
+}
+
+/// <summary>The full/main SearchWindow's default size -- distinct from <see cref="SearchWindowSettings"/>,
+/// which is the quick window's search bar layout. Updated automatically when the user drags the main
+/// window's own resize grip, in addition to being editable on the General settings page.</summary>
+public class MainWindowSettings
+{
+    public double Width { get; set; } = 854;
+    public double Height { get; set; } = 480;
 }
 

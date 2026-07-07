@@ -4,6 +4,7 @@ using System.Windows.Input;
 using SwiftList.App.Views.SearchWindow;
 using SwiftList.App.Services;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using Size = System.Windows.Size;
 using TextBox = System.Windows.Controls.TextBox;
 using ListView = System.Windows.Controls.ListView;
 using ListBox = System.Windows.Controls.ListBox;
@@ -24,6 +25,13 @@ public partial class SearchWindow : Window, ISearchWindow, IHasVisibleContentIns
     public SearchWindow(string initialQuery = "")
     {
         InitializeComponent();
+
+        // XAML's Height/Width are just the design-time/factory-reset default -- the real size (user's
+        // last resize, or the General settings page value) comes from UiMetrics, mirroring how
+        // QuickLookManager sizes the preview window from settings instead of a hardcoded XAML value.
+        this.Width = UiMetrics.MainWindowWidth;
+        this.Height = UiMetrics.MainWindowHeight;
+
         _menuPresenter = new ShellMenuPresenter(this);
         _chromeHandler = new SearchWindowChromeHandler(this);
         _inputHandler = new SearchWindowInputHandler(this);
@@ -227,11 +235,28 @@ public partial class SearchWindow : Window, ISearchWindow, IHasVisibleContentIns
 
     protected override void OnClosed(EventArgs e)
     {
+        SaveWindowSize();
         _viewModel.Dispose();
         // This window can be one of several (e.g. opened via "show more"), so on close release the icon
         // cache and trim the working set, matching the quick/inline windows, to reclaim its bitmaps.
         ShellIconHelper.ClearCache();
         Core.Win32Api.TrimWorkingSet();
         base.OnClosed(e);
+    }
+
+    // Remembers a manual resize-grip drag for next time, the same way QuickSearchWindow remembers its
+    // dragged position. Reads RestoreBounds instead of the live Width/Height when closed while maximized,
+    // so a maximized session never overwrites the user's actual "normal" size with the maximized one.
+    private void SaveWindowSize()
+    {
+        var size = WindowState == WindowState.Normal ? new Size(Width, Height) : RestoreBounds.Size;
+        if (size.Width <= 0 || size.Height <= 0) return;
+
+        var settings = Core.UserSettings.Load();
+        settings.MainWindow.Width = size.Width;
+        settings.MainWindow.Height = size.Height;
+        settings.Save();
+        UiMetrics.MainWindowWidth = size.Width;
+        UiMetrics.MainWindowHeight = size.Height;
     }
 }

@@ -105,7 +105,7 @@
                         </Border.Style>
                     </Border>
                 </StackPanel>
-                <StackPanel>
+                <StackPanel Margin="0,0,28,0">
                     <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowTitle]}"
                             Command="{Binding General.SelectTabCommand}" CommandParameter="PreviewWindow">
                         <Button.Style>
@@ -124,6 +124,32 @@
                             <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewWindow">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                </StackPanel>
+                <StackPanel>
+                    <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SearchWindowTitle]}"
+                            Command="{Binding General.SelectTabCommand}" CommandParameter="SearchWindow">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="SearchWindow">
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Border>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="SearchWindow">
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -240,7 +266,7 @@
                             <ColumnDefinition Width="150"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutWidth]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.SearchBarWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.Layout.SearchBarWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
                     </Grid>
 
                     <Grid Margin="0,8,0,0">
@@ -249,7 +275,7 @@
                             <ColumnDefinition Width="150"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutHeight]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.SearchBarHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.Layout.SearchBarHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
                     </Grid>
 
                     <Grid Margin="0,8,0,0">
@@ -258,7 +284,7 @@
                             <ColumnDefinition Width="150"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutCornerRadius]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.SearchWindowCornerRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.Layout.CornerRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
                     </Grid>
 
                     <Grid Margin="0,8,0,0">
@@ -267,7 +293,7 @@
                             <ColumnDefinition Width="150"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutIconSize]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.ResultIconSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.Layout.ResultIconSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
                     </Grid>
 
                     <Grid Margin="0,16,0,0">
@@ -276,7 +302,7 @@
                             <ColumnDefinition Width="150"/>
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutReset]}"
-                                Command="{Binding General.ResetLayoutCommand}"
+                                Command="{Binding General.Layout.ResetCommand}"
                                 Style="{StaticResource SettingsButton}"
                                 Margin="0" HorizontalAlignment="Left"/>
                     </Grid>
@@ -327,6 +353,56 @@
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowReset]}"
                                 Command="{Binding General.PreviewWindow.ResetCommand}"
+                                Style="{StaticResource SettingsButton}"
+                                Margin="0" HorizontalAlignment="Left"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            </StackPanel>
+
+            <!-- Tab: Search Window -->
+            <StackPanel>
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding General.SelectedTab}" Value="SearchWindow">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+
+                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
+                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SearchWindowHint]}"/>
+
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SearchWindowWidth]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.MainWindow.Width, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                    </Grid>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SearchWindowHeight]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.MainWindow.Height, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                    </Grid>
+
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SearchWindowReset]}"
+                                Command="{Binding General.MainWindow.ResetCommand}"
                                 Style="{StaticResource SettingsButton}"
                                 Margin="0" HorizontalAlignment="Left"/>
                     </Grid>

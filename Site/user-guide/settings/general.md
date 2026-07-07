@@ -1,6 +1,6 @@
 # General
 
-Three tabs: **System**, **Search Bar Layout**, and **Preview**.
+Four tabs: **System**, **Search Bar Layout**, **Preview**, and **Search Window**.
 
 ## System
 
@@ -40,3 +40,19 @@ Customizes the size, corner rounding, and on-screen position of the quick search
 
 The preview window ignores the current result count — it's a fixed size, not a size that grows
 with content. See [Actions Menu & Preview](../actions-and-preview) for how the pane is positioned.
+
+## Search Window
+
+Sets the default size of the full/main search window (the larger window you get from the taskbar
+or Start Menu shortcut, as opposed to the quick popup — see
+[Getting Started](../getting-started#the-three-windows)):
+
+- **Window Width (px)** — range 640–2000px, default 854px.
+- **Window Height (px)** — range 400–1400px, default 480px. The minimums match the window's own
+  resize floor, so a configured value is never silently overridden by the window itself.
+- **Reset Search Window Settings** button.
+
+Dragging the window's edge to resize it manually is remembered automatically — the next time you
+open the window (or open a new one), it comes back at whatever size you last left it at, and this
+page's fields update to match. Resizing while maximized doesn't overwrite the remembered size; only
+resizing in the normal (non-maximized) state does.

@@ -51,10 +51,21 @@ public static class UiMetrics
     public const double MinPreviewWindowHeight = 250;
     public const double MaxPreviewWindowHeight = 1200;
 
+    // Range for the user-configurable main SearchWindow default size (General settings page).
+    // Min matches SearchWindow.xaml's own MinWidth/MinHeight resize floor.
+    public const double DefaultMainWindowWidth = 854;
+    public const double DefaultMainWindowHeight = 480;
+    public const double MinMainWindowWidth = 640;
+    public const double MaxMainWindowWidth = 2000;
+    public const double MinMainWindowHeight = 400;
+    public const double MaxMainWindowHeight = 1400;
+
     private static double _scale = 1.0;
     private static double _quickResultIconSize = BaseResultIconSize;
     private static double _previewWindowWidth = 400;
     private static double _previewWindowHeight = 529;
+    private static double _mainWindowWidth = DefaultMainWindowWidth;
+    private static double _mainWindowHeight = DefaultMainWindowHeight;
 
     /// <summary>
     /// Global UI scale factor. Result rows, fonts and icons multiply their
@@ -100,8 +111,23 @@ public static class UiMetrics
         set => _previewWindowHeight = Math.Clamp(value, MinPreviewWindowHeight, MaxPreviewWindowHeight);
     }
 
-    /// <summary>Loads the current search bar height, quick-window icon size, and preview window size
-    /// from settings and applies them.</summary>
+    /// <summary>Main SearchWindow default size. User-configurable (General settings page) and also
+    /// updated automatically when the user drags the window's own resize grip, so re-opening it (or
+    /// opening a new instance) remembers the last size either way.</summary>
+    public static double MainWindowWidth
+    {
+        get => _mainWindowWidth;
+        set => _mainWindowWidth = Math.Clamp(value, MinMainWindowWidth, MaxMainWindowWidth);
+    }
+
+    public static double MainWindowHeight
+    {
+        get => _mainWindowHeight;
+        set => _mainWindowHeight = Math.Clamp(value, MinMainWindowHeight, MaxMainWindowHeight);
+    }
+
+    /// <summary>Loads the current search bar height, quick-window icon size, preview window size, and
+    /// main window size from settings and applies them.</summary>
     public static void ApplyScaleFromSettings()
     {
         var settings = UserSettings.Load();
@@ -113,6 +139,10 @@ public static class UiMetrics
         catch { /* fall back to current preview width */ }
         try { PreviewWindowHeight = settings.PreviewWindow.Height; }
         catch { /* fall back to current preview height */ }
+        try { MainWindowWidth = settings.MainWindow.Width; }
+        catch { /* fall back to current main window width */ }
+        try { MainWindowHeight = settings.MainWindow.Height; }
+        catch { /* fall back to current main window height */ }
     }
 
     // ── Base metrics (used everywhere by default: inline window, full window, action menu) ──
