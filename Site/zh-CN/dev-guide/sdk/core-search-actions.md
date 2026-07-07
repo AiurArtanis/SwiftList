@@ -112,7 +112,7 @@ interface ISearchResultAction
 
 在运行时构建菜单项，而不是返回一份固定列表——真正的 Windows Shell 右键菜单(含级联子菜单)之所
 以能出现在 SwiftList 的动作菜单里，用的就是这个机制；参见
-[ShellMenuActionProvider](../examples#coreextensions-动作与-shell-右键菜单)。
+[ShellMenuActionProvider](../examples#coreextensions-——-动作与-shell-右键菜单)。
 
 ```csharp
 interface IDynamicActionProvider

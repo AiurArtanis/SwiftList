@@ -15,6 +15,10 @@ SwiftList 自带两个插件，都是很有参考价值的真实案例——都�
   一份固定的动作列表，这是值得照抄的模式。
 - **`IConfigurable.GetConfigSchema()`** 展示了带嵌套字段分组和 `StringList` 字段类型的配置模式
   ——如果你的插件在设置 → 插件的配置对话框里需要的不只是一份扁平的布尔值列表，值得读一下这部分。
+- `FavoritesTabProvider` 和 `HistoryTabProvider` 各自实现了
+  [`IStartupPanelTabProvider`](./sdk/ui-extensions#istartuppaneltabprovider)，把已有的列表以标签
+  的形式呈现在[初始面板](../user-guide/settings/startup-panel)里——是这个接口的一个最简参考实现，
+  因为两者都只是把一份已经查询好的列表包一层，自己没有额外的状态。
 
 ## PinyinAlias —— 中文文件名拼音别名
 

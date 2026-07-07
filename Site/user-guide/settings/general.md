@@ -31,6 +31,9 @@ Customizes the size, corner rounding, and on-screen position of the quick search
   this (with a legibility floor), independent of the search bar height above.
 - **Reset Layout Settings** button — restores all four values to their defaults.
 
+Right-clicking the status icon inside the quick window's search box resets just its on-screen
+position (not size), re-centering it the same way it centers on first launch.
+
 ## Preview
 
 - **Preview Width (px)** — range 250–900px.

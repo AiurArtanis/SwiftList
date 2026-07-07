@@ -19,6 +19,11 @@ Two plugins ship with SwiftList itself and are useful, real-world references —
 - **`IConfigurable.GetConfigSchema()`** demonstrates a config schema with nested field groups and a
   `StringList` field type — worth reading if your own plugin needs more than a flat list of
   booleans in its Settings → Plugins configuration dialog.
+- `FavoritesTabProvider` and `HistoryTabProvider` each implement
+  [`IStartupPanelTabProvider`](./sdk/ui-extensions#istartuppaneltabprovider) to surface their
+  existing lists as tabs in the [Startup Panel](../user-guide/settings/startup-panel) — a minimal
+  reference for that interface, since both just wrap an already-queried list of items with no
+  extra state of their own.
 
 ## PinyinAlias — pinyin aliasing for Chinese filenames
 

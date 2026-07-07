@@ -32,6 +32,31 @@ interface IResultColumnProvider
 `ResultColumnDefinition` carries a column id, header text, width, and optional
 `VisibilityPredicate`/`SortComparer` delegates.
 
+## Startup Panel
+
+### `IStartupPanelTabProvider`
+
+Contributes a tab to the quick window's Startup Panel — the tab strip shown above the result list
+when the search box is empty (see [Startup Panel](../../user-guide/settings/startup-panel)).
+CoreExtensions' History and Favorites tabs are both built on this; see
+[Example Plugins](../examples#coreextensions-actions-and-the-shell-context-menu) for a walkthrough.
+
+```csharp
+interface IStartupPanelTabProvider
+{
+    string Id => GetType().Name; // stable key the enable/disable state persists against
+    string Name { get; } // the tab's label
+    IEnumerable<ISearchResult> GetItems();
+}
+```
+
+`GetItems()` runs synchronously on every panel activation and is expected to be fast with no I/O —
+it's called each time the search box is cleared, not cached. A tab that returns no items is left out
+of the strip entirely rather than shown empty. The user can hide a tab from the live panel with its
+**×** button independently of disabling the component altogether in Settings → Plugins — the two
+are deliberately separate, so implementations shouldn't assume `Id` uniqueness means anything beyond
+persisting that one piece of state.
+
 ## Preview & thumbnails
 
 ### `IFilePreviewProvider`

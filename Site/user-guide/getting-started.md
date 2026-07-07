@@ -31,6 +31,10 @@ where and how they appear.
 
 ## Basic search
 
+Clearing the search box (or opening the quick window fresh) shows the
+[Startup Panel](./settings/startup-panel) instead of an empty result list — a tab strip with quick
+access to recent files, favorites, and history, no query needed.
+
 Just start typing. Results update as you type, ranked by relevance (see
 [Search Syntax](./search-syntax) for how matching and ranking work). Use the
 [configurable next/previous-item hotkeys](./hotkeys) (arrow keys by default) to move the

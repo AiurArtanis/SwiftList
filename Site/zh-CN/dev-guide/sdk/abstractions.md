@@ -52,7 +52,7 @@ interface IConfigurable
 
 `ConfigFieldType` 涵盖:`Boolean`、`Text`、`Integer`、`Choice`、`Array`、`Object`、`Group`、
 `StringList`、`Hotkey`、`FilePath`、`FolderPath`。参见
-[CoreExtensions](../examples#coreextensions-动作与-shell-右键菜单) 里一个用到嵌套分组和
+[CoreExtensions](../examples#coreextensions-——-动作与-shell-右键菜单) 里一个用到嵌套分组和
 `StringList` 的真实配置模式。
 
 ## 注册表
