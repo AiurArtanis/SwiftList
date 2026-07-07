@@ -57,6 +57,12 @@ public class QuickSearchWindowInputHandler
             e.Handled = true;
             return;
         }
+        if (WpfUiHelper.MatchesHotkey(settings.KeywordHistoryDeleteHotkey, Keyboard.Modifiers, actualKey))
+        {
+            _window.KeywordHistoryController.DeleteCurrent();
+            e.Handled = true;
+            return;
+        }
         if (actualKey == Key.Enter)
         {
             var result = _window.LstResults.SelectedItem as AppSearchResult;

@@ -32,6 +32,16 @@ public static class KeywordHistoryStore
         }
     }
 
+    public static void Delete(string keyword)
+    {
+        lock (Gate)
+        {
+            EnsureCacheNoLock();
+            if (_entriesCache!.RemoveAll(x => x.Equals(keyword, StringComparison.OrdinalIgnoreCase)) > 0)
+                SaveNoLock();
+        }
+    }
+
     public static IReadOnlyList<string> GetEntries()
     {
         lock (Gate)

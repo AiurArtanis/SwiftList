@@ -31,6 +31,7 @@ public class HotkeySettingsViewModel : ViewModelBase
         _quickLookHotkey = hotkeys.QuickLookHotkey;
         _keywordHistoryPreviousHotkey = hotkeys.KeywordHistoryPreviousHotkey;
         _keywordHistoryNextHotkey = hotkeys.KeywordHistoryNextHotkey;
+        _keywordHistoryDeleteHotkey = hotkeys.KeywordHistoryDeleteHotkey;
 
         PluginActionGroups = BuildPluginActionGroups(hotkeys.PluginActionHotkeys);
 
@@ -183,6 +184,13 @@ public class HotkeySettingsViewModel : ViewModelBase
         set => SetProperty(ref _keywordHistoryNextHotkey, value);
     }
 
+    private string _keywordHistoryDeleteHotkey;
+    public string KeywordHistoryDeleteHotkey
+    {
+        get => _keywordHistoryDeleteHotkey;
+        set => SetProperty(ref _keywordHistoryDeleteHotkey, value);
+    }
+
     public void Apply()
     {
         var hotkeys = _userSettings.Hotkeys;
@@ -201,6 +209,7 @@ public class HotkeySettingsViewModel : ViewModelBase
         hotkeys.QuickLookHotkey = QuickLookHotkey;
         hotkeys.KeywordHistoryPreviousHotkey = KeywordHistoryPreviousHotkey;
         hotkeys.KeywordHistoryNextHotkey = KeywordHistoryNextHotkey;
+        hotkeys.KeywordHistoryDeleteHotkey = KeywordHistoryDeleteHotkey;
 
         var pluginActionHotkeys = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in PluginActionGroups)

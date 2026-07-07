@@ -240,6 +240,11 @@ public class HotkeyPageSettings
     public string KeywordHistoryPreviousHotkey { get; set; } = "Alt+Up";
     public string KeywordHistoryNextHotkey { get; set; } = "Alt+Down";
 
+    // Deletes the keyword history entry currently shown in the search box (only while navigating
+    // history via the two hotkeys above). A middle-click on the search box does the same thing and
+    // isn't user-configurable, matching the always-on scroll-to-navigate gesture.
+    public string KeywordHistoryDeleteHotkey { get; set; } = "Shift+Delete";
+
     /// <summary>
     /// User overrides for plugin action hotkeys, keyed by plugin ID (the DLL file name without its
     /// extension, matching <see cref="PluginSettings"/>'s convention) then by

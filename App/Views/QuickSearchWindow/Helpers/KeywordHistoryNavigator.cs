@@ -47,4 +47,17 @@ internal sealed class KeywordHistoryNavigator
         _index--;
         return _index == -1 ? _originalQuery : _snapshot[_index];
     }
+
+    /// <summary>Deletes the currently-shown entry from history, ends the navigation session, and
+    /// clears the search box (no auto-advance to another entry, no restoring the original query).
+    /// Returns null when not currently navigating -- there is nothing displayed to delete.</summary>
+    public string? DeleteCurrent()
+    {
+        if (_index == -1 || _snapshot == null || _index >= _snapshot.Count)
+            return null;
+
+        KeywordHistoryStore.Delete(_snapshot[_index]);
+        Reset();
+        return string.Empty;
+    }
 }

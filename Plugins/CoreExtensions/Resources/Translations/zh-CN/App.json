@@ -353,6 +353,7 @@
   "Hotkeys_SelectQuickLook": "快速预览",
   "Hotkeys_KeywordHistoryPrevious": "上一条关键字记录",
   "Hotkeys_KeywordHistoryNext": "下一条关键字记录",
+  "Hotkeys_KeywordHistoryDelete": "删除当前关键字记录",
   "Hotkeys_QuickNavTitle": "快捷导航触发",
   "Hotkeys_QuickNavDoubleClick": "在支持的窗口空白处双击左键呼出",
   "Hotkeys_QuickNavMiddleClick": "在支持的窗口空白处点击中键呼出",

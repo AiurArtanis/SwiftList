@@ -17,6 +17,7 @@ here. See [Settings → Hotkeys page](./settings/hotkeys-page) for the settings 
 | QuickLook preview | `Alt+P` | Toggles the preview pane for the selected result. |
 | Previous keyword history | `Alt+Up` | Cycles backward through your recently typed queries. |
 | Next keyword history | `Alt+Down` | Cycles forward through your recently typed queries. |
+| Delete keyword history entry | `Shift+Delete` | |
 
 ## Quick navigation (mouse)
 

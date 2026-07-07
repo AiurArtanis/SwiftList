@@ -16,7 +16,8 @@ UI itself.
 
 - Next Item (`Ctrl+N`), Previous Item (`Ctrl+P`), Jump-to-Result modifier (default `Ctrl`, paired
   with digits 1–9), Open Actions Menu (`Ctrl+O`), Complete from Selection (`Ctrl+Tab`), QuickLook
-  (`Alt+P`), Previous/Next Keyword History (`Alt+Up` / `Alt+Down`).
+  (`Alt+P`), Previous/Next Keyword History (`Alt+Up` / `Alt+Down`), Delete Keyword History Entry
+  (`Shift+Delete`).
 - Every recorder here accepts any key or combo you press — including keys like a bare `Tab` — and
   that binding takes priority over any hardcoded default meaning that key might otherwise have.
 
