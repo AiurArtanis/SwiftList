@@ -1,0 +1,87 @@
+# Search Syntax
+
+SwiftList's query box supports more than plain typing. Every operator below can be combined with
+plain fuzzy terms in the same query.
+
+## Fuzzy matching (default)
+
+Type any part of a name and SwiftList finds it as long as the characters occur in order, anywhere
+in the file/folder name — you don't need to type a contiguous substring:
+
+| You type | Matches |
+|---|---|
+| `swlst` | `SwiftList.exe` |
+| `report` | `Q3-report-final.docx` |
+
+## Multiple words
+
+Separate words with a space. Each word narrows the result set further — it does **not** require
+the words to appear in the same order you typed them:
+
+```
+report final
+```
+
+matches `final-Q3-report.docx` just as well as `Q3-report-final.docx`.
+
+## Case sensitivity
+
+- An **all-lowercase** query is case-insensitive: `myfile` matches `MyFile`, `MYFILE`, etc.
+- A query with **any uppercase letter** becomes case-sensitive for that term: `MyFile` only
+  matches `MyFile`, not `myfile`.
+
+## Operators
+
+| Prefix/Suffix | Example | Effect |
+|---|---|---|
+| *(none)* | `report` | Fuzzy match anywhere in the name (default). |
+| `!` | `!temp` | **Exclude** results that match `temp`. |
+| `'` | `'report` | **Exact** substring match instead of fuzzy. |
+| `'...'` | `'final report'` | Exact match anchored to word boundaries (won't match inside a larger word). |
+| `^` | `^IMG` | **Prefix** match — the name must start with `IMG`. |
+| `$` | `.pdf$` | **Suffix** match — the name must end with `.pdf`. |
+| `\|` | `report \| summary` | **OR** — match either side of the pipe. |
+
+You can mix these freely, e.g. `^IMG !.png$ 2024` finds files starting with `IMG`, from 2024,
+that are *not* PNGs.
+
+## Targeting a drive
+
+Start the query with a drive letter followed by a colon to restrict results to that drive, then
+continue typing your search as normal:
+
+```
+d: report
+```
+
+searches only on the `D:` drive.
+
+## Path mode
+
+If your query contains a path separator (`\` or `/`), SwiftList switches to path mode and matches
+against full paths instead of just names — useful for jumping straight to a known folder:
+
+```
+D:\Projects\SwiftList
+```
+
+A trailing separator (`D:\Projects\`) searches the *contents* of that exact folder.
+
+## Chinese filenames: pinyin aliasing
+
+Filenames containing Chinese characters are automatically searchable by pinyin, with no setup
+required:
+
+- **Full pinyin**: typing `chongqing` matches a file named `重庆`.
+- **Initials**: typing `cq` also matches `重庆` (first letter of each syllable).
+- **Polyphonic characters** (characters with more than one valid pronunciation) generate aliases
+  for each common reading, so whichever pronunciation you think of is likely to match.
+
+This is handled by a bundled alias plugin — see **Settings → Plugins** if you ever want to check
+it's enabled.
+
+## Favorites, not custom aliases
+
+SwiftList does not have a general-purpose "define your own alias/macro" system. The closest
+equivalent is [Favorites](./settings/favorites): pin a folder, file, or URL under a custom display
+name, and it becomes searchable by that name (shown with a ★ marker in results).

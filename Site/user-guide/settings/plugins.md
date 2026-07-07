@@ -1,0 +1,20 @@
+# Plugins
+
+Lists every installed plugin, with the currently-loaded Plugin SDK version shown as a badge in the
+page header (relevant if you're pairing a plugin against the
+[Developer Manual](../../dev-guide/)).
+
+## Per-plugin card
+
+Each installed plugin gets a card showing its icon, name, version, and DLL filename. Click the card
+to expand it and see its registered components, grouped by type (search providers, dynamic menu
+providers, etc.) — each toggleable component has its own **enable/disable checkbox**; a component
+marked as required shows a lock icon instead and can't be turned off.
+
+If a plugin exposes its own configuration (custom settings beyond simple enable/disable), a
+**Configure** button appears in the card header, opening that plugin's own settings dialog.
+
+A banner at the bottom of the page reminds you that some component toggles only take effect after
+restarting SwiftList.
+
+If no plugins are installed, the page shows an empty-state message instead.

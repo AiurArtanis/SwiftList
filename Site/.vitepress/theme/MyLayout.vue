@@ -2,9 +2,12 @@
 import { useData } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
 import DownloadDropdown from './DownloadDropdown.vue'
+import { dictionary } from '../i18n/dictionary.js'
 
 const { Layout } = DefaultTheme
 const { lang } = useData()
+const t = (key) => (dictionary[lang.value] ?? dictionary['en-US'])[key]
+const localePrefix = () => (lang.value === 'zh-CN' ? '/zh-CN' : '')
 </script>
 
 <template>
@@ -14,20 +17,20 @@ const { lang } = useData()
         <!-- 1. Download Dropdown Button -->
         <DownloadDropdown />
 
-        <!-- 2. Get Started / 快速开始 -->
-        <a 
-          class="custom-action-btn alt-btn" 
-          :href="lang === 'zh-CN' ? '/zh-CN/guide/introduction.html' : '/guide/introduction.html'"
+        <!-- 2. User Manual -->
+        <a
+          class="custom-action-btn alt-btn"
+          :href="`${localePrefix()}/user-guide/getting-started.html`"
         >
-          {{ lang === 'zh-CN' ? '快速开始' : 'Get Started' }}
+          {{ t('btnGetStarted') }}
         </a>
 
-        <!-- 3. Plugin Dev / 插件开发 -->
-        <a 
-          class="custom-action-btn alt-btn" 
-          :href="lang === 'zh-CN' ? '/zh-CN/guide/plugin-development.html' : '/guide/plugin-development.html'"
+        <!-- 3. Developer Manual -->
+        <a
+          class="custom-action-btn alt-btn"
+          :href="`${localePrefix()}/dev-guide/getting-started.html`"
         >
-          {{ lang === 'zh-CN' ? '插件开发' : 'Plugin Dev' }}
+          {{ t('btnDevGuide') }}
         </a>
       </div>
     </template>

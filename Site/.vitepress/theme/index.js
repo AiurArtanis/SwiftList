@@ -1,6 +1,7 @@
 import DefaultTheme from 'vitepress/theme'
 import MyLayout from './MyLayout.vue'
 import DownloadDropdown from './DownloadDropdown.vue'
+import './custom.css'
 
 export default {
   extends: DefaultTheme,

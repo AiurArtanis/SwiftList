@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "swiftlist-site",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "site:dev", "--", "--port", "47391", "--strictPort"],
+      "cwd": "Site",
+      "port": 47391,
+      "autoPort": false
+    },
+    {
+      "name": "swiftlist-site-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "site:preview", "--", "--port", "47392", "--strictPort"],
+      "cwd": "Site",
+      "port": 47392,
+      "autoPort": false
+    }
+  ]
+}

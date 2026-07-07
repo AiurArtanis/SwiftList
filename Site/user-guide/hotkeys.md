@@ -1,0 +1,52 @@
+# Hotkeys
+
+All global and in-app hotkeys below can be rebound from **Settings → Hotkeys**; defaults are shown
+here. See [Settings → Hotkeys page](./settings/hotkeys-page) for the settings UI itself.
+
+## Global hotkeys
+
+| Action | Default | Notes |
+|---|---|---|
+| Toggle quick window | Double-tap `Ctrl` | Can also be set to a full combo (e.g. `Alt+Space`) instead of a double-tap. |
+| Quick switch | `Ctrl+G` | Switches between the inline (embedded-in-Explorer) search bar and the main window. |
+| Select next item | `Ctrl+N` | Also works as the literal Down arrow. |
+| Select previous item | `Ctrl+P` | Also works as the literal Up arrow. |
+| Jump to result 1–9 | `Ctrl` + digit | The modifier is configurable; the digit is always 1–9. |
+| Open actions menu | `Ctrl+O` | Also works as the literal Right arrow on a selected result. |
+| Complete from selection | `Ctrl+Tab` | In the quick window, fills the search box with the selected result's name/path. |
+| QuickLook preview | `Alt+P` | Toggles the preview pane for the selected result. |
+| Previous keyword history | `Alt+Up` | Cycles backward through your recently typed queries. |
+| Next keyword history | `Alt+Down` | Cycles forward through your recently typed queries. |
+
+## Quick navigation (mouse)
+
+Enabled by default, toggled per-trigger in settings:
+
+- **Double-click** empty space in a supported window to trigger quick navigation.
+- **Middle-click** empty space in a supported window to trigger quick navigation.
+
+## Hardcoded keys (not configurable)
+
+These always behave the same way regardless of your hotkey settings:
+
+| Key | Context | Behavior |
+|---|---|---|
+| `Escape` | Anywhere | Clears the search box if it has text; otherwise closes the window (or exits the actions menu). |
+| `Enter` | Result list | Opens the selected result. |
+| `Ctrl+Enter` | Result list | Locates the result in Explorer instead of opening it. |
+| `Ctrl+Shift+Enter` | Result list | Opens the result elevated (Run as administrator). |
+| `Left` / `Right` arrow | Actions menu | Go back a menu level / enter a submenu. |
+| `Backspace` | Actions menu | Exits the actions menu when the search box is already empty. |
+
+## Plugin action hotkeys
+
+Plugins can register their own actions with a default hotkey (e.g. copy path, run as admin). These
+show up under **Settings → Hotkeys → Plugin Actions**, grouped by the plugin that registered them,
+and can be rebound the same way as built-in hotkeys.
+
+## Process blacklist
+
+If SwiftList's global hotkeys interfere with another application (a game capturing raw keyboard
+input, for example), add that process to the **Process Blacklist** — see
+[Settings → Hotkeys page](./settings/hotkeys-page#process-blacklist). While a blacklisted process is
+in the foreground, SwiftList's global hotkeys are let through untouched.

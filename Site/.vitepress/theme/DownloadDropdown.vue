@@ -1,8 +1,10 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useData } from 'vitepress'
+import { dictionary } from '../i18n/dictionary.js'
 
 const { lang } = useData()
+const t = (key) => (dictionary[lang.value] ?? dictionary['en-US'])[key]
 const isOpen = ref(false)
 const dropdownRef = ref(null)
 
@@ -35,7 +37,7 @@ onUnmounted(() => {
         href="https://github.com/SwiftList/SwiftList/releases/latest/download/SwiftList-Setup.exe"
       >
         <span class="icon">💾</span>
-        <span>{{ lang === 'zh-CN' ? '立即下载' : 'Download' }}</span>
+        <span>{{ t('downloadMain') }}</span>
       </a>
 
       <!-- Dropdown Toggle Arrow -->
@@ -65,8 +67,8 @@ onUnmounted(() => {
         >
           <span class="item-icon">💾</span>
           <div class="item-content">
-            <span class="item-title">{{ lang === 'zh-CN' ? '安装包' : 'Installer' }}</span>
-            <span class="item-desc">{{ lang === 'zh-CN' ? '推荐，支持系统服务与自启' : 'Recommended, supports system service' }}</span>
+            <span class="item-title">{{ t('downloadInstallerTitle') }}</span>
+            <span class="item-desc">{{ t('downloadInstallerDesc') }}</span>
           </div>
         </a>
 
@@ -76,8 +78,8 @@ onUnmounted(() => {
         >
           <span class="item-icon">📦</span>
           <div class="item-content">
-            <span class="item-title">{{ lang === 'zh-CN' ? '便携版' : 'Portable Version' }}</span>
-            <span class="item-desc">{{ lang === 'zh-CN' ? '绿色免安装，解压即用' : 'Standalone, unzip and run' }}</span>
+            <span class="item-title">{{ t('downloadPortableTitle') }}</span>
+            <span class="item-desc">{{ t('downloadPortableDesc') }}</span>
           </div>
         </a>
       </div>

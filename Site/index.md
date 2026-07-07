@@ -13,14 +13,17 @@ features:
     details: A modern, beautiful, and highly extensible open-source alternative to commercial file search launchers.
   - icon: 🚀
     title: Instant Indexing
-    details: Leverages Windows USN Journal and MFT to read millions of files in seconds, lightweight and system-shared via a background service.
+    details: Leverages the Windows USN Journal and MFT to read millions of files in seconds, lightweight and system-shared via a background service.
   - icon: 🎯
-    title: Alias System
-    details: Pre-computed and dynamically scoped query matching, supporting flexible customized search alias fuzzy matching.
+    title: Fuzzy Matching & Aliases
+    details: Type-ahead fuzzy matching with prefix/suffix/exact/exclude operators, plus pinyin aliasing for Chinese filenames — see it all in the User Manual.
+  - icon: ⌨️
+    title: Fully Customizable Hotkeys
+    details: Every hotkey — toggle window, next/previous item, actions menu, QuickLook preview — can be rebound to fit your workflow.
   - icon: 🔌
     title: Extensible Plugins
-    details: Open SDK architecture allowing easy creation of custom search providers, aliases, and system settings integration.
+    details: Open SDK architecture allowing easy creation of custom search providers, aliases, context-menu actions, and UI extensions.
   - icon: 🛡️
     title: Process Isolation
-    details: SYSTEM-level background indexing service separated from session-level user App UI for maximum security and performance.
+    details: A SYSTEM-level background indexing service is kept separate from the session-level user App UI, for maximum security and performance.
 ---
