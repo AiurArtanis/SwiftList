@@ -22,4 +22,6 @@ public static class UserNetworkDriveSearch
 
 
     public static void SearchStreaming(string query, int limit, Action<SearchResult> onResult, CancellationToken token = default, string? directoryFilter = null) => NetworkIndexer.SearchStreaming(query, limit, onResult, token, directoryFilter);
+
+    public static List<SearchResult> GetRecentFiles(IReadOnlyList<string> directories, int limit, int maxAgeMinutes) => NetworkIndexer.GetRecentFiles(directories, limit, maxAgeMinutes);
 }

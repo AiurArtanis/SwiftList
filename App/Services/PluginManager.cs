@@ -33,6 +33,7 @@ public class PluginManager : PluginRegistry
     private readonly List<PluginSdk.Abstractions.Plugins.IQuickNavigationProvider> _quickNavigationProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.IThumbnailProvider> _thumbnailProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.IQueryTokenProvider> _queryTokenProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider> _startupPanelTabProviders = new();
     private uint _nextRuntimeActionId = 0x80000000;
 
     private readonly ComponentFilter _filter = new();
@@ -106,6 +107,7 @@ public class PluginManager : PluginRegistry
     void PluginRegistry.AddQuickNavigationProvider(PluginSdk.Abstractions.Plugins.IQuickNavigationProvider p) => _quickNavigationProviders.Add(p);
     void PluginRegistry.AddThumbnailProvider(PluginSdk.Abstractions.Plugins.IThumbnailProvider p) => _thumbnailProviders.Add(p);
     void PluginRegistry.AddQueryTokenProvider(PluginSdk.Abstractions.Plugins.IQueryTokenProvider p) => _queryTokenProviders.Add(p);
+    void PluginRegistry.AddStartupPanelTabProvider(PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider p) => _startupPanelTabProviders.Add(p);
 
     // ── Public API ────────────────────────────────────────────────────────
 
@@ -182,6 +184,9 @@ public class PluginManager : PluginRegistry
     public IEnumerable<PluginSdk.Abstractions.Plugins.IQueryTokenProvider> QueryTokenProviders
         => _queryTokenProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.QueryTokenProvider, p.Id));
 
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider> StartupPanelTabProviders
+        => _startupPanelTabProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.StartupPanelTabProvider, p.Id));
+
     // ── Unfiltered collections (settings UI ?show disabled as unchecked) ─
 
     public IEnumerable<PluginSdk.Abstractions.Plugins.IFilePreviewProvider> AllFilePreviewProviders => _previewProviders;
@@ -196,6 +201,7 @@ public class PluginManager : PluginRegistry
     public IEnumerable<PluginSdk.Abstractions.Plugins.ITranslationProvider> AllTranslationProviders => _translationProviders;
     public IEnumerable<PluginSdk.Abstractions.Plugins.IThemeProvider> AllThemeProviders => _themeProviders;
     public IEnumerable<PluginSdk.Abstractions.Plugins.IQueryTokenProvider> AllQueryTokenProviders => _queryTokenProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider> AllStartupPanelTabProviders => _startupPanelTabProviders;
 
     // ── Search and execution ──────────────────────────────────────────────
 

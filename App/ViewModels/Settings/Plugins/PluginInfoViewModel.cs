@@ -24,6 +24,7 @@ public enum PluginComponentType
     QuickNavigationProvider,
     ThumbnailProvider,
     QueryTokenProvider,
+    StartupPanelTabProvider,
     /// <summary>Translation providers are displayed read-only; they cannot be disabled.</summary>
     TranslationProvider,
     /// <summary>Theme providers are displayed read-only; they cannot be disabled.</summary>
@@ -142,9 +143,20 @@ public class PluginComponentViewModel : ViewModelBase
     /// </summary>
     public bool IsToggleable => ComponentType != PluginComponentType.TranslationProvider && ComponentType != PluginComponentType.ThemeProvider;
 
+    /// <summary>Set once the user actually flips this checkbox. Lets Save() apply only components the
+    /// user touched in this page, instead of blindly re-asserting this snapshot's IsEnabled for every
+    /// component -- which would clobber changes made through other channels (e.g. closing a Startup
+    /// Panel tab's x button, or the Startup Panel settings page's own re-enable checkbox) in the same
+    /// Settings window session.</summary>
+    public bool IsDirty { get; private set; }
+
     public bool IsEnabled
     {
         get => _isEnabled;
-        set => SetProperty(ref _isEnabled, value);
+        set
+        {
+            if (SetProperty(ref _isEnabled, value))
+                IsDirty = true;
+        }
     }
 }

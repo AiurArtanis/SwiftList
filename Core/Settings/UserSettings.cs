@@ -38,6 +38,7 @@ public class UserSettings
     public SearchWindowSettings SearchWindow { get; set; } = new();
     public PreviewWindowSettings PreviewWindow { get; set; } = new();
     public MainWindowSettings MainWindow { get; set; } = new();
+    public StartupPanelSettings StartupPanel { get; set; } = new();
 
     private static string GetDefaultSystemLanguage()
     {

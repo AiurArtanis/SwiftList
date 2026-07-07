@@ -154,6 +154,13 @@ internal static class PluginLoader
                     registry.AddQueryTokenProvider(provider);
                     Logger.Log($"[PluginManager] Loaded query token provider: '{type.Name}' from {fileName}");
                 }
+
+                if (typeof(PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider).IsAssignableFrom(type))
+                {
+                    var provider = (PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider)Activator.CreateInstance(type)!;
+                    registry.AddStartupPanelTabProvider(provider);
+                    Logger.Log($"[PluginManager] Loaded startup panel tab provider: '{type.Name}' from {fileName}");
+                }
             }
         }
         catch (Exception ex)

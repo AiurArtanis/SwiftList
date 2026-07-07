@@ -79,6 +79,8 @@ public class SearchEngine : IDisposable
 
     public Dictionary<string, FileMetadataEntry> GetFileMetadataBatch(IReadOnlyList<string> paths) => _indexer.GetFileMetadataBatch(paths);
 
+    public List<SearchResult> GetRecentFiles(IReadOnlyList<string> directories, int limit, int maxAgeMinutes) => _indexer.GetRecentFiles(directories, limit, maxAgeMinutes);
+
     public UsnIndexer.IndexerStatus GetStatus()
     {
         _indexer.Status.IsMaintenanceBusy = _isRebuilding || _drives.HasPendingRebuilds;

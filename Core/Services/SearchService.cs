@@ -1,10 +1,11 @@
 using System.IO.Pipes;
 using SwiftList.Core.Indexer.Usn;
-using SwiftList.Core.Indexer.NetworkDrive;
 
 namespace SwiftList.Core;
 
-public class SearchService : IDisposable
+// Split across SearchService.cs (status/search/recent-files) and SearchService.Management.cs (drive and
+// settings admin pass-throughs) to stay under the repo's per-file line limit -- both halves are one type.
+public partial class SearchService : IDisposable
 {
     private readonly Dictionary<string, List<SearchResult>> _sessionDirectoryCache = new(StringComparer.OrdinalIgnoreCase);
 
@@ -186,62 +187,32 @@ public class SearchService : IDisposable
         return results.Any(r => r);
     }
 
-    public void RefreshNetworkIndexes() => UserNetworkDriveSearch.Refresh();
-    public void ConfigureNetworkIndexes() => UserNetworkDriveSearch.Configure();
-    public bool RefreshNetworkDriveIndex(string drive) => UserNetworkDriveSearch.RefreshDrive(drive);
-    public IReadOnlyList<NetworkIndexStatus> GetNetworkIndexStatuses() => UserNetworkDriveSearch.GetStatuses();
-    public bool HasNetworkDriveCache(string drive) => UserNetworkDriveSearch.HasCache(drive);
-    public IReadOnlyList<string> GetCachedNetworkDrives() => UserNetworkDriveSearch.GetCachedDrives();
-    public void DeleteNetworkDriveCache(string drive) => UserNetworkDriveSearch.DeleteCache(drive);
-
-    public async Task InitializeOrLoadIndexAsync(bool forceRebuild = false, CancellationToken token = default)
+    // In-memory index lookup only (no disk I/O) -- the most recently created entries across all of the
+    // given directories' subtrees, most recent first. The elevated service only tracks local drive
+    // letters, so network/WSL directories are queried in-process here (same split as SearchStreamingAsync's
+    // localTask/networkTask) and merged by actual creation time rather than just concatenated.
+    public async Task<List<SearchResult>> GetRecentFilesAsync(IReadOnlyList<string> directories, int limit, int maxAgeMinutes, CancellationToken token = default)
     {
-        var requestId = forceRebuild ? SearchRequestId.Rebuild : SearchRequestId.Initialize;
-        await SendPipeCommandAsync(new SearchRequestMessage { Id = requestId }, token).ConfigureAwait(false);
-    }
+        var networkTask = Task.Run(() =>
+        {
+            try
+            {
+                return UserNetworkDriveSearch.GetRecentFiles(directories, limit, maxAgeMinutes);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[SearchService] Network drive GetRecentFiles failed: {ex.Message}", LogLevel.Error);
+                return new List<SearchResult>();
+            }
+        }, token);
 
-    // service.log lives under the service's own (elevated/system) data directory, which the App
-    // process cannot write to directly -- ask the service to truncate its own log file instead.
-    public async Task<bool> ClearServiceLogAsync(CancellationToken token = default)
-    {
-        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.ClearServiceLog }, token).ConfigureAwait(false);
-        return resp.Kind == PipeResponseKind.Ok;
-    }
+        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.GetRecentFiles, Directories = directories.ToList(), Limit = limit, MaxAgeMinutes = maxAgeMinutes }, token).ConfigureAwait(false);
+        if (resp.Kind == PipeResponseKind.Error) Logger.Log($"[SearchService] GetRecentFiles failed: {resp.Message}", LogLevel.Error);
+        var localResults = resp.Kind == PipeResponseKind.RecentFiles && resp.RecentFiles != null ? resp.RecentFiles : new List<SearchResult>();
 
-    public async Task<bool> RebuildDriveIndexAsync(string drive, CancellationToken token = default)
-    {
-        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.RebuildDrive, Drive = drive }, token).ConfigureAwait(false);
-        return resp.Kind == PipeResponseKind.Ok;
-    }
-
-    public async Task<bool> DeleteDriveIndexAsync(string drive, CancellationToken token = default)
-    {
-        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.DeleteDriveIndex, Drive = drive }, token).ConfigureAwait(false);
-        return resp.Kind == PipeResponseKind.Ok;
-    }
-
-    public async Task<MachineSettings> GetMachineSettingsAsync(CancellationToken token = default)
-    {
-        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.GetMachineSettings }, token).ConfigureAwait(false);
-        if (resp.Kind == PipeResponseKind.MachineSettings && resp.MachineSettings != null) return resp.MachineSettings;
-        if (resp.Kind == PipeResponseKind.Error) Logger.Log($"[SearchService] GetMachineSettings failed: {resp.Message}", LogLevel.Error);
-        return new MachineSettings();
-    }
-
-    public async Task<bool> SaveMachineSettingsAsync(MachineSettings settings, CancellationToken token = default)
-    {
-        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.SetMachineSettings, MachineSettings = settings }, token).ConfigureAwait(false);
-        return resp.Kind == PipeResponseKind.Ok;
-    }
-
-    // In-memory index lookup only (no disk I/O) -- paths the service isn't tracking are simply
-    // absent from the result, not an error; the caller is expected to fall back to a live stat.
-    public async Task<Dictionary<string, FileMetadataEntry>> GetFileMetadataBatchAsync(IReadOnlyList<string> paths, CancellationToken token = default)
-    {
-        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.GetFileMetadata, FilePaths = paths.ToList() }, token).ConfigureAwait(false);
-        if (resp.Kind == PipeResponseKind.FileMetadata && resp.FileMetadata != null) return resp.FileMetadata;
-        if (resp.Kind == PipeResponseKind.Error) Logger.Log($"[SearchService] GetFileMetadataBatch failed: {resp.Message}", LogLevel.Error);
-        return new Dictionary<string, FileMetadataEntry>(StringComparer.OrdinalIgnoreCase);
+        var networkResults = await networkTask.ConfigureAwait(false);
+        var merged = localResults.Concat(networkResults).OrderByDescending(r => r.CreatedUtc);
+        return (limit > 0 ? merged.Take(limit) : merged).ToList();
     }
 
     private async Task<PipeResponse> SendPipeCommandAsync(SearchRequestMessage msg, CancellationToken token)

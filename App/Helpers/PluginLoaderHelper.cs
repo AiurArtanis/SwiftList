@@ -225,6 +225,11 @@ public static class PluginLoaderHelper
             var id = MakeId(dllName, PluginComponentType.QueryTokenProvider, prov.Id);
             components.Add(new PluginComponentViewModel(id, PluginComponentType.QueryTokenProvider, prov.Name, !disabledSet.Contains(id)));
         }
+        foreach (var prov in manager.AllStartupPanelTabProviders.Where(p => p.GetType().Assembly == assembly))
+        {
+            var id = MakeId(dllName, PluginComponentType.StartupPanelTabProvider, prov.Id);
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.StartupPanelTabProvider, prov.Name, !disabledSet.Contains(id)));
+        }
         foreach (var prov in manager.AllTranslationProviders.Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.TranslationProvider, prov.GetType().Name);

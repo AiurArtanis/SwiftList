@@ -9,6 +9,11 @@ public class SearchResult
     public string Drive { get; set; } = string.Empty;
     public FileAttributes Attributes { get; set; }
     internal ulong RankSortKey { get; set; }
+
+    // Only populated (and only meaningful) for GetRecentFiles results -- lets SearchService merge the
+    // local-drive and network/WSL result sets by actual recency instead of just concatenating two
+    // already-sorted-but-incomparable lists. Zero for every other kind of search result.
+    public uint CreatedUtc { get; set; }
 }
 
 public sealed class SearchResultRankComparer : IComparer<SearchResult>

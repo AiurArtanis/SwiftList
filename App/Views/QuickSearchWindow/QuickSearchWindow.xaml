@@ -67,6 +67,8 @@
                 <RowDefinition Height="Auto"/>
                 <!-- Separator -->
                 <RowDefinition Height="Auto"/>
+                <!-- Startup panel tab strip (empty search box only) -->
+                <RowDefinition Height="Auto"/>
                 <!-- Results panel (grows with content) -->
                 <RowDefinition Height="Auto"/>
                 <!-- Status bar -->
@@ -84,15 +86,107 @@
                        Fill="{DynamicResource SeparatorBrush}"
                        Visibility="{Binding ResultsSeparatorVisibility}"/>
 
-            <!-- ═══════════ 3. Results Panel ═══════════ -->
-            <local:ResultsControl x:Name="ResultsPanelControl" Grid.Row="2" 
+            <!-- ═══════════ 3. Startup Panel Tab Strip ("初始面板") ═══════════ -->
+            <ItemsControl x:Name="StartupPanelTabStrip" Grid.Row="2"
+                          ItemsSource="{Binding StartupPanelTabs}"
+                          Visibility="{Binding StartupPanelVisibility}"
+                          Margin="12,8,12,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <!-- Styled like the Settings window's own tab headers (Button+underline pair,
+                             see Resources/Styles/SettingsWindow.xaml's TabHeaderButtonStyle and
+                             TabUnderlineStyle) for visual consistency; clicking the label switches to
+                             this tab (IsSelected drives the accent-blue/underline "active" look). -->
+                        <StackPanel Margin="0,0,20,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="{Binding Label}" Command="{Binding SelectCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter Property="Focusable" Value="False"/>
+                                            <Setter Property="FontSize" Value="14"/>
+                                            <Setter Property="Padding" Value="0,0,0,10"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                                <Button Content="&#xE711;" Command="{Binding CloseCommand}" Margin="8,0,0,8"
+                                        ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_CloseTabTooltip]}">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Width" Value="16"/>
+                                            <Setter Property="Height" Value="16"/>
+                                            <Setter Property="Padding" Value="0"/>
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+                                            <Setter Property="FontSize" Value="9"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary2}"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="Bd" CornerRadius="3" Background="{TemplateBinding Background}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlHoverBackground}"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </StackPanel>
+                            <Border Height="2" Background="{DynamicResource AccentBlue}" Margin="0,-2,0,0">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- ═══════════ 4. Results Panel ═══════════ -->
+            <local:ResultsControl x:Name="ResultsPanelControl" Grid.Row="3"
                                   ItemsSource="{Binding Results}"
                                   SelectedItem="{Binding SelectedResult, Mode=TwoWay}"
                                   ViewMode="List"
                                   Visibility="{Binding ResultsPanelVisibility}"/>
 
-            <!-- ═══════════ 4. Status bar (shown when loading or ready) ═══════════ -->
-            <local:StatusBarControl x:Name="StatusBarControl" Grid.Row="3" 
+            <!-- ═══════════ 5. Status bar (shown when loading or ready) ═══════════ -->
+            <local:StatusBarControl x:Name="StatusBarControl" Grid.Row="4"
                                     Visibility="{Binding StatusBarVisibility}"/>
         </Grid>
             </Border>

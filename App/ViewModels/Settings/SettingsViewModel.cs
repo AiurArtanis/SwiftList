@@ -37,6 +37,7 @@ public class SettingsViewModel : ViewModelBase
         Hotkeys = new HotkeySettingsViewModel(_userSettings, Blacklist);
         History = new HistorySettingsViewModel(_userSettings);
         Favorites = new FavoritesSettingsViewModel(_userSettings);
+        StartupPanel = new StartupPanelSettingsViewModel(_userSettings);
         RefreshCommand = new RelayCommand(Refresh);
         ApplyCommand = new RelayCommand(Apply, () => CanApply);
 
@@ -65,6 +66,7 @@ public class SettingsViewModel : ViewModelBase
     public BlacklistSettingsViewModel Blacklist { get; }
     public HistorySettingsViewModel History { get; }
     public FavoritesSettingsViewModel Favorites { get; }
+    public StartupPanelSettingsViewModel StartupPanel { get; }
     public ICommand RefreshCommand { get; }
     public ICommand ApplyCommand { get; }
 
@@ -164,9 +166,11 @@ public class SettingsViewModel : ViewModelBase
         Blacklist.Save();
         History.Save();
         Favorites.Save();
+        StartupPanel.Save();
         _userSettings.Save();
         App.HookClient?.SendMessage(new IpcMessage { Id = IpcMessageId.ReloadSettings });
         PluginManager.Instance.RefreshDisabledComponents();
+        StartupPanel.RefreshPluginTabs();
         NetworkDrive.ResetPendingEdits();
         var exclusionsChanged = SettingsChangeSnapshot.ExclusionsChanged(previousExclusions, SettingsChangeSnapshot.CaptureExclusions(_userSettings));
         var newDisabledAliases = _userSettings.DisabledPluginComponents

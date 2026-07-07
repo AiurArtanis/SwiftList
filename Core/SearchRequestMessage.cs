@@ -14,7 +14,8 @@ public enum SearchRequestId : byte
     DeleteDriveIndex = 8,
     Initialize = 10,
     GetFileMetadata = 11,
-    ClearServiceLog = 12
+    ClearServiceLog = 12,
+    GetRecentFiles = 13
 }
 
 public struct SearchRequestMessage
@@ -28,4 +29,9 @@ public struct SearchRequestMessage
     public MachineSettings? MachineSettings { get; set; }
     public List<string>? DisabledAliasComponents { get; set; }
     public List<string>? FilePaths { get; set; }
+    // Target directories for GetRecentFiles -- distinct from FilePaths above (individual file paths
+    // for GetFileMetadata) since the two requests take different kinds of list.
+    public List<string>? Directories { get; set; }
+    // GetRecentFiles' max-age cutoff, in minutes.
+    public int MaxAgeMinutes { get; set; }
 }

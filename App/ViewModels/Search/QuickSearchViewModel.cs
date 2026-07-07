@@ -107,6 +107,10 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
         set => Search.ResultsSeparatorVisibility = value;
     }
 
+    public ObservableCollection<StartupPanelTabViewModel> StartupPanelTabs => Search.StartupPanelTabs;
+
+    public Visibility StartupPanelVisibility => Search.StartupPanelVisibility;
+
     public Visibility StatusBarVisibility => Monitor.StatusBarVisibility;
 
     public Visibility LoadingPanelVisibility => Monitor.LoadingPanelVisibility;
@@ -135,6 +139,7 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
 
     public void TriggerIndexBuild(bool forceRebuild = false) => Monitor.TriggerIndexBuild(forceRebuild);
     public void EnsureServiceMonitoringActive() => Monitor.EnsureServiceMonitoringActive();
+    public void RefreshEmptyState() => Search.RefreshEmptyState();
 
     public CornerRadius WindowCornerRadius => new(UserSettings.Load().SearchWindow.CornerRadius);
     public CornerRadius InnerCornerRadius => new(Math.Max(0, UserSettings.Load().SearchWindow.CornerRadius - 1));

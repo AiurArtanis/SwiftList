@@ -1,0 +1,26 @@
+namespace SwiftList.PluginSdk.Abstractions.Plugins;
+
+/// <summary>
+/// Contributes a tab to the quick window's "初始面板" (Startup Panel), shown above the result list
+/// when the search box is empty. The host renders whatever items are returned through its own result
+/// list (icons, open, actions menu all come for free) -- a provider only needs to say what to show
+/// right now. A tab whose items are empty is hidden automatically; there's nothing else to configure.
+/// </summary>
+public interface IStartupPanelTabProvider
+{
+    /// <summary>
+    /// A stable, locale-independent identifier for this tab.
+    /// Used to persist the enabled/disabled state.
+    /// Defaults to the concrete type name.
+    /// </summary>
+    string Id => GetType().Name;
+
+    /// <summary>Display label shown on the tab strip and in Settings (already localized by the provider).</summary>
+    string Name { get; }
+
+    /// <summary>
+    /// Returns the items to show right now. Called synchronously each time the panel is (re)activated --
+    /// keep this fast (no disk/network I/O beyond what the host process already has in memory).
+    /// </summary>
+    IEnumerable<ISearchResult> GetItems();
+}

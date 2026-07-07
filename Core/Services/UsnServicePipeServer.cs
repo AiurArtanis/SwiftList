@@ -238,6 +238,11 @@ public sealed class UsnServicePipeServer : IDisposable
                     var metadata = _engine?.GetFileMetadataBatch(paths) ?? new Dictionary<string, FileMetadataEntry>();
                     return new PipeResponse { Kind = PipeResponseKind.FileMetadata, FileMetadata = metadata };
 
+                case SearchRequestId.GetRecentFiles:
+                    var directories = msg.Directories ?? new List<string>();
+                    var recentFiles = _engine?.GetRecentFiles(directories, msg.Limit, msg.MaxAgeMinutes) ?? new List<SearchResult>();
+                    return new PipeResponse { Kind = PipeResponseKind.RecentFiles, RecentFiles = recentFiles };
+
                 case SearchRequestId.ClearServiceLog:
                     Logger.ClearCurrentLog();
                     return new PipeResponse { Kind = PipeResponseKind.Ok };
@@ -263,6 +268,7 @@ public sealed class UsnServicePipeServer : IDisposable
         PipeResponseKind.Status => PipeResponseBinarySerializer.WriteStatusAsync(stream, response.Status ?? new Indexer.Usn.UsnIndexer.IndexerStatus { State = "error" }, token),
         PipeResponseKind.MachineSettings => PipeResponseBinarySerializer.WriteMachineSettingsAsync(stream, response.MachineSettings ?? new MachineSettings(), token),
         PipeResponseKind.FileMetadata => PipeResponseBinarySerializer.WriteFileMetadataAsync(stream, response.FileMetadata ?? new Dictionary<string, FileMetadataEntry>(), token),
+        PipeResponseKind.RecentFiles => PipeResponseBinarySerializer.WriteRecentFilesAsync(stream, response.RecentFiles ?? new List<SearchResult>(), token),
         _ => PipeResponseBinarySerializer.WriteErrorAsync(stream, "Unknown response kind", token)
     };
 

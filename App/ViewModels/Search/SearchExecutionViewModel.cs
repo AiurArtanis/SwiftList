@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using SwiftList.Core;
 using SwiftList.App.Services;
@@ -9,6 +10,7 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
 {
     private readonly QuickSearchViewModel _mainVm;
     private readonly SearchExecutionEngine _engine;
+    private readonly StartupPanelController _startupPanel;
 
     private string _searchQuery = null!;
     private IReadOnlyList<string> _queryTokens = Array.Empty<string>();
@@ -29,13 +31,12 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
         _engine = new SearchExecutionEngine(searchService);
         Results = new ObservableRangeCollection<AppSearchResult>();
 
-        // Coalesce multiple providers finishing their (background, unawaited) load in quick succession --
-        // e.g. right after app startup -- into a single re-run of the current query, instead of one
-        // re-run per provider.
-        _providerLoadedRefreshTimer = new System.Windows.Threading.DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(150)
-        };
+        _startupPanel = new StartupPanelController(searchService, ReplaceResults);
+        _startupPanel.PropertyChanged += (s, e) => { if (e.PropertyName == nameof(StartupPanelController.Visibility)) OnPropertyChanged(nameof(StartupPanelVisibility)); };
+
+        // Coalesce multiple providers finishing their (background, unawaited) load in quick succession
+        // (e.g. right after app startup) into a single re-run of the current query, not one per provider.
+        _providerLoadedRefreshTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
         _providerLoadedRefreshTimer.Tick += (s, e) =>
         {
             _providerLoadedRefreshTimer.Stop();
@@ -163,6 +164,18 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _resultsSeparatorVisibility, value);
     }
 
+    // "初始面板" (Startup Panel): shown above the results in the quick popup only, see StartupPanelController.
+    public ObservableCollection<StartupPanelTabViewModel> StartupPanelTabs => _startupPanel.Tabs;
+    public Visibility StartupPanelVisibility => _startupPanel.Visibility;
+
+    // SearchQuery's setter only re-runs PerformSearch when the value changes, so re-showing the window
+    // while the box stays empty wouldn't otherwise notice a new file, or a tab re-enabled in Settings.
+    public void RefreshEmptyState()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+            PerformSearch(_searchQuery);
+    }
+
     public void PerformSearch(string query)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -174,6 +187,7 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
             var suggestion = ExplorerJumpSuggestionHelper.TryBuildSuggestion(IsInlineSearchContext, SearchScope);
             if (suggestion != null)
             {
+                _startupPanel.Deactivate();
                 ReplaceResults(new[] { suggestion });
                 ResultsPanelVisibility = Visibility.Visible;
                 ResultsSeparatorVisibility = Visibility.Visible;
@@ -182,6 +196,8 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
             {
                 ResultsPanelVisibility = Visibility.Collapsed;
                 ResultsSeparatorVisibility = Visibility.Collapsed;
+                if (!IsInlineSearchContext)
+                    _ = ActivateStartupPanelAsync();
             }
 
             if (_mainVm.Monitor.IsIndexReady)
@@ -221,6 +237,16 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
 
     private void HandleLocalServiceUnavailable() => _mainVm.TriggerIndexBuild();
 
+    private async Task ActivateStartupPanelAsync()
+    {
+        var shown = await _startupPanel.TryActivateAsync();
+        if (!shown || !string.IsNullOrWhiteSpace(_searchQuery))
+            return; // a real query started while the fetch was in flight; ApplySearchResults handled visibility
+
+        ResultsPanelVisibility = Visibility.Visible;
+        ResultsSeparatorVisibility = Visibility.Visible;
+    }
+
     private void ApplySearchResults(string query, List<AppSearchResult> uiResults, string statusText, bool final)
     {
         if (SearchQuery != query)
@@ -238,6 +264,7 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
 
         // ReplaceResults reconciles row-by-row and no-ops when nothing changed, so no pre-check needed.
         ReplaceResults(uiResults);
+        _startupPanel.Deactivate();
 
         var hasResults = uiResults.Count > 0;
         ResultsPanelVisibility = hasResults ? Visibility.Visible : Visibility.Collapsed;
@@ -254,39 +281,8 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
         ReplaceResults(dispatched);
     }
 
-    private static bool ItemsEqual(AppSearchResult a, AppSearchResult b) =>
-        string.Equals(a.FullPath, b.FullPath, StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(a.Name, b.Name, StringComparison.Ordinal) &&
-        string.Equals(a.ResultKind, b.ResultKind, StringComparison.Ordinal) &&
-        string.Equals(a.SearchQuery, b.SearchQuery, StringComparison.Ordinal);
-
-    private void ReplaceResults(IEnumerable<AppSearchResult> results)
-    {
-        var list = results as List<AppSearchResult> ?? new List<AppSearchResult>(results);
-
-        // Reconcile row-by-row instead of a full Clear+Add reset: only changed rows are replaced in
-        // place (recycling ListBox reuses containers) and the tail is appended/trimmed, so the list
-        // is never torn down and rebuilt from the top — which is what caused the flicker.
-        Results.ReconcileTo(list, ItemsEqual);
-
-        // Keep the current selection if it survived the update; only re-select when it's gone or
-        // no longer selectable, so streaming updates don't yank the highlight back to the top.
-        if (SelectedResult != null && Results.Contains(SelectedResult)
-            && !SelectedResult.IsEmptyResult && !SelectedResult.IsSearchSectionHeader)
-            return;
-
-        AppSearchResult? firstSelectable = null;
-        foreach (var result in list)
-        {
-            if (!result.IsEmptyResult && !result.IsSearchSectionHeader)
-            {
-                firstSelectable = result;
-                break;
-            }
-        }
-
-        SelectedResult = firstSelectable;
-    }
+    private void ReplaceResults(IEnumerable<AppSearchResult> results) =>
+        SearchResultsReconciler.Replace(Results, results, SelectedResult, v => SelectedResult = v);
 
     public void CancelPendingSearch() => _engine.CancelPendingSearch();
 
@@ -294,6 +290,7 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
     {
         SearchableItemMapper.ProviderLoaded -= OnSearchableItemProviderLoaded;
         _providerLoadedRefreshTimer.Stop();
+        _startupPanel.Deactivate();
         _engine.Dispose();
     }
 }

@@ -69,12 +69,21 @@ public class PluginManagementViewModel : ViewModelBase
 
     public void Save()
     {
-        var disabledIds = Plugins
-            .SelectMany(p => p.RawComponents)
-            .Where(c => c.IsToggleable && !c.IsEnabled)
-            .Select(c => c.ComponentId)
-            .ToList();
+        // Apply only the components the user actually toggled on this page (IsDirty), merged into the
+        // CURRENT disabled list rather than replacing it wholesale -- Plugins is a snapshot taken when
+        // the Settings window opened, so a blind replace would silently revert any component disabled
+        // or re-enabled through another channel since then (e.g. a Startup Panel tab's x button, or the
+        // Startup Panel settings page's own re-enable checkbox).
+        var disabled = new HashSet<string>(_userSettings.DisabledPluginComponents, StringComparer.OrdinalIgnoreCase);
 
-        _userSettings.DisabledPluginComponents = disabledIds;
+        foreach (var c in Plugins.SelectMany(p => p.RawComponents).Where(c => c.IsToggleable && c.IsDirty))
+        {
+            if (c.IsEnabled)
+                disabled.Remove(c.ComponentId);
+            else
+                disabled.Add(c.ComponentId);
+        }
+
+        _userSettings.DisabledPluginComponents = disabled.ToList();
     }
 }

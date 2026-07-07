@@ -124,6 +124,14 @@ internal sealed class NetworkIndex
             _searcher.SearchStreaming(_runtime, rawQuery, limit, onResult, token, directoryFilterLower);
     }
 
+    // Backs NetworkIndexerRecentFilesExtensions.GetRecentFiles -- same in-memory subtree walk the local
+    // NTFS/ReFS path uses (RecentFilesWalker), just pointed at this share's own RuntimeIndex.
+    public void CollectRecentFiles(string dirLower, uint cutoffUtc, List<SearchResult> candidates)
+    {
+        lock (_gate)
+            RecentFilesWalker.CollectFromDirectory(_runtime, dirLower, Drive, cutoffUtc, candidates);
+    }
+
     public bool ApplyCreatedOrChanged(string root, string path, ExclusionRuleSet? exclusionRules = null)
     {
         lock (_gate)
