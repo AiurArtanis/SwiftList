@@ -40,6 +40,8 @@ public partial class SearchWindow : Window, ISearchWindow, IHasVisibleContentIns
 
         this.Loaded += (s, e) =>
         {
+            SearchWindowMaximizeBoundsHelper.Attach(this);
+
             this.Activate();
             this.Focus();
 

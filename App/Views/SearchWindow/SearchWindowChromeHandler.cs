@@ -43,8 +43,6 @@ public class SearchWindowChromeHandler
 
         _window.DragGrip?.Visibility = _window.WindowState == WindowState.Maximized ? Visibility.Collapsed : Visibility.Visible;
 
-        ApplyMaximizeSizeCap();
-
         if (_window.MainBorder != null && _window.ClippingBorder != null)
         {
             if (_window.WindowState == WindowState.Maximized)
@@ -61,40 +59,6 @@ public class SearchWindowChromeHandler
                 _window.MainBorder.BorderThickness = new Thickness(1);
                 _window.ClippingBorder.CornerRadius = new CornerRadius(10);
             }
-        }
-    }
-
-    // A borderless (WindowStyle=None) window maximizes over the taskbar, so cap its size to the work
-    // area. The cap must come from the monitor the window is actually on -- using the primary monitor's
-    // size (as before) mis-sizes a maximize on a secondary screen of a different resolution/DPI.
-    private void ApplyMaximizeSizeCap()
-    {
-        if (_window.WindowState == WindowState.Maximized)
-        {
-            var handle = new System.Windows.Interop.WindowInteropHelper(_window).Handle;
-            var workingArea = Screen.FromHandle(handle).WorkingArea;
-            var dpiScaleX = 1.0;
-            var dpiScaleY = 1.0;
-            var src = PresentationSource.FromVisual(_window);
-            if (src?.CompositionTarget != null)
-            {
-                dpiScaleX = src.CompositionTarget.TransformFromDevice.M11;
-                dpiScaleY = src.CompositionTarget.TransformFromDevice.M22;
-            }
-            _window.MaxWidth = workingArea.Width * dpiScaleX;   // physical (system-DPI space) -> DIP
-            _window.MaxHeight = workingArea.Height * dpiScaleY;
-
-            // WPF maximizes a WindowStyle=None window to the monitor's full bounds (top-left included),
-            // not the work area -- MaxWidth/MaxHeight alone only shrinks it, leaving the shrunk edge
-            // (wherever the taskbar/excluded area is) as a visible gap unless Left/Top are pinned to the
-            // work area's own origin too.
-            _window.Left = workingArea.Left * dpiScaleX;
-            _window.Top = workingArea.Top * dpiScaleY;
-        }
-        else
-        {
-            _window.MaxWidth = double.PositiveInfinity;
-            _window.MaxHeight = double.PositiveInfinity;
         }
     }
 
