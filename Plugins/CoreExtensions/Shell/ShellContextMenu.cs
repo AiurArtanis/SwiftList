@@ -55,14 +55,34 @@ public class ShellMenuSession : IDisposable
     public const uint CMD_FIRST = 1;
     public const uint CMD_LAST = 30000;
 
+    // Bounds how long a caller waits on the shared STA worker below. A misbehaving shell extension can
+    // wedge that thread on a native call forever; without this, every caller -- including the startup
+    // warm-up's background task -- would block indefinitely right along with it.
+    private const int StaInvokeTimeoutMs = 5000;
+
     // Shell context-menu COM objects must live in a stable STA. Host them on a dedicated, long-lived
     // STA thread so the menu can be built OFF the UI thread (a slow shell extension no longer freezes
     // the whole actions list) while the COM objects stay valid for a later InvokeCommand.
     private static Dispatcher? _staDispatcher;
+    private static uint _staThreadId;
     private static readonly object _staLock = new();
 
     [DllImport("ole32.dll")]
     private static extern int OleInitialize(IntPtr pvReserved);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenThread(uint dwDesiredAccess, bool bInheritHandle, uint dwThreadId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool TerminateThread(IntPtr hThread, uint dwExitCode);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CloseHandle(IntPtr hObject);
+
+    private const uint ThreadTerminateAccess = 0x0001;
 
     private static Dispatcher StaDispatcher
     {
@@ -80,6 +100,7 @@ public class ShellMenuSession : IDisposable
                     // this; a bare worker thread does not, so initialize OLE here or those handlers load
                     // incompletely (missing/changing items on first open).
                     OleInitialize(IntPtr.Zero);
+                    _staThreadId = GetCurrentThreadId();
                     _staDispatcher = Dispatcher.CurrentDispatcher;
                     ready.Set();
                     Dispatcher.Run();
@@ -96,9 +117,31 @@ public class ShellMenuSession : IDisposable
         }
     }
 
+    // A shell extension stuck in a native call can wedge this thread forever; Thread.Abort/Interrupt
+    // don't reach native code, so the only way out is a hard OS-level kill. This intentionally skips
+    // cleanup (no stack unwind, no COM release) -- the thread and everything it was doing is discarded,
+    // and a fresh STA worker takes over for the next call.
+    private static void KillWedgedStaWorker(Dispatcher wedgedDispatcher)
+    {
+        lock (_staLock)
+        {
+            if (_staDispatcher != wedgedDispatcher) return; // already replaced by another caller's timeout
+
+            var threadId = _staThreadId;
+            _staDispatcher = null;
+            _staThreadId = 0;
+
+            if (threadId == 0) return;
+            var handle = OpenThread(ThreadTerminateAccess, false, threadId);
+            if (handle == IntPtr.Zero) return;
+            try { TerminateThread(handle, 1); }
+            finally { CloseHandle(handle); }
+        }
+    }
+
     private ShellMenuSession() { }
 
-    public static ShellMenuSession? Create(string path) => StaDispatcher.Invoke(() => CreateCore(path));
+    public static ShellMenuSession? Create(string path) => TryInvoke(() => CreateCore(path));
 
     private static ShellMenuSession? CreateCore(string path)
     {
@@ -149,7 +192,7 @@ public class ShellMenuSession : IDisposable
         }
     }
 
-    public List<ShellMenuItem> EnumerateItems(IntPtr hMenu = default) => StaDispatcher.Invoke(() => EnumerateItemsCore(hMenu));
+    public List<ShellMenuItem> EnumerateItems(IntPtr hMenu = default) => TryInvoke(() => EnumerateItemsCore(hMenu)) ?? new List<ShellMenuItem>();
 
     private List<ShellMenuItem> EnumerateItemsCore(IntPtr hMenu)
     {
@@ -241,7 +284,7 @@ public class ShellMenuSession : IDisposable
     }
 
 
-    public void InvokeCommand(uint commandId, IntPtr ownerHwnd) => StaDispatcher.Invoke(() => InvokeCommandCore(commandId, ownerHwnd));
+    public void InvokeCommand(uint commandId, IntPtr ownerHwnd) => TryInvoke(() => { InvokeCommandCore(commandId, ownerHwnd); return true; });
 
     private void InvokeCommandCore(uint commandId, IntPtr ownerHwnd)
     {
@@ -263,7 +306,19 @@ public class ShellMenuSession : IDisposable
         }
     }
 
-    public void Dispose() => StaDispatcher.Invoke(DisposeCore);
+    public void Dispose() => TryInvoke(() => { DisposeCore(); return true; });
+
+    private static T? TryInvoke<T>(Func<T> callback)
+    {
+        var dispatcher = StaDispatcher;
+        var operation = dispatcher.InvokeAsync(callback);
+        if (operation.Wait(TimeSpan.FromMilliseconds(StaInvokeTimeoutMs)) == DispatcherOperationStatus.Completed)
+            return operation.Result;
+
+        Logger.Log($"[ShellMenuSession] STA dispatcher call timed out after {StaInvokeTimeoutMs}ms; a shell extension appears hung. Killing the worker thread and starting a fresh one.", LogLevel.Error);
+        KillWedgedStaWorker(dispatcher);
+        return default;
+    }
 
     private void DisposeCore()
     {
