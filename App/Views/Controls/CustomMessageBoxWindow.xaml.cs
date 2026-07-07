@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using SwiftList.App.Services;
 
 namespace SwiftList.App.Views.Controls;
 
@@ -10,6 +11,9 @@ public partial class CustomMessageBoxWindow : Window
     public CustomMessageBoxWindow(string messageBoxText, string caption, MessageBoxButton button, MessageBoxImage icon)
     {
         InitializeComponent();
+
+        ThemedWindowIconHelper.Apply(this);
+        ThemedWindowIconHelper.Apply(TitleBarLogo, this);
 
         TxtTitle.Text = string.IsNullOrEmpty(caption) ? "SwiftList" : caption;
         TxtMessage.Text = messageBoxText;
