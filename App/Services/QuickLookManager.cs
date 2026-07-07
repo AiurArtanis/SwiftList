@@ -162,13 +162,6 @@ public class QuickLookManager
             var ownerTop = _owner.Top;
             var ownerWidth = _owner.ActualWidth;
 
-            // Fixed, user-configurable size (General settings page) rather than mirroring the owner's
-            // current ActualHeight -- the owner auto-sizes to however many results are actually showing,
-            // so a preview window that copied it would resize unpredictably every time the result count
-            // changed instead of staying the same size like a real preview pane.
-            _window.Width = UiMetrics.PreviewWindowWidth;
-            _window.Height = UiMetrics.PreviewWindowHeight;
-
             // Use the work area of the monitor the owner is actually on -- not the primary monitor --
             // so the right/left placement flip is correct when the search window sits on a secondary screen.
             var ownerHandle = new System.Windows.Interop.WindowInteropHelper(_owner).Handle;
@@ -176,14 +169,29 @@ public class QuickLookManager
             var dpiScale = 1.0;
             var src = PresentationSource.FromVisual(_owner);
             if (src?.CompositionTarget != null) dpiScale = src.CompositionTarget.TransformFromDevice.M11;
-            var screenRight = workingArea.Right * dpiScale; // physical (system-DPI space) -> DIP
+            // physical (system-DPI space) -> DIP
+            var screenLeft = workingArea.Left * dpiScale;
+            var screenTop = workingArea.Top * dpiScale;
+            var screenRight = workingArea.Right * dpiScale;
+            var screenBottom = workingArea.Bottom * dpiScale;
+
+            var previewInset = Views.QuickLook.QuickLookWindow.ContentMargin;
+
+            // Fixed, user-configurable size (General settings page) rather than mirroring the owner's
+            // current ActualHeight -- the owner auto-sizes to however many results are actually showing,
+            // so a preview window that copied it would resize unpredictably every time the result count
+            // changed instead of staying the same size like a real preview pane. Capped to the current
+            // monitor's own work area (plus the invisible shadow margin) -- repositioning alone can't
+            // keep a configured size fully on screen when that size is bigger than the monitor itself
+            // (e.g. the 1200px max preview height on a 768px-tall laptop display).
+            _window.Width = Math.Min(UiMetrics.PreviewWindowWidth, screenRight - screenLeft + 2 * previewInset);
+            _window.Height = Math.Min(UiMetrics.PreviewWindowHeight, screenBottom - screenTop + 2 * previewInset);
 
             // Both the owner and this preview window use AllowsTransparency with an invisible margin
             // around their actual visible card (room for a drop shadow) -- dock against those visible
             // edges, not the outer window bounds, or the gap ends up several times bigger than DesiredGap.
             const double DesiredGap = 10;
             var ownerInset = (_owner as IHasVisibleContentInset)?.VisibleContentInset ?? new Thickness(0);
-            var previewInset = Views.QuickLook.QuickLookWindow.ContentMargin;
 
             var dockedRight = true;
             var targetLeft = ownerLeft + ownerWidth - ownerInset.Right + DesiredGap - previewInset;
@@ -193,6 +201,18 @@ public class QuickLookManager
                 dockedRight = false;
             }
             var targetTop = ownerTop + ownerInset.Top - previewInset;
+
+            // Neither docking side, nor the owner's own vertical position, guarantees the preview's
+            // configured size (user-configurable, up to 900x1200) actually fits next to the owner on
+            // this monitor -- clamp against the monitor's work area on every edge so a large preview
+            // window always stays fully visible instead of running off-screen.
+            var minLeft = screenLeft - previewInset;
+            var maxLeft = screenRight - _window.Width + previewInset;
+            targetLeft = Math.Clamp(targetLeft, minLeft, Math.Max(minLeft, maxLeft));
+
+            var minTop = screenTop - previewInset;
+            var maxTop = screenBottom - _window.Height + previewInset;
+            targetTop = Math.Clamp(targetTop, minTop, Math.Max(minTop, maxTop));
 
             // Clear any still-running/held slide-in animation before touching Left directly -- WPF keeps
             // an animated dependency property pinned to the animation's value until the clock is cleared,
