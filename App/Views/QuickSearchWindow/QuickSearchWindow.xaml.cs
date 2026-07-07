@@ -102,6 +102,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         // Wire up event handlers to subcontrols
 
         BtnOpenMore.Click += BtnOpenMore_Click;
+        SearchBox.IconRightClicked += _controller.ResetPosition;
         LstResults.PreviewMouseLeftButtonUp += (s, e) => _resultExecutor.HandlePreviewMouseLeftButtonUp(e);
         LstResults.PreviewMouseRightButtonUp += (s, e) => _resultExecutor.HandlePreviewMouseRightButtonUp(e);
         LstResults.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler(OnResultsScrollChanged));

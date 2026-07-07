@@ -114,6 +114,18 @@ public class QuickSearchWindowController
         }
     }
 
+    // Wired to the search box's status icon right-click -- clears the saved position and immediately
+    // re-centers the window using the same fallback PositionWindow already falls back to when there's
+    // no saved position (or it's off-screen).
+    public void ResetPosition()
+    {
+        var settings = UserSettings.Load();
+        settings.SearchWindow.Left = null;
+        settings.SearchWindow.Top = null;
+        settings.Save();
+        PositionWindow();
+    }
+
     // Saved Left/Top are DIP; Screen work areas are physical (system-DPI space), so scale them to DIP
     // with the same factor before testing whether the given DIP anchor point falls on any monitor.
     private static bool IsAnchorOnAnyScreen(double anchorX, double anchorY, double dpiScaleX, double dpiScaleY)
@@ -154,6 +166,7 @@ public class QuickSearchWindowController
         _window.ViewModel.EnsureServiceMonitoringActive();
 
         _window.ViewModel.SearchQuery = initialQuery ?? string.Empty;
+        _window.ViewModel.RefreshEmptyState();
         _window.ViewModel.RefreshLayoutSettings();
         _window.UpdateLayout();
         _window.Topmost = false;

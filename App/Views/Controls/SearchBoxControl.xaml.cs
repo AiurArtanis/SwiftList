@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using UserControl = System.Windows.Controls.UserControl;
 using TextBox = System.Windows.Controls.TextBox;
 using TextBlock = System.Windows.Controls.TextBlock;
@@ -7,6 +8,13 @@ namespace SwiftList.App;
 
 public partial class SearchBoxControl : UserControl
 {
+    // Raised when either the left- or right-docked status icon is right-clicked. Purely a passthrough --
+    // this control doesn't know what "reset" means for whichever window hosts it (only the quick popup
+    // window currently wires this up, to reset its own saved position).
+    public event Action? IconRightClicked;
+
+    private void Icon_MouseRightButtonUp(object sender, MouseButtonEventArgs e) => IconRightClicked?.Invoke();
+
     static SearchBoxControl()
     {
         PaddingProperty.OverrideMetadata(typeof(SearchBoxControl),
