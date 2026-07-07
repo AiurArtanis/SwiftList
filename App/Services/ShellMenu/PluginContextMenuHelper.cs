@@ -2,7 +2,6 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using SwiftList.App.Helpers;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using MenuItem = System.Windows.Controls.MenuItem;
@@ -143,7 +142,9 @@ public static class PluginContextMenuHelper
 
             border.Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
-                BlurRadius = 12, ShadowDepth = 2, Direction = 270,
+                BlurRadius = 12,
+                ShadowDepth = 2,
+                Direction = 270,
                 Color = (System.Windows.Media.Color)Application.Current.FindResource("ShadowColor"),
                 Opacity = 0.08
             };
@@ -229,82 +230,7 @@ public static class PluginContextMenuHelper
             contextMenu.AddHandler(UIElement.PreviewMouseMoveEvent, mouseMoveHandler, true);
 
             KeyEventHandler? keyHandler = (s, ev) =>
-            {
-                if (_currentRightClickPopup == null || !_currentRightClickPopup.IsOpen || isHighlightedKey == null) return;
-
-                // Registered action hotkeys (Ctrl+C, Ctrl+Enter, ...) fire on the item while the flyout is
-                // open too; hideOnRun closes the whole quick-nav menu afterward.
-                if (Keyboard.Modifiers != ModifierKeys.None
-                    && HotkeyActionTrigger.TryExecute(ev, selection, view, MenuWindowType, hideOnRun: true))
-                {
-                    ev.Handled = true;
-                    return;
-                }
-
-                var state = PluginContextMenuBuilder.GetActiveMenuState(rightClickMenu, isHighlightedKey);
-                if (state.items.Count == 0) return;
-
-                Action<int> updateStateHighlight = (newIdx) =>
-                {
-                    if (state.highlightedIndex >= 0 && state.highlightedIndex < state.items.Count)
-                        state.items[state.highlightedIndex].SetValue(isHighlightedKey, false);
-                    if (newIdx >= 0 && newIdx < state.items.Count)
-                    {
-                        state.items[newIdx].SetValue(isHighlightedKey, true);
-                        state.items[newIdx].BringIntoView();
-                    }
-                };
-
-                if (ev.Key == Key.Down)
-                {
-                    ev.Handled = true;
-                    updateStateHighlight((state.highlightedIndex + 1) % state.items.Count);
-                }
-                else if (ev.Key == Key.Up)
-                {
-                    ev.Handled = true;
-                    updateStateHighlight((state.highlightedIndex - 1 + state.items.Count) % state.items.Count);
-                }
-                else if (ev.Key == Key.Right)
-                {
-                    var activeItem = (state.highlightedIndex >= 0 && state.highlightedIndex < state.items.Count) ? state.items[state.highlightedIndex] : null;
-                    if (activeItem != null && activeItem.HasItems)
-                    {
-                        ev.Handled = true;
-                        activeItem.IsSubmenuOpen = true;
-                        var subItems = activeItem.Items.OfType<MenuItem>().Where(mi => mi.IsEnabled).ToList();
-                        if (subItems.Count > 0) subItems[0].SetValue(isHighlightedKey, true);
-                    }
-                }
-                else if (ev.Key == Key.Left)
-                {
-                    if (state.parent is MenuItem parentMenuItem)
-                    {
-                        ev.Handled = true;
-                        parentMenuItem.IsSubmenuOpen = false;
-                    }
-                }
-                else if (ev.Key == Key.Escape)
-                {
-                    ev.Handled = true;
-                    _currentRightClickPopup.IsOpen = false;
-                }
-                else if ((ev.Key == Key.Enter || ev.Key == Key.Space) && state.highlightedIndex >= 0)
-                {
-                    var activeItem = state.items[state.highlightedIndex];
-                    ev.Handled = true;
-                    if (activeItem.HasItems)
-                    {
-                        activeItem.IsSubmenuOpen = true;
-                        var subItems = activeItem.Items.OfType<MenuItem>().Where(mi => mi.IsEnabled).ToList();
-                        if (subItems.Count > 0) subItems[0].SetValue(isHighlightedKey, true);
-                    }
-                    else
-                    {
-                        activeItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
-                    }
-                }
-            };
+                PluginContextMenuKeyHandler.Handle(ev, _currentRightClickPopup, isHighlightedKey, rightClickMenu, selection, view, MenuWindowType);
             contextMenu.AddHandler(UIElement.PreviewKeyDownEvent, keyHandler, true);
 
             RoutedEventHandler? rootMenuClosedHandler = null;

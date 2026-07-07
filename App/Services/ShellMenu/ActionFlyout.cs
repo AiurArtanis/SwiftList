@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using SwiftList.App.Helpers;
+using SwiftList.Core;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using MenuItem = System.Windows.Controls.MenuItem;
@@ -59,11 +61,11 @@ public static class ActionFlyout
                 if (buildTask.Wait(2000))
                     dynamicItems = buildTask.Result;
                 else
-                    Core.Logger.Log("[ActionFlyout] Shell menu build exceeded 2s; showing built-in actions only.", Core.LogLevel.Warn);
+                    Logger.Log("[ActionFlyout] Shell menu build exceeded 2s; showing built-in actions only.", LogLevel.Warn);
             }
             catch (Exception ex)
             {
-                Core.Logger.Log($"[ActionFlyout] Shell menu build failed: {ex.Message}", Core.LogLevel.Error);
+                Logger.Log($"[ActionFlyout] Shell menu build failed: {ex.Message}", LogLevel.Error);
             }
 
             Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -177,7 +179,18 @@ public static class ActionFlyout
             }
         }
 
-        switch (e.Key)
+        // The user's configurable next/previous-item hotkeys should move the highlight here too, not
+        // just the literal arrow keys -- otherwise a custom binding silently stops working once this
+        // flyout (or one of its nested submenus) is open.
+        var actualKey = WpfUiHelper.GetActualKey(e);
+        var hotkeys = UserSettings.Load().Hotkeys;
+        var effectiveKey = e.Key;
+        if (WpfUiHelper.MatchesHotkey(hotkeys.NextItemHotkey, Keyboard.Modifiers, actualKey))
+            effectiveKey = Key.Down;
+        else if (WpfUiHelper.MatchesHotkey(hotkeys.PreviousItemHotkey, Keyboard.Modifiers, actualKey))
+            effectiveKey = Key.Up;
+
+        switch (effectiveKey)
         {
             case Key.Down:
                 e.Handled = true;
@@ -188,17 +201,17 @@ public static class ActionFlyout
                 UpdateHighlight(state.highlightedIndex <= 0 ? state.items.Count - 1 : state.highlightedIndex - 1);
                 break;
             case Key.Right:
-            {
-                var active = state.highlightedIndex >= 0 && state.highlightedIndex < state.items.Count ? state.items[state.highlightedIndex] : null;
-                if (active != null && active.HasItems)
                 {
-                    e.Handled = true;
-                    active.IsSubmenuOpen = true;
-                    var first = active.Items.OfType<MenuItem>().FirstOrDefault(mi => mi.IsEnabled);
-                    first?.SetValue(isHighlightedKey, true);
+                    var active = state.highlightedIndex >= 0 && state.highlightedIndex < state.items.Count ? state.items[state.highlightedIndex] : null;
+                    if (active != null && active.HasItems)
+                    {
+                        e.Handled = true;
+                        active.IsSubmenuOpen = true;
+                        var first = active.Items.OfType<MenuItem>().FirstOrDefault(mi => mi.IsEnabled);
+                        first?.SetValue(isHighlightedKey, true);
+                    }
+                    break;
                 }
-                break;
-            }
             case Key.Left:
                 if (state.parent is MenuItem parentMenuItem)
                 {
