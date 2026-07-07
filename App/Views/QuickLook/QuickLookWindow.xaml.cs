@@ -9,6 +9,10 @@ namespace SwiftList.App.Views.QuickLook;
 
 public partial class QuickLookWindow : Window
 {
+    // Must match QuickLookWindow.xaml's WindowBorder Margin -- the invisible gap between the window's
+    // outer (transparent, drop-shadow) bounds and the actual visible card, on every side.
+    public const double ContentMargin = 12;
+
     private string? _currentFilePath;
     private readonly PreviewOverlay _overlay;
     private HwndHost? _pendingHost;

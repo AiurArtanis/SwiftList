@@ -32,6 +32,7 @@ public partial class InlineSearchWindow : Window, ISearchWindow
     public InlineSearchWindow(QuickSearchViewModel viewModel, InlineSearchManager manager)
     {
         InitializeComponent();
+        ThemedWindowIconHelper.Apply(this);
         _viewModel = viewModel;
         _manager = manager;
         this.DataContext = _viewModel;
@@ -150,52 +151,8 @@ public partial class InlineSearchWindow : Window, ISearchWindow
             _inputHandler.QueueResultsLayoutUpdate();
         };
 
-        // Wire scroll handler to update shortcut keys dynamically when scrolling
-
-        LstResults.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler((s, e) => _inputHandler.UpdateShortcutHints()));
-        LstResults.SelectionChanged += (s, e) =>
-        {
-            _inputHandler.SyncExplorerSelection();
-            _inputHandler.UpdatePathPreviewVisibility();
-        };
-        LstResults.MouseMove += (s, e) =>
-        {
-            var item = InlineSearchWindowInputHandler.FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
-            var result = item?.Content as AppSearchResult;
-            _inputHandler.SetHoveredResult(result);
-        };
-        LstResults.MouseLeave += (s, e) => _inputHandler.SetHoveredResult(null);
-
-        // Mouse actions on results list: single click to execute search result
-
-        LstResults.PreviewMouseLeftButtonUp += (s, e) =>
-        {
-            var item = InlineSearchWindowInputHandler.FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
-            if (item != null && item.Content is AppSearchResult result)
-            {
-                e.Handled = true;
-                var asAdmin = Keyboard.Modifiers == ModifierKeys.Control;
-                InlineSearchNavigator.ExecuteSearchResult(this, result, asAdmin);
-            }
-
-        };
-
-        LstResults.PreviewMouseRightButtonUp += (s, e) =>
-        {
-            var item = InlineSearchWindowInputHandler.FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
-            if (item != null && item.Content is AppSearchResult result)
-            {
-                e.Handled = true;
-                LstResults.SelectedItem = result;
-                _menuPresenter.EnterActionsMode(result);
-            }
-
-        };
-
-        // Actions list double-click and click wiring
-
-        LstActions.PreviewMouseLeftButtonUp += _menuPresenter.HandleActionsPreviewMouseLeftButtonUp;
-
+        // Wire up results/actions list scroll, selection, and mouse-click handlers.
+        InlineSearchWindowResultsWiring.Attach(this);
     }
 
     // ==========================================

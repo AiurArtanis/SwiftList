@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings;
 
 namespace SwiftList.App;
@@ -12,6 +13,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow()
     {
         InitializeComponent();
+        ThemedWindowIconHelper.Apply(this);
         var vm = new SettingsViewModel();
         DataContext = vm;
         Loaded += (_, _) => { if (LstSections.SelectedItem == null) LstSections.SelectedIndex = 0; };

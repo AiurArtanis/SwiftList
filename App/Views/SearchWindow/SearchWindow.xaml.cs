@@ -11,12 +11,15 @@ using Grid = System.Windows.Controls.Grid;
 using SwiftList.App.ViewModels.Search;
 namespace SwiftList.App;
 
-public partial class SearchWindow : Window, ISearchWindow
+public partial class SearchWindow : Window, ISearchWindow, IHasVisibleContentInset
 {
     private readonly SearchViewModel _viewModel;
     private readonly SearchWindowChromeHandler _chromeHandler;
     private readonly SearchWindowInputHandler _inputHandler;
     private readonly ShellMenuPresenter _menuPresenter;
+
+    // Must match SearchWindow.xaml's MainBorder Margin.
+    public Thickness VisibleContentInset => new(8);
 
     public SearchWindow(string initialQuery = "")
     {

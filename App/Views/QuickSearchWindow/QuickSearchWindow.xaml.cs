@@ -16,7 +16,7 @@ using SwiftList.App.ViewModels.Search;
 using SwiftList.App.Views.QuickSearchWindow.Helpers;
 namespace SwiftList.App;
 
-public partial class QuickSearchWindow : Window, ISearchWindow
+public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleContentInset
 {
     private readonly QuickSearchViewModel _viewModel;
     private TrayIconService? _trayService;
@@ -25,7 +25,11 @@ public partial class QuickSearchWindow : Window, ISearchWindow
     private readonly QuickSearchWindowController _controller;
     private readonly QuickSearchWindowInputHandler _inputHandler;
     private readonly QuickSearchWindowLayoutManager _layoutManager;
+    private readonly QuickSearchWindowResultExecutor _resultExecutor;
     internal QuickSearchKeywordHistoryController KeywordHistoryController { get; private set; } = null!;
+
+    // Must match QuickSearchWindow.xaml's root Border Margin ("24,40,24,24").
+    public Thickness VisibleContentInset => new(24, 40, 24, 24);
 
     public QuickSearchWindow()
     {
@@ -35,6 +39,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow
         _controller = new QuickSearchWindowController(this);
         _inputHandler = new QuickSearchWindowInputHandler(this);
         _layoutManager = new QuickSearchWindowLayoutManager(this);
+        _resultExecutor = new QuickSearchWindowResultExecutor(this);
         InitializeChildControls();
     }
 
@@ -97,8 +102,8 @@ public partial class QuickSearchWindow : Window, ISearchWindow
         // Wire up event handlers to subcontrols
 
         BtnOpenMore.Click += BtnOpenMore_Click;
-        LstResults.PreviewMouseLeftButtonUp += LstResults_PreviewMouseLeftButtonUp;
-        LstResults.PreviewMouseRightButtonUp += LstResults_PreviewMouseRightButtonUp;
+        LstResults.PreviewMouseLeftButtonUp += (s, e) => _resultExecutor.HandlePreviewMouseLeftButtonUp(e);
+        LstResults.PreviewMouseRightButtonUp += (s, e) => _resultExecutor.HandlePreviewMouseRightButtonUp(e);
         LstResults.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler(OnResultsScrollChanged));
         LstActions.PreviewMouseLeftButtonUp += _menuPresenter.HandleActionsPreviewMouseLeftButtonUp;
 
@@ -231,28 +236,6 @@ public partial class QuickSearchWindow : Window, ISearchWindow
         FileExecutor.OpenFileOrFolder("__SHOW_MORE__", queryText, HideWindowNoRestore);
     }
 
-    private void LstResults_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        var item = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
-        if (item != null && item.Content is AppSearchResult result)
-        {
-            e.Handled = true;
-            var asAdmin = Keyboard.Modifiers == ModifierKeys.Control;
-            ExecuteSearchResult(result, asAdmin);
-        }
-    }
-
-    private void LstResults_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        var item = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
-        if (item != null && item.Content is AppSearchResult result)
-        {
-            e.Handled = true;
-            LstResults.SelectedItem = result;
-            _menuPresenter?.EnterActionsMode(result);
-        }
-    }
-
     private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
     {
         while (child != null)
@@ -270,51 +253,6 @@ public partial class QuickSearchWindow : Window, ISearchWindow
         }
 
         return null;
-    }
-
-    private void ExecuteSearchResult(AppSearchResult result, bool asAdmin = false)
-    {
-        if (result.IsSearchSectionHeader)
-            return;
-        if (!result.IsPluginSearchAction && !result.IsInstantResult)
-        {
-            SearchHistoryStore.Record(result.FullPath);
-        }
-
-        if (result.IsPluginSearchAction)
-        {
-            HideWindow();
-            if (PluginManager.Instance.TryExecuteSearchAction(result, this, asAdmin))
-            {
-            }
-
-            return;
-        }
-
-        if (PluginManager.Instance.TryExecuteSearchAction(result, this, asAdmin))
-        {
-            HideWindow();
-            return;
-        }
-
-        var currentQuery = TxtSearch.Text;
-        if (result.FullPath == "__SHOW_MORE__")
-        {
-            HideWindowNoRestore();
-            if (asAdmin)
-                FileExecutor.OpenFileOrFolderAsAdmin(result.FullPath, currentQuery, HideWindowNoRestore);
-            else
-                FileExecutor.OpenFileOrFolder(result.FullPath, currentQuery, HideWindowNoRestore);
-        }
-
-        else
-        {
-            HideWindow();
-            if (asAdmin)
-                FileExecutor.OpenFileOrFolderAsAdmin(result.FullPath, currentQuery, HideWindow);
-            else
-                FileExecutor.OpenFileOrFolder(result.FullPath, currentQuery, HideWindow);
-        }
     }
 
     protected override void OnClosed(EventArgs e)

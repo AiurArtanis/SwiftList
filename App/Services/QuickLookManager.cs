@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Media.Animation;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
 namespace SwiftList.App.Services;
@@ -86,7 +87,11 @@ public class QuickLookManager
 
         _window.SetTarget(path);
 
-        if (!_window.IsVisible)
+        // Only slide in on the transition to visible -- a preview session starting fresh -- not on every
+        // reposition while it's already open (the owner moving/resizing would otherwise re-trigger the
+        // slide constantly instead of just tracking along).
+        var isFirstShow = !_window.IsVisible;
+        if (isFirstShow)
         {
             _window.Owner = owner;
             _window.Show();
@@ -97,7 +102,7 @@ public class QuickLookManager
             owner.Deactivated += Owner_Deactivated;
         }
 
-        PositionWindow();
+        PositionWindow(animate: isFirstShow);
     }
 
     private void DetachOwner()
@@ -147,7 +152,7 @@ public class QuickLookManager
             (provider as IPreviewSessionAware)?.EndPreviewSession();
     }
 
-    private void PositionWindow()
+    private void PositionWindow(bool animate = false)
     {
         if (_window == null || _owner == null || !_window.IsVisible) return;
 
@@ -173,14 +178,46 @@ public class QuickLookManager
             if (src?.CompositionTarget != null) dpiScale = src.CompositionTarget.TransformFromDevice.M11;
             var screenRight = workingArea.Right * dpiScale; // physical (system-DPI space) -> DIP
 
-            var targetLeft = ownerLeft + ownerWidth + 8;
+            // Both the owner and this preview window use AllowsTransparency with an invisible margin
+            // around their actual visible card (room for a drop shadow) -- dock against those visible
+            // edges, not the outer window bounds, or the gap ends up several times bigger than DesiredGap.
+            const double DesiredGap = 10;
+            var ownerInset = (_owner as IHasVisibleContentInset)?.VisibleContentInset ?? new Thickness(0);
+            var previewInset = Views.QuickLook.QuickLookWindow.ContentMargin;
+
+            var dockedRight = true;
+            var targetLeft = ownerLeft + ownerWidth - ownerInset.Right + DesiredGap - previewInset;
             if (targetLeft + _window.Width > screenRight)
             {
-                targetLeft = ownerLeft - _window.Width - 8;
+                targetLeft = ownerLeft + ownerInset.Left - DesiredGap - _window.Width + previewInset;
+                dockedRight = false;
             }
+            var targetTop = ownerTop + ownerInset.Top - previewInset;
 
-            _window.Left = targetLeft;
-            _window.Top = ownerTop;
+            // Clear any still-running/held slide-in animation before touching Left directly -- WPF keeps
+            // an animated dependency property pinned to the animation's value until the clock is cleared,
+            // so a bare assignment here would silently be ignored while one is active.
+            _window.BeginAnimation(Window.LeftProperty, null);
+            _window.Top = targetTop;
+
+            if (animate)
+            {
+                // Slide out like a drawer: start just short of the resting spot, on the side it docked
+                // to, and ease out to it -- rather than just snapping into place.
+                const double SlideDistance = 40;
+                var startLeft = dockedRight ? targetLeft - SlideDistance : targetLeft + SlideDistance;
+                _window.Left = startLeft;
+
+                var slideIn = new DoubleAnimation(startLeft, targetLeft, TimeSpan.FromMilliseconds(180))
+                {
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                };
+                _window.BeginAnimation(Window.LeftProperty, slideIn);
+            }
+            else
+            {
+                _window.Left = targetLeft;
+            }
         }
         catch { }
     }
