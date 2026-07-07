@@ -59,6 +59,7 @@
   "Service_LogTab_App": "Main App",
   "Service_LogTab_Hook": "Hook",
   "Service_LogFilter_All": "All",
+  "Service_LogSearchPlaceholder": "Search logs...",
   "Service_GettingStatus": "Retrieving service status...",
   "Service_ErrorTitle": "Unable to connect to background service",
   "Service_ErrorStats": "Background service is not running or not installed. Please click the button to install and start it.",

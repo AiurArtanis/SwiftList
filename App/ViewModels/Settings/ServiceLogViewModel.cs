@@ -70,6 +70,17 @@ public class ServiceLogViewModel : ViewModelBase, IDisposable
     private readonly LabeledOption[] _levelFilterOptions;
     public IReadOnlyList<LabeledOption> LevelFilterOptions => _levelFilterOptions;
 
+    private string _searchText = string.Empty;
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (SetProperty(ref _searchText, value))
+                ApplyFilter();
+        }
+    }
+
     private ICommand? _selectTabCommand;
     public ICommand SelectTabCommand => _selectTabCommand ??= new RelayCommand<string>(tab => SelectedTab = tab);
 
@@ -149,9 +160,11 @@ public class ServiceLogViewModel : ViewModelBase, IDisposable
 
     private void ApplyFilter()
     {
-        var filtered = LevelFilter == "All"
-            ? _allLines
-            : _allLines.Where(l => l.Level.ToString() == LevelFilter);
+        IEnumerable<LogLineViewModel> filtered = _allLines;
+        if (LevelFilter != "All")
+            filtered = filtered.Where(l => l.Level.ToString() == LevelFilter);
+        if (!string.IsNullOrWhiteSpace(SearchText))
+            filtered = filtered.Where(l => l.Text.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
         Lines.ReplaceRange(filtered);
     }
 

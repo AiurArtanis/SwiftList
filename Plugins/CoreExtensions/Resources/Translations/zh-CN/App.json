@@ -59,6 +59,7 @@
   "Service_LogTab_App": "主程序",
   "Service_LogTab_Hook": "钩子",
   "Service_LogFilter_All": "全部",
+  "Service_LogSearchPlaceholder": "搜索日志...",
   "Service_GettingStatus": "正在获取服务状态...",
   "Service_ErrorTitle": "无法连接至后台服务",
   "Service_ErrorStats": "后台服务未运行或未安装，请点击右侧按钮进行安装与启动。",

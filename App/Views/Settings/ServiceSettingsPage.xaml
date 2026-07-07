@@ -119,6 +119,7 @@
         <!-- Log view: Service/App/Hook, mirroring the Hotkeys page's tab pattern -->
         <Grid Grid.Row="2" Margin="0,4,0,10">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
@@ -205,12 +206,38 @@
                     </StackPanel>
                 </StackPanel>
 
-                <ComboBox Grid.Column="1" Style="{StaticResource SettingsComboBox}" Width="90" Margin="0,0,8,0" VerticalAlignment="Top"
+                <Border Grid.Column="1" Height="34" CornerRadius="6" Margin="16,0,8,0" VerticalAlignment="Top"
+                        Background="{DynamicResource ControlBackground}"
+                        BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1">
+                    <Grid>
+                        <TextBox Background="Transparent" BorderThickness="0" FontSize="12"
+                                 Foreground="{DynamicResource TextPrimary}"
+                                 CaretBrush="{DynamicResource TextPrimary}"
+                                 Padding="10,0" VerticalContentAlignment="Center"
+                                 Text="{Binding Log.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_LogSearchPlaceholder]}"
+                                   IsHitTestVisible="False" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondary}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Log.SearchText}" Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+
+                <ComboBox Grid.Column="2" Style="{StaticResource SettingsComboBox}" Width="90" Margin="0,0,8,0" VerticalAlignment="Top"
                           ItemsSource="{Binding Log.LevelFilterOptions}"
                           DisplayMemberPath="Label"
                           SelectedValuePath="Value"
                           SelectedValue="{Binding Log.LevelFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                <Button Grid.Column="2" Style="{StaticResource SettingsButton}" VerticalAlignment="Top"
+                <Button Grid.Column="3" Style="{StaticResource SettingsButton}" VerticalAlignment="Top"
                         Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_ClearLog]}"
                         Command="{Binding Log.ClearCommand}"/>
         </Grid>
