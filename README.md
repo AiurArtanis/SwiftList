@@ -7,7 +7,7 @@ launcher for Windows, built on **.NET 10 (WPF)**. It's a modern, open-source alt
 **Everything** and **Listary** — indexing local drives via the NTFS **USN Journal** and MFT for
 near-instant, low-resource search.
 
-📖 **[Full documentation, User Manual & Developer Manual](https://swiftlist.github.io/)** ([中文](https://swiftlist.github.io/zh-CN/))
+📖 **[Full documentation, User Manual & Developer Manual](https://swiftlist.github.io/)**
 
 ## Highlights
 

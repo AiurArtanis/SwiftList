@@ -6,7 +6,7 @@ SwiftList 是一款基于 **.NET 10 (WPF)** 打造的超轻量、极速、高度
 动工具，是 **Everything** 和 **Listary** 的现代化开源替代——通过读取 NTFS **USN 日志** 与 MFT 直
 接索引本地磁盘，实现毫秒级、低资源占用的检索体验。
 
-📖 [完整文档、用户手册与开发手册](https://swiftlist.github.io/zh-CN/)（[English](https://swiftlist.github.io/)）
+📖 [完整文档、用户手册与开发手册](https://swiftlist.github.io/zh-CN/)
 
 ## 核心特性
 
