@@ -4,30 +4,6 @@ using SwiftList.App.Services;
 
 namespace SwiftList.App.ViewModels.Settings;
 
-// A mutable, stable-identity option: the ComboBox binds its ItemsSource once and never swaps it,
-// so on a language change only Label is updated in place (via PropertyChanged) rather than rebuilding
-// the whole list -- rebuilding it transiently nulls the bound SelectedValue while WPF regenerates items.
-public sealed class RefreshModeOption : ViewModelBase
-{
-    private string _label;
-
-    public RefreshModeOption(string value, string label)
-    {
-        Value = value;
-        _label = label;
-    }
-
-    public string Value { get; }
-
-    public string Label
-    {
-        get => _label;
-        set => SetProperty(ref _label, value);
-    }
-
-    public override string ToString() => Label;
-}
-
 internal static class NetworkDriveSettingsHelper
 {
     public static string GetStateText(ResolvedNetworkDrive? drive, NetworkIndexStatus? indexStatus)

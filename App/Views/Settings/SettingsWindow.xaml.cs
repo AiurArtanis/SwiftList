@@ -14,6 +14,7 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent();
         ThemedWindowIconHelper.Apply(this);
+        ThemedWindowIconHelper.Apply(TitleBarLogo, this);
         var vm = new SettingsViewModel();
         DataContext = vm;
         Loaded += (_, _) => { if (LstSections.SelectedItem == null) LstSections.SelectedIndex = 0; };

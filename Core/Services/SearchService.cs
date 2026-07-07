@@ -200,6 +200,14 @@ public class SearchService : IDisposable
         await SendPipeCommandAsync(new SearchRequestMessage { Id = requestId }, token).ConfigureAwait(false);
     }
 
+    // service.log lives under the service's own (elevated/system) data directory, which the App
+    // process cannot write to directly -- ask the service to truncate its own log file instead.
+    public async Task<bool> ClearServiceLogAsync(CancellationToken token = default)
+    {
+        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.ClearServiceLog }, token).ConfigureAwait(false);
+        return resp.Kind == PipeResponseKind.Ok;
+    }
+
     public async Task<bool> RebuildDriveIndexAsync(string drive, CancellationToken token = default)
     {
         var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.RebuildDrive, Drive = drive }, token).ConfigureAwait(false);

@@ -1,6 +1,4 @@
 using System.IO.Pipes;
-using System.Security.AccessControl;
-using System.Security.Principal;
 
 namespace SwiftList.Core.Services;
 
@@ -29,32 +27,7 @@ public sealed class UsnServicePipeServer : IDisposable
     private async Task PipeServerLoop(CancellationToken token)
     {
         Logger.Log("[PipeServer] Pipe server loop started.", LogLevel.Debug);
-        PipeSecurity? pipeSecurity = null;
-
-        try
-        {
-            pipeSecurity = new PipeSecurity();
-            var everyoneSid = new SecurityIdentifier(WellKnownSidType.WorldSid, null);
-
-            pipeSecurity.AddAccessRule(new PipeAccessRule(
-                everyoneSid,
-                PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
-                AccessControlType.Allow
-            ));
-
-            var authenticatedUsersSid = new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null);
-
-            pipeSecurity.AddAccessRule(new PipeAccessRule(
-                authenticatedUsersSid,
-                PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
-                AccessControlType.Allow
-            ));
-            Logger.Log("[PipeServer] PipeSecurity successfully configured.", LogLevel.Debug);
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[PipeServer] Failed to create PipeSecurity: {ex.Message}", LogLevel.Error);
-        }
+        var pipeSecurity = PipeSecurityFactory.Create();
 
         // Pre-create 2 parallel listener loops to serve as a connection pool
         var listeners = Enumerable.Range(0, 2)
@@ -264,6 +237,10 @@ public sealed class UsnServicePipeServer : IDisposable
                     var paths = msg.FilePaths ?? new List<string>();
                     var metadata = _engine?.GetFileMetadataBatch(paths) ?? new Dictionary<string, FileMetadataEntry>();
                     return new PipeResponse { Kind = PipeResponseKind.FileMetadata, FileMetadata = metadata };
+
+                case SearchRequestId.ClearServiceLog:
+                    Logger.ClearCurrentLog();
+                    return new PipeResponse { Kind = PipeResponseKind.Ok };
             }
 
             return new PipeResponse { Kind = PipeResponseKind.Error, Message = "Unknown command" };

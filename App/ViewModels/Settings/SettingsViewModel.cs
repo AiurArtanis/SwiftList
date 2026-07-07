@@ -25,6 +25,7 @@ public class SettingsViewModel : ViewModelBase
     public SettingsViewModel()
     {
         Service = new ServiceSettingsViewModel(_searchService, RefreshLists);
+        Log = new ServiceLogViewModel(_searchService);
 
         LocalDrive = new LocalDriveSettingsViewModel(_searchService, RefreshLists);
 
@@ -54,6 +55,7 @@ public class SettingsViewModel : ViewModelBase
     private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e) => ApplyUiState();
 
     public ServiceSettingsViewModel Service { get; }
+    public ServiceLogViewModel Log { get; }
     public LocalDriveSettingsViewModel LocalDrive { get; }
     public NetworkDriveSettingsViewModel NetworkDrive { get; }
     public GeneralSettingsViewModel General { get; }
@@ -81,6 +83,7 @@ public class SettingsViewModel : ViewModelBase
         _statusSubscriptionCts.Cancel();
         UserNetworkDriveSearch.StatusesChanged -= OnNetworkStatusesChanged;
         TranslationManager.Instance.PropertyChanged -= OnLanguageChanged;
+        Log.Dispose();
     }
 
     public void Refresh() => RefreshLists();
@@ -181,7 +184,7 @@ public class SettingsViewModel : ViewModelBase
             {
                 _searchService.RefreshNetworkIndexes();
             }
-            else if (NetworkSettingsChanged(previousNetworkDrives, newNetworkDrives) || WslSettingsChanged(previousWslDrives, newWslDrives))
+            else if (SettingsApplyHelpers.NetworkSettingsChanged(previousNetworkDrives, newNetworkDrives) || SettingsApplyHelpers.WslSettingsChanged(previousWslDrives, newWslDrives))
             {
                 await NetworkDriveApplyHelper.ApplyChangesAsync(_searchService, previousNetworkDrives, newNetworkDrives);
                 foreach (var wsl in newWslDrives)
@@ -195,7 +198,7 @@ public class SettingsViewModel : ViewModelBase
             }
 
             if (exclusionsChanged)
-                await RebuildScanBasedLocalDrivesAsync(localDriveSnapshots, machineSettings.LocalDrives);
+                await SettingsApplyHelpers.RebuildScanBasedLocalDrivesAsync(_searchService, localDriveSnapshots, machineSettings.LocalDrives);
 
             if (aliasProviderEnabled)
                 await _searchService.InitializeOrLoadIndexAsync(false);
@@ -271,57 +274,9 @@ public class SettingsViewModel : ViewModelBase
         // panel controls.
         var isBusy = isServiceLifecycleBusy || isLocalDriveBusy || isNetworkBusy;
         IsServiceReady = isServiceReady;
+        Log.IsServiceReady = isServiceReady;
         IsBusy = isBusy;
         CanApply = !isBusy;
     }
 
-    private async Task RebuildScanBasedLocalDrivesAsync(IReadOnlyList<LocalDriveSnapshot> drives, IReadOnlyList<string> enabledLocalDriveIds)
-    {
-        var enabled = enabledLocalDriveIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var drive in drives.Where(d => d.IsEnabled && (enabled.Count == 0 || enabled.Contains(d.Id))))
-        {
-            var fs = VolumeHelper.GetFileSystemType(drive.Drive);
-            if (!fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) &&
-                await _searchService.RebuildDriveIndexAsync(drive.Drive))
-                await WaitForLocalDriveRebuildAsync(drive.Drive);
-        }
-    }
-
-    private async Task WaitForLocalDriveRebuildAsync(string drive)
-    {
-        for (var i = 0; i < 120; i++)
-        {
-            await Task.Delay(500);
-            var status = await _searchService.GetStatusAsync();
-            var item = status.Drives.FirstOrDefault(d => d.Drive.Equals(drive, StringComparison.OrdinalIgnoreCase));
-            if (item?.State is not ("pending" or "indexing"))
-                return;
-        }
-    }
-
-    private static bool NetworkSettingsChanged(IReadOnlyList<NetworkDriveSetting> oldSettings, IReadOnlyList<NetworkDriveSetting> newSettings)
-    {
-        var oldOrdered = oldSettings
-            .OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
-            .Select(d => $"{d.Id}|{d.RefreshMode}");
-
-        var newOrdered = newSettings
-            .OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
-            .Select(d => $"{d.Id}|{d.RefreshMode}");
-        return !oldOrdered.SequenceEqual(newOrdered, StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static bool WslSettingsChanged(IReadOnlyList<WslSetting> oldSettings, IReadOnlyList<WslSetting> newSettings)
-    {
-        var oldOrdered = oldSettings
-            .OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
-            .Select(d => $"{d.Id}|{d.RefreshMode}");
-
-        var newOrdered = newSettings
-            .OrderBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
-            .Select(d => $"{d.Id}|{d.RefreshMode}");
-        return !oldOrdered.SequenceEqual(newOrdered, StringComparer.OrdinalIgnoreCase);
-    }
-
-    private sealed record LocalDriveSnapshot(string Drive, string Id, bool IsEnabled);
 }

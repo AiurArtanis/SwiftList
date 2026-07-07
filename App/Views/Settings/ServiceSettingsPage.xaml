@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:services="clr-namespace:SwiftList.App.Services"
-             mc:Ignorable="d" 
+             mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="700">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -16,14 +16,23 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel>
-            <TextBlock Style="{StaticResource SettingsSectionTitle}" 
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*" MinHeight="140"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Style="{StaticResource SettingsSectionTitle}"
                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_Title]}"/>
-            <TextBlock Style="{StaticResource SettingsHintText}" 
+            <TextBlock Style="{StaticResource SettingsHintText}"
                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_Hint]}"/>
-            
-            <Border Style="{StaticResource SettingsCard}" Margin="0,16,0,16" Padding="16">
+        </StackPanel>
+
+            <Border Grid.Row="1" Style="{StaticResource SettingsCard}" Margin="0,16,0,16" Padding="16">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -107,42 +116,128 @@
                 </Grid>
             </Border>
 
-            <!-- Service Architecture Info Card -->
-            <Border Style="{StaticResource SettingsCard}">
-                <StackPanel>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_AboutTitle]}" 
-                               FontWeight="SemiBold" FontSize="13"  Margin="0,0,0,10"/>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_AboutDesc]}" 
-                               FontSize="12" Foreground="{DynamicResource TextSecondary2}" LineHeight="18" TextWrapping="Wrap" Margin="0,0,0,12"/>
-                    
-                    <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SeparatorBrush}" Margin="0,4,0,12"/>
-                    
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_AdvTitle]}" 
-                               FontWeight="SemiBold" FontSize="12"  Margin="0,0,0,8"/>
-                    
-                    <StackPanel Orientation="Horizontal" Margin="0,5">
-                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource SuccessBadgeText}" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_Adv1Title]}" 
-                                   FontSize="12" Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_Adv1Desc]}" 
-                                   FontSize="11" Foreground="{DynamicResource TextSecondary2}" VerticalAlignment="Center"/>
+        <!-- Log view: Service/App/Hook, mirroring the Hotkeys page's tab pattern -->
+        <Grid Grid.Row="2" Margin="0,4,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <StackPanel Margin="0,0,28,0">
+                        <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_LogTab_Service]}"
+                                Command="{Binding Log.SelectTabCommand}" CommandParameter="Service">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Log.SelectedTab}" Value="Service">
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Border>
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Log.SelectedTab}" Value="Service">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                        </Border>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,5">
-                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource SuccessBadgeText}" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_Adv2Title]}" 
-                                   FontSize="12" Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_Adv2Desc]}" 
-                                   FontSize="11" Foreground="{DynamicResource TextSecondary2}" VerticalAlignment="Center"/>
+                    <StackPanel Margin="0,0,28,0">
+                        <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_LogTab_App]}"
+                                Command="{Binding Log.SelectTabCommand}" CommandParameter="App">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Log.SelectedTab}" Value="App">
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Border>
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Log.SelectedTab}" Value="App">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                        </Border>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,5">
-                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource SuccessBadgeText}" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_Adv3Title]}" 
-                                   FontSize="12" Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_Adv3Desc]}" 
-                                   FontSize="11" Foreground="{DynamicResource TextSecondary2}" VerticalAlignment="Center"/>
+                    <StackPanel>
+                        <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_LogTab_Hook]}"
+                                Command="{Binding Log.SelectTabCommand}" CommandParameter="Hook">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Log.SelectedTab}" Value="Hook">
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Border>
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Log.SelectedTab}" Value="Hook">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                        </Border>
                     </StackPanel>
                 </StackPanel>
-            </Border>
-        </StackPanel>
-    </ScrollViewer>
+
+                <ComboBox Grid.Column="1" Style="{StaticResource SettingsComboBox}" Width="90" Margin="0,0,8,0" VerticalAlignment="Top"
+                          ItemsSource="{Binding Log.LevelFilterOptions}"
+                          DisplayMemberPath="Label"
+                          SelectedValuePath="Value"
+                          SelectedValue="{Binding Log.LevelFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <Button Grid.Column="2" Style="{StaticResource SettingsButton}" VerticalAlignment="Top"
+                        Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_ClearLog]}"
+                        Command="{Binding Log.ClearCommand}"/>
+        </Grid>
+        <Border Grid.Row="3" Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,10"/>
+
+        <Border Grid.Row="4" Style="{StaticResource SettingsCard}" Padding="0">
+            <!-- RichTextBox instead of an ItemsControl/ListBox: read-only but still a real text-editing
+                 control, so character-level selection and Ctrl+C copy work natively, no hand-rolled
+                 selection/clipboard code needed, while a colored Run per line still gets the by-level
+                 coloring an ItemsControl of TextBlocks would give. The FlowDocument itself is rebuilt in
+                 code-behind whenever Log.Lines changes (RichTextBox has no ItemsSource to bind to). -->
+            <RichTextBox x:Name="LogTextBox" IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                         Background="Transparent" BorderThickness="0" Padding="12,10"
+                         FontFamily="Consolas" FontSize="11"
+                         HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                         PreviewMouseWheel="LogTextBox_PreviewMouseWheel">
+                <!-- The app's TextBox style gives every plain TextBox this same themed context menu
+                     (Styles/Controls.xaml); it doesn't apply to RichTextBox (a different control type),
+                     so without this override it falls back to the unstyled native OS context menu. -->
+                <RichTextBox.ContextMenu>
+                    <ContextMenu Style="{DynamicResource {x:Type ContextMenu}}">
+                        <MenuItem Style="{DynamicResource {x:Type MenuItem}}" Command="ApplicationCommands.Cut"/>
+                        <MenuItem Style="{DynamicResource {x:Type MenuItem}}" Command="ApplicationCommands.Copy"/>
+                        <MenuItem Style="{DynamicResource {x:Type MenuItem}}" Command="ApplicationCommands.Paste"/>
+                    </ContextMenu>
+                </RichTextBox.ContextMenu>
+            </RichTextBox>
+        </Border>
+    </Grid>
 </UserControl>

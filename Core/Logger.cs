@@ -107,4 +107,25 @@ public static class Logger
             }
         }
     }
+
+    /// <summary>
+    /// Truncates the current process's own log file. Only the process that owns a given log file is
+    /// guaranteed permission to write it -- e.g. service.log lives under the shared (ProgramData)
+    /// directory the service runs with elevated/system rights over, which the App process cannot
+    /// write to directly, so clearing it must be requested of the owning process via IPC instead.
+    /// </summary>
+    public static void ClearCurrentLog()
+    {
+        lock (LogLock)
+        {
+            try
+            {
+                File.WriteAllText(_logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Log cleared\n");
+            }
+            catch
+            {
+                // Ignore
+            }
+        }
+    }
 }

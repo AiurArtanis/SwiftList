@@ -3,22 +3,28 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Application = System.Windows.Application;
 using Color = System.Windows.Media.Color;
+using Image = System.Windows.Controls.Image;
 
 namespace SwiftList.App.Services;
 
 /// <summary>
-/// Sets a window's title-bar icon to a monochrome, theme-colored render of tray.png -- the same
-/// silhouette source TrayIconService recolors for the system tray icon, just recolored here as a
-/// plain WPF BitmapSource (Window.Icon accepts any ImageSource, so no .ico conversion is needed).
+/// Sets a window's title-bar icon (native Window.Icon, and/or an in-window logo Image) to a
+/// monochrome, theme-colored render of tray.png -- the same silhouette source TrayIconService
+/// recolors for the system tray icon, just recolored here as a plain WPF BitmapSource (both
+/// Window.Icon and Image.Source accept any ImageSource, so no .ico conversion is needed).
 /// Re-renders whenever the active theme changes.
 /// </summary>
 public static class ThemedWindowIconHelper
 {
     private static readonly Uri SourceUri = new("pack://application:,,,/SwiftList.App;component/tray.png", UriKind.Absolute);
 
-    public static void Apply(Window window)
+    public static void Apply(Window window) => ApplyCore(bmp => window.Icon = bmp, window);
+
+    public static void Apply(Image image, Window window) => ApplyCore(bmp => image.Source = bmp, window);
+
+    private static void ApplyCore(Action<BitmapSource> setIcon, Window window)
     {
-        void Update() => window.Icon = Render();
+        void Update() => setIcon(Render());
         Update();
 
         void OnThemeChanged() => window.Dispatcher.Invoke(Update);

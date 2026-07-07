@@ -13,7 +13,8 @@ public enum SearchRequestId : byte
     RebuildDrive = 7,
     DeleteDriveIndex = 8,
     Initialize = 10,
-    GetFileMetadata = 11
+    GetFileMetadata = 11,
+    ClearServiceLog = 12
 }
 
 public struct SearchRequestMessage

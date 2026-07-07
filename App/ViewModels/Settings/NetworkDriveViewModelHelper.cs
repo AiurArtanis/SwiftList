@@ -5,6 +5,31 @@ namespace SwiftList.App.ViewModels.Settings;
 
 internal static class NetworkDriveViewModelHelper
 {
+    // Split out of NetworkDriveSettingsViewModel to keep that file under the line-count limit.
+    public static void Rebuild(NetworkDriveSettingsViewModel vm, UserSettings userSettings, SearchService searchService, Action? onTriggerFastRefresh)
+    {
+        if (!vm.CanRebuild) return;
+        vm.IsBusy = true;
+
+        userSettings.NetworkDrives = vm.NetworkDrives.Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id)).Select(d => new NetworkDriveSetting
+        {
+            Id = d.Id,
+            RefreshMode = d.RefreshMode
+        }).ToList();
+        userSettings.WslSettings = vm.WslDrives.Where(w => w.IsEnabled && !string.IsNullOrWhiteSpace(w.Id)).Select(w => new WslSetting
+        {
+            Id = w.Id,
+            RefreshMode = w.RefreshMode
+        }).ToList();
+        userSettings.Save();
+        vm.ResetPendingEdits();
+
+        vm.CanRebuild = false;
+        vm.IndexSummary = TranslationManager.Instance["Network_Rebuilding"];
+        searchService.RefreshNetworkIndexes();
+        onTriggerFastRefresh?.Invoke();
+    }
+
     public static void RunDriveAction(
         NetworkDriveSettingsItem item,
         NetworkDriveSettingsViewModel vm,

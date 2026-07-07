@@ -41,7 +41,7 @@
                         MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                     <Grid>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
-                            <Image Source="pack://application:,,,/SwiftList.App;component/logo.png" Width="20" Height="20" Margin="0,0,10,0"/>
+                            <Image x:Name="TitleBarLogo" Width="20" Height="20" Margin="0,0,10,0"/>
                             <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Title]}" 
                                         FontSize="14" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"/>

@@ -22,21 +22,23 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
     private bool _hasPendingEdits;
     private bool _canEditRefreshModes = true;
     private bool _isBusy;
-    private readonly RefreshModeOption[] _refreshModeOptions;
+    private readonly LabeledOption[] _refreshModeOptions;
 
     public NetworkDriveSettingsViewModel(SearchService searchService, UserSettings userSettings, Action onTriggerFastRefresh)
     {
         _searchService = searchService;
         _userSettings = userSettings;
         _onTriggerFastRefresh = onTriggerFastRefresh;
-        RebuildCommand = new RelayCommand(Rebuild, () => CanRebuild);
+        RebuildCommand = new RelayCommand(
+            () => NetworkDriveViewModelHelper.Rebuild(this, _userSettings, _searchService, _onTriggerFastRefresh),
+            () => CanRebuild);
 
         _refreshModeOptions =
         [
-            new RefreshModeOption("Manual", TranslationManager.Instance["Network_ModeManual"]),
-            new RefreshModeOption("15Minutes", TranslationManager.Instance["Network_Mode15M"]),
-            new RefreshModeOption("Hourly", TranslationManager.Instance["Network_ModeHourly"]),
-            new RefreshModeOption("Daily", TranslationManager.Instance["Network_ModeDaily"])
+            new LabeledOption("Manual", TranslationManager.Instance["Network_ModeManual"]),
+            new LabeledOption("15Minutes", TranslationManager.Instance["Network_Mode15M"]),
+            new LabeledOption("Hourly", TranslationManager.Instance["Network_ModeHourly"]),
+            new LabeledOption("Daily", TranslationManager.Instance["Network_ModeDaily"])
         ];
 
         TranslationManager.Instance.PropertyChanged += (s, e) =>
@@ -67,7 +69,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
     public bool IsBusy { get => _isBusy; set => SetProperty(ref _isBusy, value); }
     public bool IsWslPanelVisible => WslDrives.Count > 0;
 
-    public IReadOnlyList<RefreshModeOption> RefreshModeOptions => _refreshModeOptions;
+    public IReadOnlyList<LabeledOption> RefreshModeOptions => _refreshModeOptions;
 
     public ICommand RebuildCommand { get; }
     public string IndexSummary { get => _indexSummary; set => SetProperty(ref _indexSummary, value); }
@@ -247,30 +249,6 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
             IndexSummary = string.Format(TranslationManager.Instance["Network_SummaryTemplate"], state, enabledCount, totalItems);
         }
         OnPropertyChanged(nameof(IsWslPanelVisible));
-    }
-
-    private void Rebuild()
-    {
-        if (!CanRebuild) return;
-        _isBusy = true;
-
-        _userSettings.NetworkDrives = NetworkDrives.Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id)).Select(d => new NetworkDriveSetting
-        {
-            Id = d.Id,
-            RefreshMode = d.RefreshMode
-        }).ToList();
-        _userSettings.WslSettings = WslDrives.Where(w => w.IsEnabled && !string.IsNullOrWhiteSpace(w.Id)).Select(w => new WslSetting
-        {
-            Id = w.Id,
-            RefreshMode = w.RefreshMode
-        }).ToList();
-        _userSettings.Save();
-        ResetPendingEdits();
-
-        CanRebuild = false;
-        IndexSummary = TranslationManager.Instance["Network_Rebuilding"];
-        _searchService.RefreshNetworkIndexes();
-        _onTriggerFastRefresh?.Invoke();
     }
 
     public void ResetPendingEdits() => HasPendingEdits = false;
