@@ -19,10 +19,21 @@ public static class UiMetrics
     // icon drives it past the base height still comes out a few pixels short of what actually renders.
     public const double ResultRowVerticalMargin = 4;
 
-    // Base font/icon metrics used by the search result item template.
-    public const double BaseResultNameFontSize = 14;
-    public const double BaseResultPathFontSize = 11;
+    // Base font/icon metrics used by the search result item template. Name:Path is weighted 8:5 (~60:40)
+    // when both lines show, tilting more toward the name than an even split while keeping the path line
+    // (the smaller of the two) comfortably legible.
+    public const double BaseResultNameFontSize = 16;
+    public const double BaseResultPathFontSize = 10;
+    // A row with no path subtitle (applications, blank ParentDir) gives the whole name/path line-height
+    // budget to the name alone instead of splitting it with an empty second line.
+    public const double BaseResultNameFontSizeSingleLine = 20;
     public const double BaseResultIconSize = 42; // fixed size for the main window
+
+    // Floors for the quick window's icon-relative font scaling (see ScaledResultNameFontSize etc.) --
+    // at the smallest configurable icon size, the raw ratio would shrink text well past legible.
+    public const double MinScaledResultNameFontSize = 12;
+    public const double MinScaledResultPathFontSize = 9;
+    public const double MinScaledResultNameFontSizeSingleLine = 14;
 
     // Fixed icon size for the inline window's own (more compact) row template
     // (App/Resources/DataTemplates/InlineSearchResult.xaml binds its Image to this, so the two never
@@ -111,6 +122,7 @@ public static class UiMetrics
     public static double MenuItemHeight => ListItemHeight * 0.8;
 
     public static double ResultNameFontSize => BaseResultNameFontSize;
+    public static double ResultNameFontSizeSingleLine => BaseResultNameFontSizeSingleLine;
     public static double ResultPathFontSize => BaseResultPathFontSize;
     public static double ResultIconSize => BaseResultIconSize;
     public static double InlineResultIconSize => BaseInlineResultIconSize;
@@ -124,7 +136,16 @@ public static class UiMetrics
     public static double ScaledListItemHeight => Math.Round(BaseListItemHeight * _scale);
     public static double ScaledSearchSectionHeaderHeight => Math.Round(BaseSearchSectionHeaderHeight * _scale);
 
-    public static double ScaledResultNameFontSize => Math.Round(BaseResultNameFontSize * _scale);
-    public static double ScaledResultPathFontSize => Math.Round(BaseResultPathFontSize * _scale);
     public static double ScaledResultIconSize => Math.Round(_quickResultIconSize * _scale);
+
+    // Name/path font size tracks the ACTUAL rendered icon size (not just the search-bar-height scale),
+    // so bumping the icon-size setting directly grows the text too, not only bumping the search bar
+    // height. At the default icon size (BaseResultIconSize) with no search-bar scaling this ratio is
+    // exactly 1, so it's a no-op in the common case; floored so a small configured icon never shrinks
+    // text past legible.
+    private static double IconRelativeFontScale => ScaledResultIconSize / BaseResultIconSize;
+
+    public static double ScaledResultNameFontSize => Math.Max(MinScaledResultNameFontSize, Math.Round(BaseResultNameFontSize * IconRelativeFontScale));
+    public static double ScaledResultNameFontSizeSingleLine => Math.Max(MinScaledResultNameFontSizeSingleLine, Math.Round(BaseResultNameFontSizeSingleLine * IconRelativeFontScale));
+    public static double ScaledResultPathFontSize => Math.Max(MinScaledResultPathFontSize, Math.Round(BaseResultPathFontSize * IconRelativeFontScale));
 }

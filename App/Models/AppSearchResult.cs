@@ -28,20 +28,25 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     // calculator/URL/env instant results, plugin actions, jump-to-path, list items, headers, empties,
     // and the "show more" row.
     public bool CanPreview => (ResultKind == "File" || ResultKind == "Application") && FullPath != "__SHOW_MORE__";
+    // Mirrors the exact conditions DataTemplates.xaml's path-subtitle row collapses under (applications,
+    // a blank ParentDir, or the "no results" placeholder) -- single source of truth for both that
+    // visibility and the name-line font size below, so they can never drift out of sync with each other.
+    public bool HasPathSubtitle => !IsApplication && ParentDir != "" && !IsEmptyResult;
     // A row must be at least as tall as its own icon plus the row border's own vertical margin (see
     // UiMetrics.ResultRowVerticalMargin) -- otherwise the icon can exceed the row and either get clipped
     // or force it to overflow past its allotted layout space.
     public double ItemHeight => IsSearchSectionHeader ? UiMetrics.SearchSectionHeaderHeight : (IsListItem ? UiMetrics.ListItemHeight : Math.Max(UiMetrics.SearchResultItemHeight, UiMetrics.ResultIconSize + UiMetrics.ResultRowVerticalMargin));
 
-    // Base visual metrics (inline/full windows use these — no scaling).
-    public double NameFontSize => UiMetrics.ResultNameFontSize;
+    // Base visual metrics (inline/full windows use these — no scaling). A row with no path subtitle
+    // gives its whole line-height budget to the name instead of splitting it with an empty second line.
+    public double NameFontSize => HasPathSubtitle ? UiMetrics.ResultNameFontSize : UiMetrics.ResultNameFontSizeSingleLine;
     public double PathFontSize => UiMetrics.ResultPathFontSize;
     public double ResultIconSize => UiMetrics.ResultIconSize;
 
     // Scaled variants — bound only in the quick window, so it alone grows/shrinks with the
     // configured search box height.
     public double ScaledItemHeight => IsSearchSectionHeader ? UiMetrics.ScaledSearchSectionHeaderHeight : (IsListItem ? UiMetrics.ScaledListItemHeight : Math.Max(UiMetrics.ScaledSearchResultItemHeight, UiMetrics.ScaledResultIconSize + UiMetrics.ResultRowVerticalMargin));
-    public double ScaledNameFontSize => UiMetrics.ScaledResultNameFontSize;
+    public double ScaledNameFontSize => HasPathSubtitle ? UiMetrics.ScaledResultNameFontSize : UiMetrics.ScaledResultNameFontSizeSingleLine;
     public double ScaledPathFontSize => UiMetrics.ScaledResultPathFontSize;
     public double ScaledResultIconSize => UiMetrics.ScaledResultIconSize;
     // Uses the inline window's own (smaller) icon size rather than the main window's ItemHeight, so a
