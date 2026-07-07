@@ -368,7 +368,12 @@
                     </Style>
                 </StackPanel.Style>
 
-                <ItemsControl ItemsSource="{Binding PluginActionGroups}">
+                <!-- SettingsGroupTitle's default top margin (20) is meant to separate a group from a hint
+                     line above it; there's none here (unlike the "Global" tab, which overrides its first
+                     group's title margin the same way), so cancel it via the ItemsControl's own margin
+                     instead. Inter-group spacing is unaffected since that comes from each group's own
+                     title margin, not this outer offset. -->
+                <ItemsControl ItemsSource="{Binding PluginActionGroups}" Margin="0,-20,0,0">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel>
