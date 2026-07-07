@@ -18,6 +18,14 @@ public static class SearchInputHelper
         if (menuPresenter == null || !menuPresenter.IsInActionsMode)
             return false;
 
+        // Read once up front: the custom next/previous-item hotkeys must win over the hardcoded bare-Tab
+        // shortcut below whenever the user has bound one of them to Tab, otherwise a Tab-as-next-item
+        // binding would silently be swallowed by "Tab enters submenu" and never reach the match further down.
+        var actualKey = WpfUiHelper.GetActualKey(e);
+        var settings = UserSettings.Load().Hotkeys;
+        var isNextItemHotkey = WpfUiHelper.MatchesHotkey(settings.NextItemHotkey, Keyboard.Modifiers, actualKey);
+        var isPreviousItemHotkey = WpfUiHelper.MatchesHotkey(settings.PreviousItemHotkey, Keyboard.Modifiers, actualKey);
+
         if (e.Key == Key.Escape)
         {
             if (window != null && !string.IsNullOrEmpty(window.SearchTextBox.Text))
@@ -38,7 +46,7 @@ public static class SearchInputHelper
             return true;
         }
 
-        if (e.Key == Key.Right || (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None))
+        if (e.Key == Key.Right || (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None && !isNextItemHotkey && !isPreviousItemHotkey))
         {
             menuPresenter.EnterSubMenu();
             e.Handled = true;
@@ -62,15 +70,13 @@ public static class SearchInputHelper
         // The results list also accepts the user's configurable next/previous-item hotkeys (not just the
         // literal arrow keys above); the actions list should match so a custom binding still works once
         // the menu is open instead of silently falling through to move the hidden results-list selection.
-        var actualKey = WpfUiHelper.GetActualKey(e);
-        var settings = UserSettings.Load().Hotkeys;
-        if (WpfUiHelper.MatchesHotkey(settings.NextItemHotkey, Keyboard.Modifiers, actualKey))
+        if (isNextItemHotkey)
         {
             menuPresenter.NavigateActionsList(1);
             e.Handled = true;
             return true;
         }
-        if (WpfUiHelper.MatchesHotkey(settings.PreviousItemHotkey, Keyboard.Modifiers, actualKey))
+        if (isPreviousItemHotkey)
         {
             menuPresenter.NavigateActionsList(-1);
             e.Handled = true;
