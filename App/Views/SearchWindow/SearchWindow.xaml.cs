@@ -26,6 +26,8 @@ public partial class SearchWindow : Window, ISearchWindow, IHasVisibleContentIns
     {
         InitializeComponent();
 
+        ThemedWindowIconHelper.Apply(this);
+
         // XAML's Height/Width are just the design-time/factory-reset default -- the real size (user's
         // last resize, or the General settings page value) comes from UiMetrics, mirroring how
         // QuickLookManager sizes the preview window from settings instead of a hardcoded XAML value.

@@ -11,8 +11,7 @@
         Background="Transparent"
         AllowsTransparency="True"
         WindowStyle="None"
-        ResizeMode="CanResizeWithGrip"
-        Icon="pack://application:,,,/SwiftList.App;component/logo.png">
+        ResizeMode="CanResizeWithGrip">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
