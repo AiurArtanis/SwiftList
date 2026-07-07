@@ -21,13 +21,12 @@ public static class UiMetrics
 
     // Base font/icon metrics used by the search result item template. Name:Path is weighted 8:5 (~60:40)
     // when both lines show, tilting more toward the name than an even split while keeping the path line
-    // (the smaller of the two) comfortably legible. Sized down from 16/10/20 -- next to a file's own
-    // name (e.g. in Explorer, ~9-11px), the previous sizes read noticeably larger/out of place (#65).
-    public const double BaseResultNameFontSize = 14;
-    public const double BaseResultPathFontSize = 9;
+    // (the smaller of the two) comfortably legible.
+    public const double BaseResultNameFontSize = 16;
+    public const double BaseResultPathFontSize = 10;
     // A row with no path subtitle (applications, blank ParentDir) gives the whole name/path line-height
     // budget to the name alone instead of splitting it with an empty second line.
-    public const double BaseResultNameFontSizeSingleLine = 18;
+    public const double BaseResultNameFontSizeSingleLine = 20;
     public const double BaseResultIconSize = 42; // fixed size for the main window
 
     // Floors for the quick window's icon-relative font scaling (see ScaledResultNameFontSize etc.) --
