@@ -50,9 +50,9 @@ public static class ShellPathHelper
     [DllImport("user32.dll")] private static extern bool DestroyIcon(IntPtr hIcon);
 
     private const uint SHGFI_DISPLAYNAME = 0x000000200;
-    private const uint SHGFI_PIDL        = 0x000000008;
-    private const uint SHGFI_ICON        = 0x000000100;
-    private const uint SHGFI_LARGEICON   = 0x000000000;
+    private const uint SHGFI_PIDL = 0x000000008;
+    private const uint SHGFI_ICON = 0x000000100;
+    private const uint SHGFI_LARGEICON = 0x000000000;
 
     private static readonly Environment.SpecialFolder[] _trackedSpecialFolders = new[]
     {
@@ -212,11 +212,11 @@ public static class ShellPathHelper
     public static IntPtr TryGetIconHBitmapForShellItem(object comObj, int size = 96)
     {
         if (comObj == null) return IntPtr.Zero;
-        var pidl   = IntPtr.Zero;
-        var hIcon  = IntPtr.Zero;
-        var hdc    = IntPtr.Zero;
+        var pidl = IntPtr.Zero;
+        var hIcon = IntPtr.Zero;
+        var hdc = IntPtr.Zero;
         var hMemDC = IntPtr.Zero;
-        var hBmp   = IntPtr.Zero;
+        var hBmp = IntPtr.Zero;
         try
         {
             if (SHGetIDListFromObject(comObj, out pidl) != 0 || pidl == IntPtr.Zero) return IntPtr.Zero;
@@ -232,9 +232,9 @@ public static class ShellPathHelper
 
             // Convert HICON → HBITMAP.  Use the screen DC for CreateCompatibleBitmap so
             // we get a colour bitmap (CreateCompatibleDC(NULL) alone gives monochrome).
-            hdc    = GetDC(IntPtr.Zero);
+            hdc = GetDC(IntPtr.Zero);
             hMemDC = CreateCompatibleDC(hdc);
-            hBmp   = CreateCompatibleBitmap(hdc, size, size);
+            hBmp = CreateCompatibleBitmap(hdc, size, size);
             var hOld = SelectObject(hMemDC, hBmp);
             DrawIconEx(hMemDC, 0, 0, hIcon, size, size, 0, IntPtr.Zero, 0x0003 /* DI_NORMAL */);
             SelectObject(hMemDC, hOld);
@@ -247,10 +247,10 @@ public static class ShellPathHelper
         }
         finally
         {
-            if (hIcon  != IntPtr.Zero) DestroyIcon(hIcon);
-            if (pidl   != IntPtr.Zero) Marshal.FreeCoTaskMem(pidl);
+            if (hIcon != IntPtr.Zero) DestroyIcon(hIcon);
+            if (pidl != IntPtr.Zero) Marshal.FreeCoTaskMem(pidl);
             if (hMemDC != IntPtr.Zero) DeleteDC(hMemDC);
-            if (hdc    != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdc);
+            if (hdc != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdc);
         }
     }
 
@@ -266,19 +266,19 @@ public static class ShellPathHelper
         var direct = ShellImageListNative.GetShellHBitmap(path, size);
         if (direct != IntPtr.Zero) return direct;
 
-        var hIcon  = IntPtr.Zero;
-        var hdc    = IntPtr.Zero;
+        var hIcon = IntPtr.Zero;
+        var hdc = IntPtr.Zero;
         var hMemDC = IntPtr.Zero;
-        var hBmp   = IntPtr.Zero;
+        var hBmp = IntPtr.Zero;
         try
         {
             hIcon = ShellImageListNative.GetHiResHIcon(path, size);
             if (hIcon == IntPtr.Zero)
                 return IntPtr.Zero;
 
-            hdc    = GetDC(IntPtr.Zero);
+            hdc = GetDC(IntPtr.Zero);
             hMemDC = CreateCompatibleDC(hdc);
-            hBmp   = CreateCompatibleBitmap(hdc, size, size);
+            hBmp = CreateCompatibleBitmap(hdc, size, size);
             var hOld = SelectObject(hMemDC, hBmp);
             DrawIconEx(hMemDC, 0, 0, hIcon, size, size, 0, IntPtr.Zero, 0x0003 /* DI_NORMAL */);
             SelectObject(hMemDC, hOld);
@@ -291,9 +291,9 @@ public static class ShellPathHelper
         }
         finally
         {
-            if (hIcon  != IntPtr.Zero) DestroyIcon(hIcon);
+            if (hIcon != IntPtr.Zero) DestroyIcon(hIcon);
             if (hMemDC != IntPtr.Zero) DeleteDC(hMemDC);
-            if (hdc    != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdc);
+            if (hdc != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdc);
         }
     }
 }

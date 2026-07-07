@@ -27,7 +27,7 @@ public static class PluginSettingsService
                 {
                     return System.Text.Json.JsonSerializer.Deserialize<T>(element.GetRawText())!;
                 }
-                
+
                 try
                 {
                     return (T)Convert.ChangeType(val, typeof(T));

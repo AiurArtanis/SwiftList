@@ -173,7 +173,7 @@ public class CalculatorInstantProvider : IInstantResultProvider
         if (string.IsNullOrEmpty(query)) return null;
         var trimmed = query.Trim();
         var mask = new bool[text.Length];
-        
+
         if (text.StartsWith(trimmed, StringComparison.OrdinalIgnoreCase))
         {
             for (var i = 0; i < trimmed.Length && i < mask.Length; i++)

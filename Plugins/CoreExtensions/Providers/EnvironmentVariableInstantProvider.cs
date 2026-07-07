@@ -22,7 +22,7 @@ public class EnvironmentVariableInstantProvider : IInstantResultProvider
         // 1. Fuzzy matching mode: starts with '%' and is either just '%' or a single unclosed/closed variable name
         var firstPercentIdx = trimmed.IndexOf('%');
         var lastPercentIdx = trimmed.LastIndexOf('%');
-        
+
         var isFuzzyMode = firstPercentIdx == 0 && (lastPercentIdx == 0 || (lastPercentIdx == trimmed.Length - 1 && trimmed.Length > 1));
 
         if (isFuzzyMode && trimmed.Length >= 3 && trimmed.EndsWith("%"))

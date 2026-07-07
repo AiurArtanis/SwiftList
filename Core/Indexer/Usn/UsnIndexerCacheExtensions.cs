@@ -42,7 +42,7 @@ public static class UsnIndexerCacheExtensions
                     basePath = metaPath.Substring(0, metaPath.Length - 5);
                 }
             }
-            catch {}
+            catch { }
 
             if (basePath == null)
                 continue;
@@ -97,7 +97,7 @@ public static class UsnIndexerCacheExtensions
                 basePath = metaPath.Substring(0, metaPath.Length - 5);
             }
         }
-        catch {}
+        catch { }
 
         if (basePath == null)
             return null;

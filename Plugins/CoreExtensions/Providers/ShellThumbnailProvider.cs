@@ -38,8 +38,8 @@ public class ShellThumbnailProvider : IThumbnailProvider
             try
             {
                 var list = PluginSettingsService.GetSetting(
-                    "SwiftList.Plugins.CoreExtensions", 
-                    "ThumbnailExtensions", 
+                    "SwiftList.Plugins.CoreExtensions",
+                    "ThumbnailExtensions",
                     defaultList);
                 if (list != null)
                 {

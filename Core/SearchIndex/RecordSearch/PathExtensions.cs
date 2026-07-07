@@ -69,7 +69,7 @@ internal static class PathExtensions
                     continue;
 
                 var rank = FzfResultRank.ForDefaultScheme(i, name, fileMatch);
-                
+
                 // Prioritize shallower relative path depth under the matched directory
                 var relativeDepth = GetRelativeDepth(path, parentPath);
                 var point3 = (ushort)((Math.Min(relativeDepth, 255) << 8) | (Math.Min(name.Length, 255) & 0xFF));

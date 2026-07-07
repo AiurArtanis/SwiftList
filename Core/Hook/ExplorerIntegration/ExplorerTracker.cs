@@ -2,6 +2,7 @@ using System.Text;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Registries;
 namespace SwiftList.Core.Hook;
+
 public class ExplorerTracker : IDisposable
 {
     private ExplorerNativeHooks.WinEventDelegate? _winEventDelegate;

@@ -14,72 +14,72 @@ public static class ShellMenuFilter
 
             filtered = rawItems.Where(item =>
             {
-            if (item.IsSectionHeader || item.IsSeparator)
-            {
-                return true;
-            }
-
-            if (string.IsNullOrEmpty(item.Text))
-            {
-                return false;
-            }
-
-            // Standardize spaces to support multi-keyword matching like FZF
-            var queryKeywords = filter.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (queryKeywords.Length == 0)
-            {
-                return true;
-            }
-
-            // Check if every keyword matches either the item text or its aliases (via fuzzy matching helper logic)
-            foreach (var keyword in queryKeywords)
-            {
-                var isKeywordMatch = false;
-
-                // 1. Direct Fuzzy Match (simplified sequence match)
-                if (IsFuzzyMatch(item.Text, keyword))
+                if (item.IsSectionHeader || item.IsSeparator)
                 {
-                    isKeywordMatch = true;
-                }
-                else
-                {
-                    // 2. Alias Match (enforce a cleaner substring match on concatenated pinyin aliases to prevent subsequence leaking)
-                    foreach (var provider in activeProviders)
-                    {
-                        try
-                        {
-                            if (provider.CanHandle(item.Text))
-                            {
-                                foreach (var alias in provider.GetAliases(item.Text))
-                                {
-                                    if (!string.IsNullOrEmpty(alias) && alias.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        isKeywordMatch = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        catch
-                        {
-                            // Ignore provider exceptions
-                        }
-
-                        if (isKeywordMatch)
-                        {
-                            break;
-                        }
-                    }
+                    return true;
                 }
 
-                if (!isKeywordMatch)
+                if (string.IsNullOrEmpty(item.Text))
                 {
                     return false;
                 }
-            }
 
-            return true;
-        }).ToList();
+                // Standardize spaces to support multi-keyword matching like FZF
+                var queryKeywords = filter.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (queryKeywords.Length == 0)
+                {
+                    return true;
+                }
+
+                // Check if every keyword matches either the item text or its aliases (via fuzzy matching helper logic)
+                foreach (var keyword in queryKeywords)
+                {
+                    var isKeywordMatch = false;
+
+                    // 1. Direct Fuzzy Match (simplified sequence match)
+                    if (IsFuzzyMatch(item.Text, keyword))
+                    {
+                        isKeywordMatch = true;
+                    }
+                    else
+                    {
+                        // 2. Alias Match (enforce a cleaner substring match on concatenated pinyin aliases to prevent subsequence leaking)
+                        foreach (var provider in activeProviders)
+                        {
+                            try
+                            {
+                                if (provider.CanHandle(item.Text))
+                                {
+                                    foreach (var alias in provider.GetAliases(item.Text))
+                                    {
+                                        if (!string.IsNullOrEmpty(alias) && alias.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            isKeywordMatch = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // Ignore provider exceptions
+                            }
+
+                            if (isKeywordMatch)
+                            {
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!isKeywordMatch)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }).ToList();
         }
 
         // Clean up consecutive separators or headers without items
@@ -113,7 +113,7 @@ public static class ShellMenuFilter
                 cleanItems.Add(current);
             }
         }
-        
+
         while (cleanItems.Count > 0 && (cleanItems[^1].IsSeparator || cleanItems[^1].IsSectionHeader))
         {
             cleanItems.RemoveAt(cleanItems.Count - 1);

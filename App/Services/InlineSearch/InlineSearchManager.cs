@@ -278,8 +278,8 @@ public class InlineSearchManager : IDisposable
     {
         if (_window != null && _window.IsVisible)
         {
-            if (_explorerTracker.IsActiveWindowDialog 
-                && _window.SearchBox.SearchTextBox.IsKeyboardFocusWithin 
+            if (_explorerTracker.IsActiveWindowDialog
+                && _window.SearchBox.SearchTextBox.IsKeyboardFocusWithin
                 && string.IsNullOrEmpty(_window.SearchText))
             {
                 _window.ResetInlineSearchAndFocusDialog();

@@ -50,10 +50,10 @@ public class CommandInstantProvider : IInstantResultProvider
             ActionArgument = actionArg,
             TabCompletion = query
         };
-     }
+    }
 
-     public bool[]? GetHighlightMask(string text, string query)
-     {
+    public bool[]? GetHighlightMask(string text, string query)
+    {
         if (string.IsNullOrEmpty(query)) return null;
         var trimmed = query.Trim();
         var target = trimmed.Substring(1).Trim();
@@ -71,5 +71,5 @@ public class CommandInstantProvider : IInstantResultProvider
             }
         }
         return mask;
-     }
+    }
 }

@@ -75,16 +75,16 @@ public static class ShellContextMenuHelper
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)] private static extern int SHParseDisplayName([MarshalAs(UnmanagedType.LPWStr)] string pszName, IntPtr pbc, out IntPtr ppidl, uint sfgaoIn, out uint psfgaoOut);
     [DllImport("shell32.dll")] private static extern int SHBindToParent(IntPtr pidl, [In] ref Guid riid, out IntPtr ppv, ref IntPtr ppidlLast);
     [DllImport("user32.dll")] private static extern IntPtr CreatePopupMenu();
-    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool DestroyMenu(IntPtr hMenu);
+    [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool DestroyMenu(IntPtr hMenu);
     [DllImport("user32.dll")] private static extern int TrackPopupMenuEx(IntPtr hmenu, uint fuFlags, int x, int y, IntPtr hwnd, IntPtr lptpm);
-    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetCursorPos(out ulong lpPoint);
+    [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetCursorPos(out ulong lpPoint);
     [DllImport("ole32.dll")] private static extern void CoTaskMemFree(IntPtr pv);
     [DllImport("comctl32.dll", SetLastError = true)] private static extern bool SetWindowSubclass(IntPtr hWnd, SubclassProc lpCallback, IntPtr uIdSubclass, IntPtr dwRefData);
     [DllImport("comctl32.dll", SetLastError = true)] private static extern bool RemoveWindowSubclass(IntPtr hWnd, SubclassProc lpCallback, IntPtr uIdSubclass);
     [DllImport("comctl32.dll", SetLastError = true)] private static extern IntPtr DefSubclassProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll")] private static extern int GetMenuItemCount(IntPtr hMenu);
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetMenuItemInfoW(IntPtr hMenu, uint uItem, [MarshalAs(UnmanagedType.Bool)] bool fByPosition, ref MENUITEMINFOW lpmii);
-    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool DeleteMenu(IntPtr hMenu, uint uPosition, uint uFlags);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)][return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetMenuItemInfoW(IntPtr hMenu, uint uItem, [MarshalAs(UnmanagedType.Bool)] bool fByPosition, ref MENUITEMINFOW lpmii);
+    [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool DeleteMenu(IntPtr hMenu, uint uPosition, uint uFlags);
 
     private const uint TPM_RETURNCMD = 0x0100, TPM_LEFTBUTTON = 0x0000, CMD_FIRST = 1, CMD_LAST = 30000;
 

@@ -1,6 +1,7 @@
 using System.Threading.Channels;
 
 namespace SwiftList.Core.Services;
+
 using SwiftList.Core;
 
 public static class SearchStreamPump

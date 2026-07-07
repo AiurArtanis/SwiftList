@@ -41,7 +41,7 @@ public sealed class InlineSearchWindowLayoutManager
                 }
             }
             var pathPreviewHeight = 0.0;
-            if (_window.PathPreviewBorder != null && 
+            if (_window.PathPreviewBorder != null &&
                 _window.PathPreviewBorder.Visibility == Visibility.Visible)
             {
                 _window.PathPreviewBorder.Measure(new System.Windows.Size(_window.ResultsPanelControl.ActualWidth > 0 ? _window.ResultsPanelControl.ActualWidth : 437, double.PositiveInfinity));
@@ -205,7 +205,7 @@ public sealed class InlineSearchWindowLayoutManager
 
                                                           var isTruncated = CheckIfResultIsTruncated(activeResult);
                                                           var vm = _window.ViewModel;
-                                                          
+
                                                           var isShowMore = activeResult.FullPath == "__SHOW_MORE__";
 
                                                           var shouldShow = _window.ResultsPanelControl.ActionsGrid.Visibility != Visibility.Visible &&
@@ -221,10 +221,10 @@ public sealed class InlineSearchWindowLayoutManager
                                                           var targetVisibility = shouldShow ? Visibility.Visible : Visibility.Collapsed;
                                                           if (_window.PathPreviewBorder != null)
                                                           {
-                                                               if (shouldShow)
-                                                               {
-                                                                   _window.PathPreviewTextBlock.Text = isShowMore ? activeResult.Name : ViewModels.Search.SearchResultHelper.FormatWslPath(activeResult.FullPath);
-                                                               }
+                                                              if (shouldShow)
+                                                              {
+                                                                  _window.PathPreviewTextBlock.Text = isShowMore ? activeResult.Name : ViewModels.Search.SearchResultHelper.FormatWslPath(activeResult.FullPath);
+                                                              }
 
                                                               if (_window.PathPreviewBorder.Visibility != targetVisibility)
                                                               {

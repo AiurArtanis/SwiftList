@@ -172,9 +172,9 @@ public static class ResultsDragDropHelper
         // ponytail: Detect the exact millisecond when the user releases the mouse (either drop or cancel) or presses Escape.
         // We must check isLeftReleased because WPF's internal OleDragSource implementation returns directly to OLE
         // without raising the routed event for System.Windows.DragAction.Drop/Cancel.
-        var isDragEnding = e.Action == System.Windows.DragAction.Drop || 
-                            e.Action == System.Windows.DragAction.Cancel || 
-                            isLeftReleased || 
+        var isDragEnding = e.Action == System.Windows.DragAction.Drop ||
+                            e.Action == System.Windows.DragAction.Cancel ||
+                            isLeftReleased ||
                             e.EscapePressed;
 
         if (isDragEnding)

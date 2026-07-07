@@ -78,7 +78,7 @@ public static class UsnIndexerBuildExtensions
                             basePath = metaPath.Substring(0, metaPath.Length - 5);
                         }
                     }
-                    catch {}
+                    catch { }
 
                     if (basePath != null)
                     {
@@ -137,7 +137,7 @@ public static class UsnIndexerBuildExtensions
                             basePath = metaPath.Substring(0, metaPath.Length - 5);
                         }
                     }
-                    catch {}
+                    catch { }
 
                     if (basePath != null)
                     {
