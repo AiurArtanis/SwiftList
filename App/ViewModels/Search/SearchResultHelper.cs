@@ -31,7 +31,8 @@ internal static class SearchResultHelper
             Drive = item.Drive.ToString(),
             ResultKind = isApplication ? "Application" : "File",
             Index = index,
-            SearchQuery = query
+            SearchQuery = query,
+            ModifiedUtc = item.ModifiedUtc
         };
     }
 

@@ -10,10 +10,12 @@ public class SearchResult
     public FileAttributes Attributes { get; set; }
     internal ulong RankSortKey { get; set; }
 
-    // Only populated (and only meaningful) for GetRecentFiles results -- lets SearchService merge the
-    // local-drive and network/WSL result sets by actual recency instead of just concatenating two
-    // already-sorted-but-incomparable lists. Zero for every other kind of search result. Last-write time,
-    // not creation time: a long-lived file you just edited should still count as "recent".
+    // Populated from the index for every result that comes from one (local or network/WSL) -- lets
+    // SearchService merge GetRecentFiles' local and network/WSL result sets by actual recency instead of
+    // just concatenating two already-sorted-but-incomparable lists, and lets the UI show a modified date
+    // without re-touching the filesystem (see AppSearchResult.DateModified). Zero for results that don't
+    // come from an index (plugin results, etc.) or genuinely have no recorded time. Last-write time, not
+    // creation time: a long-lived file you just edited should still count as "recent".
     public uint ModifiedUtc { get; set; }
 }
 

@@ -107,7 +107,8 @@ internal sealed class LastDirectoryTabSource : ITabSource
                     Path = entry.FullName,
                     IsDir = isDir,
                     Drive = drive,
-                    Attributes = entry.Attributes
+                    Attributes = entry.Attributes,
+                    ModifiedUtc = FileTimeHelper.ToUnixSeconds(entry.LastWriteTimeUtc)
                 };
                 uiResults.Add(SearchResultHelper.CreateUiResult(item, string.Empty, index, isApplication: false, scope: null));
                 index++;

@@ -97,7 +97,8 @@ internal static class Helpers
             IsDir = index.IsDirectory(entryIndex),
             Drive = index.SourceKey,
             Attributes = FileRecordFlagsHelper.ToAttributes(flags),
-            RankSortKey = rank.SortKey
+            RankSortKey = rank.SortKey,
+            ModifiedUtc = index.GetLastWriteTimeUnixSeconds(entryIndex)
         };
     }
 

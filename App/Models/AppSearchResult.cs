@@ -182,6 +182,9 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         }
     }
 
+    // Already known from the index (Core.SearchResult.ModifiedUtc) for most results; 0 falls back below.
+    public uint ModifiedUtc { get; set; }
+
     // Lazy-loaded File Date Modified
     private DateTime? _dateModified;
     private bool _dateModifiedLoadingStarted;
@@ -190,6 +193,8 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         get
         {
             if (_dateModified.HasValue) return _dateModified.Value;
+            if (ModifiedUtc != 0)
+                return (_dateModified = Core.FileTimeHelper.FromUnixSeconds(ModifiedUtc).ToLocalTime()).Value;
             if (!_dateModifiedLoadingStarted)
             {
                 _dateModifiedLoadingStarted = true;

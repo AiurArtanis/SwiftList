@@ -96,7 +96,8 @@ internal static class StreamingSearchExtensions
                     IsDir = index.IsDirectory(entryIndex),
                     Drive = index.SourceKey,
                     Attributes = FileRecordFlagsHelper.ToAttributes(flags),
-                    RankSortKey = FzfResultRank.ForDefaultScheme(entryIndex, name, match).SortKey
+                    RankSortKey = FzfResultRank.ForDefaultScheme(entryIndex, name, match).SortKey,
+                    ModifiedUtc = index.GetLastWriteTimeUnixSeconds(entryIndex)
                 };
                 onResult(res);
             }

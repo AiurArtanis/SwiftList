@@ -68,6 +68,9 @@ public static class FileTimeHelper
         return seconds <= 0 ? 0u : seconds >= uint.MaxValue ? uint.MaxValue : (uint)seconds;
     }
 
+    // 0 means "not recorded" throughout the index (see ToUnixSeconds' clamp), not a real 1970 timestamp.
+    public static DateTime FromUnixSeconds(uint unixSeconds) => unixSeconds == 0 ? DateTime.MinValue : UnixEpoch.AddSeconds(unixSeconds);
+
     // For MFT/ReFS scanners, which read a raw FILETIME long straight out of an on-disk buffer.
     public static uint FileTimeToUnixSeconds(long fileTimeUtc)
     {
