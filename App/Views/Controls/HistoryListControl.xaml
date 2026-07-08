@@ -110,7 +110,6 @@
                 </Grid.RowDefinitions>
 
                 <TextBox Grid.Row="0" Style="{StaticResource HistorySearchTextBox}" Margin="0,0,0,8"
-                         Tag="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_History_Search_Placeholder]}"
                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="320">
