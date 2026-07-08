@@ -30,7 +30,10 @@ public class QuickSearchWindowInputHandler
             e.Handled = true;
             return;
         }
-        if (e.Key == Key.Right && IsSearchCaretAtEnd())
+        // Modifiers == None guards this against Ctrl+Right (and any other Right combo), which should
+        // fall through to its own handling below (e.g. StartupPanelNextTabHotkey) instead of always
+        // opening the actions menu just because the underlying key happens to be the same.
+        if (e.Key == Key.Right && Keyboard.Modifiers == ModifierKeys.None && IsSearchCaretAtEnd())
         {
             if (_window.LstResults.SelectedItem is AppSearchResult result)
             {
@@ -105,6 +108,22 @@ public class QuickSearchWindowInputHandler
         if (WpfUiHelper.MatchesHotkey(settings.PreviousItemHotkey, Keyboard.Modifiers, actualKey))
         {
             MoveResultSelection(-1);
+            e.Handled = true;
+            return;
+        }
+        // Only claim these while the panel is actually showing -- the defaults are Ctrl+Left/Right,
+        // which the search TextBox would otherwise use natively to jump the caret by a word while the
+        // user is typing a real query (panel hidden). Falling through lets that native behavior fire.
+        var startupPanelVisible = _window.ViewModel.Search.StartupPanelVisibility == System.Windows.Visibility.Visible;
+        if (startupPanelVisible && WpfUiHelper.MatchesHotkey(settings.StartupPanelNextTabHotkey, Keyboard.Modifiers, actualKey))
+        {
+            _window.ViewModel.Search.SelectNextStartupPanelTab();
+            e.Handled = true;
+            return;
+        }
+        if (startupPanelVisible && WpfUiHelper.MatchesHotkey(settings.StartupPanelPreviousTabHotkey, Keyboard.Modifiers, actualKey))
+        {
+            _window.ViewModel.Search.SelectPreviousStartupPanelTab();
             e.Handled = true;
             return;
         }

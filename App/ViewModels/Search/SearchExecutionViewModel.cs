@@ -167,6 +167,8 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
     // "初始面板" (Startup Panel): shown above the results in the quick popup only, see StartupPanelController.
     public ObservableCollection<StartupPanelTabViewModel> StartupPanelTabs => _startupPanel.Tabs;
     public Visibility StartupPanelVisibility => _startupPanel.Visibility;
+    public void SelectNextStartupPanelTab() => _startupPanel.SelectNextTab();
+    public void SelectPreviousStartupPanelTab() => _startupPanel.SelectPreviousTab();
 
     // SearchQuery's setter only re-runs PerformSearch when the value changes, so re-showing the window
     // while the box stays empty wouldn't otherwise notice a new file, or a tab re-enabled in Settings.

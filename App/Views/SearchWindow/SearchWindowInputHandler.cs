@@ -60,13 +60,15 @@ public class SearchWindowInputHandler
     public void HandleTxtSearchBoxKeyDown(KeyEventArgs e)
     {
         var actualKey = WpfUiHelper.GetActualKey(e);
-        if (actualKey == Key.Down)
+        // Down/Up require no modifiers so a future combo hotkey sharing either base key (this window
+        // doesn't wire any today, but QuickSearchWindow's equivalent does) wouldn't get shadowed here.
+        if (actualKey == Key.Down && Keyboard.Modifiers == ModifierKeys.None)
         {
             MoveSelection(1);
             e.Handled = true;
         }
 
-        else if (actualKey == Key.Up)
+        else if (actualKey == Key.Up && Keyboard.Modifiers == ModifierKeys.None)
         {
             MoveSelection(-1);
             e.Handled = true;

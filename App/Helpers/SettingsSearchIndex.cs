@@ -93,6 +93,9 @@ public static class SettingsSearchIndex
         new("Hotkeys_GroupQuickNav", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowGroupQuickNav", "Hotkeys_Tab_Global"),
         new("Hotkeys_QuickNavDoubleClick", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowQuickNavDoubleClick", "Hotkeys_Tab_Global"),
         new("Hotkeys_QuickNavMiddleClick", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowQuickNavMiddleClick", "Hotkeys_Tab_Global"),
+        new("Hotkeys_GroupStartupPanel", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowGroupStartupPanel", "Hotkeys_Tab_Global"),
+        new("Hotkeys_StartupPanelNextTab", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowStartupPanelNextTab", "Hotkeys_Tab_Global"),
+        new("Hotkeys_StartupPanelPreviousTab", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowStartupPanelPreviousTab", "Hotkeys_Tab_Global"),
         new("Hotkeys_Tab_PluginActions", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "PluginActions", "TabPluginActions"),
         new("Settings_Blacklist", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Blacklist", "TabBlacklist"),
 

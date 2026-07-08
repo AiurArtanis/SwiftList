@@ -127,6 +127,26 @@ public class StartupPanelController : ViewModelBase
         }
     }
 
+    /// <summary>Moves the selection to the next tab, wrapping from the last back to the first. A no-op
+    /// with 0 or 1 active tabs (nothing to cycle to).</summary>
+    public void SelectNextTab() => ShiftSelectedTab(1);
+
+    /// <summary>Moves the selection to the previous tab, wrapping from the first back to the last.</summary>
+    public void SelectPreviousTab() => ShiftSelectedTab(-1);
+
+    private void ShiftSelectedTab(int direction)
+    {
+        if (_activeTabs.Count < 2)
+            return;
+
+        var currentIndex = _activeTabs.FindIndex(t => t.ViewModel.IsSelected);
+        if (currentIndex < 0)
+            currentIndex = 0;
+
+        var nextIndex = (currentIndex + direction + _activeTabs.Count) % _activeTabs.Count;
+        SelectTab(_activeTabs[nextIndex].Source);
+    }
+
     private void SelectTab(ITabSource source)
     {
         var match = _activeTabs.FirstOrDefault(t => ReferenceEquals(t.Source, source));

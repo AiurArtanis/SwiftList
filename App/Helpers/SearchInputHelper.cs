@@ -39,28 +39,34 @@ public static class SearchInputHelper
             return true;
         }
 
-        if (e.Key == Key.Left)
+        // Every bare arrow/Enter/Backspace check below requires no modifiers -- otherwise it would
+        // shadow a user-configurable combo hotkey that happens to share the same base key (e.g. the
+        // Startup Panel's default Ctrl+Left/Right, or a plugin action's Ctrl+Enter) before it ever
+        // reaches the handling further down (or falls through to the window's own hotkey dispatch).
+        var noModifiers = Keyboard.Modifiers == ModifierKeys.None;
+
+        if (e.Key == Key.Left && noModifiers)
         {
             menuPresenter.GoBackMenuOrExit();
             e.Handled = true;
             return true;
         }
 
-        if (e.Key == Key.Right || (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None && !isNextItemHotkey && !isPreviousItemHotkey))
+        if ((e.Key == Key.Right && noModifiers) || (e.Key == Key.Tab && noModifiers && !isNextItemHotkey && !isPreviousItemHotkey))
         {
             menuPresenter.EnterSubMenu();
             e.Handled = true;
             return true;
         }
 
-        if (e.Key == Key.Down)
+        if (e.Key == Key.Down && noModifiers)
         {
             menuPresenter.NavigateActionsList(1);
             e.Handled = true;
             return true;
         }
 
-        if (e.Key == Key.Up)
+        if (e.Key == Key.Up && noModifiers)
         {
             menuPresenter.NavigateActionsList(-1);
             e.Handled = true;
@@ -83,14 +89,14 @@ public static class SearchInputHelper
             return true;
         }
 
-        if (e.Key == Key.Enter)
+        if (e.Key == Key.Enter && noModifiers)
         {
             menuPresenter.ExecuteSelectedAction();
             e.Handled = true;
             return true;
         }
 
-        if (e.Key == Key.Back)
+        if (e.Key == Key.Back && noModifiers)
         {
             if (window != null && string.IsNullOrEmpty(window.SearchTextBox.Text))
             {

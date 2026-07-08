@@ -246,6 +246,11 @@ public class HotkeyPageSettings
     // isn't user-configurable, matching the always-on scroll-to-navigate gesture.
     public string KeywordHistoryDeleteHotkey { get; set; } = "Shift+Delete";
 
+    // Cycles (wraps at both ends) through the Startup Panel's own tab strip -- see
+    // StartupPanelController.SelectNextTab/SelectPreviousTab.
+    public string StartupPanelNextTabHotkey { get; set; } = "Ctrl+Right";
+    public string StartupPanelPreviousTabHotkey { get; set; } = "Ctrl+Left";
+
     /// <summary>
     /// User overrides for plugin action hotkeys, keyed by plugin ID (the DLL file name without its
     /// extension, matching <see cref="PluginSettings"/>'s convention) then by
