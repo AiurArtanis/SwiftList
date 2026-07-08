@@ -74,7 +74,26 @@ public class QuickSearchWindowController
 
             if (activePid == (uint)Environment.ProcessId) return;
 
-            _window.Dispatcher.BeginInvoke(new Action(() => { if (_window.IsVisible) HideWindow(); }), DispatcherPriority.Background);
+            // A transient foreground steal can happen mid-typing without the user actually switching away
+            // -- e.g. rendering a \\wsl$ result's icon/modified date wakes the WSL VM, whose cold start
+            // briefly flashes a console host that grabs foreground (see the identical wait-and-recheck in
+            // QuickSearchWindow.Window_Deactivated, added for the same reason). That path alone isn't
+            // enough: this hook fires independently and used to hide immediately on the very first event.
+            // Debounce here too, so foreground that bounces right back doesn't drop the search window.
+            _window.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!_window.IsVisible) return;
+                var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+                timer.Tick += (s, _) =>
+                {
+                    timer.Stop();
+                    if (!_window.IsVisible) return;
+                    GetWindowThreadProcessId(GetForegroundWindow(), out var stillActivePid);
+                    if (stillActivePid == (uint)Environment.ProcessId) return;
+                    HideWindow();
+                };
+                timer.Start();
+            }), DispatcherPriority.Background);
         }
         catch { }
     }
