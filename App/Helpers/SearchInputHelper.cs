@@ -26,7 +26,15 @@ public static class SearchInputHelper
         var isNextItemHotkey = WpfUiHelper.MatchesHotkey(settings.NextItemHotkey, Keyboard.Modifiers, actualKey);
         var isPreviousItemHotkey = WpfUiHelper.MatchesHotkey(settings.PreviousItemHotkey, Keyboard.Modifiers, actualKey);
 
-        if (e.Key == Key.Escape)
+        // Every bare key check below (including Escape) requires no modifiers -- otherwise it would
+        // shadow a user-configurable combo hotkey that happens to share the same base key (e.g. the
+        // Startup Panel's default Ctrl+Left/Right, or a plugin action's Ctrl+Enter) before it ever
+        // reaches the handling further down (or falls through to the window's own hotkey dispatch).
+        // Nothing is bound to a modified Escape today, but guarding it anyway costs nothing and rules
+        // the whole bug class out here rather than leaving one exception someone has to remember.
+        var noModifiers = Keyboard.Modifiers == ModifierKeys.None;
+
+        if (e.Key == Key.Escape && noModifiers)
         {
             if (window != null && !string.IsNullOrEmpty(window.SearchTextBox.Text))
             {
@@ -38,12 +46,6 @@ public static class SearchInputHelper
             e.Handled = true;
             return true;
         }
-
-        // Every bare arrow/Enter/Backspace check below requires no modifiers -- otherwise it would
-        // shadow a user-configurable combo hotkey that happens to share the same base key (e.g. the
-        // Startup Panel's default Ctrl+Left/Right, or a plugin action's Ctrl+Enter) before it ever
-        // reaches the handling further down (or falls through to the window's own hotkey dispatch).
-        var noModifiers = Keyboard.Modifiers == ModifierKeys.None;
 
         if (e.Key == Key.Left && noModifiers)
         {

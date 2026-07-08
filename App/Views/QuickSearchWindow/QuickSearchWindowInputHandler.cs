@@ -16,7 +16,7 @@ public class QuickSearchWindowInputHandler
         if (SearchInputHelper.HandleCommonSearchKeys(e, _window, _window.MenuPresenter))
             return;
 
-        if (e.Key == Key.Escape)
+        if (e.Key == Key.Escape && Keyboard.Modifiers == ModifierKeys.None)
         {
             _window.HideWindow();
             e.Handled = true;
@@ -111,10 +111,14 @@ public class QuickSearchWindowInputHandler
             e.Handled = true;
             return;
         }
-        // Only claim these while the panel is actually showing -- the defaults are Ctrl+Left/Right,
-        // which the search TextBox would otherwise use natively to jump the caret by a word while the
-        // user is typing a real query (panel hidden). Falling through lets that native behavior fire.
-        var startupPanelVisible = _window.ViewModel.Search.StartupPanelVisibility == System.Windows.Visibility.Visible;
+        // Only claim these while the panel is actually showing AND the plain results list is what's on
+        // screen -- the defaults are Ctrl+Left/Right, which the search TextBox would otherwise use
+        // natively to jump the caret by a word while the user is typing a real query (panel hidden),
+        // and which would otherwise silently cycle the tab strip behind an open actions menu (its own
+        // Left/Right handling in SearchInputHelper only claims the bare, unmodified arrow keys).
+        // Falling through in either case lets whichever handling actually owns the key fire instead.
+        var startupPanelVisible = _window.ViewModel.Search.StartupPanelVisibility == System.Windows.Visibility.Visible
+            && _window.MenuPresenter?.IsInActionsMode != true;
         if (startupPanelVisible && WpfUiHelper.MatchesHotkey(settings.StartupPanelNextTabHotkey, Keyboard.Modifiers, actualKey))
         {
             _window.ViewModel.Search.SelectNextStartupPanelTab();

@@ -36,7 +36,7 @@ public class SearchWindowInputHandler
             return;
         }
 
-        if (e.Key == Key.Escape)
+        if (e.Key == Key.Escape && Keyboard.Modifiers == ModifierKeys.None)
         {
             if (string.IsNullOrEmpty(_window.TxtSearchBoxControl.Text))
             {
