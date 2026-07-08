@@ -21,7 +21,17 @@ public static class QuickNavigationMenu
 
     public static void Show(int mouseX, int mouseY)
     {
-        var path = InlineSearchManager.Instance.ExplorerTracker.ActivePath;
+        var tracker = InlineSearchManager.Instance.ExplorerTracker;
+
+        // Captured now, before anything below (the helper window grabbing foreground, the popup sitting
+        // open while the user browses it) has a chance to perturb ExplorerTracker's state -- see the note
+        // on QuickNavigationNavigator.NavigateOrOpen's dialogHwndAtTrigger parameter for why re-reading the
+        // tracker live at click time is not safe.
+        var dialogHwndAtTrigger = tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog
+            ? tracker.ActiveHwnd
+            : IntPtr.Zero;
+
+        var path = tracker.ActivePath;
         if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
             path = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
@@ -37,7 +47,7 @@ public static class QuickNavigationMenu
                 // Root entries are navigation categories (Favorites/History/configured folders/drives), so
                 // don't attach the right-click action flyout here, and clicking/Enter must not execute or
                 // navigate anywhere either -- only real files/folders in deeper levels do that.
-                contextMenu.Items.Add(item.IsSeparator ? new Separator() : CreateMenuItem(item, dummyResult, provider, contextMenu, enableRightClick: false, isRootItem: true));
+                contextMenu.Items.Add(item.IsSeparator ? new Separator() : CreateMenuItem(item, dummyResult, provider, contextMenu, dialogHwndAtTrigger, enableRightClick: false, isRootItem: true));
         }
 
         if (contextMenu.Items.Count == 0) return;
@@ -103,7 +113,7 @@ public static class QuickNavigationMenu
         contextMenu.IsOpen = true;
     }
 
-    private static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, bool enableRightClick = true, bool isRootItem = false)
+    private static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, IntPtr dialogHwndAtTrigger, bool enableRightClick = true, bool isRootItem = false)
     {
         var menuItem = new MenuItem { Header = item.Text, IsEnabled = !item.IsDisabled, Focusable = !item.IsDisabled };
 
@@ -130,11 +140,11 @@ public static class QuickNavigationMenu
             menuItem.Items.Add(new MenuItem { Header = "Loading...", IsEnabled = false });
             menuItem.GotKeyboardFocus += (s, e) =>
             {
-                EnsureSubItemsLoaded(menuItem, result, item, provider, contextMenu);
+                EnsureSubItemsLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger);
                 Application.Current.Dispatcher.BeginInvoke(new Action(() => { if (menuItem.IsKeyboardFocusWithin || menuItem.IsFocused) menuItem.IsSubmenuOpen = true; }));
             };
-            menuItem.MouseEnter += (s, e) => EnsureSubItemsLoaded(menuItem, result, item, provider, contextMenu);
-            menuItem.SubmenuOpened += (s, e) => { if (e.OriginalSource == menuItem) EnsureSubItemsLoaded(menuItem, result, item, provider, contextMenu); };
+            menuItem.MouseEnter += (s, e) => EnsureSubItemsLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger);
+            menuItem.SubmenuOpened += (s, e) => { if (e.OriginalSource == menuItem) EnsureSubItemsLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger); };
         }
         else
         {
@@ -183,7 +193,7 @@ public static class QuickNavigationMenu
             {
                 if (item.HasSubMenu)
                 {
-                    if (canNavigate) QuickNavigationNavigator.NavigateOrOpen(itemPath!);
+                    if (canNavigate) QuickNavigationNavigator.NavigateOrOpen(itemPath!, dialogHwndAtTrigger);
                 }
                 else
                 {
@@ -191,7 +201,7 @@ public static class QuickNavigationMenu
                     if (item.OnExecute != null)
                         item.OnExecute();
                     else if (!string.IsNullOrEmpty(itemPath))
-                        QuickNavigationNavigator.NavigateOrOpen(itemPath);
+                        QuickNavigationNavigator.NavigateOrOpen(itemPath, dialogHwndAtTrigger);
                     else
                         provider.ExecuteCommand(result, item.CommandId, IntPtr.Zero);
                 }
@@ -229,91 +239,7 @@ public static class QuickNavigationMenu
         }
 
         menuItem.PreviewKeyDown += (s, e) =>
-        {
-            // Action hotkeys (Ctrl+C, Ctrl+Enter, ...) fire directly on the highlighted item without
-            // opening its action menu — like the full window's result list. Gated to real file/folder
-            // items (same places the action menu is allowed), so nav categories don't respond.
-            if (menuItem.IsFocused && enableRightClick && canNavigate && !string.IsNullOrEmpty(itemPath)
-                && System.Windows.Input.Keyboard.Modifiers != System.Windows.Input.ModifierKeys.None)
-            {
-                var hotkeySelection = new[]
-                {
-                    new AppSearchResult
-                    {
-                        FullPath = itemPath!,
-                        Name = Path.GetFileName(itemPath),
-                        IsDir = item.HasSubMenu || Directory.Exists(itemPath),
-                        ContextDirectory = Directory.Exists(itemPath) ? itemPath! : (Path.GetDirectoryName(itemPath) ?? string.Empty)
-                    }
-                };
-                var shim = new QuickNavShimView(() =>
-                {
-                    contextMenu.IsOpen = false;
-                    (contextMenu.PlacementTarget as Window)?.Hide();
-                });
-                if (Helpers.HotkeyActionTrigger.TryExecute(e, hotkeySelection, shim, SearchWindowType.Main, hideOnRun: true))
-                {
-                    e.Handled = true;
-                    return;
-                }
-            }
-
-            if ((e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Return) && menuItem.IsFocused)
-            {
-                e.Handled = true;
-                triggerAction();
-                return;
-            }
-            if (menuItem.IsFocused)
-            {
-                if (e.Key == System.Windows.Input.Key.Down)
-                {
-                    if (NavigateToSibling(menuItem, forward: true)) { menuItem.IsSubmenuOpen = false; e.Handled = true; }
-                }
-                else if (e.Key == System.Windows.Input.Key.Up)
-                {
-                    if (NavigateToSibling(menuItem, forward: false)) { menuItem.IsSubmenuOpen = false; e.Handled = true; }
-                }
-                else if (e.Key == System.Windows.Input.Key.Right && item.HasSubMenu && item.SubMenuHandle != IntPtr.Zero)
-                {
-                    if (menuItem.Items.OfType<MenuItem>().All(c => !c.IsEnabled)) e.Handled = true;
-                    else
-                    {
-                        var firstChild = menuItem.Items.OfType<MenuItem>().FirstOrDefault(i => i.IsEnabled && i.Focusable);
-                        if (firstChild != null) { firstChild.Focus(); e.Handled = true; }
-                    }
-                }
-            }
-            else if (menuItem.IsSubmenuOpen && item.HasSubMenu && item.SubMenuHandle != IntPtr.Zero)
-            {
-                if (System.Windows.Input.Keyboard.FocusedElement is MenuItem focused && menuItem.Items.Contains(focused))
-                {
-                    if (e.Key == System.Windows.Input.Key.Left)
-                    {
-                        menuItem.IsSubmenuOpen = false;
-                        Application.Current.Dispatcher.BeginInvoke(new Action(() => menuItem.Focus()));
-                        e.Handled = true;
-                    }
-                    else if (e.Key == System.Windows.Input.Key.Down || e.Key == System.Windows.Input.Key.Up)
-                    {
-                        var items = menuItem.Items.OfType<MenuItem>().Where(i => i.IsEnabled && i.Focusable).ToList();
-                        var index = items.IndexOf(focused);
-                        if (index != -1 && items.Count > 0)
-                        {
-                            var nextIndex = e.Key == System.Windows.Input.Key.Down ? (index + 1) % items.Count : (index - 1 + items.Count) % items.Count;
-                            items[nextIndex].Focus();
-                            e.Handled = true;
-                        }
-                    }
-                }
-                else if ((e.Key == System.Windows.Input.Key.Up || e.Key == System.Windows.Input.Key.Down) && menuItem.Items.OfType<MenuItem>().All(c => !c.IsEnabled))
-                {
-                    menuItem.IsSubmenuOpen = false;
-                    Application.Current.Dispatcher.BeginInvoke(new Action(() => menuItem.Focus()));
-                    e.Handled = true;
-                }
-            }
-        };
+            QuickNavigationMenuKeyHandler.HandlePreviewKeyDown(e, menuItem, item, contextMenu, itemPath, canNavigate, enableRightClick, triggerAction);
 
         return menuItem;
     }
@@ -328,22 +254,11 @@ public static class QuickNavigationMenu
         return null;
     }
 
-    private static void EnsureSubItemsLoaded(MenuItem menuItem, ISearchResult result, DynamicMenuItem item, IQuickNavigationProvider provider, ContextMenu contextMenu)
+    private static void EnsureSubItemsLoaded(MenuItem menuItem, ISearchResult result, DynamicMenuItem item, IQuickNavigationProvider provider, ContextMenu contextMenu, IntPtr dialogHwndAtTrigger)
     {
         if (menuItem.Items.Count > 0 && (menuItem.Items[0] as MenuItem)?.Header?.ToString() != "Loading...") return;
         menuItem.Items.Clear();
         foreach (var subItem in provider.GetMenuItems(result, item.SubMenuHandle))
-            menuItem.Items.Add(CreateMenuItem(subItem, result, provider, contextMenu));
-    }
-
-    private static bool NavigateToSibling(MenuItem currentItem, bool forward)
-    {
-        var parent = System.Windows.Controls.ItemsControl.ItemsControlFromItemContainer(currentItem);
-        var items = parent?.Items.OfType<MenuItem>().Where(i => i.IsEnabled && i.Focusable).ToList();
-        var idx = items?.IndexOf(currentItem) ?? -1;
-        if (idx == -1 || items == null || items.Count == 0) return false;
-        var nextIdx = (idx + (forward ? 1 : -1) + items.Count) % items.Count;
-        items[nextIdx].Focus();
-        return true;
+            menuItem.Items.Add(CreateMenuItem(subItem, result, provider, contextMenu, dialogHwndAtTrigger));
     }
 }

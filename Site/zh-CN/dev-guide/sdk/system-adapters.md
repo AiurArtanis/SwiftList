@@ -36,6 +36,7 @@ interface IFileDialogAdapter
     bool CanHandle(IntPtr hwnd, string className, string processName);
     string? GetCurrentPath(IntPtr hwnd);
     bool NavigateTo(IntPtr hwnd, string targetPath);
+    bool CanShowQuickNav(IntPtr hwndUnderCursor, string classNameUnderCursor); // 默认 true
     bool GetDockBounds(IntPtr hwnd, out AdapterRect rect);
     bool RestoreFocus(IntPtr hwnd);
 }
@@ -69,16 +70,14 @@ interface IInlineSearchAdapter
 
 ## `IQuickNavigationProvider`
 
-在受支持窗口的空白处双击或点击中键时触发(见
-[热键 → 快速导航](../../user-guide/hotkeys#快速导航鼠标))——通常用来弹出级联菜单，或者从桌面/
-资源管理器窗口触发导航。
+为快速导航菜单提供内容(通常是级联菜单)——见
+[热键 → 快速导航](../../user-guide/hotkeys#快速导航鼠标)。菜单该不该弹出由宿主决定，不是这个接口
+的职责:任何已被 `IInlineSearchAdapter`/`IFileDialogAdapter` 识别的窗口，触发菜单的工作已经有人做
+了，所以这个接口纯粹是内容来源。
 
 ```csharp
 interface IQuickNavigationProvider
 {
-    bool CanShow(
-        IntPtr activeHwnd, string processName, string className,
-        bool isDesktop, int x, int y, MouseTriggerType triggerType);
     bool CanProvide(ISearchResult result);
     IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu);
     void ExecuteCommand(ISearchResult result, uint commandId, IntPtr ownerHwnd);

@@ -67,7 +67,7 @@ public partial class App : Application
             var trk = InlineSearchManager.Instance.ExplorerTracker;
             var proc = GetProcessNameOfWindow(trk.ActiveHwnd);
             var cls = GetClassNameOfWindow(trk.ActiveHwnd);
-            if (PluginManager.Instance.QuickNavigationProviders.Any(p => p.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, PluginSdk.Abstractions.Plugins.MouseTriggerType.DoubleClick)))
+            if (QuickNavigationTriggerGate.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, PluginSdk.Abstractions.Plugins.MouseTriggerType.DoubleClick))
                 Dispatcher.BeginInvoke(() => QuickNavigationMenu.Show(x, y));
         };
 
@@ -78,7 +78,8 @@ public partial class App : Application
             var trk = InlineSearchManager.Instance.ExplorerTracker;
             var proc = GetProcessNameOfWindow(trk.ActiveHwnd);
             var cls = GetClassNameOfWindow(trk.ActiveHwnd);
-            if (PluginManager.Instance.QuickNavigationProviders.Any(p => p.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, PluginSdk.Abstractions.Plugins.MouseTriggerType.MiddleClick)))
+            if (QuickNavigationTriggerGate.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, PluginSdk.Abstractions.Plugins.MouseTriggerType.MiddleClick)
+                || FileDialogQuickNavGate.CanShow(trk.ActiveHwnd, proc, cls, x, y))
                 Dispatcher.BeginInvoke(() => QuickNavigationMenu.Show(x, y));
         };
 

@@ -17,9 +17,9 @@ public class DirMenuProvider : IQuickNavigationProvider
     private int _nextId = 1;
     private uint _nextCmdId = 1;
 
-    public bool CanShow(IntPtr activeHwnd, string processName, string className, bool isDesktop, int x, int y, MouseTriggerType triggerType)
-        => triggerType == MouseTriggerType.MiddleClick && className.Equals("TTOTAL_CMD", StringComparison.OrdinalIgnoreCase);
-
+    // No IQuickNavigationTriggerGate of its own: FolderCascader's own trigger already covers Total
+    // Commander's file list generically via TotalCommanderInlineSearchAdapter.CanShowQuickNav, and this
+    // provider only ever contributes content once that has already fired.
     public bool CanProvide(ISearchResult result) => result != null;
 
     public IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu)

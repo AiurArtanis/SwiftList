@@ -7,7 +7,10 @@ public enum MouseTriggerType
 }
 
 /// <summary>
-/// Defines a provider that supplies items for the Quick Navigation menu.
+/// Defines a provider that supplies items for the Quick Navigation menu. Purely a content source --
+/// whether the popup should open at all for a given click is a separate concern, decided by
+/// <see cref="IQuickNavigationTriggerGate"/> (or, for file dialogs, <see cref="IFileDialogAdapter.CanShowQuickNav"/>).
+/// Most plugins only need to implement this interface.
 /// </summary>
 public interface IQuickNavigationProvider
 {
@@ -25,11 +28,6 @@ public interface IQuickNavigationProvider
     /// Executes the command associated with the command ID.
     /// </summary>
     void ExecuteCommand(ISearchResult result, uint commandId, IntPtr ownerHwnd);
-
-    /// <summary>
-    /// Determines whether the quick navigation menu can be shown for the specified active window and process.
-    /// </summary>
-    bool CanShow(IntPtr activeHwnd, string processName, string className, bool isDesktop, int x, int y, MouseTriggerType triggerType);
 
     /// <summary>
     /// Clears any cached handles or states.

@@ -37,6 +37,7 @@ interface IFileDialogAdapter
     bool CanHandle(IntPtr hwnd, string className, string processName);
     string? GetCurrentPath(IntPtr hwnd);
     bool NavigateTo(IntPtr hwnd, string targetPath);
+    bool CanShowQuickNav(IntPtr hwndUnderCursor, string classNameUnderCursor); // default: true
     bool GetDockBounds(IntPtr hwnd, out AdapterRect rect);
     bool RestoreFocus(IntPtr hwnd);
 }
@@ -70,16 +71,15 @@ rectangle.
 
 ## `IQuickNavigationProvider`
 
-Fires on double-click or middle-click in empty space inside a supported window (see
-[Hotkeys → Quick navigation](../../user-guide/hotkeys#quick-navigation-mouse)) — typically used to
-pop a cascaded menu or trigger navigation from the desktop or an explorer window.
+Supplies content (a cascaded menu, typically) for the Quick Navigation popup — see
+[Hotkeys → Quick navigation](../../user-guide/hotkeys#quick-navigation-mouse). Whether the popup
+opens at all for a given click is decided by the host, not by this interface: any window already
+recognized by `IInlineSearchAdapter`/`IFileDialogAdapter` triggers it for you, so this is purely a
+content source.
 
 ```csharp
 interface IQuickNavigationProvider
 {
-    bool CanShow(
-        IntPtr activeHwnd, string processName, string className,
-        bool isDesktop, int x, int y, MouseTriggerType triggerType);
     bool CanProvide(ISearchResult result);
     IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu);
     void ExecuteCommand(ISearchResult result, uint commandId, IntPtr ownerHwnd);
