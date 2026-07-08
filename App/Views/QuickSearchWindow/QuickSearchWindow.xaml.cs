@@ -34,6 +34,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     public QuickSearchWindow()
     {
         InitializeComponent();
+        ThemedWindowIconHelper.Apply(this);
         _viewModel = new QuickSearchViewModel();
         this.DataContext = _viewModel;
         _controller = new QuickSearchWindowController(this);

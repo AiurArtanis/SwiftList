@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Win32;
+using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings.Plugins;
 
 namespace SwiftList.App.Views.Settings.Plugins;
@@ -11,6 +12,7 @@ public partial class PluginConfigWindow : Window
     public PluginConfigWindow(PluginInfoViewModel viewModel)
     {
         InitializeComponent();
+        ThemedWindowIconHelper.Apply(this);
         DataContext = viewModel;
     }
 

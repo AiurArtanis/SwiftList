@@ -10,5 +10,6 @@ internal class MenuHelperWindow : Window
         WindowStyle = WindowStyle.None; AllowsTransparency = true;
         Background = System.Windows.Media.Brushes.Transparent;
         ShowInTaskbar = false; IsTabStop = false; Focusable = true;
+        ThemedWindowIconHelper.Apply(this);
     }
 }
