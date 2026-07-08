@@ -13,7 +13,7 @@ button:
 
 ## Logs
 
-Three tabs — **Service**, **App**, **Hook** — corresponding to the three processes SwiftList runs
+Three tabs — **App**, **Hook**, **Service** — corresponding to the three processes SwiftList runs
 (the elevated background indexer, the per-user App you interact with, and the keyboard-hook
 process). Each tab shows that process's log lines, color-coded by level.
 

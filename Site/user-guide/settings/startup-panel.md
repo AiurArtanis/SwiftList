@@ -24,7 +24,7 @@ Two sub-tabs: **Recent Files** and **Plugin Tabs**.
 Plugin-provided tabs (e.g. History, Favorites) each show a **×** button in the live panel to hide
 them for now. This is a panel-local "hide it" choice — separate from disabling the plugin component
 itself in [Plugins](./plugins), which stops it from being used at all. A tab closed this way is
-listed here, unchecked; check it to bring it back.
+listed here, grouped by the plugin that provides it, unchecked; check it to bring it back.
 
 Only tabs whose plugin component is currently enabled show up in this list — one disabled entirely
 under [Plugins](./plugins) never becomes a tab candidate in the first place.
