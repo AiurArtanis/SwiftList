@@ -146,7 +146,7 @@
   "General_SysTitle": "System",
   "General_SysHint": "Controls startup behavior, log level, interface language, and theme.",
   "General_Startup": "Start SwiftList with Windows",
-  "General_AutoElevate": "Run as Administrator (fixes shortcut issue in elevated windows)",
+  "General_AutoElevate": "Run the hotkey listener process as Administrator (fixes hotkeys not working under elevated windows)",
   "General_AutoCheckUpdates": "Auto check for updates on startup",
   "General_AutoSilentUpdate": "Auto silent update (when new version is detected)",
   "General_LogLevel": "Log Level",
