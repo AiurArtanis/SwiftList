@@ -25,8 +25,10 @@ public static class UiMetrics
     public const double BaseResultNameFontSize = 16;
     public const double BaseResultPathFontSize = 10;
     // A row with no path subtitle (applications, blank ParentDir) gives the whole name/path line-height
-    // budget to the name alone instead of splitting it with an empty second line.
-    public const double BaseResultNameFontSizeSingleLine = 20;
+    // budget to the name alone instead of splitting it with an empty second line. Matches
+    // BaseResultNameFontSize exactly rather than being bigger -- the size jump between single- and
+    // dual-line rows read as inconsistent (#65).
+    public const double BaseResultNameFontSizeSingleLine = 16;
     public const double BaseResultIconSize = 42; // fixed size for the main window
 
     // Floors for the quick window's icon-relative font scaling (see ScaledResultNameFontSize etc.) --
