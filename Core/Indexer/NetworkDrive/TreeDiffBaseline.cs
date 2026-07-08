@@ -27,9 +27,19 @@ internal sealed class TreeDiffBaseline
 
         var baseline = new TreeDiffBaseline(previousStore.Records);
         for (var i = 0; i < previousStore.Records.Count; i++)
+            baseline._indexById[previousStore.Records[i].Id] = i;
+
+        // Second pass, gated on _indexById: a store that (through some earlier bug) ended up with more than
+        // one row for the same id must only ever contribute ONE entry to its parent's child list here --
+        // otherwise the caller enqueues that same directory id more than once, and each duplicate re-walks
+        // (or re-copies) its entire subtree again, compounding into unbounded, runaway growth on every
+        // subsequent resume instead of just carrying the original duplication forward unchanged.
+        for (var i = 0; i < previousStore.Records.Count; i++)
         {
             var record = previousStore.Records[i];
-            baseline._indexById[record.Id] = i;
+            if (baseline._indexById[record.Id] != i)
+                continue;
+
             if (!baseline._childIndicesByParent.TryGetValue(record.ParentId, out var siblings))
                 baseline._childIndicesByParent[record.ParentId] = siblings = new List<int>();
             siblings.Add(i);

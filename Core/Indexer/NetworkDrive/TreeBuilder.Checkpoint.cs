@@ -19,8 +19,24 @@ internal sealed partial class TreeBuilder
         if (Interlocked.Exchange(ref _countSinceCheckpoint, 0) == 0)
             return;
 
-        _onProgress(indexedItems);
-        _onCheckpoint(CloneStore(), CurrentStats());
+        // The reuse-copy path has no network I/O throttling it, so on a mostly-cached resume threshold
+        // crossings can come faster than a checkpoint's own disk write finishes. Without this, a second
+        // checkpoint's save can start on the same cache files before the first one's temp-file swap is
+        // done -- exactly the concurrent-write collisions IndexerHelper.Save was logging. Skipping (not
+        // blocking) is safe: nothing is lost, the items that would've gone into this checkpoint just ride
+        // along in the next one that actually gets to run.
+        if (Interlocked.CompareExchange(ref _checkpointInFlight, 1, 0) != 0)
+            return;
+
+        try
+        {
+            _onProgress(indexedItems);
+            _onCheckpoint(CloneStore(), CurrentStats());
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _checkpointInFlight, 0);
+        }
     }
 
     private FileRecordStore CloneStore()

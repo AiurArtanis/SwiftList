@@ -18,6 +18,7 @@ internal sealed partial class TreeBuilder
     private readonly Channel<WorkItem> _pending;
     private readonly object _recordsGate = new();
     private readonly FileRecordNamePool _namePool = new();
+    private readonly HashSet<UInt128> _enqueuedIds = new();
     private int _pendingDirectories;
     private int _countSinceProgress;
     private int _indexedItems;
@@ -28,6 +29,7 @@ internal sealed partial class TreeBuilder
     private int _reparseSkipped;
     private int _slowDirectories;
     private int _countSinceCheckpoint;
+    private int _checkpointInFlight;
 
     public TreeBuilder(
         FileRecordStore store,
@@ -247,8 +249,22 @@ internal sealed partial class TreeBuilder
             ? Math.Clamp(_filter.WorkerCount, 1, 32)
             : Math.Clamp(Environment.ProcessorCount, 2, 8);
 
+    // parentId here is this directory's OWN id (becomes WorkItem.LocalId), not its parent's -- matches the
+    // naming TryCreateRecord's callers already use when they pass record.Id through as this parameter.
     private void EnqueueDirectory(string path, string logicalPath, UInt128 parentId, int depth, NetworkIgnoreRuleSet ignoreRules)
     {
+        // Last-resort guard against processing the same directory twice in one run: a corrupted diff
+        // baseline (e.g. a duplicate row left by some earlier bug) could otherwise get a directory enqueued
+        // more than once, and each duplicate walks or copies its entire subtree again -- compounding into
+        // unbounded growth rather than just carrying the original duplication forward unchanged. A given
+        // directory id can only legitimately be discovered once per run, so refusing every id after its
+        // first enqueue is always safe, never drops a real directory.
+        lock (_recordsGate)
+        {
+            if (!_enqueuedIds.Add(parentId))
+                return;
+        }
+
         Interlocked.Increment(ref _pendingDirectories);
         try
         {
