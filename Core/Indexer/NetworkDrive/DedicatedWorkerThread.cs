@@ -1,13 +1,14 @@
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
-// Runs work on a dedicated, BelowNormal-priority thread instead of the shared ThreadPool. A large/slow
+// Runs work on a dedicated, Lowest-priority thread instead of the shared ThreadPool. A large/slow
 // background scan can otherwise saturate the ThreadPool (many workers doing blocking sync I/O) and starve
 // unrelated Task.Run-based work -- including the app's own interactive search/launch code -- from getting
-// a worker thread promptly. BelowNormal priority additionally lets the OS scheduler favor foreground UI
-// work whenever there's real CPU contention. Neither change reduces throughput when the system isn't
-// contended, which is true for nearly all of a scan's runtime: idle cores run BelowNormal threads exactly
-// as fast as Normal ones. Wrapped back into a Task so callers keep normal Task.WaitAll/cancellation/
-// exception-propagation semantics.
+// a worker thread promptly. Lowest priority additionally lets the OS scheduler favor foreground UI work
+// whenever there's real CPU contention -- most of a scan is network I/O wait (priority barely matters
+// there), but TreeDiffBaseline's reuse-copy path on a resumed scan is a tight, genuinely CPU-bound loop
+// with no I/O to yield on, which is exactly when this matters most. Neither change reduces throughput when
+// the system isn't contended: idle cores run Lowest-priority threads exactly as fast as Normal ones.
+// Wrapped back into a Task so callers keep normal Task.WaitAll/cancellation/exception-propagation semantics.
 internal static class DedicatedWorkerThread
 {
     public static Task Run(Func<Task> work, string name)
@@ -27,7 +28,7 @@ internal static class DedicatedWorkerThread
         })
         {
             IsBackground = true,
-            Priority = ThreadPriority.BelowNormal,
+            Priority = ThreadPriority.Lowest,
             Name = name
         };
         thread.Start();

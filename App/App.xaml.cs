@@ -18,6 +18,10 @@ public partial class App : Application
 
     protected override async void OnStartup(StartupEventArgs e)
     {
+        // Only this thread (the Dispatcher), not Process.PriorityClass -- keeps input/rendering responsive
+        // under CPU contention without making the whole process compete unfairly against everything else.
+        Thread.CurrentThread.Priority = ThreadPriority.Highest;
+
         // Initialize logger first so we can log elevation decisions and issues
 
         Logger.Initialize("app.log", overwrite: true);
