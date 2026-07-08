@@ -25,8 +25,18 @@ here. See [Settings → Hotkeys page](./settings/hotkeys-page) for the settings 
 
 Enabled by default, toggled per-trigger in settings:
 
-- **Double-click** empty space in a supported window to trigger quick navigation.
-- **Middle-click** empty space in a supported window to trigger quick navigation.
+- **Double-click** empty space on the desktop or inside an Explorer window to trigger quick navigation.
+- **Middle-click** empty space on the desktop or inside an Explorer window — or the file list of a
+  supported third-party file manager (Directory Opus, Total Commander, ...), or a native Open/Save/
+  Browse-for-folder dialog — to trigger quick navigation. Those other windows only respond to
+  middle-click: double-clicking there already means "open this," so double-click isn't repurposed.
+
+Either trigger pops a cascading menu of your Favorites, History, and configured quick-access folders
+(see [Settings → Favorites](./settings/favorites) and [Settings → History](./settings/history)) —
+plugins can contribute their own entries too, such as Total Commander's own Directory Hotlist if
+you've set one up in `wincmd.ini`. Clicking a folder navigates the target window there; clicking a
+file opens it there. Inside a file dialog specifically, clicking a file instead jumps the dialog to
+that file's folder — it deliberately never auto-confirms Open/Save on your behalf.
 
 ## Hardcoded keys (not configurable)
 

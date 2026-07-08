@@ -87,5 +87,5 @@ interface IQuickNavigationProvider
 }
 ```
 
-`MouseTriggerType` is `DoubleClick` or `MiddleClick`. `DynamicMenuItem` is the same model used by
+`DynamicMenuItem` is the same model used by
 [`IDynamicActionProvider`](./core-search-actions#idynamicactionprovider).
