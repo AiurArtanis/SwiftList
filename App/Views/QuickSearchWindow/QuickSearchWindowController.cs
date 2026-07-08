@@ -52,22 +52,37 @@ public class QuickSearchWindowController
         if (hwnd == IntPtr.Zero) return;
         try
         {
+            var sbClass = new StringBuilder(256);
+            GetClassName(hwnd, sbClass, sbClass.Capacity);
+            var className = sbClass.ToString();
+            GetWindowThreadProcessId(hwnd, out var activePid);
+            var procName = TryGetProcessName(activePid);
+
+            // TODO(issue #68): temporary diagnostic for "a system notification makes the search window
+            // disappear" -- couldn't reproduce with a plain WinRT toast fired under Explorer's AUMID, so
+            // logging every candidate here (skipped or not) to see what's actually triggering it for the
+            // reporter. Remove once root-caused.
+            Logger.Log($"[ForegroundHook] class='{className}' pid={activePid} proc='{procName}'", LogLevel.Info);
+
             // A preview provider may be hosting an out-of-process native handler (e.g. Office acting as
             // its own Preview Handler COM server), whose window can grab foreground on its own -- at
             // startup or from interacting with its content (e.g. a right-click menu) -- for as long as
             // it's shown. See PreviewActivationSignal. That isn't the user switching to another app.
             if (PluginSdk.Services.PreviewActivationSignal.IsActive) return;
 
-            var sbClass = new StringBuilder(256);
-            GetClassName(hwnd, sbClass, sbClass.Capacity);
-            if (sbClass.ToString().Contains("InputSwitch", StringComparison.OrdinalIgnoreCase)) return;
+            if (className.Contains("InputSwitch", StringComparison.OrdinalIgnoreCase)) return;
 
-            GetWindowThreadProcessId(hwnd, out var activePid);
             if (activePid == (uint)Environment.ProcessId) return;
 
             _window.Dispatcher.BeginInvoke(new Action(() => { if (_window.IsVisible) HideWindow(); }), DispatcherPriority.Background);
         }
         catch { }
+    }
+
+    private static string TryGetProcessName(uint pid)
+    {
+        try { return System.Diagnostics.Process.GetProcessById((int)pid).ProcessName; }
+        catch { return "?"; }
     }
 
     public static void ForceForeground(IntPtr hwnd)
