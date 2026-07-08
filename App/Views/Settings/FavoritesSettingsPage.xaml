@@ -115,7 +115,7 @@
 
             <Border Style="{StaticResource SettingsCard}">
                 <StackPanel>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_AddCardTitle]}" 
+                    <TextBlock x:Name="RowAddCardTitle" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_AddCardTitle]}"
                                FontWeight="SemiBold" FontSize="13" />
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_AddCardDesc]}"
                                Style="{StaticResource SettingsHintText}" Margin="0,4,0,12"/>
@@ -133,8 +133,8 @@
                         </Grid.RowDefinitions>
 
                         <!-- Headers -->
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_FieldName]}" FontSize="12" Foreground="{DynamicResource TextSecondary2}" Margin="0,0,0,4"/>
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_FieldPath]}" FontSize="12" Foreground="{DynamicResource TextSecondary2}" Margin="8,0,0,4"/>
+                        <TextBlock x:Name="RowFieldName" Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_FieldName]}" FontSize="12" Foreground="{DynamicResource TextSecondary2}" Margin="0,0,0,4"/>
+                        <TextBlock x:Name="RowFieldPath" Grid.Row="0" Grid.Column="1" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_FieldPath]}" FontSize="12" Foreground="{DynamicResource TextSecondary2}" Margin="8,0,0,4"/>
 
                         <!-- Inputs -->
                         <TextBox Grid.Row="1" Grid.Column="0" Style="{StaticResource FavTextBox}" Margin="0,0,8,0"
@@ -160,7 +160,7 @@
 
                     <Separator Background="{DynamicResource SettingsRowBorderBrush}" Height="1" Margin="0,0,0,12"/>
 
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_ListTitle]}" 
+                    <TextBlock x:Name="RowListTitle" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_ListTitle]}"
                                FontWeight="SemiBold" FontSize="13" Margin="0,0,0,8"/>
 
                     <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource FavItemTemplate}">

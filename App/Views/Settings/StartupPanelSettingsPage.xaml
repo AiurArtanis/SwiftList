@@ -105,7 +105,7 @@
             <TextBlock Style="{StaticResource SettingsSectionTitle}"
                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_StartupPanel]}"/>
 
-            <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_Enabled]}"
+            <CheckBox x:Name="RowStartupPanelEnabled" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_Enabled]}"
                       IsChecked="{Binding Enabled, Mode=TwoWay}"
                       Margin="0,12,0,0"/>
 
@@ -169,7 +169,7 @@
             <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
 
             <!-- Sub-tab: Recent Files -->
-            <StackPanel>
+            <StackPanel x:Name="SubTabRecentFiles">
                 <StackPanel.Style>
                     <Style TargetType="StackPanel">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -181,11 +181,11 @@
                     </Style>
                 </StackPanel.Style>
 
-                <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_RecentFilesEnabled]}"
+                <CheckBox x:Name="RowRecentFilesEnabled" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_RecentFilesEnabled]}"
                           IsChecked="{Binding RecentFilesEnabled, Mode=TwoWay}"
                           Margin="0,0,0,12"/>
 
-                <Border Style="{StaticResource SettingsCard}">
+                <Border x:Name="RowRecentFilesDirectories" Style="{StaticResource SettingsCard}">
                     <StackPanel>
                         <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_RecentFilesDirectoriesDesc]}"
                                    Style="{StaticResource SettingsHintText}" Margin="0,0,0,10" TextWrapping="Wrap"/>
@@ -210,7 +210,7 @@
 
                 <Border Style="{StaticResource SettingsCard}" Margin="0,15,0,0" Grid.IsSharedSizeScope="True">
                     <StackPanel>
-                        <Grid>
+                        <Grid x:Name="RowRecentFilesCount">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" SharedSizeGroup="StartupPanelCountLabel"/>
                                 <ColumnDefinition Width="120"/>
@@ -220,7 +220,7 @@
                             <TextBox Grid.Column="1" Style="{StaticResource RuleTextBox}"
                                      Text="{Binding RecentFilesCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
                         </Grid>
-                        <Grid Margin="0,10,0,0">
+                        <Grid x:Name="RowRecentFilesMaxAge" Margin="0,10,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" SharedSizeGroup="StartupPanelCountLabel"/>
                                 <ColumnDefinition Width="120"/>
@@ -235,7 +235,7 @@
             </StackPanel>
 
             <!-- Sub-tab: Plugin Tabs -->
-            <StackPanel>
+            <StackPanel x:Name="SubTabPluginTabs">
                 <StackPanel.Style>
                     <Style TargetType="StackPanel">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -254,7 +254,7 @@
                            Style="{StaticResource SettingsHintText}"
                            Visibility="{Binding HasPluginTabs, Converter={StaticResource InvertBoolToVis}}"/>
 
-                <ItemsControl ItemsSource="{Binding PluginTabGroups}" Visibility="{Binding HasPluginTabs, Converter={StaticResource BoolToVis}}">
+                <ItemsControl x:Name="PluginTabGroupsList" ItemsSource="{Binding PluginTabGroups}" Visibility="{Binding HasPluginTabs, Converter={StaticResource BoolToVis}}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Margin="0,0,0,15">

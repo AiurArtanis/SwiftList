@@ -1,5 +1,7 @@
 {
   "Settings_Title": "SwiftList Settings",
+  "Settings_SearchPlaceholder": "Search settings...",
+  "Settings_SearchNoResults": "No matching settings found.",
   "Settings_Service": "Running Status",
   "Settings_Index": "Index",
   "Settings_LocalDrive": "Local Drives",

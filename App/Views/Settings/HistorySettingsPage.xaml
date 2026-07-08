@@ -100,7 +100,7 @@
         </StackPanel>
 
         <!-- Tab: Search History -->
-        <ctrl:HistoryListControl Grid.Row="1" DataContext="{Binding SearchHistory}">
+        <ctrl:HistoryListControl x:Name="TabSearchHistory" Grid.Row="1" DataContext="{Binding SearchHistory}">
             <ctrl:HistoryListControl.Style>
                 <Style TargetType="ctrl:HistoryListControl">
                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -114,7 +114,7 @@
         </ctrl:HistoryListControl>
 
         <!-- Tab: Keyword History -->
-        <ctrl:HistoryListControl Grid.Row="1" DataContext="{Binding KeywordHistory}">
+        <ctrl:HistoryListControl x:Name="TabKeywordHistory" Grid.Row="1" DataContext="{Binding KeywordHistory}">
             <ctrl:HistoryListControl.Style>
                 <Style TargetType="ctrl:HistoryListControl">
                     <Setter Property="Visibility" Value="Collapsed"/>

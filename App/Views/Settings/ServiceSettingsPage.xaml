@@ -104,8 +104,8 @@
                     
                     <!-- Action Button -->
                     <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                        <Button Style="{StaticResource PrimarySettingsButton}" 
-                                Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_ActionInstall]}" 
+                        <Button x:Name="RowActionInstall" Style="{StaticResource PrimarySettingsButton}"
+                                Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_ActionInstall]}"
                                 Height="38"
                                 Padding="22,0"
                                 FontSize="13"
@@ -237,7 +237,7 @@
                           DisplayMemberPath="Label"
                           SelectedValuePath="Value"
                           SelectedValue="{Binding Log.LevelFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                <Button Grid.Column="3" Style="{StaticResource SettingsButton}" VerticalAlignment="Top"
+                <Button x:Name="RowClearLog" Grid.Column="3" Style="{StaticResource SettingsButton}" VerticalAlignment="Top"
                         Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_ClearLog]}"
                         Command="{Binding Log.ClearCommand}"/>
         </Grid>

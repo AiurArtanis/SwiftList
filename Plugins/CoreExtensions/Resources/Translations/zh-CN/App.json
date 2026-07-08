@@ -1,5 +1,7 @@
 {
   "Settings_Title": "SwiftList 设置",
+  "Settings_SearchPlaceholder": "搜索设置...",
+  "Settings_SearchNoResults": "未找到匹配的设置项。",
   "Settings_Service": "运行状态",
   "Settings_Index": "索引",
   "Settings_LocalDrive": "本地驱动器",

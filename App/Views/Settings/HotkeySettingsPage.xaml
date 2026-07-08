@@ -191,7 +191,7 @@
             <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
 
             <!-- Tab: Global -->
-            <StackPanel>
+            <StackPanel x:Name="TabGlobal">
                 <StackPanel.Style>
                     <Style TargetType="StackPanel">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -204,10 +204,10 @@
                 </StackPanel.Style>
 
                 <!-- Group: Global Hotkeys -->
-                <TextBlock Style="{StaticResource SettingsGroupTitle}" Margin="0,0,0,10"
+                <TextBlock x:Name="RowGroupGlobal" Style="{StaticResource SettingsGroupTitle}" Margin="0,0,0,10"
                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_GroupGlobal]}"/>
 
-                <Grid Margin="0,4,0,0">
+                <Grid x:Name="RowToggleHotkey" Margin="0,4,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
@@ -232,7 +232,7 @@
                     </TextBlock>
                 </Grid>
 
-                <Grid Margin="0,8,0,0">
+                <Grid x:Name="RowQuickSwitch" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
@@ -243,10 +243,10 @@
                         RequireModifier="True" DefaultValue="Ctrl+G"/>
                 </Grid>
 
-                <TextBlock Style="{StaticResource SettingsSubHeading}"
+                <TextBlock x:Name="RowSelectionTitle" Style="{StaticResource SettingsSubHeading}"
                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectionTitle]}"/>
 
-                <Grid Margin="0,4,0,0">
+                <Grid x:Name="RowSelectNext" Margin="0,4,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
@@ -256,7 +256,7 @@
                         Value="{Binding NextItemHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Ctrl+N"/>
                 </Grid>
-                <Grid Margin="0,8,0,0">
+                <Grid x:Name="RowSelectPrevious" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
@@ -266,7 +266,7 @@
                         Value="{Binding PreviousItemHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Ctrl+P"/>
                 </Grid>
-                <Grid Margin="0,8,0,0">
+                <Grid x:Name="RowSelectJump" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
@@ -279,7 +279,7 @@
                         <TextBlock Text=" + 1~9" VerticalAlignment="Center" Margin="6,0,0,0"/>
                     </StackPanel>
                 </Grid>
-                <Grid Margin="0,8,0,0">
+                <Grid x:Name="RowSelectActions" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
@@ -289,7 +289,7 @@
                         Value="{Binding ActionsMenuHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Ctrl+O"/>
                 </Grid>
-                <Grid Margin="0,8,0,0">
+                <Grid x:Name="RowSelectComplete" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
@@ -299,7 +299,7 @@
                         Value="{Binding CompleteFromSelectionHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Ctrl+Tab"/>
                 </Grid>
-                <Grid Margin="0,8,0,0">
+                <Grid x:Name="RowSelectQuickLook" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
@@ -309,7 +309,7 @@
                         Value="{Binding QuickLookHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Alt+P"/>
                 </Grid>
-                <Grid Margin="0,8,0,0">
+                <Grid x:Name="RowKeywordHistoryPrevious" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
@@ -319,7 +319,7 @@
                         Value="{Binding KeywordHistoryPreviousHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Alt+Up"/>
                 </Grid>
-                <Grid Margin="0,8,0,0">
+                <Grid x:Name="RowKeywordHistoryNext" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
@@ -329,7 +329,7 @@
                         Value="{Binding KeywordHistoryNextHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         DefaultValue="Alt+Down"/>
                 </Grid>
-                <Grid Margin="0,8,0,0">
+                <Grid x:Name="RowKeywordHistoryDelete" Margin="0,8,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
@@ -343,20 +343,20 @@
                 <Border Style="{StaticResource SettingsGroupDivider}"/>
 
                 <!-- Group: Quick Navigation -->
-                <TextBlock Style="{StaticResource SettingsGroupTitle}"
+                <TextBlock x:Name="RowGroupQuickNav" Style="{StaticResource SettingsGroupTitle}"
                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_GroupQuickNav]}"/>
 
-                <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickNavDoubleClick]}"
+                <CheckBox x:Name="RowQuickNavDoubleClick" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickNavDoubleClick]}"
                           IsChecked="{Binding QuickNavTriggerOnDoubleClick, Mode=TwoWay}"
                           Margin="0,4"/>
 
-                <CheckBox Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickNavMiddleClick]}"
+                <CheckBox x:Name="RowQuickNavMiddleClick" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickNavMiddleClick]}"
                           IsChecked="{Binding QuickNavTriggerOnMiddleClick, Mode=TwoWay}"
                           Margin="0,4"/>
             </StackPanel>
 
             <!-- Tab: Plugin Actions -->
-            <StackPanel>
+            <StackPanel x:Name="TabPluginActions">
                 <StackPanel.Style>
                     <Style TargetType="StackPanel">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -373,7 +373,7 @@
                      group's title margin the same way), so cancel it via the ItemsControl's own margin
                      instead. Inter-group spacing is unaffected since that comes from each group's own
                      title margin, not this outer offset. -->
-                <ItemsControl ItemsSource="{Binding PluginActionGroups}" Margin="0,-20,0,0">
+                <ItemsControl x:Name="PluginActionGroupsList" ItemsSource="{Binding PluginActionGroups}" Margin="0,-20,0,0">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel>
@@ -402,7 +402,7 @@
             </StackPanel>
 
             <!-- Tab: Blacklist -->
-            <StackPanel>
+            <StackPanel x:Name="TabBlacklist">
                 <StackPanel.Style>
                     <Style TargetType="StackPanel">
                         <Setter Property="Visibility" Value="Collapsed"/>

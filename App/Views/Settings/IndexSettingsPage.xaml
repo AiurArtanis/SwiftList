@@ -381,7 +381,7 @@
             <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
 
             <!-- Tab: Local -->
-            <StackPanel>
+            <StackPanel x:Name="TabLocal">
                 <StackPanel.Style>
                     <Style TargetType="StackPanel">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -396,7 +396,7 @@
                 <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Local_Hint]}"/>
 
-                <Border Style="{StaticResource SettingsCard}">
+                <Border x:Name="RowLocalRebuild" Style="{StaticResource SettingsCard}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -451,7 +451,7 @@
             </StackPanel>
 
             <!-- Tab: Network -->
-            <StackPanel>
+            <StackPanel x:Name="TabNetwork">
                 <StackPanel.Style>
                     <Style TargetType="StackPanel">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -466,7 +466,7 @@
                 <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_Hint]}"/>
 
-                <Border Style="{StaticResource SettingsCard}">
+                <Border x:Name="RowNetworkRebuild" Style="{StaticResource SettingsCard}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -528,7 +528,7 @@
             </StackPanel>
 
             <!-- Tab: WSL -->
-            <StackPanel>
+            <StackPanel x:Name="TabWsl">
                 <StackPanel.Style>
                     <Style TargetType="StackPanel">
                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -673,7 +673,7 @@
                 <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
 
                 <!-- Sub-tab: Path -->
-                <StackPanel>
+                <StackPanel x:Name="SubTabExclusionsPath">
                     <StackPanel.Style>
                         <Style TargetType="StackPanel">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -712,7 +712,7 @@
                 </StackPanel>
 
                 <!-- Sub-tab: Glob -->
-                <StackPanel>
+                <StackPanel x:Name="SubTabExclusionsGlob">
                     <StackPanel.Style>
                         <Style TargetType="StackPanel">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -751,7 +751,7 @@
                 </StackPanel>
 
                 <!-- Sub-tab: Regex -->
-                <StackPanel>
+                <StackPanel x:Name="SubTabExclusionsRegex">
                     <StackPanel.Style>
                         <Style TargetType="StackPanel">
                             <Setter Property="Visibility" Value="Collapsed"/>

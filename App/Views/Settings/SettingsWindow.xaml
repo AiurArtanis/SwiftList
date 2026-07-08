@@ -40,18 +40,104 @@
                         CornerRadius="9,9,0,0"
                         MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                     <Grid>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
                             <Image x:Name="TitleBarLogo" Width="20" Height="20" Margin="0,0,10,0"/>
-                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Title]}" 
+                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Title]}"
                                         FontSize="14" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,6,0">
+
+                        <!-- Centered in the remaining space between the title and the window buttons,
+                             not the sidebar, so the sidebar stays full-width and the search box lives
+                             in the title bar as requested. -->
+                        <Border x:Name="SearchBoxBorder" Grid.Column="1" Width="320" Height="28" CornerRadius="6"
+                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Background="{DynamicResource ControlBackground}"
+                                BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                           Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                                <Grid Grid.Column="1">
+                                    <TextBox x:Name="TxtSettingsSearch" Background="Transparent" BorderThickness="0" FontSize="12"
+                                             Foreground="{DynamicResource TextPrimary}"
+                                             CaretBrush="{DynamicResource TextPrimary}"
+                                             Padding="0,0,8,0" VerticalContentAlignment="Center"
+                                             TextChanged="TxtSettingsSearch_TextChanged"
+                                             PreviewKeyDown="TxtSettingsSearch_KeyDown"/>
+                                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_SearchPlaceholder]}"
+                                               IsHitTestVisible="False" FontSize="12" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextSecondary}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Text, ElementName=TxtSettingsSearch}" Value="">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,6,0">
                             <Button Content="&#xE949;" Style="{StaticResource WindowControlButton}" Click="BtnMinimize_Click"/>
                             <Button Content="&#xE8BB;" Style="{StaticResource CloseButton}" Click="BtnClose_Click"/>
                         </StackPanel>
                     </Grid>
                 </Border>
+
+                <!-- Popup instead of replacing the sidebar list: results overlay the content area
+                     without disturbing the section list underneath, closer to a Win11-style search
+                     flyout. StaysOpen is True: with StaysOpen="False" clicking a result inside the
+                     popup would close it (losing the click) before SelectionChanged can fire; IsOpen is
+                     instead driven explicitly (see SettingsWindow.xaml.cs) by text-empty/Escape/section
+                     changes/window deactivation. -->
+                <Popup x:Name="SearchResultsPopup" PlacementTarget="{Binding ElementName=SearchBoxBorder}"
+                       Placement="Bottom" Width="320" VerticalOffset="4" StaysOpen="True" AllowsTransparency="True"
+                       PopupAnimation="Fade">
+                    <Border Background="{DynamicResource ContentBg}" BorderBrush="{DynamicResource WindowBorderBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="0,4">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.25" Color="{DynamicResource ShadowColor}"/>
+                        </Border.Effect>
+                        <StackPanel>
+                            <ListBox x:Name="LstSearchResults" MaxHeight="400"
+                                     BorderThickness="0" Background="Transparent"
+                                     ItemContainerStyle="{StaticResource SidebarItemStyle}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     MouseUp="LstSearchResults_MouseUp">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,2">
+                                            <TextBlock Text="{Binding Label}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding SectionLabel}" FontSize="11"
+                                                       Foreground="{DynamicResource TextSecondary2}" Margin="0,2,0,0"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock x:Name="TxtSearchNoResults"
+                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_SearchNoResults]}"
+                                       Visibility="Collapsed" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextSecondary2}" FontSize="12"
+                                       Margin="12,10"/>
+                        </StackPanel>
+                    </Border>
+                </Popup>
 
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
@@ -122,7 +208,11 @@
                         </ListBox>
                     </Border>
 
-                    <Grid Grid.Column="1" Margin="24,20,24,16">
+                    <!-- AdornerDecorator: this custom-chrome window (WindowStyle="None") has no default
+                         Window template to supply one, and the search result highlight flash (see
+                         SettingsSearchHighlight) needs an AdornerLayer somewhere above the settings pages. -->
+                    <AdornerDecorator Grid.Column="1" Margin="24,20,24,16">
+                    <Grid>
                         <settings:ServiceSettingsPage x:Name="PageService" Visibility="Collapsed"/>
                         <settings:IndexSettingsPage x:Name="PageIndex"/>
                         <settings:GeneralSettingsPage x:Name="PageGeneral" Visibility="Collapsed"/>
@@ -138,6 +228,7 @@
                                                             DataContext="{Binding StartupPanel}"/>
                         <settings:AboutSettingsPage x:Name="PageAbout" Visibility="Collapsed"/>
                     </Grid>
+                    </AdornerDecorator>
                 </Grid>
 
                 <Border Grid.Row="2" Background="{DynamicResource StatusBarBg}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0"
