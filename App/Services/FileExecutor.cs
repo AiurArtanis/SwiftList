@@ -24,16 +24,34 @@ public static class FileExecutor
             return;
         }
 
-        try
+        // Web-address (http/https) favorites: hand straight to the default browser, no filesystem I/O
+        // needed, so no reason to leave the UI thread for these.
+        if (Helpers.FavoriteUrlHelper.IsWebUrl(path))
         {
-            // Web-address (http/https) favorites: hand straight to the default browser. They aren't files,
-            // so the File/Directory.Exists check below would wrongly report "not found".
-            if (Helpers.FavoriteUrlHelper.IsWebUrl(path))
+            try
             {
                 Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
-                return;
             }
+            catch (Exception ex)
+            {
+                Logger.Log($"[FileExecutor] OpenFileOrFolder failed for '{path}': {ex}", LogLevel.Error);
+                MessageBox.Show(string.Format(TranslationManager.Instance["Executor_OpenFailed"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            return;
+        }
 
+        // Everything below can block for seconds on a slow or heavily-indexed network share
+        // (File.Exists/Directory.Exists have no timeout) -- run it off the UI thread so launching
+        // something doesn't freeze the whole app while a background scan is hammering the same share.
+        // Process.Start itself doesn't need the UI thread either (UseShellExecute hands off to the shell
+        // and returns); CustomMessageBox.Show already marshals itself back when called off-thread.
+        Task.Run(() => LaunchExistingPath(path, asAdmin));
+    }
+
+    private static void LaunchExistingPath(string path, bool asAdmin)
+    {
+        try
+        {
             var isVirtual = path.StartsWith("::") || path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase);
             if (isVirtual || File.Exists(path) || Directory.Exists(path))
             {
@@ -149,32 +167,9 @@ public static class FileExecutor
         }
     }
 
-    public static void LocateInExplorer(string path)
-    {
-        try
-        {
-            // SHOpenFolderAndSelectItems routes through the shell so it respects the user's
-            // default file manager (e.g. Directory Opus) rather than always opening explorer.exe.
-            if (SHParseDisplayName(path, IntPtr.Zero, out var pidl, 0, out _) == 0)
-            {
-                SHOpenFolderAndSelectItems(pidl, 0, null, 0);
-                Marshal.FreeCoTaskMem(pidl);
-                return;
-            }
-        }
-        catch { }
+    public static void LocateInExplorer(string path) => ExplorerLocateHelper.LocateInExplorer(path);
 
-        // Fallback
-        try
-        {
-            Process.Start("explorer.exe", $"/select,\"{path}\"");
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[FileExecutor] Locate in explorer failed for '{path}': {ex.Message}", LogLevel.Error);
-            MessageBox.Show(string.Format(TranslationManager.Instance["Executor_LocateFailed"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
+    public static bool TryLocateInExistingExplorer(string path, IntPtr explorerHwnd) => ExplorerLocateHelper.TryLocateInExistingExplorer(path, explorerHwnd);
 
     private enum AssocStr { Executable = 2 }
 
@@ -212,90 +207,6 @@ public static class FileExecutor
         catch
         {
             return null;
-        }
-    }
-
-    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-    private static extern int SHParseDisplayName(string name, IntPtr bindingContext, out IntPtr pidl, uint sfgaoIn, out uint psfgaoOut);
-
-    [DllImport("shell32.dll")]
-    private static extern int SHOpenFolderAndSelectItems(IntPtr pidlFolder, uint cidl, IntPtr[]? apidl, uint dwFlags);
-
-    public static bool TryLocateInExistingExplorer(string path, IntPtr explorerHwnd)
-    {
-        if (explorerHwnd == IntPtr.Zero) return false;
-        try
-        {
-            dynamic? window = FindExplorerWindow(explorerHwnd);
-            if (window == null) return false;
-            var targetFolder = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
-            if (string.IsNullOrWhiteSpace(targetFolder) || !Directory.Exists(targetFolder))
-            {
-                return false;
-            }
-
-            window.Navigate2(targetFolder);
-            if (File.Exists(path))
-            {
-                SelectItemInExplorerLater(path, explorerHwnd);
-            }
-
-            return true;
-        }
-
-        catch (Exception ex)
-        {
-            Logger.Log($"[FileExecutor] Locate in existing explorer failed for '{path}': {ex.Message}", LogLevel.Error);
-            return false;
-        }
-    }
-
-    private static dynamic? FindExplorerWindow(IntPtr explorerHwnd)
-    {
-        var shellWindowsType = Type.GetTypeFromCLSID(new Guid("9BA05972-F6A8-11CF-A442-00A0C90A8F39"));
-        if (shellWindowsType == null) return null;
-        dynamic shellWindows = Activator.CreateInstance(shellWindowsType)!;
-        int count = shellWindows.Count;
-        for (var i = 0; i < count; i++)
-        {
-            try
-            {
-                dynamic? window = shellWindows.Item(i);
-                if (window == null) continue;
-                if ((IntPtr)window.HWND == explorerHwnd)
-                {
-                    return window;
-                }
-            }
-
-            catch { }
-        }
-
-        return null;
-    }
-
-    private static async void SelectItemInExplorerLater(string path, IntPtr explorerHwnd)
-    {
-        await Task.Delay(250);
-
-        try
-        {
-            dynamic? window = FindExplorerWindow(explorerHwnd);
-            if (window == null) return;
-            var name = Path.GetFileName(path);
-            if (string.IsNullOrEmpty(name)) return;
-            dynamic folder = window.Document.Folder;
-            dynamic? item = folder.ParseName(name);
-            if (item == null) return;
-            const int svsiSelect = 0x1;
-            const int svsiDeselectOthers = 0x4;
-            const int svsiEnsureVisible = 0x8;
-            window.Document.SelectItem(item, svsiSelect | svsiDeselectOthers | svsiEnsureVisible);
-        }
-
-        catch (Exception ex)
-        {
-            Logger.Log($"[FileExecutor] Select item in existing explorer failed for '{path}': {ex.Message}", LogLevel.Error);
         }
     }
 }

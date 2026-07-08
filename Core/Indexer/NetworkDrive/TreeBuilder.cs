@@ -60,7 +60,7 @@ internal sealed class TreeBuilder
         var workers = GetWorkerCount();
         var tasks = new Task[workers];
         for (var i = 0; i < workers; i++)
-            tasks[i] = Task.Run(WorkerLoopAsync, _token);
+            tasks[i] = DedicatedWorkerThread.Run(WorkerLoopAsync, "NetworkDriveScan");
 
         Task.WaitAll(tasks, _token);
         return new NetworkDriveWalkStats(

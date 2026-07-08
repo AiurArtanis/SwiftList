@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.ServiceProcess;
 using SwiftList.Core;
 using SwiftList.Core.Services;
@@ -21,6 +22,18 @@ public class UsnService : ServiceBase
         Logger.Log("[UsnService] Service Starting...");
         try
         {
+            // Local-drive scanning (USN/MFT/ReFS full builds, the non-USN FolderDriveScanner fallback,
+            // and their FileSystemWatcher-based file monitors) all run in this same process. Unlike
+            // network-drive indexing, they're already isolated from the App's own ThreadPool by being in
+            // a separate process, but their threads still compete for physical CPU with the App's UI
+            // thread through the OS scheduler. BelowNormal covers all of that background work uniformly
+            // (rather than touching every scanner class individually) and only matters under real
+            // contention -- an idle system still runs this service at full speed, so a full drive rebuild
+            // isn't slowed down. The pipe server handling search queries lives in this process too and
+            // inherits the same priority, which is the right trade-off: a UI frame is more urgent than a
+            // search reply that's already going through IPC latency regardless.
+            Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.BelowNormal;
+
             ServicePluginLoader.LoadForService();
             _engine = new SearchEngine();
             _engine.InitializeOrLoadIndex(false);

@@ -14,6 +14,14 @@ public static class SearchHistoryStore
         if (string.IsNullOrWhiteSpace(path) || path.StartsWith("__", StringComparison.Ordinal) || !UserSettings.Load().EnableHistory)
             return;
 
+        // File.Exists/Directory.Exists below have no timeout and can block for seconds on a slow or
+        // heavily-indexed network share -- callers invoke this synchronously right before/after launching
+        // a result, often still on the UI thread, so recording history must not be able to freeze that.
+        Task.Run(() => RecordCore(path));
+    }
+
+    private static void RecordCore(string path)
+    {
         var normalized = NormalizePath(path);
         if (!File.Exists(normalized) && !Directory.Exists(normalized))
             return;
