@@ -43,25 +43,8 @@ public static class PluginLoaderHelper
                 sdkVersion = referencedSdk.Version.ToString(3);
             }
 
-            var pluginName = Path.GetFileNameWithoutExtension(dllName);
+            var pluginName = GetPluginDisplayName(assembly, manager, out var pluginInstance);
             var pluginVersion = assembly.GetName().Version?.ToString(3) ?? "1.0.0";
-
-            var pluginType = assembly.GetTypes().FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
-            IPlugin? pluginInstance = null;
-            if (pluginType != null)
-            {
-                pluginInstance = manager.Plugins.FirstOrDefault(p => p.GetType() == pluginType);
-                if (pluginInstance != null)
-                {
-                    pluginName = pluginInstance.Name;
-
-                }
-            }
-
-            if (pluginInstance == null)
-            {
-                pluginName = FallbackPluginName(assembly, pluginName);
-            }
 
             var components = new List<PluginComponentViewModel>();
             if (pluginInstance != null)
@@ -80,6 +63,20 @@ public static class PluginLoaderHelper
         }
 
         return result;
+    }
+
+    /// <summary>Resolves the display name shown for a plugin -- Plugin Management's card header, and
+    /// any other UI that groups components by their owning plugin (e.g. Startup Panel's reopenable-tabs
+    /// list). Prefers the IPlugin's own Name if this assembly has one, else the first named provider
+    /// found via FallbackPluginName, else the DLL's bare filename.</summary>
+    public static string GetPluginDisplayName(Assembly assembly, PluginManager manager) => GetPluginDisplayName(assembly, manager, out _);
+
+    private static string GetPluginDisplayName(Assembly assembly, PluginManager manager, out IPlugin? pluginInstance)
+    {
+        var defaultName = Path.GetFileNameWithoutExtension(assembly.Location);
+        var pluginType = assembly.GetTypes().FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+        pluginInstance = pluginType != null ? manager.Plugins.FirstOrDefault(p => p.GetType() == pluginType) : null;
+        return pluginInstance != null ? pluginInstance.Name : FallbackPluginName(assembly, defaultName);
     }
 
     private static string FallbackPluginName(Assembly assembly, string defaultName)

@@ -66,11 +66,11 @@ public class StartupPanelSettingsViewModel : ViewModelBase
 
     public ObservableCollection<ExclusionRuleItem> RecentFilesDirectories { get; } = new();
 
-    // Plugin-provided tabs (History/Favorites/...) -- lets the user reopen one that was closed via its
-    // x button in the live panel. Distinct from Plugin Management's enable/disable: see
-    // StartupPanelPluginTabViewModel for why the two must not share storage.
-    public ObservableCollection<StartupPanelPluginTabViewModel> PluginTabs { get; } = new();
-    public bool HasPluginTabs => PluginTabs.Count > 0;
+    // Plugin-provided tabs (History/Favorites/...), grouped by owning plugin -- lets the user reopen one
+    // that was closed via its x button in the live panel. Distinct from Plugin Management's enable/
+    // disable: see StartupPanelPluginTabViewModel for why the two must not share storage.
+    public ObservableCollection<StartupPanelPluginGroupViewModel> PluginTabGroups { get; } = new();
+    public bool HasPluginTabs => PluginTabGroups.Count > 0;
 
     // Called on construction, and again after Plugin Management applies an enable/disable change in the
     // same Settings window session (see SettingsViewModel.Apply, right after RefreshDisabledComponents) --
@@ -80,9 +80,15 @@ public class StartupPanelSettingsViewModel : ViewModelBase
     // up in this "reopen a closed tab" list either.
     public void RefreshPluginTabs()
     {
-        PluginTabs.Clear();
-        foreach (var provider in PluginManager.Instance.StartupPanelTabProviders)
-            PluginTabs.Add(new StartupPanelPluginTabViewModel(provider));
+        PluginTabGroups.Clear();
+        var manager = PluginManager.Instance;
+        var groups = manager.StartupPanelTabProviders
+            .GroupBy(p => p.GetType().Assembly)
+            .Select(g => new StartupPanelPluginGroupViewModel(
+                PluginLoaderHelper.GetPluginDisplayName(g.Key, manager),
+                g.Select(p => new StartupPanelPluginTabViewModel(p)).ToList()));
+        foreach (var group in groups)
+            PluginTabGroups.Add(group);
         OnPropertyChanged(nameof(HasPluginTabs));
     }
 
