@@ -20,7 +20,7 @@ public class ServiceLogViewModel : ViewModelBase, IDisposable
     private readonly Dictionary<string, DateTime> _lastLoadedWriteTimes = new();
     private List<LogLineViewModel> _allLines = new();
 
-    private string _selectedTab = "Service";
+    private string _selectedTab = "App";
     public string SelectedTab
     {
         get => _selectedTab;
