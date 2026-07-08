@@ -127,32 +127,6 @@
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <StackPanel Margin="0,0,28,0">
-                        <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_LogTab_Service]}"
-                                Command="{Binding Log.SelectTabCommand}" CommandParameter="Service">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Log.SelectedTab}" Value="Service">
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-                                            <Setter Property="FontWeight" Value="SemiBold"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Border>
-                            <Border.Style>
-                                <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Log.SelectedTab}" Value="Service">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
-                    </StackPanel>
-                    <StackPanel Margin="0,0,28,0">
                         <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_LogTab_App]}"
                                 Command="{Binding Log.SelectTabCommand}" CommandParameter="App">
                             <Button.Style>
@@ -178,7 +152,7 @@
                             </Border.Style>
                         </Border>
                     </StackPanel>
-                    <StackPanel>
+                    <StackPanel Margin="0,0,28,0">
                         <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_LogTab_Hook]}"
                                 Command="{Binding Log.SelectTabCommand}" CommandParameter="Hook">
                             <Button.Style>
@@ -197,6 +171,32 @@
                                 <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding Log.SelectedTab}" Value="Hook">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                        </Border>
+                    </StackPanel>
+                    <StackPanel>
+                        <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_LogTab_Service]}"
+                                Command="{Binding Log.SelectTabCommand}" CommandParameter="Service">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Log.SelectedTab}" Value="Service">
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Border>
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Log.SelectedTab}" Value="Service">
                                             <Setter Property="Visibility" Value="Visible"/>
                                         </DataTrigger>
                                     </Style.Triggers>
