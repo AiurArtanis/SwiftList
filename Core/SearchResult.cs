@@ -12,8 +12,9 @@ public class SearchResult
 
     // Only populated (and only meaningful) for GetRecentFiles results -- lets SearchService merge the
     // local-drive and network/WSL result sets by actual recency instead of just concatenating two
-    // already-sorted-but-incomparable lists. Zero for every other kind of search result.
-    public uint CreatedUtc { get; set; }
+    // already-sorted-but-incomparable lists. Zero for every other kind of search result. Last-write time,
+    // not creation time: a long-lived file you just edited should still count as "recent".
+    public uint ModifiedUtc { get; set; }
 }
 
 public sealed class SearchResultRankComparer : IComparer<SearchResult>

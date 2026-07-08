@@ -16,7 +16,7 @@ Two sub-tabs: **Recent Files** and **Plugin Tabs**.
   and WSL paths (`\\wsl$\...` or `\\wsl.localhost\...`) — matched against whichever of those you've
   already configured and indexed under [Index](./index-drives).
 - **Maximum number of files to show** — range 1–100, default 10.
-- **Time range (minutes)** — only files created within this many minutes of now are eligible, on
+- **Time range (minutes)** — only files modified within this many minutes of now are eligible, on
   top of the count cap above. Range 1–43200 (30 days), default 60.
 
 ## Plugin Tabs

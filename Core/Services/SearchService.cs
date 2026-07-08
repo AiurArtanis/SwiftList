@@ -187,10 +187,10 @@ public partial class SearchService : IDisposable
         return results.Any(r => r);
     }
 
-    // In-memory index lookup only (no disk I/O) -- the most recently created entries across all of the
+    // In-memory index lookup only (no disk I/O) -- the most recently modified entries across all of the
     // given directories' subtrees, most recent first. The elevated service only tracks local drive
     // letters, so network/WSL directories are queried in-process here (same split as SearchStreamingAsync's
-    // localTask/networkTask) and merged by actual creation time rather than just concatenated.
+    // localTask/networkTask) and merged by actual modification time rather than just concatenated.
     public async Task<List<SearchResult>> GetRecentFilesAsync(IReadOnlyList<string> directories, int limit, int maxAgeMinutes, CancellationToken token = default)
     {
         var networkTask = Task.Run(() =>
@@ -211,7 +211,7 @@ public partial class SearchService : IDisposable
         var localResults = resp.Kind == PipeResponseKind.RecentFiles && resp.RecentFiles != null ? resp.RecentFiles : new List<SearchResult>();
 
         var networkResults = await networkTask.ConfigureAwait(false);
-        var merged = localResults.Concat(networkResults).OrderByDescending(r => r.CreatedUtc);
+        var merged = localResults.Concat(networkResults).OrderByDescending(r => r.ModifiedUtc);
         return (limit > 0 ? merged.Take(limit) : merged).ToList();
     }
 

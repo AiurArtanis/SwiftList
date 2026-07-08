@@ -30,7 +30,7 @@ public readonly struct PipeResponse
 public static partial class PipeResponseBinarySerializer
 {
     private const int Magic = 0x52504C53; // SLPR
-    private const int Version = 4; // v4: RecentFiles entries gained CreatedUtc
+    private const int Version = 4; // v4: RecentFiles entries gained ModifiedUtc (originally CreatedUtc)
 
     public static Task WriteOkAsync(Stream stream, CancellationToken token = default)
         => WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.Ok }, token);

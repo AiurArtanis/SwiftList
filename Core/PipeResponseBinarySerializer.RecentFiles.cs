@@ -9,8 +9,8 @@ public static partial class PipeResponseBinarySerializer
     public static Task WriteRecentFilesAsync(Stream stream, List<SearchResult> recentFiles, CancellationToken token = default)
         => WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.RecentFiles, RecentFiles = recentFiles }, token);
 
-    // Name/Path/IsDir/Drive/CreatedUtc only -- Attributes isn't read by any caller (see
-    // SearchResultHelper.CreateUiResult). CreatedUtc is carried so SearchService.GetRecentFilesAsync can
+    // Name/Path/IsDir/Drive/ModifiedUtc only -- Attributes isn't read by any caller (see
+    // SearchResultHelper.CreateUiResult). ModifiedUtc is carried so SearchService.GetRecentFilesAsync can
     // merge this response with the network/WSL result set by actual recency instead of just concatenating.
     private static int CalculateRecentFilesSize(List<SearchResult> recentFiles)
     {
@@ -30,7 +30,7 @@ public static partial class PipeResponseBinarySerializer
             WriteString(span, ref offset, item.Path);
             span[offset++] = (byte)(item.IsDir ? 1 : 0);
             WriteString(span, ref offset, item.Drive);
-            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset), item.CreatedUtc);
+            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset), item.ModifiedUtc);
             offset += 4;
         }
     }
@@ -46,9 +46,9 @@ public static partial class PipeResponseBinarySerializer
             var path = ReadString(payload, ref offset);
             var isDir = payload[offset++] != 0;
             var drive = ReadString(payload, ref offset);
-            var createdUtc = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(offset));
+            var modifiedUtc = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(offset));
             offset += 4;
-            recentFiles.Add(new SearchResult { Name = name, Path = path, IsDir = isDir, Drive = drive, CreatedUtc = createdUtc });
+            recentFiles.Add(new SearchResult { Name = name, Path = path, IsDir = isDir, Drive = drive, ModifiedUtc = modifiedUtc });
         }
         return recentFiles;
     }

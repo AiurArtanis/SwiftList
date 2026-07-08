@@ -25,7 +25,7 @@ public class StartupPanelSettings
 
     public int RecentFilesCount { get; set; } = 10;
 
-    // Only entries created within this many minutes of "now" are eligible, on top of the count cap
+    // Only entries modified within this many minutes of "now" are eligible, on top of the count cap
     // above -- so an idle watched folder doesn't keep surfacing month-old files just because nothing
     // newer exists.
     public int RecentFilesMaxAgeMinutes { get; set; } = 60;

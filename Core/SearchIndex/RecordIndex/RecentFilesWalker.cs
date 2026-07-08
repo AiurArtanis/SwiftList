@@ -34,8 +34,8 @@ public static class RecentFilesWalker
                 if (index.IsDirectory(child))
                     stack.Push(child);
 
-                var createdUtc = index.GetCreationTimeUnixSeconds(child);
-                if (createdUtc < cutoffUtc)
+                var modifiedUtc = index.GetLastWriteTimeUnixSeconds(child);
+                if (modifiedUtc < cutoffUtc)
                     continue;
 
                 candidates.Add(new SearchResult
@@ -44,7 +44,7 @@ public static class RecentFilesWalker
                     Path = index.GetFullPath(child),
                     IsDir = index.IsDirectory(child),
                     Drive = drive,
-                    CreatedUtc = createdUtc
+                    ModifiedUtc = modifiedUtc
                 });
             }
         }
