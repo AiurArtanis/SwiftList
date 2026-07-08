@@ -1,6 +1,8 @@
+using System.Diagnostics;
+
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
-internal sealed class Scheduler : IDisposable
+internal sealed partial class Scheduler : IDisposable
 {
     private readonly object _gate = new();
     private readonly Dictionary<string, CancellationTokenSource> _debounceCts = new(StringComparer.OrdinalIgnoreCase);
@@ -14,12 +16,15 @@ internal sealed class Scheduler : IDisposable
     private readonly Action<string, string, int?, string?> _setStatus;
     private readonly Action<string, NetworkIndex> _onRefreshFinished;
     private readonly Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> _onPublishCheckpoint;
+    private readonly Func<string, FileRecordStore?> _getPreviousStore;
 
     public Scheduler(Action<string, string> onWatcherEnsure, Action<string> onWatcherRemove, Action<string, string, int?, string?> setStatus,
-        Action<string, NetworkIndex> onRefreshFinished, Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> onPublishCheckpoint)
+        Action<string, NetworkIndex> onRefreshFinished, Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> onPublishCheckpoint,
+        Func<string, FileRecordStore?> getPreviousStore)
     {
         _onWatcherEnsure = onWatcherEnsure; _onWatcherRemove = onWatcherRemove; _setStatus = setStatus;
         _onRefreshFinished = onRefreshFinished; _onPublishCheckpoint = onPublishCheckpoint;
+        _getPreviousStore = getPreviousStore;
     }
 
     public void StartRefresh(
@@ -125,119 +130,6 @@ internal sealed class Scheduler : IDisposable
         }
     }
 
-    public void QueueRefreshDrive(string drive, string reason)
-    {
-        CancellationTokenSource? oldDebounce = null;
-        CancellationTokenSource debounce;
-        lock (_gate)
-        {
-            if (_refreshCts == null || _refreshCts.IsCancellationRequested)
-                return;
-
-            if (_debounceCts.TryGetValue(drive, out oldDebounce))
-                oldDebounce.Cancel();
-
-            debounce = CancellationTokenSource.CreateLinkedTokenSource(_refreshCts.Token);
-            _debounceCts[drive] = debounce;
-        }
-
-        try
-        {
-            oldDebounce?.Dispose();
-        }
-        catch { }
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await Task.Delay(reason == "configure" ? TimeSpan.Zero : TimeSpan.FromSeconds(2), debounce.Token).ConfigureAwait(false);
-                StartRefreshDriveIfIdle(drive, reason, debounce.Token);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (ObjectDisposedException)
-            {
-                // Swallow exception caused by CancellationTokenSource being disposed to prevent UnobservedTaskException crash
-            }
-            finally
-            {
-                lock (_gate)
-                {
-                    if (_debounceCts.TryGetValue(drive, out var current) && ReferenceEquals(current, debounce))
-                        _debounceCts.Remove(drive);
-                }
-
-                try
-                {
-                    debounce.Dispose();
-                }
-                catch { }
-            }
-        }, CancellationToken.None);
-    }
-
-    private void StartRefreshDriveIfIdle(string drive, string reason, CancellationToken token)
-    {
-        lock (_gate)
-        {
-            if (token.IsCancellationRequested || _refreshCts == null || _refreshCts.IsCancellationRequested)
-                return;
-
-            if (_refreshingDrives.Contains(drive))
-            {
-                _pendingRefreshDrives.Add(drive);
-                return;
-            }
-
-            _refreshingDrives.Add(drive);
-        }
-
-        _ = Task.Run(() => RefreshDriveLoop(drive, reason, token), token);
-    }
-
-    private void RefreshDriveLoop(string drive, string reason, CancellationToken token)
-    {
-        try
-        {
-            while (!token.IsCancellationRequested)
-            {
-                Logger.Log($"[NetworkIndexer] Refreshing {drive}: because {reason}");
-                RefreshDrive(drive, token);
-
-                lock (_gate)
-                {
-                    if (!_pendingRefreshDrives.Remove(drive))
-                        break;
-                }
-
-                reason = "pending changes";
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        finally
-        {
-            // If Configure/StartRefresh replaced _refreshCts while this loop was still running (e.g. a
-            // manual "rebuild" clicked while the drive's own initial scan was in flight), this loop's
-            // `token` is now permanently cancelled, so the while condition above exits without ever
-            // consuming a fresh pending request queued against the *new* token. Left alone, that request
-            // is silently dropped and the drive's status stays stuck at "indexing" forever (nothing else
-            // re-triggers a Manual-mode drive). Re-queue it through the normal path so it runs against
-            // whatever token is current now.
-            bool stillPending;
-            lock (_gate)
-            {
-                _refreshingDrives.Remove(drive);
-                stillPending = _pendingRefreshDrives.Remove(drive);
-            }
-            if (stillPending)
-                QueueRefreshDrive(drive, "pending changes");
-        }
-    }
-
     private void RefreshDrive(string drive, CancellationToken token)
     {
         var root = (drive.StartsWith(@"\\") || drive.StartsWith(@"//")) ? drive : drive + @":\";
@@ -247,6 +139,7 @@ internal sealed class Scheduler : IDisposable
         }
         var physicalRoot = root;
 
+        var stopwatch = Stopwatch.StartNew();
         try
         {
             _setStatus(drive, "indexing", 0, null);
@@ -258,6 +151,8 @@ internal sealed class Scheduler : IDisposable
                 0,
                 0,
                 true);
+            var previousStore = _getPreviousStore(drive);
+            LogResumeProgress(drive, previousStore);
             var index = NetworkIndex.Build(
                 drive,
                 root,
@@ -265,9 +160,17 @@ internal sealed class Scheduler : IDisposable
                 options,
                 token,
                 count => _setStatus(drive, "indexing", count, null),
-                (store, stats) => _onPublishCheckpoint(drive, store, stats, token));
+                (store, stats) => _onPublishCheckpoint(drive, store, stats, token),
+                previousStore);
             token.ThrowIfCancellationRequested();
+            // Only reached once TreeBuilder.Run() drained every worker without cancellation -- the walk
+            // genuinely covered the whole tree, so a future resume can trust every FileRecordFlags.Listed
+            // directory this build produced.
+            index.IsComplete = true;
             IndexerHelper.Save(index);
+
+            stopwatch.Stop();
+            Logger.Log($"[NetworkIndexer] {drive}: finished in {stopwatch.Elapsed.TotalSeconds:F1}s, {index.Count} records.");
 
             _onRefreshFinished(drive, index);
         }
@@ -279,6 +182,32 @@ internal sealed class Scheduler : IDisposable
             Logger.Log($"[NetworkIndexer] Failed to index {drive}: {ex.Message}", LogLevel.Error);
             _setStatus(drive, "error", null, ex.Message);
         }
+    }
+
+    // Directories-listed ratio is a proxy for "how far the previous pass got": a directory only carries
+    // FileRecordFlags.Listed once its own children were fully captured, so this is what TreeDiffBaseline
+    // will actually be able to trust and skip re-listing, as opposed to just the raw record count.
+    private static void LogResumeProgress(string drive, FileRecordStore? previousStore)
+    {
+        if (previousStore == null)
+        {
+            Logger.Log($"[NetworkIndexer] {drive}: no previous index to resume from, starting a fresh scan.");
+            return;
+        }
+
+        var totalDirs = 0;
+        var listedDirs = 0;
+        foreach (var record in previousStore.Records)
+        {
+            if (!record.IsDirectory)
+                continue;
+            totalDirs++;
+            if ((record.Flags & FileRecordFlags.Listed) != 0)
+                listedDirs++;
+        }
+
+        Logger.Log($"[NetworkIndexer] {drive}: resuming with {previousStore.Records.Count} records from last pass " +
+            $"({listedDirs}/{totalDirs} directories confirmed listed, previous IsComplete={previousStore.IsComplete}).");
     }
 
     public void Dispose()

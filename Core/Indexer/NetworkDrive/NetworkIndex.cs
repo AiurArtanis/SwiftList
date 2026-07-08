@@ -19,6 +19,9 @@ internal sealed class NetworkIndex
 
     public string Drive { get; }
     public DateTime LastUpdated { get; set; } = DateTime.Now;
+    // See FileRecordStore.IsComplete -- false for a checkpoint or an interrupted scan, true only once the
+    // build that produced this index finished in full.
+    public bool IsComplete { get; set; }
     public UInt128 RootId { get; private set; }
     public int Skipped { get; private set; }
     public int Errors { get; private set; }
@@ -40,6 +43,7 @@ internal sealed class NetworkIndex
         var index = new NetworkIndex(store.SourceKey);
         index.RootId = store.RootId;
         index.LastUpdated = store.LastUpdated;
+        index.IsComplete = store.IsComplete;
         lock (index._gate)
             index._runtime.Load(store);
         return index;
@@ -65,7 +69,8 @@ internal sealed class NetworkIndex
         WalkOptions options,
         CancellationToken token,
         Action<int> onProgress,
-        Action<FileRecordStore, NetworkDriveWalkStats>? onCheckpoint = null)
+        Action<FileRecordStore, NetworkDriveWalkStats>? onCheckpoint = null,
+        FileRecordStore? previousStore = null)
     {
         var index = new NetworkIndex(drive);
         const ulong rootId = 1;
@@ -76,13 +81,22 @@ internal sealed class NetworkIndex
             IdKind = FileRecordIdKind.SourceLocalId64,
             RootId = rootId
         };
+        // Stat the real root mtime, the same as TryCreateRecord does for every other directory -- without
+        // it this record would default to LastWriteTimeUnixSeconds=0, which TreeDiffBaseline could never
+        // match against a live stat, permanently forcing the share's own top-level entries to be re-listed
+        // on every resume no matter how unchanged they actually are.
+        uint rootLastWriteTime = 0;
+        try { rootLastWriteTime = FileTimeHelper.ToUnixSeconds(Directory.GetLastWriteTimeUtc(physicalRoot)); } catch { }
+
         store.Records.Add(new FileRecord(
             rootId,
             rootId,
             string.Empty,
-            FileRecordFlags.Directory | FileRecordFlags.SourceRoot));
+            FileRecordFlags.Directory | FileRecordFlags.SourceRoot,
+            lastWriteTimeUnixSeconds: rootLastWriteTime));
 
-        var builder = new TreeBuilder(store, root, physicalRoot, options, token, onProgress, onCheckpoint);
+        var diffBaseline = TreeDiffBaseline.From(previousStore);
+        var builder = new TreeBuilder(store, root, physicalRoot, options, token, onProgress, onCheckpoint, diffBaseline);
         var stats = builder.Run();
 
         index.RootId = rootId;
@@ -113,6 +127,7 @@ internal sealed class NetworkIndex
                 journalId: 0,
                 nextUsn: 0);
             store.LastUpdated = LastUpdated;
+            store.IsComplete = IsComplete;
             return store;
         }
     }

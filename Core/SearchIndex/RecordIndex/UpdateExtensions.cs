@@ -34,7 +34,7 @@ public static class UpdateExtensions
             index.ParentIndexes[oldIndex] = newParentIndex;
             index.TrackOrphanParent(oldIndex, newParentIndex, record.ParentId);
             index.NameIds[oldIndex] = index.Names.GetId(name);
-            index.Flags[oldIndex] = (byte)record.Flags;
+            index.Flags[oldIndex] = (ushort)record.Flags;
             index.Sizes[oldIndex] = record.Size;
             index.CreationTimes[oldIndex] = record.CreationTimeUnixSeconds;
             index.LastWriteTimes[oldIndex] = record.LastWriteTimeUnixSeconds;
@@ -137,7 +137,7 @@ public static class UpdateExtensions
             return;
 
         var wasDirectory = index.IsDirectory(idx);
-        index.Flags[idx] = (byte)(((FileRecordFlags)index.Flags[idx]) | FileRecordFlags.Deleted);
+        index.Flags[idx] = (ushort)(((FileRecordFlags)index.Flags[idx]) | FileRecordFlags.Deleted);
         index.CharMasks[idx] = 0;
 
         index.DeltaIdToIndex.Remove(id);
@@ -225,7 +225,7 @@ public static class UpdateExtensions
     {
         index.Ids.Add(id);
         index.NameIds.Add(index.Names.GetId(name));
-        index.Flags.Add((byte)flags);
+        index.Flags.Add((ushort)flags);
         index.CharMasks.Add(FzfAlgorithm.GetCharMask(name));
         index.Sizes.Add(size);
         index.CreationTimes.Add(creationTimeUtc);

@@ -3,12 +3,11 @@ using System.Threading.Channels;
 
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
-internal sealed class TreeBuilder
+internal sealed partial class TreeBuilder
 {
     private const int RecordBatchSize = 256;
     private const int ProgressBatchSize = 1024;
     private const int CheckpointBatchSize = 4096;
-    private static readonly TimeSpan CheckpointInterval = TimeSpan.FromSeconds(5);
     private readonly FileRecordStore _store;
     private readonly string _root;
     private readonly string _physicalRoot;
@@ -29,7 +28,6 @@ internal sealed class TreeBuilder
     private int _reparseSkipped;
     private int _slowDirectories;
     private int _countSinceCheckpoint;
-    private long _lastCheckpointTicks = DateTime.UtcNow.Ticks;
 
     public TreeBuilder(
         FileRecordStore store,
@@ -38,7 +36,8 @@ internal sealed class TreeBuilder
         WalkOptions options,
         CancellationToken token,
         Action<int> onProgress,
-        Action<FileRecordStore, NetworkDriveWalkStats>? onCheckpoint = null)
+        Action<FileRecordStore, NetworkDriveWalkStats>? onCheckpoint = null,
+        TreeDiffBaseline? diffBaseline = null)
     {
         _store = store;
         _root = PathHelpers.NormalizePath(root, true);
@@ -47,11 +46,13 @@ internal sealed class TreeBuilder
         _token = token;
         _onProgress = onProgress;
         _onCheckpoint = onCheckpoint;
+        _diffBaseline = diffBaseline;
         _pending = Channel.CreateUnbounded<WorkItem>(new UnboundedChannelOptions
         {
             SingleReader = false,
             SingleWriter = false
         });
+        RegisterDirectoryIndices(0, _store.Records);
     }
 
     public NetworkDriveWalkStats Run()
@@ -89,6 +90,9 @@ internal sealed class TreeBuilder
 
     private void WalkDirectory(WorkItem current)
     {
+        if (_diffBaseline != null && TryReuseUnchangedDirectory(current))
+            return;
+
         var ignoreRules = _filter.LoadIgnoreRules(current.Path, current.LogicalPath, current.IgnoreRules);
         var stopwatch = Stopwatch.StartNew();
         IEnumerable<string> children;
@@ -127,7 +131,14 @@ internal sealed class TreeBuilder
             var indexedItems = Interlocked.Increment(ref _indexedItems);
 
             if (isDirectory && _filter.ShouldDescend(logicalFullPath, record.Attributes, current.Depth + 1, ignoreRules))
+            {
+                // A directory just added to batch isn't in _indexById until its batch is flushed -- another
+                // worker can dequeue and finish this child (including its own MarkListed) before that
+                // happens, silently leaving it un-Listed forever. Flush now so the child's own record is
+                // registered before anyone else can possibly touch it.
+                FlushRecords(batch);
                 EnqueueDirectory(child, logicalFullPath, record.Id, current.Depth + 1, ignoreRules);
+            }
 
             if (Interlocked.Increment(ref _countSinceProgress) >= ProgressBatchSize)
             {
@@ -139,6 +150,7 @@ internal sealed class TreeBuilder
         }
 
         FlushRecords(batch);
+        MarkListed(current.LocalId);
         if (stopwatch.ElapsedMilliseconds >= 2_000)
             Interlocked.Increment(ref _slowDirectories);
     }
@@ -223,57 +235,13 @@ internal sealed class TreeBuilder
 
         lock (_recordsGate)
         {
+            var startIndex = _store.Records.Count;
             _store.Records.AddRange(batch);
+            RegisterDirectoryIndices(startIndex, batch);
         }
 
         batch.Clear();
     }
-
-    private void MaybeCheckpoint(int indexedItems)
-    {
-        if (_onCheckpoint == null)
-            return;
-
-        var nowTicks = DateTime.UtcNow.Ticks;
-        var count = Interlocked.Increment(ref _countSinceCheckpoint);
-        var countDue = count >= CheckpointBatchSize;
-        var timeDue = new TimeSpan(nowTicks - Interlocked.Read(ref _lastCheckpointTicks)) >= CheckpointInterval;
-        if (!countDue && !timeDue)
-            return;
-
-        if (Interlocked.Exchange(ref _countSinceCheckpoint, 0) == 0 && !timeDue)
-            return;
-
-        Interlocked.Exchange(ref _lastCheckpointTicks, nowTicks);
-        _onProgress(indexedItems);
-        _onCheckpoint(CloneStore(), CurrentStats());
-    }
-
-    private FileRecordStore CloneStore()
-    {
-        lock (_recordsGate)
-        {
-            var clone = new FileRecordStore
-            {
-                SourceKey = _store.SourceKey,
-                SourceKind = _store.SourceKind,
-                IdKind = _store.IdKind,
-                RootId = _store.RootId,
-                JournalId = _store.JournalId,
-                NextUsn = _store.NextUsn
-            };
-            clone.Records.AddRange(_store.Records);
-            return clone;
-        }
-    }
-
-    private NetworkDriveWalkStats CurrentStats() => new NetworkDriveWalkStats(
-            Volatile.Read(ref _skippedItems),
-            Volatile.Read(ref _errors),
-            Volatile.Read(ref _enumerateErrors),
-            Volatile.Read(ref _attributeErrors),
-            Volatile.Read(ref _reparseSkipped),
-            Volatile.Read(ref _slowDirectories));
 
     private int GetWorkerCount() => _filter.WorkerCount > 0
             ? Math.Clamp(_filter.WorkerCount, 1, 32)

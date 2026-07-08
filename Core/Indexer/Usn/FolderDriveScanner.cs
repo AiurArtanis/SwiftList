@@ -17,7 +17,9 @@ internal static class FolderDriveScanner
             IdKind = FileRecordIdKind.SourceLocalId64,
             FileSystemType = identity?.FileSystemType ?? string.Empty,
             VolumeSerialNumber = identity?.SerialNumber ?? 0,
-            RootId = 1
+            RootId = 1,
+            // No partial-checkpoint concept for this fallback walk -- it's always a full build.
+            IsComplete = true
         };
         store.Records.Add(new FileRecord(1, 1, string.Empty, FileRecordFlags.Directory | FileRecordFlags.SourceRoot));
 

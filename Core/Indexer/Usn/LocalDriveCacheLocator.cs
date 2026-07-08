@@ -15,7 +15,18 @@ internal static class LocalDriveCacheLocator
     {
         var key = GetCacheKey(drive);
         if (key == null) return null;
-        var summary = FileRecordStoreSerializer.LoadSummary(cacheDir, key);
+
+        FileRecordStoreSummary? summary;
+        try
+        {
+            summary = FileRecordStoreSerializer.LoadSummary(cacheDir, key);
+        }
+        catch (IOException)
+        {
+            // Busy right now (e.g. a save mid-write) -- not evidence of corruption, don't delete.
+            return null;
+        }
+
         if (!summary.HasValue)
         {
             FileRecordStoreSerializer.Delete(cacheDir, key);
@@ -46,7 +57,16 @@ internal static class LocalDriveCacheLocator
             if (string.IsNullOrWhiteSpace(key))
                 continue;
 
-            var summary = FileRecordStoreSerializer.LoadSummary(cacheDir, key);
+            FileRecordStoreSummary? summary;
+            try
+            {
+                summary = FileRecordStoreSerializer.LoadSummary(cacheDir, key);
+            }
+            catch (IOException)
+            {
+                continue;
+            }
+
             if (!summary.HasValue)
             {
                 FileRecordStoreSerializer.Delete(cacheDir, key);

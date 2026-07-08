@@ -95,7 +95,7 @@ internal static class HardLinkUpdateExtensions
             return;
 
         var wasDirectory = index.IsDirectory(idx);
-        index.Flags[idx] = (byte)(((FileRecordFlags)index.Flags[idx]) | FileRecordFlags.Deleted);
+        index.Flags[idx] = (ushort)(((FileRecordFlags)index.Flags[idx]) | FileRecordFlags.Deleted);
         index.CharMasks[idx] = 0;
 
         var parentIndex = index.ParentIndexes[idx];

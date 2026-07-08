@@ -23,7 +23,7 @@ internal sealed class FileRecordNamePool
     }
 }
 
-public static class FileRecordStoreSerializer
+public static partial class FileRecordStoreSerializer
 {
     private const string MetaMagic = "SLRCMETA";
     private const string RecordsMagic = "SLRCREC";
@@ -47,7 +47,10 @@ public static class FileRecordStoreSerializer
     // age-windowed query; force one rebuild so the full FileInfo-based walk (which always stats correctly)
     // repopulates them. Shared by both the local-drive cache (LocalDriveCacheLocator) and the network/WSL
     // cache (NetworkDriveCacheLocator), so both get swept.
-    public const int Version = 13;
+    // v14: added FileRecordStore.IsComplete (meta) and FileRecordFlags.Listed (per directory record), for
+    // resumable network/WSL drive scans (TreeDiffBaseline) -- force one rebuild since older caches have
+    // neither bit and would otherwise look like a directory that was discovered but never actually listed.
+    public const int Version = 14;
 
     public static string GetBasePath(string cacheDir, string sourceKey) => Path.Combine(cacheDir, sourceKey.ToLowerInvariant());
 
@@ -140,6 +143,7 @@ public static class FileRecordStoreSerializer
             writer.Write(store.Records.Count);
             writer.Write(store.Records.Count(r => !r.IsDeleted));
             writer.Write(store.LastUpdated.ToUniversalTime().Ticks);
+            writer.Write(store.IsComplete);
         }
 
         Replace(metaTemp, basePath + ".meta");
@@ -176,6 +180,7 @@ public static class FileRecordStoreSerializer
                 _ = reader.ReadInt32();
                 var ticks = reader.ReadInt64();
                 store.LastUpdated = new DateTime(ticks, DateTimeKind.Utc).ToLocalTime();
+                store.IsComplete = reader.ReadBoolean();
             }
 
             var names = new List<string>();
@@ -230,53 +235,6 @@ public static class FileRecordStoreSerializer
         catch (Exception ex)
         {
             Logger.Log($"[FileRecordStoreSerializer] Failed to load {basePath}: {ex.Message}", LogLevel.Error);
-            return null;
-        }
-    }
-
-    public static FileRecordStoreSummary? LoadSummary(string cacheDir, string sourceKey)
-    {
-        var basePath = GetBasePath(cacheDir, sourceKey);
-        try
-        {
-            if (!Exists(cacheDir, sourceKey))
-                return null;
-
-            using var meta = File.OpenRead(basePath + ".meta");
-            using var reader = new BinaryReader(meta, Encoding.UTF8);
-            if (reader.ReadString() != MetaMagic || reader.ReadInt32() != Version)
-                return null;
-
-            var storeSourceKey = reader.ReadString();
-            var sourceKind = (FileRecordSourceKind)reader.ReadByte();
-            var idKind = (FileRecordIdKind)reader.ReadByte();
-            var fileSystemType = reader.ReadString();
-            var volumeSerialNumber = reader.ReadUInt32();
-            var rootLow = reader.ReadUInt64();
-            var rootHigh = reader.ReadUInt64();
-            var journalId = reader.ReadUInt64();
-            var nextUsn = reader.ReadInt64();
-            var recordCount = reader.ReadInt32();
-            var liveRecordCount = reader.ReadInt32();
-            var ticks = reader.ReadInt64();
-            var rootId = new UInt128(rootHigh, rootLow);
-            var lastUpdated = new DateTime(ticks, DateTimeKind.Utc).ToLocalTime();
-            return new FileRecordStoreSummary(
-                storeSourceKey,
-                sourceKind,
-                idKind,
-                fileSystemType,
-                volumeSerialNumber,
-                rootId,
-                journalId,
-                nextUsn,
-                recordCount,
-                liveRecordCount,
-                lastUpdated);
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[FileRecordStoreSerializer] Failed to load summary {basePath}: {ex.Message}", LogLevel.Error);
             return null;
         }
     }

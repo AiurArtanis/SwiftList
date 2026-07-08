@@ -17,7 +17,11 @@ public sealed class RuntimeIndex
     private readonly List<UInt128> _ids = new();
     private readonly List<int> _parentIndexes = new();
     private readonly List<int> _nameIds = new();
-    private readonly List<byte> _flags = new();
+    // ushort, not byte: FileRecordFlags has used all 8 low bits (Directory..Encrypted) since before this
+    // index existed, and FileRecordFlags.Listed (added for resumable network-drive scans) needs bit 8 --
+    // a byte column would silently truncate it away on every load, so no directory could ever come back
+    // as "confirmed listed" no matter how correctly TreeBuilder set the bit going in.
+    private readonly List<ushort> _flags = new();
     private readonly List<ulong> _charMasks = new();
     private readonly List<long> _sizes = new();
     private readonly List<uint> _creationTimes = new();
@@ -49,7 +53,7 @@ public sealed class RuntimeIndex
     internal List<UInt128> Ids => _ids;
     internal List<int> ParentIndexes => _parentIndexes;
     internal List<int> NameIds => _nameIds;
-    internal List<byte> Flags => _flags;
+    internal List<ushort> Flags => _flags;
     internal List<ulong> CharMasks => _charMasks;
     internal List<long> Sizes => _sizes;
     internal List<uint> CreationTimes => _creationTimes;
@@ -274,7 +278,11 @@ public sealed class RuntimeIndex
             VolumeSerialNumber = volumeSerialNumber,
             RootId = rootId,
             JournalId = journalId,
-            NextUsn = nextUsn
+            NextUsn = nextUsn,
+            // Local USN/MFT snapshots have no partial-checkpoint concept -- a runtime index only ever gets
+            // converted back to a store once fully (re)built or patched, so this is always true for them.
+            // NetworkIndex.ToStore() overwrites this with its own IsComplete right after calling here.
+            IsComplete = true
         };
 
         store.Records.Capacity = Count;

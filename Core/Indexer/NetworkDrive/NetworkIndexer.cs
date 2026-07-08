@@ -27,7 +27,8 @@ public sealed class NetworkIndexer : IDisposable
             drive => _watcherManager?.RemoveWatcher(drive),
             SetStatus,
             OnRefreshFinished,
-            PublishCheckpoint
+            PublishCheckpoint,
+            GetPreviousStore
         );
     }
 
@@ -108,13 +109,17 @@ public sealed class NetworkIndexer : IDisposable
                     {
                         _indexes[drive] = index;
                         _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "cached", index.Count, index, null);
-                        cachedDrives.Add(drive);
+                        // An incomplete cache (interrupted scan) must not be mistaken for "nothing to do" --
+                        // only a fully-finished index skips the initial refresh below.
+                        if (index.IsComplete)
+                            cachedDrives.Add(drive);
                         lastUpdatedTimes[drive] = index.LastUpdated;
                     }
                 }
                 else
                 {
-                    cachedDrives.Add(drive);
+                    if (_indexes[drive].IsComplete)
+                        cachedDrives.Add(drive);
                     lastUpdatedTimes[drive] = _indexes[drive].LastUpdated;
                 }
             }
@@ -175,6 +180,14 @@ public sealed class NetworkIndexer : IDisposable
                 drive, state, items ?? current?.Items ?? 0, null, current, error ?? string.Empty);
         }
         PublishStatusesChanged();
+    }
+
+    // Whatever's currently loaded for this drive (a completed index, or an interrupted checkpoint) becomes
+    // TreeBuilder's diff baseline for the refresh about to run -- see TreeDiffBaseline.
+    private FileRecordStore? GetPreviousStore(string drive)
+    {
+        lock (_gate)
+            return _indexes.TryGetValue(drive, out var index) ? index.ToStore() : null;
     }
 
     private void OnRefreshFinished(string drive, NetworkIndex index)

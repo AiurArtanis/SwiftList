@@ -23,7 +23,13 @@ public enum FileRecordFlags : ushort
     System = 16,
     ReadOnly = 32,
     Compressed = 64,
-    Encrypted = 128
+    Encrypted = 128,
+    // Directories only: this directory's own children were fully enumerated as of this snapshot, so a
+    // later diff-aware walk (see TreeDiffBaseline) can trust its cached children when the directory's own
+    // LastWriteTimeUnixSeconds still matches -- rather than trusting cached children for any directory
+    // record that merely exists (which could be a directory only ever discovered, never actually listed,
+    // e.g. one whose walk never got to run before a scan was interrupted).
+    Listed = 256
 }
 
 public static class FileRecordFlagsHelper
@@ -134,6 +140,11 @@ public sealed class FileRecordStore
     public ulong JournalId { get; set; }
     public long NextUsn { get; set; }
     public DateTime LastUpdated { get; set; } = DateTime.Now;
+    // False for a mid-walk checkpoint or an interrupted scan; true only once the walk that produced this
+    // store finished in full. Consulted at startup (network/WSL drives only) to decide whether a saved
+    // cache can be trusted as-is or the scan needs to resume/finish first -- see TreeDiffBaseline for how
+    // a resumed scan still reuses whatever this store's directories already recorded as FileRecordFlags.Listed.
+    public bool IsComplete { get; set; }
     public List<FileRecord> Records { get; } = new();
 }
 

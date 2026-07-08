@@ -106,7 +106,18 @@ internal static class NetworkDriveCacheLocator
                 continue;
 
             var storageKey = name;
-            var summary = FileRecordStoreSerializer.LoadSummary(cacheDir, storageKey);
+            FileRecordStoreSummary? summary;
+            try
+            {
+                summary = FileRecordStoreSerializer.LoadSummary(cacheDir, storageKey);
+            }
+            catch (IOException)
+            {
+                // Busy right now -- most likely a checkpoint save mid-write for this exact drive. Skip this
+                // pass without touching the file; it'll be picked up again next time this is enumerated.
+                continue;
+            }
+
             if (!summary.HasValue)
             {
                 // Delete outdated or corrupted caches immediately to prevent infinite retry loops and CPU spikes
