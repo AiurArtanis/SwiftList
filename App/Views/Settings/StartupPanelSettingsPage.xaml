@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:services="clr-namespace:SwiftList.App.Services"
              xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"
+             xmlns:local="clr-namespace:SwiftList.App.Views.Settings"
              mc:Ignorable="d"
              d:DesignHeight="550" d:DesignWidth="700">
     <UserControl.Resources>
@@ -109,8 +110,8 @@
                       IsChecked="{Binding Enabled, Mode=TwoWay}"
                       Margin="0,12,0,0"/>
 
-            <!-- Sub-tab header row (only "Recent Files" exists today; more tabs would each get their
-                 own header here mirroring the live panel's own tabs) -->
+            <!-- Sub-tab header row: one button + underline pair per built-in tab source, mirroring the
+                 live panel's own tabs. -->
             <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                 <StackPanel>
                     <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_TabRecentFiles]}"
@@ -131,6 +132,33 @@
                             <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SelectedSubTab}" Value="RecentFiles">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Margin="24,0,0,0">
+                    <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_TabLastDirectory]}"
+                            Command="{Binding SelectSubTabCommand}" CommandParameter="LastDirectory">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedSubTab}" Value="LastDirectory">
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Border>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedSubTab}" Value="LastDirectory">
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -234,10 +262,29 @@
                 </Border>
             </StackPanel>
 
-            <!-- Sub-tab: Plugin Tabs -->
-            <StackPanel x:Name="SubTabPluginTabs">
+            <!-- Sub-tab: Last Directory -->
+            <StackPanel x:Name="SubTabLastDirectory">
                 <StackPanel.Style>
                     <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedSubTab}" Value="LastDirectory">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+
+                <CheckBox x:Name="RowLastDirectoryEnabled" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_LastDirectoryEnabled]}"
+                          IsChecked="{Binding LastDirectoryEnabled, Mode=TwoWay}" Margin="0,0,0,12"/>
+                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_LastDirectoryDesc]}"
+                           Style="{StaticResource SettingsHintText}" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- Sub-tab: Plugin Tabs (extracted; see StartupPanelPluginTabsSection.xaml) -->
+            <local:StartupPanelPluginTabsSection x:Name="SubTabPluginTabs">
+                <local:StartupPanelPluginTabsSection.Style>
+                    <Style TargetType="local:StartupPanelPluginTabsSection">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding SelectedSubTab}" Value="PluginTabs">
@@ -245,36 +292,8 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
-
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_PluginTabsDesc]}"
-                           Style="{StaticResource SettingsHintText}" Margin="0,0,0,12" TextWrapping="Wrap"/>
-
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_PluginTabsEmpty]}"
-                           Style="{StaticResource SettingsHintText}"
-                           Visibility="{Binding HasPluginTabs, Converter={StaticResource InvertBoolToVis}}"/>
-
-                <ItemsControl x:Name="PluginTabGroupsList" ItemsSource="{Binding PluginTabGroups}" Visibility="{Binding HasPluginTabs, Converter={StaticResource BoolToVis}}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Margin="0,0,0,15">
-                                <TextBlock Text="{Binding PluginName}" Style="{StaticResource SettingsSubHeading}" Margin="0,0,0,8"/>
-                                <Border Style="{StaticResource SettingsCard}">
-                                    <ItemsControl ItemsSource="{Binding Tabs}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
-                                                    <CheckBox Content="{Binding Label}" IsChecked="{Binding IsOpen, Mode=TwoWay}"/>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Border>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
+                </local:StartupPanelPluginTabsSection.Style>
+            </local:StartupPanelPluginTabsSection>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

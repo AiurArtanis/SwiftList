@@ -99,6 +99,8 @@ public class StartupPanelController : ViewModelBase
         var sources = new List<ITabSource>();
         if (UserSettings.Load().StartupPanel.RecentFilesEnabled)
             sources.Add(new RecentFilesTabSource(_searchService));
+        if (UserSettings.Load().StartupPanel.LastDirectoryEnabled)
+            sources.Add(new LastDirectoryTabSource());
 
         // StartupPanelTabProviders already excludes plugin components disabled via Plugin Management;
         // ClosedTabIds is the separate, panel-local "user hid this one" list -- see PluginTabSource.Close.

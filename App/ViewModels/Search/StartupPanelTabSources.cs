@@ -53,6 +53,81 @@ internal sealed class RecentFilesTabSource : ITabSource
     }
 }
 
+// The built-in "Last Directory" tab -- lists the contents of whatever folder a native file dialog (any
+// app's, not just SwiftList's own UI) was last navigated to while SwiftList's dialog-interception hook
+// was tracking it. Reads InlineSearchManager's own ExplorerTracker, which mirrors the Hook process's
+// live state over IPC (see InlineSearchManager's ctor) -- no separate round trip needed since that
+// tracker is already running by the time the quick window (and this tab) can exist.
+internal sealed class LastDirectoryTabSource : ITabSource
+{
+    // A folder can have far more entries than a startup-panel tab should ever show at once.
+    private const int MaxItems = 100;
+
+    public string Label => TranslationManager.Instance["StartupPanel_TabLastDirectory"];
+
+    public void Close()
+    {
+        var settings = UserSettings.Load();
+        settings.StartupPanel.LastDirectoryEnabled = false;
+        settings.Save();
+    }
+
+    public Task<List<AppSearchResult>> LoadItemsAsync()
+    {
+        var path = InlineSearchManager.Instance.ExplorerTracker.LastActiveExplorerPath;
+        // The Desktop is where Explorer/dialogs land by default when nothing more specific has been
+        // browsed to yet, so treating it as "last visited" would make this tab show up constantly with
+        // a location the user didn't actually navigate to.
+        if (string.IsNullOrEmpty(path) || !Directory.Exists(path) || IsCurrentUserDesktop(path))
+            return Task.FromResult(new List<AppSearchResult>());
+
+        var uiResults = new List<AppSearchResult>();
+        try
+        {
+            var drive = (Path.GetPathRoot(path) ?? string.Empty).TrimEnd('\\', ':');
+            var exclusions = ExclusionRuleSet.From(UserSettings.Load());
+            var index = 0;
+            // A raw filesystem walk sees everything, unlike the real index (which skips hidden/system
+            // entries and anything the user has excluded) -- apply the same two filters here so this
+            // tab doesn't surface things like $RECYCLE.BIN that a normal search never would.
+            foreach (var entry in new DirectoryInfo(path).EnumerateFileSystemInfos())
+            {
+                if (index >= MaxItems)
+                    break;
+                if (FileSystemItemFilter.IsHiddenOrSystem(entry.Attributes))
+                    continue;
+
+                var isDir = entry is DirectoryInfo;
+                if (exclusions.IsExcludedPath(entry.FullName, isDir))
+                    continue;
+
+                var item = new SearchResult
+                {
+                    Name = entry.Name,
+                    Path = entry.FullName,
+                    IsDir = isDir,
+                    Drive = drive,
+                    Attributes = entry.Attributes
+                };
+                uiResults.Add(SearchResultHelper.CreateUiResult(item, string.Empty, index, isApplication: false, scope: null));
+                index++;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[LastDirectoryTabSource] Failed to list '{path}': {ex.Message}", LogLevel.Error);
+            return Task.FromResult(new List<AppSearchResult>());
+        }
+        return Task.FromResult(uiResults);
+    }
+
+    private static bool IsCurrentUserDesktop(string path)
+    {
+        var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+        return string.Equals(path.TrimEnd('\\'), desktop.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+    }
+}
+
 // Wraps a plugin-contributed IStartupPanelTabProvider (see PluginSdk.Abstractions.Plugins). Closing this
 // tab is a panel-local "don't show it for now" choice, not a plugin-level decision -- it writes to
 // StartupPanel.ClosedTabIds, never to UserSettings.DisabledPluginComponents. That other list is a load-

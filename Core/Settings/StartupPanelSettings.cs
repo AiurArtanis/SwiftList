@@ -3,12 +3,12 @@ namespace SwiftList.Core;
 /// <summary>Backs the "初始面板" (Startup Panel) settings page and the tab strip shown above the
 /// quick window's result list when the search box is empty. Each tab type gets its own Enabled flag
 /// here so the settings checkbox and the tab's in-panel close (x) button stay in sync (both just flip
-/// the same field). Currently only the "Recent Files" tab exists; more tabs would each add their own
-/// Enabled flag + config block here rather than a generic list, since there's nothing generic yet.</summary>
+/// the same field) -- Recent Files and Last Directory each add their own Enabled flag + config block
+/// here rather than a generic list, since there's nothing generic between them yet.</summary>
 public class StartupPanelSettings
 {
     // Master switch for the whole panel: off means nothing here activates when the search box is empty,
-    // regardless of RecentFilesEnabled/ClosedTabIds below.
+    // regardless of RecentFilesEnabled/LastDirectoryEnabled/ClosedTabIds below.
     public bool Enabled { get; set; } = true;
 
     public bool RecentFilesEnabled { get; set; } = true;
@@ -29,6 +29,8 @@ public class StartupPanelSettings
     // above -- so an idle watched folder doesn't keep surfacing month-old files just because nothing
     // newer exists.
     public int RecentFilesMaxAgeMinutes { get; set; } = 60;
+
+    public bool LastDirectoryEnabled { get; set; } = true;
 
     // Plugin-provided tabs (History, Favorites, ...) closed via the panel's own x button. Deliberately
     // separate from UserSettings.DisabledPluginComponents: that list governs whether a plugin component

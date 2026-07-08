@@ -125,6 +125,8 @@ public static class SettingsSearchIndex
         new("StartupPanel_RecentFilesDirectoriesDesc", "StartupPanel", vm => vm.StartupPanel.SelectedSubTab = "RecentFiles", "RowRecentFilesDirectories", "StartupPanel_TabRecentFiles"),
         new("StartupPanel_RecentFilesCountDesc", "StartupPanel", vm => vm.StartupPanel.SelectedSubTab = "RecentFiles", "RowRecentFilesCount", "StartupPanel_TabRecentFiles"),
         new("StartupPanel_RecentFilesMaxAgeDesc", "StartupPanel", vm => vm.StartupPanel.SelectedSubTab = "RecentFiles", "RowRecentFilesMaxAge", "StartupPanel_TabRecentFiles"),
+        new("StartupPanel_TabLastDirectory", "StartupPanel", vm => vm.StartupPanel.SelectedSubTab = "LastDirectory", "SubTabLastDirectory"),
+        new("StartupPanel_LastDirectoryEnabled", "StartupPanel", vm => vm.StartupPanel.SelectedSubTab = "LastDirectory", "RowLastDirectoryEnabled", "StartupPanel_TabLastDirectory"),
         new("StartupPanel_TabPluginTabs", "StartupPanel", vm => vm.StartupPanel.SelectedSubTab = "PluginTabs", "SubTabPluginTabs"),
 
         // About

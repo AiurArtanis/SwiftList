@@ -7,10 +7,11 @@ using SwiftList.Core;
 namespace SwiftList.App.ViewModels.Settings;
 
 /// <summary>
-/// Backs the "初始面板" (Startup Panel) settings page: sub-tab navigation plus, for now, the single
-/// "Recent Files" sub-tab (target directories + how many entries to show). RecentFilesEnabled here is
-/// the same field the live panel's tab-close (x) button flips directly in UserSettings -- this
-/// ViewModel just reflects whatever is on disk when the Settings window opens.
+/// Backs the "初始面板" (Startup Panel) settings page: sub-tab navigation plus the "Recent Files"
+/// (target directories + how many entries to show) and "Last Directory" (single enable checkbox)
+/// sub-tabs. RecentFilesEnabled/LastDirectoryEnabled here are the same fields the live panel's own
+/// tab-close (x) buttons flip directly in UserSettings -- this ViewModel just reflects whatever is on
+/// disk when the Settings window opens.
 /// </summary>
 public class StartupPanelSettingsViewModel : ViewModelBase
 {
@@ -25,6 +26,7 @@ public class StartupPanelSettingsViewModel : ViewModelBase
         _recentFilesEnabled = panel.RecentFilesEnabled;
         _recentFilesCount = panel.RecentFilesCount;
         _recentFilesMaxAgeMinutes = panel.RecentFilesMaxAgeMinutes;
+        _lastDirectoryEnabled = panel.LastDirectoryEnabled;
         foreach (var dir in panel.RecentFilesDirectories.Where(x => !string.IsNullOrWhiteSpace(x)))
             RecentFilesDirectories.Add(new ExclusionRuleItem(dir));
         RefreshBulkText();
@@ -47,8 +49,8 @@ public class StartupPanelSettingsViewModel : ViewModelBase
         set => SetProperty(ref _enabled, value);
     }
 
-    // Sub-tab navigation -- only "RecentFiles" exists today; more tabs would each get their own
-    // sub-tab here mirroring the live panel's own tabs.
+    // Sub-tab navigation -- "RecentFiles", "LastDirectory", and "PluginTabs" today, each mirroring one
+    // of the live panel's own tab sources.
     private string _selectedSubTab = "RecentFiles";
     public string SelectedSubTab
     {
@@ -65,6 +67,13 @@ public class StartupPanelSettingsViewModel : ViewModelBase
     }
 
     public ObservableCollection<ExclusionRuleItem> RecentFilesDirectories { get; } = new();
+
+    private bool _lastDirectoryEnabled;
+    public bool LastDirectoryEnabled
+    {
+        get => _lastDirectoryEnabled;
+        set => SetProperty(ref _lastDirectoryEnabled, value);
+    }
 
     // Plugin-provided tabs (History/Favorites/...), grouped by owning plugin -- lets the user reopen one
     // that was closed via its x button in the live panel. Distinct from Plugin Management's enable/
@@ -151,6 +160,7 @@ public class StartupPanelSettingsViewModel : ViewModelBase
         panel.RecentFilesDirectories = NormalizeItems(RecentFilesDirectories);
         panel.RecentFilesCount = RecentFilesCount;
         panel.RecentFilesMaxAgeMinutes = RecentFilesMaxAgeMinutes;
+        panel.LastDirectoryEnabled = LastDirectoryEnabled;
     }
 
     private bool CanAddDirectory() => !string.IsNullOrWhiteSpace(NewDirectory);

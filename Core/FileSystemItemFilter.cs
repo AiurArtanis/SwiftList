@@ -1,6 +1,6 @@
 namespace SwiftList.Core;
 
-internal static class FileSystemItemFilter
+public static class FileSystemItemFilter
 {
     public static bool IsHiddenOrSystem(FileAttributes attributes)
         => (attributes & (FileAttributes.Hidden | FileAttributes.System)) != 0;
