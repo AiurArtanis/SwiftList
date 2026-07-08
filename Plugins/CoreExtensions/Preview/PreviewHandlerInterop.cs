@@ -40,6 +40,7 @@ internal static class PreviewHandlerInterop
     public const int WS_VISIBLE = 0x10000000;
     public const uint STGM_READ = 0x0;
     public const uint STGM_SHARE_DENY_WRITE = 0x20;
+    public const uint GW_CHILD = 5;
 
     [DllImport("ole32.dll")]
     public static extern int CoCreateInstance(in Guid clsid, IntPtr pUnkOuter, CLSCTX dwClsContext, in Guid iid, out IntPtr ppv);
@@ -60,6 +61,16 @@ internal static class PreviewHandlerInterop
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetClientRect(IntPtr hwnd, out RECT rect);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetWindow(IntPtr hwnd, uint uCmd);
+
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool AllowSetForegroundWindow(uint dwProcessId);
 }
 
 [ComImport, Guid("8895b1c6-b41f-4c1c-a562-0d564250836f"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

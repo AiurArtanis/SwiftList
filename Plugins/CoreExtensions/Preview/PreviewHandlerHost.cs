@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.CoreExtensions.Preview;
 
@@ -34,6 +35,15 @@ internal sealed class PreviewHandlerHost : HwndHost, IReusablePreview
 
     protected override HandleRef BuildWindowCore(HandleRef hwndParent)
     {
+        // Held for this host's whole lifetime, not just the initial activation: some registered handlers
+        // (Office formats) are the full app EXE acting as its own prevhost surrogate, and interacting with
+        // their rendered content -- not just their cold-start -- can pop up a real top-level window of
+        // theirs (e.g. a right-click context menu), which would otherwise register as a foreground steal.
+        // The quick window's foreground-loss hide (unrelated to this class) already tolerates that for as
+        // long as the owning QuickLookWindow stays open (its own owned-window check); this makes the
+        // separate, non-debounced foreground hook agree instead of hiding mid-interaction.
+        PreviewActivationSignal.Begin();
+
         // A plain child window the handler renders into; WPF keeps it sized to this element's slot.
         _hostHwnd = PreviewHandlerInterop.CreateWindowEx(
             0, "static", null,
@@ -93,11 +103,32 @@ internal sealed class PreviewHandlerHost : HwndHost, IReusablePreview
             var rect = ClientRect();
             _activeHandler!.SetWindow(_hostHwnd, in rect);
             _activeHandler.DoPreview();
+            GrantForegroundRights();
         }
         catch
         {
             // Handler failed on this file; leave the host blank rather than crash.
         }
+    }
+
+    // Grants the handler's out-of-process server the right to legitimately take OS foreground for its own
+    // transient popups (a right-click menu, a dialog), since a freshly spawned process's inherited grant
+    // (from being launched by us while we were foreground) doesn't extend to popups shown well after
+    // startup. Doesn't help every case -- confirmed by testing that Office's own main window can still
+    // immediately re-activate itself over its own just-shown popup afterward (both windows same process),
+    // which no cross-process grant can prevent since a process never needs permission to activate its own
+    // windows. Left in as a real, harmless improvement for handlers that don't have that self-competing
+    // behavior, even though it's not a full fix for Office specifically.
+    private void GrantForegroundRights()
+    {
+        try
+        {
+            var child = PreviewHandlerInterop.GetWindow(_hostHwnd, PreviewHandlerInterop.GW_CHILD);
+            if (child == IntPtr.Zero) return;
+            PreviewHandlerInterop.GetWindowThreadProcessId(child, out var pid);
+            if (pid != 0) PreviewHandlerInterop.AllowSetForegroundWindow(pid);
+        }
+        catch { }
     }
 
     private static bool InitializeHandler(object com, string path)
@@ -144,6 +175,7 @@ internal sealed class PreviewHandlerHost : HwndHost, IReusablePreview
     protected override void DestroyWindowCore(HandleRef hwnd)
     {
         _disposed = true;
+        PreviewActivationSignal.End();
         // Park the active handler back in the pool (Unload only). The pool owns its lifetime and releases
         // it on EndPreviewSession — never FinalReleaseComObject here, or the cached prevhost would die.
         if (_activeHandler != null)

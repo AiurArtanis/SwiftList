@@ -52,6 +52,12 @@ public class QuickSearchWindowController
         if (hwnd == IntPtr.Zero) return;
         try
         {
+            // A preview provider may be hosting an out-of-process native handler (e.g. Office acting as
+            // its own Preview Handler COM server), whose window can grab foreground on its own -- at
+            // startup or from interacting with its content (e.g. a right-click menu) -- for as long as
+            // it's shown. See PreviewActivationSignal. That isn't the user switching to another app.
+            if (PluginSdk.Services.PreviewActivationSignal.IsActive) return;
+
             var sbClass = new StringBuilder(256);
             GetClassName(hwnd, sbClass, sbClass.Capacity);
             if (sbClass.ToString().Contains("InputSwitch", StringComparison.OrdinalIgnoreCase)) return;
