@@ -6,7 +6,7 @@ giving quick access to recent files, favorites, and history without typing a que
 - **Enable the startup panel** — master switch; off means the panel never activates at all,
   regardless of the per-tab settings below.
 
-Two sub-tabs: **Recent Files** and **Plugin Tabs**.
+Three sub-tabs: **Recent Files**, **Last Directory**, and **Plugin Tabs**.
 
 ## Recent Files
 
@@ -18,6 +18,18 @@ Two sub-tabs: **Recent Files** and **Plugin Tabs**.
 - **Maximum number of files to show** — range 1–100, default 10.
 - **Time range (minutes)** — only files modified within this many minutes of now are eligible, on
   top of the count cap above. Range 1–43200 (30 days), default 60.
+
+## Last Directory
+
+- **Enable panel** — checkbox, on by default.
+
+Shows the contents of whatever folder a native file open/save dialog was last navigated to, while
+SwiftList's own dialog-interception feature was active — a quick way back to wherever you were just
+browsing through a file picker, without needing to remember the path. The same hidden/system-file
+filtering and [Exclusion Rules](./index-drives#exclusion-rules) the real index applies also apply
+here, so things like `$RECYCLE.BIN` don't show up. This tab doesn't appear at all if that hasn't
+happened yet this session, the folder no longer exists, or it's your Desktop (too often just the
+default landing spot, not a real navigation target).
 
 ## Plugin Tabs
 
