@@ -2,5 +2,6 @@
   "Plugins_TotalCommander_EnableInlineSearch": "Enable Inline Search",
   "Plugins_TotalCommander_EnableInlineSearchDesc": "Allow double-clicking or pressing hotkeys in Total Commander to summon inline search",
   "Plugins_TotalCommander_EnableQuickNav": "Enable Quick Navigation Menu",
-  "Plugins_TotalCommander_EnableQuickNavDesc": "Allow middle-clicking in Total Commander's file list to summon the Quick Navigation menu"
+  "Plugins_TotalCommander_EnableQuickNavDesc": "Allow middle-clicking in Total Commander's file list to summon the Quick Navigation menu",
+  "Plugins_TotalCommander_DirMenu_Empty": "(Empty)"
 }

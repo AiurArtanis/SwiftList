@@ -1,3 +1,4 @@
+using System.IO;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.Plugins.TotalCommander.Win32;
 
