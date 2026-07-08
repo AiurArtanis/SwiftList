@@ -18,4 +18,15 @@ public static class PreviewActivationSignal
 
     public static void Begin() => Interlocked.Increment(ref _depth);
     public static void End() => Interlocked.Decrement(ref _depth);
+
+    /// <summary>
+    /// Raised by a preview provider the moment it detects that the out-of-process handler it just
+    /// granted foreground rights to has actually taken OS keyboard focus for itself -- e.g. Excel's own
+    /// window grabbing focus once its content finishes initializing, anywhere from tens of milliseconds
+    /// to well over a second later depending on the file. The app subscribes once to reclaim focus back
+    /// onto its search box exactly when this fires, instead of guessing at a fixed delay.
+    /// </summary>
+    public static event Action? FocusStolen;
+
+    public static void NotifyFocusStolen() => FocusStolen?.Invoke();
 }

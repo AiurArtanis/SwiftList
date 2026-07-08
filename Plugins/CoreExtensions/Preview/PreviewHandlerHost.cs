@@ -26,6 +26,13 @@ internal sealed class PreviewHandlerHost : HwndHost, IReusablePreview
     private Guid _activeClsid;
     private bool _disposed;
 
+    private readonly PreviewFocusGuard _focusGuard = new();
+    private const int WM_PARENTNOTIFY = 0x0210;
+    private const int WM_CREATE = 0x0001;
+    private const int WM_MOUSEACTIVATE = 0x0021;
+    private const int MA_NOACTIVATE = 3;
+    private const int WM_SETFOCUS = 0x0007;
+
     public PreviewHandlerHost(PreviewHandlerPool pool, string path, Guid clsid)
     {
         _pool = pool;
@@ -52,6 +59,38 @@ internal sealed class PreviewHandlerHost : HwndHost, IReusablePreview
 
         ScheduleRender();
         return new HandleRef(this, _hostHwnd);
+    }
+
+    protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        // Fires for every child window the system attaches under _hostHwnd, including ones created by an
+        // out-of-process handler (Excel) reparenting its own rendering surrogate in via SetWindow -- the
+        // earliest reliable signal available for PreviewFocusGuard to learn that window's PID and start
+        // watching for a focus steal, ahead of GrantForegroundRights resolving the same PID later.
+        if (msg == WM_PARENTNOTIFY && (wParam.ToInt64() & 0xFFFF) == WM_CREATE)
+        {
+            _focusGuard.OnChildWindowCreated(lParam);
+        }
+        // A click landing anywhere in the preview (including on a cross-process reparented child) is
+        // decided here first, since _hostHwnd is the actual top-level ancestor for activation purposes.
+        // MA_NOACTIVATE only refuses the activation / keyboard-focus transfer the click would otherwise
+        // cause -- the mouse message itself still dispatches normally afterward, so clicks, text
+        // selection, hyperlinks, and scrolling inside the preview are unaffected.
+        else if (msg == WM_MOUSEACTIVATE)
+        {
+            handled = true;
+            return new IntPtr(MA_NOACTIVATE);
+        }
+        // Belt-and-suspenders for handlers whose content doesn't reparent a separate cross-process window
+        // (so WM_SETFOCUS actually lands on _hostHwnd itself rather than on that other window) -- reuses
+        // the same reclaim path as PreviewFocusGuard's fallback detector.
+        else if (msg == WM_SETFOCUS)
+        {
+            handled = true;
+            PreviewActivationSignal.NotifyFocusStolen();
+        }
+
+        return IntPtr.Zero;
     }
 
     // IReusablePreview: re-point this live host at a new file in place. Returns false for anything this
@@ -126,7 +165,8 @@ internal sealed class PreviewHandlerHost : HwndHost, IReusablePreview
             var child = PreviewHandlerInterop.GetWindow(_hostHwnd, PreviewHandlerInterop.GW_CHILD);
             if (child == IntPtr.Zero) return;
             PreviewHandlerInterop.GetWindowThreadProcessId(child, out var pid);
-            if (pid != 0) PreviewHandlerInterop.AllowSetForegroundWindow(pid);
+            if (pid == 0) return;
+            PreviewHandlerInterop.AllowSetForegroundWindow(pid);
         }
         catch { }
     }
@@ -175,6 +215,7 @@ internal sealed class PreviewHandlerHost : HwndHost, IReusablePreview
     protected override void DestroyWindowCore(HandleRef hwnd)
     {
         _disposed = true;
+        _focusGuard.Dispose();
         PreviewActivationSignal.End();
         // Park the active handler back in the pool (Unload only). The pool owns its lifetime and releases
         // it on EndPreviewSession — never FinalReleaseComObject here, or the cached prevhost would die.

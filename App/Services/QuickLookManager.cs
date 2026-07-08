@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media.Animation;
 using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.App.Services;
 
@@ -21,7 +22,18 @@ public class QuickLookManager
     // preview handlers and their prevhost surrogates when the search window that used them goes away.
     private readonly HashSet<Window> _sessionOwners = new();
 
-    private QuickLookManager() { }
+    private QuickLookManager() => PreviewActivationSignal.FocusStolen += OnPreviewFocusStolen;
+
+    // A native (HwndHost) preview handler's own out-of-process window just grabbed OS keyboard focus for
+    // itself (see PreviewFocusGuard) -- reclaim it back onto the search box the preview is attached to.
+    // Window.Deactivated doesn't fire for this: the handler's window is reparented as a child of our own
+    // overlay window, so top-level activation never actually changes, only which control has keyboard
+    // focus.
+    private void OnPreviewFocusStolen()
+    {
+        if (_owner is ISearchWindow searchWindow && IsVisible)
+            _owner.Dispatcher.BeginInvoke(new Action(() => searchWindow.FocusSearch()));
+    }
 
     public bool IsVisible => _window != null && _window.IsVisible;
 
