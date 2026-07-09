@@ -43,8 +43,6 @@ public static class NetworkIndexerRecentFilesExtensions
     // cached index, and the path handed to RuntimeIndex must be rewritten to the alias the index's own
     // records actually use, or the subtree lookup silently finds nothing. Matching (and rewriting) by the
     // distro NAME rather than a raw string prefix also avoids "Ubuntu-22" wrongly prefix-matching "Ubuntu".
-    private static readonly string[] WslUncPrefixes = { @"\\wsl$\", @"\\wsl.localhost\" };
-
     private static bool TryResolveIndex(NetworkIndexer indexer, string dir, out NetworkIndex? index, out string canonicalDirLower)
     {
         var distro = ExtractWslDistro(dir, out var remainder);
@@ -72,7 +70,7 @@ public static class NetworkIndexerRecentFilesExtensions
 
     private static string? ExtractWslDistro(string path, out string remainder)
     {
-        foreach (var prefix in WslUncPrefixes)
+        foreach (var prefix in PathHelpers.WslUncPrefixes)
         {
             if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {

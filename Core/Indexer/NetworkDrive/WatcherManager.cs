@@ -20,8 +20,11 @@ internal class WatcherManager : IDisposable
 
     public void EnsureWatcher(string drive)
     {
-        // WSL UNC paths do not support ReadDirectoryChangesW/FileSystemWatcher (raises "Function incorrect" / ERROR_INVALID_FUNCTION)
-        if (drive.StartsWith(@"\\wsl", StringComparison.OrdinalIgnoreCase))
+        // WSL UNC paths do not support ReadDirectoryChangesW/FileSystemWatcher (raises "Function incorrect" /
+        // ERROR_INVALID_FUNCTION). Checked precisely (not every "\\wsl"-prefixed path) so a real UNC share
+        // whose hostname happens to start with "wsl" (e.g. "\\wslbackup\share", indexable via the
+        // folder-index feature) doesn't silently lose live change detection.
+        if (PathHelpers.IsWslUncPath(drive))
             return;
 
         lock (_watchers)

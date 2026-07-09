@@ -5,10 +5,14 @@ namespace SwiftList.App.ViewModels.Search;
 
 public static class SearchResultMapper
 {
-    public static List<AppSearchResult> BuildQuickResults(List<SearchResult>? fileResults, string query, string? scope, string? contextDirectory, bool isInlineWindow)
+    public static List<AppSearchResult> BuildQuickResults(List<SearchResult>? fileResults, string query, string? scope, string? contextDirectory, bool isInlineWindow, string? rawQuery = null)
     {
         var uiResults = new List<AppSearchResult>();
-        PluginSearchResultMapper.AddInstantResults(uiResults, query, isInlineWindow);
+        // Instant-result plugins get the untouched raw text (keyword + any " :xxx" token suffix) rather
+        // than the stripped keyword everything else here uses -- a plugin like a calculator or unit
+        // converter may care about the suffix itself, and it has no other way to see it since the token
+        // is consumed before reaching here for every other purpose (file search, highlighting, ...).
+        PluginSearchResultMapper.AddInstantResults(uiResults, rawQuery ?? query, isInlineWindow);
 
         if (fileResults != null && !string.IsNullOrWhiteSpace(query))
         {
@@ -53,6 +57,12 @@ public static class SearchResultMapper
             fileResults.RemoveAll(r => existingPaths.Contains(SearchResultHelper.NormalizePath(r.Path)));
         }
 
+        // Capped here (not deferred to the caller) because this display cap has to respect whatever
+        // header/grouping layout the caller (or InlineListSearchHelper.MergeLocalMatches, downstream)
+        // builds around these file rows -- e.g. the inline window's "Current Folder"/"Global Search"
+        // split needs its own files to stay adjacent to its own header. SearchDispatchController only
+        // takes over capping/filtering once a query token is active, since token mode collapses that
+        // grouping anyway (see its own composition logic).
         var fileResultsCount = fileResults != null ? fileResults.Count : 0;
         if (uiResults.Count + fileResultsCount < 10 && fileResults != null)
         {

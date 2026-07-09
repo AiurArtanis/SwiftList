@@ -57,11 +57,34 @@ internal sealed class SearchDispatchController
         if (string.IsNullOrWhiteSpace(cleanQuery))
         {
             _engine.CancelPendingSearch();
-            PerformSearch(string.Empty);
+            if (string.IsNullOrWhiteSpace(value))
+                PerformSearch(string.Empty);
+            else
+                ClearForTokenOnlyQuery();
             return;
         }
 
         RunEngineSearch(_engine.QueueSearch, value, cleanQuery);
+    }
+
+    // A token-only query (e.g. "::foo" with no keyword before it) strips down to an empty clean query,
+    // but the search box itself isn't empty -- unlike a genuinely empty box, this must not fall back to
+    // the startup panel/recent-files history, since there's no keyword for a token to filter against
+    // and showing history here would look like an unrelated, unprompted result set. No engine search
+    // actually runs (there's no keyword to search for), so the synthetic "no results" row a real
+    // zero-match search would render (see SearchExecutionEngine's own final-empty-snapshot handling)
+    // has to be added here explicitly instead -- otherwise this would show nothing at all, which reads
+    // just as wrong as showing stale history.
+    private void ClearForTokenOnlyQuery()
+    {
+        _setIsSearching(false);
+        // The startup panel's tab strip has its own Visibility separate from the results panel below --
+        // if it was already showing (box was empty a moment ago), it must be explicitly hidden here too,
+        // not just have its results cleared underneath it.
+        _startupPanel.Deactivate();
+        _replaceResults(new[] { SearchResultMapper.CreateNoResultsResult(string.Empty) });
+        _setResultsPanelVisibility(Visibility.Visible);
+        _setResultsSeparatorVisibility(Visibility.Visible);
     }
 
     // DispatchSearch (debounced) and PerformSearch (blocking) both resolve to the same set of
@@ -76,7 +99,7 @@ internal sealed class SearchDispatchController
             _getIsInlineSearchContext(),
             51,
             51,
-            (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, cleanQuery, _getIsInlineSearchContext() ? null : _getSearchScope(), contextDir, _getIsInlineSearchContext()),
+            (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, cleanQuery, _getIsInlineSearchContext() ? null : _getSearchScope(), contextDir, _getIsInlineSearchContext(), originalValue),
             state => _setIsSearching(state),
             (results, status, final) => ApplySearchResults(originalValue, results, status, final),
             HandleLocalServiceUnavailable,
@@ -124,7 +147,7 @@ internal sealed class SearchDispatchController
 
         if (string.IsNullOrWhiteSpace(cleanQuery))
         {
-            PerformSearch(string.Empty);
+            ClearForTokenOnlyQuery();
             return;
         }
 
@@ -148,43 +171,77 @@ internal sealed class SearchDispatchController
         if (_getSearchQuery() != query)
             return;
 
-        // Token providers (e.g. the built-in ":[SCMA]"/".ext"/"::expr" sort+filter+match plugin)
-        // render via a follow-up ReplaceResults inside DispatchTokensAsync instead of the raw
-        // ReplaceResults below -- a provider with no genuine async work (a plain filter, no metadata
-        // fetch) resolves its already-completed Task inline, so DispatchTokensAsync can run to
-        // completion synchronously right here; falling through to the raw ReplaceResults(uiResults)
-        // below would then immediately clobber its filtered result with the unfiltered one.
-        if (_queryTokens.Count > 0)
+        if (_queryTokens.Count == 0)
         {
-            var tokensSnapshot = _queryTokens;
-            var resultsSnapshot = uiResults;
-            _ = DispatchTokensAsync(query, resultsSnapshot, tokensSnapshot);
+            // No active token -- render exactly what SearchResultMapper/InlineListSearchHelper already
+            // built, untouched. In particular, this preserves whatever multi-header layout the caller
+            // assembled (e.g. the inline window's "Current Folder"/"Global Search" split, each with its
+            // own files right under its own header) -- token mode is the only case that needs to
+            // extract/re-filter/re-cap that structure, since it collapses it into a flat file list anyway.
+            _replaceResults(uiResults);
+            _startupPanel.Deactivate();
+
+            var hasResults = uiResults.Count > 0;
+            _setResultsPanelVisibility(hasResults ? Visibility.Visible : Visibility.Collapsed);
+            _setResultsSeparatorVisibility(hasResults ? Visibility.Visible : Visibility.Collapsed);
+            _mainVm.Monitor.StatusBarVisibility = Visibility.Visible;
+            _mainVm.Monitor.StatusText = statusText;
+            return;
+        }
+
+        _ = ComposeAndApplyAsync(query, uiResults, _queryTokens, statusText, final);
+    }
+
+    // Token mode only: extracts the file/directory subset -- the only thing a query token is allowed to
+    // see or reorder -- and everything else is pruned down to just instant results (a calculator answer,
+    // etc.); applications, plugin actions, and section headers have nothing to do with what the token is
+    // sorting/filtering and would just clutter a result set that's now specifically about files. Runs the
+    // file/directory subset through QueryTokenDispatcher, then recomposes [instant results, token-processed
+    // file rows] and caps the combined count to 9 with a "N more" row. QueryTokenDispatcher only
+    // transforms a plain list -- deciding what any of this means for the rest of the UI (capping, "no
+    // results", visibility) lives here.
+    private async Task ComposeAndApplyAsync(string query, List<AppSearchResult> uiResults, IReadOnlyList<string> tokensSnapshot, string statusText, bool final)
+    {
+        var fileRows = uiResults.Where(IsFileOrDirectory).ToList();
+        var instantRows = uiResults.Where(r => r.ResultKind == "InstantResult").ToList();
+
+        var processedFileRows = await QueryTokenDispatcher.ApplyAsync(fileRows, tokensSnapshot);
+        if (_getSearchQuery() != query || !ReferenceEquals(_queryTokens, tokensSnapshot))
+            return; // superseded by a newer query/token set while the token chain was running
+
+        var composed = new List<AppSearchResult>(instantRows.Count + processedFileRows.Count + 1);
+        composed.AddRange(instantRows);
+
+        if (processedFileRows.Count + instantRows.Count > 9)
+        {
+            // Instant results are never trimmed -- only the file/directory portion gets capped, down to
+            // whatever's left of the 9-item budget after instant results claim their share.
+            var visibleFileCount = Math.Max(0, 9 - instantRows.Count);
+            composed.AddRange(processedFileRows.Take(visibleFileCount));
+            SearchResultHelper.AddShowMoreResult(composed, query);
         }
         else
         {
-            // ReplaceResults reconciles row-by-row and no-ops when nothing changed, so no pre-check needed.
-            _replaceResults(uiResults);
+            composed.AddRange(processedFileRows);
         }
+
+        // A filter token (or an unclaimed one) can legitimately drop every file/directory result -- this
+        // window has no separate "no results" hint of its own (unlike the full search window), it
+        // renders the synthetic "Empty" row inline. Only on the final snapshot, though -- an empty
+        // intermediate streaming update just means results haven't arrived yet, not that there are none.
+        if (composed.Count == 0 && final)
+            composed.Add(SearchResultMapper.CreateNoResultsResult(query));
+
+        // ReplaceResults reconciles row-by-row and no-ops when nothing changed, so no pre-check needed.
+        _replaceResults(composed);
         _startupPanel.Deactivate();
 
-        var hasResults = uiResults.Count > 0;
+        var hasResults = composed.Count > 0;
         _setResultsPanelVisibility(hasResults ? Visibility.Visible : Visibility.Collapsed);
         _setResultsSeparatorVisibility(hasResults ? Visibility.Visible : Visibility.Collapsed);
         _mainVm.Monitor.StatusBarVisibility = Visibility.Visible;
         _mainVm.Monitor.StatusText = statusText;
     }
 
-    private async Task DispatchTokensAsync(string query, List<AppSearchResult> resultsSnapshot, IReadOnlyList<string> tokensSnapshot)
-    {
-        var dispatched = await QueryTokenDispatcher.ApplyAsync(resultsSnapshot, tokensSnapshot);
-        if (_getSearchQuery() != query || !ReferenceEquals(_queryTokens, tokensSnapshot))
-            return;
-
-        // A filter token can legitimately drop every ordinary result -- this window has no separate
-        // "no results" hint of its own (unlike the full search window), it renders the synthetic
-        // "Empty" row inline, so add one back once there's nothing left to show.
-        if (dispatched.Count == 0)
-            dispatched.Add(SearchResultMapper.CreateNoResultsResult(query));
-        _replaceResults(dispatched);
-    }
+    private static bool IsFileOrDirectory(AppSearchResult r) => r.ResultKind is "File" or "Directory";
 }
