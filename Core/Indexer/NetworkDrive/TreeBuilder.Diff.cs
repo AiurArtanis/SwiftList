@@ -47,6 +47,8 @@ internal sealed partial class TreeBuilder
         if (!_diffBaseline!.TryGetUnchangedChildren(current.Path, current.LocalId, out var previousChildren))
             return false;
 
+        Interlocked.Increment(ref _reusedDirectories);
+
         var ignoreRules = _filter.LoadIgnoreRules(current.Path, current.LogicalPath, current.IgnoreRules);
         var batch = new List<FileRecord>(RecordBatchSize);
 

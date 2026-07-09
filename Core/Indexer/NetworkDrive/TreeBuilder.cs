@@ -30,6 +30,7 @@ internal sealed partial class TreeBuilder
     private int _slowDirectories;
     private int _countSinceCheckpoint;
     private int _checkpointInFlight;
+    private int _reusedDirectories;
 
     public TreeBuilder(
         FileRecordStore store,
@@ -66,6 +67,14 @@ internal sealed partial class TreeBuilder
             tasks[i] = DedicatedWorkerThread.Run(WorkerLoopAsync, "NetworkDriveScan");
 
         Task.WaitAll(tasks, _token);
+        // Temporary diagnostic for a resumed scan finishing with far fewer records than the drive
+        // actually has: shows whether the channel drained because there was genuinely nothing left
+        // enqueued (_pendingDirectories == 0, as expected) or something else is going on, and how much of
+        // the walk came from the reuse path vs real enumeration.
+        Logger.Log($"[NetworkIndexer] TreeBuilder.Run done for {_physicalRoot}: pendingDirectories={Volatile.Read(ref _pendingDirectories)}, " +
+            $"enqueuedIds={_enqueuedIds.Count}, records={_store.Records.Count}, indexedItems={Volatile.Read(ref _indexedItems)}, " +
+            $"skipped={Volatile.Read(ref _skippedItems)}, errors={Volatile.Read(ref _errors)} " +
+            $"(enumerate={Volatile.Read(ref _enumerateErrors)}, attribute={Volatile.Read(ref _attributeErrors)}), reused={Volatile.Read(ref _reusedDirectories)}.");
         return new NetworkDriveWalkStats(
             Volatile.Read(ref _skippedItems),
             Volatile.Read(ref _errors),
