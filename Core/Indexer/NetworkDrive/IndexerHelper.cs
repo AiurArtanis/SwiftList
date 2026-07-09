@@ -55,8 +55,14 @@ internal static class IndexerHelper
             return normalized.TrimEnd('\\');
         }
 
-        var letter = char.ToUpperInvariant(drive[0]);
-        return char.IsLetter(letter) ? letter.ToString() : string.Empty;
+        // A bare drive letter ("D", "D:", "D:\") collapses to just the letter -- the whole-drive case.
+        // Anything longer is a folder-index target: a real subpath, not a drive identity, so it's
+        // normalized but kept in full rather than collapsed away.
+        var trimmed = drive.TrimEnd('\\');
+        if (trimmed.Length is > 0 and <= 2 && char.IsLetter(trimmed[0]))
+            return char.ToUpperInvariant(trimmed[0]).ToString();
+
+        return drive.Replace('/', '\\').TrimEnd('\\');
     }
 
     public static string NormalizeRefreshMode(string? refreshMode) => refreshMode switch

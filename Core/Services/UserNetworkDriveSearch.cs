@@ -11,8 +11,17 @@ public static class UserNetworkDriveSearch
         remove => NetworkIndexer.StatusesChanged -= value;
     }
 
-    public static void Configure() => NetworkIndexer.Configure(UserSettings.Load().NetworkDrives, UserSettings.Load().WslSettings);
-    public static void Refresh() => NetworkIndexer.Configure(UserSettings.Load().NetworkDrives, UserSettings.Load().WslSettings, forceRefresh: true);
+    public static void Configure()
+    {
+        var settings = UserSettings.Load();
+        NetworkIndexer.Configure(settings.NetworkDrives, settings.WslSettings, settings.FolderIndexes);
+    }
+
+    public static void Refresh()
+    {
+        var settings = UserSettings.Load();
+        NetworkIndexer.Configure(settings.NetworkDrives, settings.WslSettings, settings.FolderIndexes, forceRefresh: true);
+    }
     public static bool RefreshDrive(string drive) => NetworkIndexer.RefreshDrive(drive);
     public static bool CancelDrive(string drive) => NetworkIndexer.CancelDrive(drive);
 

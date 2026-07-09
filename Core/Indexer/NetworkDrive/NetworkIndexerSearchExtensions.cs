@@ -44,12 +44,21 @@ public static class NetworkIndexerSearchExtensions
 
     private static bool IsDriveAllowed(string indexDrive, ParsedSearchQuery parsed, string? directoryFilterLower)
     {
-        if (parsed.TargetDrive != null && !parsed.TargetDrive.Equals(indexDrive, StringComparison.OrdinalIgnoreCase))
+        // The "d:foo" query-scoping modifier only makes sense against a bare drive letter -- a
+        // folder-index or UNC key (anything longer) can never match it, so it never gets excluded on
+        // that basis.
+        if (indexDrive.Length == 1 && parsed.TargetDrive != null && !parsed.TargetDrive.Equals(indexDrive, StringComparison.OrdinalIgnoreCase))
             return false;
 
         if (directoryFilterLower == null)
             return true;
 
-        return directoryFilterLower.StartsWith(indexDrive + @":\", StringComparison.OrdinalIgnoreCase);
+        if (indexDrive.Length == 1)
+            return directoryFilterLower.StartsWith(indexDrive + @":\", StringComparison.OrdinalIgnoreCase);
+
+        // A folder-index or UNC key is already a full rooted path -- compare directly, with a trailing
+        // separator so "D:\Foo" doesn't also match a filter under a sibling "D:\FooBar".
+        var rootedDrive = indexDrive.EndsWith(Path.DirectorySeparatorChar) ? indexDrive : indexDrive + Path.DirectorySeparatorChar;
+        return directoryFilterLower.StartsWith(rootedDrive, StringComparison.OrdinalIgnoreCase);
     }
 }

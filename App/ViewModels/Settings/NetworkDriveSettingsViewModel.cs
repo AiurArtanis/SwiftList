@@ -8,7 +8,7 @@ using SwiftList.App.Services;
 
 namespace SwiftList.App.ViewModels.Settings;
 
-public class NetworkDriveSettingsViewModel : ViewModelBase
+public partial class NetworkDriveSettingsViewModel : ViewModelBase
 {
     private readonly SearchService _searchService;
     private readonly UserSettings _userSettings;
@@ -93,6 +93,11 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
         var configuredWsl = userSettings.WslSettings
             .Where(w => !string.IsNullOrWhiteSpace(w.Id))
             .ToDictionary(w => w.Id, StringComparer.OrdinalIgnoreCase);
+        var configuredFolders = userSettings.FolderIndexes
+            .Where(f => !string.IsNullOrWhiteSpace(f.Path))
+            .GroupBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
 
         var statuses = (indexStatuses ?? Array.Empty<NetworkIndexStatus>())
             .ToDictionary(s => s.Drive, StringComparer.OrdinalIgnoreCase);
@@ -116,114 +121,53 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
             .OrderBy(w => w, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        // Update in place (don't Clear+rebuild) whenever the drive/WSL set is unchanged. A periodic status
-        // refresh rebuilding the rows would replace the WslSettingsItem a "refresh mode" ComboBox is bound
-        // to and instantly close its open dropdown -- which is why the WSL refresh mode couldn't be changed
-        // once indexing started producing status. Only rebuild when a drive/distro is actually added/removed.
+        var visibleFolders = GetVisibleFolders(userSettings);
+
+        // Update in place (don't Clear+rebuild) whenever the drive/WSL/folder set is unchanged. A periodic
+        // status refresh rebuilding the rows would replace the item a "refresh mode" ComboBox is bound to
+        // and instantly close its open dropdown -- which is why the WSL refresh mode couldn't be changed
+        // once indexing started producing status. Only rebuild when a drive/distro/folder is actually
+        // added or removed.
         var structureUnchanged =
             NetworkDrives.Count == visibleDrives.Count &&
             visibleDrives.All(letter => NetworkDrives.Any(d => d.Drive.Equals(letter, StringComparison.OrdinalIgnoreCase))) &&
             WslDrives.Count == visibleWsl.Count &&
-            visibleWsl.All(name => WslDrives.Any(d => d.DistroName.Equals(name, StringComparison.OrdinalIgnoreCase)));
+            visibleWsl.All(name => WslDrives.Any(d => d.DistroName.Equals(name, StringComparison.OrdinalIgnoreCase))) &&
+            FolderIndexes.Count == visibleFolders.Count &&
+            visibleFolders.All(path => FolderIndexes.Any(f => f.Path.Equals(path, StringComparison.OrdinalIgnoreCase)));
 
         if (HasPendingEdits || structureUnchanged)
-        {
-            foreach (var letter in visibleDrives)
-            {
-                var item = NetworkDrives.FirstOrDefault(d => d.Drive.Equals(letter, StringComparison.OrdinalIgnoreCase));
-                if (item != null)
-                {
-                    statuses.TryGetValue(letter, out var indexStatus);
-                    resolvedByDrive.TryGetValue(letter, out var drive);
-                    item.Id = NetworkDriveResolver.GetNetworkId(letter);
-                    item.IsPresent = drive != null;
-                    if (!item.IsPresent) item.IsEnabled = false;
-                    TrackPendingRebuild(letter, indexStatus?.State);
-                    item.State = drive == null ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(drive, indexStatus);
-                    item.ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-";
-                    configured.TryGetValue(item.Id, out var saved);
-                    UpdateRowAction(item, item.IsPresent && saved != null, indexStatus?.State);
-                }
-            }
-            foreach (var name in visibleWsl)
-            {
-                var item = WslDrives.FirstOrDefault(d => d.DistroName.Equals(name, StringComparison.OrdinalIgnoreCase));
-                if (item != null)
-                {
-                    var unc = $@"\\wsl$\{name}";
-                    statuses.TryGetValue(unc, out var indexStatus);
-                    var isPresent = wslDistros.Contains(name, StringComparer.OrdinalIgnoreCase);
-                    item.IsPresent = isPresent;
-                    if (!item.IsPresent) item.IsEnabled = false;
-                    TrackPendingRebuild(unc, indexStatus?.State);
-                    item.State = !isPresent ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(null, indexStatus);
-                    item.ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-";
-                    configuredWsl.TryGetValue(name, out var saved);
-                    UpdateWslRowAction(item, isPresent && saved != null, indexStatus?.State);
-                }
-            }
-        }
+            UpdateRowsInPlace(visibleDrives, visibleWsl, visibleFolders, statuses, resolvedByDrive, wslDistros, configured, configuredWsl, configuredFolders);
         else
-        {
-            foreach (var existing in NetworkDrives) existing.PropertyChanged -= OnNetworkDriveItemChanged;
-            NetworkDrives.Clear();
-            foreach (var letter in visibleDrives)
-            {
-                statuses.TryGetValue(letter, out var indexStatus);
-                resolvedByDrive.TryGetValue(letter, out var drive);
-                var id = NetworkDriveResolver.GetNetworkId(letter);
-                configured.TryGetValue(id, out var saved);
-                var item = new NetworkDriveSettingsItem
-                {
-                    Id = id,
-                    Drive = letter,
-                    IsPresent = drive != null,
-                    IsEnabled = drive != null && saved != null,
-                    State = drive == null ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(drive, indexStatus),
-                    ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-",
-                    RefreshMode = NetworkDriveSettingsHelper.NormalizeRefreshMode(saved?.RefreshMode)
-                };
-                item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunDriveAction(item, this, _userSettings, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
-                TrackPendingRebuild(letter, indexStatus?.State);
-                UpdateRowAction(item, drive != null && saved != null, indexStatus?.State);
-                item.PropertyChanged += OnNetworkDriveItemChanged;
-                NetworkDrives.Add(item);
-            }
+            RebuildRows(visibleDrives, visibleWsl, visibleFolders, statuses, resolvedByDrive, wslDistros, configured, configuredWsl, configuredFolders);
 
-            foreach (var existing in WslDrives) existing.PropertyChanged -= OnWslDriveItemChanged;
-            WslDrives.Clear();
-            foreach (var name in visibleWsl)
-            {
-                var unc = $@"\\wsl$\{name}";
-                statuses.TryGetValue(unc, out var indexStatus);
-                var isPresent = wslDistros.Contains(name, StringComparer.OrdinalIgnoreCase);
-                configuredWsl.TryGetValue(name, out var saved);
-                var item = new WslSettingsItem
-                {
-                    Id = name,
-                    DistroName = name,
-                    IsPresent = isPresent,
-                    IsEnabled = isPresent && saved != null,
-                    State = !isPresent ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(null, indexStatus),
-                    ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-",
-                    RefreshMode = NetworkDriveSettingsHelper.NormalizeRefreshMode(saved?.RefreshMode)
-                };
-                item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunWslDriveAction(item, this, _userSettings, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
-                TrackPendingRebuild(unc, indexStatus?.State);
-                UpdateWslRowAction(item, isPresent && saved != null, indexStatus?.State);
-                item.PropertyChanged += OnWslDriveItemChanged;
-                WslDrives.Add(item);
-            }
-        }
-
-        IsNetworkDrivesEmpty = NetworkDrives.Count == 0 && WslDrives.Count == 0;
+        IsNetworkDrivesEmpty = NetworkDrives.Count == 0 && WslDrives.Count == 0 && FolderIndexes.Count == 0;
         DrivesPlaceholderText = TranslationManager.Instance["Network_Placeholder"];
 
-        var hasEnabled = NetworkDrives.Any(d => d.AppliedEnabled) || WslDrives.Any(w => w.AppliedEnabled);
+        var hasEnabled = NetworkDrives.Any(d => d.AppliedEnabled) || WslDrives.Any(w => w.AppliedEnabled) || FolderIndexes.Any(f => f.AppliedEnabled);
         var isBusy = isGlobalBusy || _pendingRowRebuilds.Count > 0 || indexStatuses?.Any(s => s.State == "indexing" || s.State == "pending") == true;
         _isBusy = isBusy;
         CanRebuild = hasEnabled && !isBusy;
         CanEditRefreshModes = !isBusy;
+        UpdateRowPermissions(isBusy);
+
+        if (IsNetworkDrivesEmpty)
+        {
+            IndexSummary = TranslationManager.Instance["Network_DrivesEmpty"];
+        }
+        else
+        {
+            var enabledCount = NetworkDrives.Count(d => d.AppliedEnabled) + WslDrives.Count(w => w.AppliedEnabled) + FolderIndexes.Count(f => f.AppliedEnabled);
+            var totalItems = (indexStatuses ?? Array.Empty<NetworkIndexStatus>()).Sum(s => s.Items);
+            var state = isBusy ? TranslationManager.Instance["Network_StatusIndexing"] : TranslationManager.Instance["Status_Ready"];
+            IndexSummary = string.Format(TranslationManager.Instance["Network_SummaryTemplate"], state, enabledCount, totalItems);
+        }
+        OnPropertyChanged(nameof(IsWslPanelVisible));
+        OnPropertyChanged(nameof(IsFolderIndexesEmpty));
+    }
+
+    private void UpdateRowPermissions(bool isBusy)
+    {
         foreach (var drive in NetworkDrives)
         {
             drive.CanEditEnabled = drive.IsPresent && !isBusy;
@@ -239,19 +183,18 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
             wsl.CanRunRowAction = wsl.RowAction == NetworkDriveRowAction.Stop
                 || (!isBusy && (wsl.RowAction == NetworkDriveRowAction.Delete || CanRebuild && wsl.RowAction == NetworkDriveRowAction.Rebuild));
         }
-
-        if (IsNetworkDrivesEmpty)
+        foreach (var folder in FolderIndexes)
         {
-            IndexSummary = TranslationManager.Instance["Network_DrivesEmpty"];
+            folder.CanEditEnabled = folder.IsPresent && !isBusy;
+            folder.CanEditRefreshMode = folder.IsPresent && !isBusy;
+            // Delete also stays clickable through isBusy here, unlike drives/WSL: isBusy for this whole
+            // panel includes isGlobalBusy (!isServiceReady, the *local USN* service), which has nothing
+            // to do with folder indexing (it runs entirely in-process, never through that service) --
+            // removing a folder row that was never applied/cached must not get blocked by an unrelated
+            // service being unreachable.
+            folder.CanRunRowAction = folder.RowAction is NetworkDriveRowAction.Stop or NetworkDriveRowAction.Delete
+                || (!isBusy && CanRebuild && folder.RowAction == NetworkDriveRowAction.Rebuild);
         }
-        else
-        {
-            var enabledCount = NetworkDrives.Count(d => d.AppliedEnabled) + WslDrives.Count(w => w.AppliedEnabled);
-            var totalItems = (indexStatuses ?? Array.Empty<NetworkIndexStatus>()).Sum(s => s.Items);
-            var state = isBusy ? TranslationManager.Instance["Network_StatusIndexing"] : TranslationManager.Instance["Status_Ready"];
-            IndexSummary = string.Format(TranslationManager.Instance["Network_SummaryTemplate"], state, enabledCount, totalItems);
-        }
-        OnPropertyChanged(nameof(IsWslPanelVisible));
     }
 
     public void ResetPendingEdits() => HasPendingEdits = false;

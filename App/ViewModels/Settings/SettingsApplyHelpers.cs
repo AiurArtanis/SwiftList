@@ -55,4 +55,16 @@ internal static class SettingsApplyHelpers
             .Select(d => $"{d.Id}|{d.RefreshMode}");
         return !oldOrdered.SequenceEqual(newOrdered, StringComparer.OrdinalIgnoreCase);
     }
+
+    public static bool FolderIndexesChanged(IReadOnlyList<FolderIndexSetting> oldSettings, IReadOnlyList<FolderIndexSetting> newSettings)
+    {
+        var oldOrdered = oldSettings
+            .OrderBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
+            .Select(f => $"{f.Path}|{f.RefreshMode}");
+
+        var newOrdered = newSettings
+            .OrderBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
+            .Select(f => $"{f.Path}|{f.RefreshMode}");
+        return !oldOrdered.SequenceEqual(newOrdered, StringComparer.OrdinalIgnoreCase);
+    }
 }

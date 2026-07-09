@@ -134,6 +134,9 @@ public class SettingsViewModel : ViewModelBase
         var previousWslDrives = _userSettings.WslSettings
             .Select(w => new WslSetting { Id = w.Id, RefreshMode = w.RefreshMode })
             .ToList();
+        var previousFolderIndexes = _userSettings.FolderIndexes
+            .Select(f => new FolderIndexSetting { Path = f.Path, RefreshMode = f.RefreshMode })
+            .ToList();
         var previousExclusions = SettingsChangeSnapshot.CaptureExclusions(_userSettings);
         var previousDisabledAliases = _userSettings.DisabledPluginComponents
             .Where(c => c.Contains("::AliasProvider::", StringComparison.OrdinalIgnoreCase))
@@ -154,11 +157,17 @@ public class SettingsViewModel : ViewModelBase
             Id = w.Id,
             RefreshMode = w.RefreshMode
         }).ToList();
+        var newFolderIndexes = NetworkDrive.FolderIndexes.Where(f => f.IsEnabled && !string.IsNullOrWhiteSpace(f.Path)).Select(f => new FolderIndexSetting
+        {
+            Path = f.Path,
+            RefreshMode = f.RefreshMode
+        }).ToList();
         var localDriveSnapshots = LocalDrive.LocalDrives
             .Select(d => new LocalDriveSnapshot(d.Drive, d.Id, d.IsEnabled))
             .ToList();
         _userSettings.NetworkDrives = newNetworkDrives;
         _userSettings.WslSettings = newWslDrives;
+        _userSettings.FolderIndexes = newFolderIndexes;
         Exclusions.Save();
         General.Apply();
         Plugins.Save();
@@ -188,7 +197,9 @@ public class SettingsViewModel : ViewModelBase
             {
                 _searchService.RefreshNetworkIndexes();
             }
-            else if (SettingsApplyHelpers.NetworkSettingsChanged(previousNetworkDrives, newNetworkDrives) || SettingsApplyHelpers.WslSettingsChanged(previousWslDrives, newWslDrives))
+            else if (SettingsApplyHelpers.NetworkSettingsChanged(previousNetworkDrives, newNetworkDrives)
+                || SettingsApplyHelpers.WslSettingsChanged(previousWslDrives, newWslDrives)
+                || SettingsApplyHelpers.FolderIndexesChanged(previousFolderIndexes, newFolderIndexes))
             {
                 await NetworkDriveApplyHelper.ApplyChangesAsync(_searchService, previousNetworkDrives, newNetworkDrives);
                 foreach (var wsl in newWslDrives)
@@ -198,6 +209,15 @@ public class SettingsViewModel : ViewModelBase
                         var unc = $@"\\wsl$\{wsl.Id}";
                         _searchService.RefreshNetworkDriveIndex(unc);
                     }
+                }
+                // Unlike a network drive, a folder path never needs resolving from the OS, so there's
+                // nothing to wait for -- ConfigureNetworkIndexes() (already called above via
+                // ApplyChangesAsync) already auto-queues an initial refresh for it; this just requests it
+                // directly, same as a newly-added WSL distro above.
+                foreach (var folder in newFolderIndexes)
+                {
+                    if (!previousFolderIndexes.Any(f => f.Path.Equals(folder.Path, StringComparison.OrdinalIgnoreCase)))
+                        _searchService.RefreshNetworkDriveIndex(folder.Path);
                 }
             }
 

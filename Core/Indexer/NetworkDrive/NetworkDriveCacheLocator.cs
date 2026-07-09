@@ -20,6 +20,10 @@ internal static class NetworkDriveCacheLocator
             .Where(d => !string.IsNullOrWhiteSpace(d.UncPath))
             .ToDictionary(d => NormalizeUnc(d.UncPath), d => d.Letter, StringComparer.OrdinalIgnoreCase);
 
+        // Was filtered to single-letter drives only, which silently made this never return UNC/WSL/
+        // folder-index keys -- e.g. the App's own "cached but currently unchecked WSL row" logic
+        // (NetworkDriveSettingsViewModel filtering this list for entries starting with "\\") was dead
+        // code, always empty. Broadened to return every distinct normalized key regardless of shape.
         return EnumerateNetworkStores()
             .Select(store =>
             {
@@ -28,7 +32,7 @@ internal static class NetworkDriveCacheLocator
                     ? currentDrive
                     : IndexerHelper.NormalizeDrive(store.SourceKey);
             })
-            .Where(drive => drive.Length == 1)
+            .Where(drive => !string.IsNullOrEmpty(drive))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(drive => drive, StringComparer.OrdinalIgnoreCase)
             .ToList();

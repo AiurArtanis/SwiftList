@@ -46,7 +46,7 @@ public sealed partial class NetworkIndexer : IDisposable
             _configured = true;
             try
             {
-                Configure(settings.NetworkDrives, settings.WslSettings);
+                Configure(settings.NetworkDrives, settings.WslSettings, settings.FolderIndexes);
             }
             catch
             {
@@ -56,7 +56,11 @@ public sealed partial class NetworkIndexer : IDisposable
         }
     }
 
-    public void Configure(IEnumerable<NetworkDriveSetting> driveSettings, IEnumerable<WslSetting> wslSettings, bool forceRefresh = false)
+    public void Configure(
+        IEnumerable<NetworkDriveSetting> driveSettings,
+        IEnumerable<WslSetting> wslSettings,
+        IEnumerable<FolderIndexSetting>? folderSettings = null,
+        bool forceRefresh = false)
     {
         var wslPrefix = @"\\wsl$";
         var enabledSettings = driveSettings
@@ -70,6 +74,13 @@ public sealed partial class NetworkIndexer : IDisposable
             {
                 Drive = $@"{wslPrefix}\{w.Id}",
                 RefreshMode = IndexerHelper.NormalizeRefreshMode(w.RefreshMode)
+            }))
+            // A folder-index path is already absolute -- normalized (but not collapsed to a letter, see
+            // IndexerHelper.NormalizeDrive), it becomes its own opaque key, same as a WSL UNC path.
+            .Concat((folderSettings ?? Enumerable.Empty<FolderIndexSetting>()).Select(f => new
+            {
+                Drive = IndexerHelper.NormalizeDrive(f.Path),
+                RefreshMode = IndexerHelper.NormalizeRefreshMode(f.RefreshMode)
             }))
             .Where(d => !string.IsNullOrEmpty(d.Drive))
             .GroupBy(d => d.Drive, StringComparer.OrdinalIgnoreCase)

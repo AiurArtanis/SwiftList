@@ -260,6 +260,46 @@
                     </Grid>
                 </Border>
             </DataTemplate>
+
+            <DataTemplate x:Key="FolderIndexTemplate">
+                <Border Style="{StaticResource SettingsRow}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="1.2*"/>
+                            <ColumnDefinition Width="1.1*"/>
+                            <ColumnDefinition Width="1.4*" MinWidth="126"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanEditEnabled}"
+                                  VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}" FontSize="13" VerticalAlignment="Center" ToolTip="{Binding Path}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding State}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="{Binding ItemCount}" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="4"
+                                  Width="116"
+                                  HorizontalAlignment="Left"
+                                  VerticalAlignment="Center"
+                                  Style="{StaticResource SettingsComboBox}"
+                                  ItemsSource="{Binding DataContext.NetworkDrive.RefreshModeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  DisplayMemberPath="Label"
+                                  SelectedValuePath="Value"
+                                  SelectedValue="{Binding RefreshMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  IsEnabled="{Binding CanEditRefreshMode}"/>
+                        <Button Grid.Column="5"
+                                Style="{StaticResource SettingsButton}"
+                                MinWidth="72"
+                                Height="28"
+                                Padding="10,0"
+                                Content="{Binding RowActionText}"
+                                Command="{Binding RowActionCommand}"
+                                IsEnabled="{Binding CanRunRowAction}"
+                                Visibility="{Binding IsRowActionVisible, Converter={StaticResource BoolToVis}}"/>
+                    </Grid>
+                </Border>
+            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -344,6 +384,32 @@
                             <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding LocalDrive.SelectedTab}" Value="Wsl">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                </StackPanel>
+                <StackPanel Margin="28,0,0,0">
+                    <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_FolderIndex]}"
+                            Command="{Binding LocalDrive.SelectTabCommand}" CommandParameter="Folders">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding LocalDrive.SelectedTab}" Value="Folders">
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Border>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding LocalDrive.SelectedTab}" Value="Folders">
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -569,6 +635,76 @@
                         </Grid>
 
                         <ItemsControl ItemsSource="{Binding NetworkDrive.WslDrives}" ItemTemplate="{StaticResource WslDriveTemplate}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Tab: Folders -->
+            <StackPanel x:Name="TabFolders">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding LocalDrive.SelectedTab}" Value="Folders">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+
+                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
+                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Folder_SectionHint]}"/>
+
+                <Border Style="{StaticResource SettingsCard}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_IndexStatus]}"
+                                   FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Style="{StaticResource PrimarySettingsButton}"
+                                Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Folder_AddBtn]}"
+                                Command="{Binding NetworkDrive.AddFolderCommand}"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource SettingsCard}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="1.2*"/>
+                                <ColumnDefinition Width="1.1*"/>
+                                <ColumnDefinition Width="1.4*" MinWidth="126"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Folder_HeaderPath]}"
+                                       Foreground="{DynamicResource TextSecondary2}"/>
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderStatus]}"
+                                       Foreground="{DynamicResource TextSecondary2}"/>
+                            <TextBlock Grid.Column="3"
+                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderItems]}"
+                                       Foreground="{DynamicResource TextSecondary2}"/>
+                            <TextBlock Grid.Column="4"
+                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderMode]}"
+                                       Foreground="{DynamicResource TextSecondary2}"/>
+                        </Grid>
+                        <Border Background="{DynamicResource EmptyPlaceholderBackground}" BorderBrush="{DynamicResource EmptyPlaceholderBorderBrush}" BorderThickness="1" CornerRadius="6"
+                                Padding="24,32" Margin="0,8,0,0"
+                                Visibility="{Binding NetworkDrive.IsFolderIndexesEmpty, Converter={StaticResource BoolToVis}}">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="36"
+                                           Foreground="{DynamicResource EmptyPlaceholderIcon}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Folder_Placeholder]}" FontSize="13"
+                                           Foreground="{DynamicResource TextSecondary2}" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ItemsControl ItemsSource="{Binding NetworkDrive.FolderIndexes}" ItemTemplate="{StaticResource FolderIndexTemplate}"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
