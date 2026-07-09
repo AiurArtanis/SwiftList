@@ -261,7 +261,10 @@ public static class QuickNavigationMenu
         if (menuItem.Items.Count > 0 && (menuItem.Items[0] as MenuItem)?.Header?.ToString() != "Loading...") return;
         menuItem.Items.Clear();
         foreach (var subItem in provider.GetMenuItems(result, item.SubMenuHandle))
-            menuItem.Items.Add(CreateMenuItem(subItem, result, provider, contextMenu, dialogHwndAtTrigger));
+            // Root items already do this IsSeparator check (see the ShowMenu loop above) -- missing here
+            // meant a separator nested inside any submenu rendered as a real MenuItem with an empty Header
+            // instead of an actual divider line, showing up as a blank row.
+            menuItem.Items.Add(subItem.IsSeparator ? new Separator() : CreateMenuItem(subItem, result, provider, contextMenu, dialogHwndAtTrigger));
 
         // A provider can legitimately return nothing here -- e.g. its backing data (favorites, a plugin's
         // own cache) hasn't finished loading yet this soon after app startup, not just "this folder is
