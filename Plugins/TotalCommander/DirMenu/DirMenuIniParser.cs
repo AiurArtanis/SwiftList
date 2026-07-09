@@ -51,7 +51,31 @@ internal static class DirMenuIniParser
             }
         }
 
+        Prune(root);
         return root;
+    }
+
+    // A "-Name"/"--" group whose only entries failed to resolve (unrecognized cmd, a "cd" target that no
+    // longer exists) would otherwise survive as a dead-end submenu: it shows up next to real entries, but
+    // opening it renders nothing at all. Mirrors GetMenuItems' own root-level rule ("hidden entirely when
+    // the hotlist has nothing to show") at every nesting level, not just the root.
+    private static bool Prune(List<DirMenuNode> nodes)
+    {
+        var hasContent = false;
+        for (var i = nodes.Count - 1; i >= 0; i--)
+        {
+            var node = nodes[i];
+            if (node.IsSeparator) continue;
+
+            if (node.Children != null)
+            {
+                if (!Prune(node.Children)) { nodes.RemoveAt(i); continue; }
+            }
+
+            hasContent = true;
+        }
+
+        return hasContent;
     }
 
     // Case-insensitive key=value pairs from one [Section], keyed by index suffix rather than physical
