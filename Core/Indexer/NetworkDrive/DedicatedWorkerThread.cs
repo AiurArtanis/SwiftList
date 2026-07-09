@@ -21,6 +21,16 @@ internal static class DedicatedWorkerThread
                 work().GetAwaiter().GetResult();
                 tcs.SetResult();
             }
+            catch (OperationCanceledException)
+            {
+                // A cancelled scan (drive removed from config, or a user-initiated Stop) is expected, not
+                // an error -- Task.WaitAll(tasks, token) in TreeBuilder.Run() throws and returns as soon as
+                // its own token is cancelled, without waiting for every worker task to finish, so nothing
+                // else ever observes this task's outcome. Faulting it (the old behavior) left it to be
+                // garbage-collected as an unobserved exception, crashing the process via
+                // TaskScheduler.UnobservedTaskException; a Canceled task never triggers that.
+                tcs.SetCanceled();
+            }
             catch (Exception ex)
             {
                 tcs.SetException(ex);
