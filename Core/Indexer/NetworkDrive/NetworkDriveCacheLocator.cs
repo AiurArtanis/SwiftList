@@ -86,6 +86,16 @@ internal static class NetworkDriveCacheLocator
         if (!string.IsNullOrWhiteSpace(unc))
             return BuildStorageKey(unc);
 
+        // A folder-index target has no UNC to resolve, ever -- GetStorageKeyOrFallback saved it under
+        // BuildFallbackStorageKey(drive) directly. Check that exact key before falling through to the
+        // FileSystemType-based scan below, which for a folder index is empty (never a real UNC) and would
+        // resolve to a filename nothing was ever saved under, silently orphaning the cache on delete/reload.
+        var fallbackKey = BuildFallbackStorageKey(normalizedDrive);
+        if (FileRecordStoreSerializer.Exists(Path.Combine(Logger.UserDataDir, "indexes"), fallbackKey))
+            return fallbackKey;
+
+        // Last resort for a drive/share that WAS connected when saved (so its cache's FileSystemType holds
+        // the real UNC it was keyed under) but is disconnected right now.
         var fallback = EnumerateNetworkStores()
             .Cast<FileRecordStoreSummary?>()
             .FirstOrDefault(store => store.HasValue && store.Value.SourceKey.TrimEnd(':')
