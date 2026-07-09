@@ -181,11 +181,12 @@ public static class QuickNavigationMenu
 
         Action triggerAction = () =>
         {
-            // Root-level category entries (Favorites/History/configured folders) are pure navigation
-            // categories, not executable targets -- clicking/Enter must do nothing at all. Their contents
-            // are still reachable via submenu expansion (hover/keyboard-focus/right-arrow), which is wired
-            // independently of this action below.
-            if (isRootItem) return;
+            // Root-level category entries (Favorites/History/configured folders) and any provider-marked
+            // non-actionable node (e.g. an ini-defined submenu group with no real target of its own) are
+            // pure navigation categories -- clicking/Enter must do nothing at all, not even close the menu.
+            // Their contents are still reachable via submenu expansion (hover/keyboard-focus/right-arrow),
+            // which is wired independently of this action below.
+            if (isRootItem || !item.IsActionable) return;
 
             contextMenu.IsOpen = false;
             (contextMenu.PlacementTarget as Window)?.Hide();

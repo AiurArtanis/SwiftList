@@ -78,7 +78,9 @@ public class DirMenuProvider : IQuickNavigationProvider
                 Text = node.Label,
                 HasSubMenu = true,
                 SubMenuHandle = AllocateHandle(node),
-                HBitmapItem = node.Children != null ? DirMenuIcon.GetMenuGroupHBitmap() : IntPtr.Zero
+                HBitmapItem = node.Children != null ? DirMenuIcon.GetMenuGroupHBitmap() : IntPtr.Zero,
+                // A submenu group has no real target of its own -- only a resolved "cd <realdir>" leaf does.
+                IsActionable = node.Children == null
             };
         }
     }

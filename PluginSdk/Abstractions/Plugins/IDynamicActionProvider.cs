@@ -58,6 +58,12 @@ public class DynamicMenuItem
     public bool HasSubMenu { get; set; }
     public IntPtr SubMenuHandle { get; set; }
     public bool IsDisabled { get; set; }
+    /// <summary>
+    /// Whether clicking/Enter on this item executes anything. Default: true. Set false for a pure
+    /// category/group node (no real target of its own) so it can only be drilled into via its submenu
+    /// (hover/keyboard-focus/right-arrow) -- a click on it does nothing instead of closing the host menu.
+    /// </summary>
+    public bool IsActionable { get; set; } = true;
     public IntPtr HBitmapItem { get; set; }
     /// <summary>
     /// Optional direct invocation delegate set by the plugin.

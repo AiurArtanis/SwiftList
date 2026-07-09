@@ -27,7 +27,7 @@ internal static class QuickNavigationMenuKeyHandler
         // Action hotkeys (Ctrl+C, Ctrl+Enter, ...) fire directly on the highlighted item without
         // opening its action menu — like the full window's result list. Gated to real file/folder
         // items (same places the action menu is allowed), so nav categories don't respond.
-        if (menuItem.IsFocused && enableRightClick && canNavigate && !string.IsNullOrEmpty(itemPath)
+        if (menuItem.IsFocused && enableRightClick && item.IsActionable && canNavigate && !string.IsNullOrEmpty(itemPath)
             && System.Windows.Input.Keyboard.Modifiers != System.Windows.Input.ModifierKeys.None)
         {
             var hotkeySelection = new[]
