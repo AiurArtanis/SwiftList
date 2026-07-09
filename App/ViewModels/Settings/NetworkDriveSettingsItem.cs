@@ -82,6 +82,7 @@ public class NetworkDriveSettingsItem : ViewModelBase
     {
         NetworkDriveRowAction.Rebuild => TranslationManager.Instance["Network_RowRebuildBtn"],
         NetworkDriveRowAction.Delete => TranslationManager.Instance["Network_RowDeleteBtn"],
+        NetworkDriveRowAction.Stop => TranslationManager.Instance["Network_RowStopBtn"],
         _ => string.Empty
     };
 
@@ -96,5 +97,6 @@ public enum NetworkDriveRowAction
 {
     None,
     Rebuild,
-    Delete
+    Delete,
+    Stop
 }

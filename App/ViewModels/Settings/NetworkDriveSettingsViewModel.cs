@@ -142,7 +142,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
                     item.State = drive == null ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(drive, indexStatus);
                     item.ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-";
                     configured.TryGetValue(item.Id, out var saved);
-                    UpdateRowAction(item, item.IsPresent && saved != null);
+                    UpdateRowAction(item, item.IsPresent && saved != null, indexStatus?.State);
                 }
             }
             foreach (var name in visibleWsl)
@@ -159,7 +159,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
                     item.State = !isPresent ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(null, indexStatus);
                     item.ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-";
                     configuredWsl.TryGetValue(name, out var saved);
-                    UpdateWslRowAction(item, isPresent && saved != null);
+                    UpdateWslRowAction(item, isPresent && saved != null, indexStatus?.State);
                 }
             }
         }
@@ -185,7 +185,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
                 };
                 item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunDriveAction(item, this, _userSettings, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
                 TrackPendingRebuild(letter, indexStatus?.State);
-                UpdateRowAction(item, drive != null && saved != null);
+                UpdateRowAction(item, drive != null && saved != null, indexStatus?.State);
                 item.PropertyChanged += OnNetworkDriveItemChanged;
                 NetworkDrives.Add(item);
             }
@@ -210,7 +210,7 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
                 };
                 item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunWslDriveAction(item, this, _userSettings, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
                 TrackPendingRebuild(unc, indexStatus?.State);
-                UpdateWslRowAction(item, isPresent && saved != null);
+                UpdateWslRowAction(item, isPresent && saved != null, indexStatus?.State);
                 item.PropertyChanged += OnWslDriveItemChanged;
                 WslDrives.Add(item);
             }
@@ -228,13 +228,16 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
         {
             drive.CanEditEnabled = drive.IsPresent && !isBusy;
             drive.CanEditRefreshMode = drive.IsPresent && !isBusy;
-            drive.CanRunRowAction = !isBusy && (drive.RowAction == NetworkDriveRowAction.Delete || CanRebuild && drive.RowAction == NetworkDriveRowAction.Rebuild);
+            // Stop stays clickable through isBusy -- a Stop row is exactly what's causing it.
+            drive.CanRunRowAction = drive.RowAction == NetworkDriveRowAction.Stop
+                || (!isBusy && (drive.RowAction == NetworkDriveRowAction.Delete || CanRebuild && drive.RowAction == NetworkDriveRowAction.Rebuild));
         }
         foreach (var wsl in WslDrives)
         {
             wsl.CanEditEnabled = wsl.IsPresent && !isBusy;
             wsl.CanEditRefreshMode = wsl.IsPresent && !isBusy;
-            wsl.CanRunRowAction = !isBusy && (wsl.RowAction == NetworkDriveRowAction.Delete || CanRebuild && wsl.RowAction == NetworkDriveRowAction.Rebuild);
+            wsl.CanRunRowAction = wsl.RowAction == NetworkDriveRowAction.Stop
+                || (!isBusy && (wsl.RowAction == NetworkDriveRowAction.Delete || CanRebuild && wsl.RowAction == NetworkDriveRowAction.Rebuild));
         }
 
         if (IsNetworkDrivesEmpty)
@@ -267,19 +270,19 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
     // WslSettings (the same way LocalDriveSettingsViewModel.UpdateStatus derives its own local appliedEnabled
     // every call), never read back off a previously-stored field -- so RowAction can't go stale just because
     // some save path forgot to sync a cached "applied" flag afterwards.
-    private void UpdateRowAction(NetworkDriveSettingsItem item, bool appliedEnabled)
+    private void UpdateRowAction(NetworkDriveSettingsItem item, bool appliedEnabled, string? state)
     {
         item.AppliedEnabled = appliedEnabled;
         item.RowAction = appliedEnabled
-            ? NetworkDriveRowAction.Rebuild
+            ? (state == "indexing" ? NetworkDriveRowAction.Stop : NetworkDriveRowAction.Rebuild)
             : _searchService.HasNetworkDriveCache(item.Drive) ? NetworkDriveRowAction.Delete : NetworkDriveRowAction.None;
     }
 
-    private void UpdateWslRowAction(WslSettingsItem item, bool appliedEnabled)
+    private void UpdateWslRowAction(WslSettingsItem item, bool appliedEnabled, string? state)
     {
         item.AppliedEnabled = appliedEnabled;
         item.RowAction = appliedEnabled
-            ? NetworkDriveRowAction.Rebuild
+            ? (state == "indexing" ? NetworkDriveRowAction.Stop : NetworkDriveRowAction.Rebuild)
             : _searchService.HasNetworkDriveCache(item.UncPath) ? NetworkDriveRowAction.Delete : NetworkDriveRowAction.None;
     }
 

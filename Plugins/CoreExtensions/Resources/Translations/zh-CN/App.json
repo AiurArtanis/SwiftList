@@ -121,6 +121,7 @@
   "Network_RebuildBtn": "重建索引",
   "Network_RowRebuildBtn": "重建",
   "Network_RowDeleteBtn": "删除",
+  "Network_RowStopBtn": "停止",
   "Network_HeaderDrive": "驱动器",
   "Network_HeaderStatus": "状态",
   "Network_HeaderItems": "项目",

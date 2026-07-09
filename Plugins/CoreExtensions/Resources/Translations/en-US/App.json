@@ -121,6 +121,7 @@
   "Network_RebuildBtn": "Rebuild Index",
   "Network_RowRebuildBtn": "Rebuild",
   "Network_RowDeleteBtn": "Delete",
+  "Network_RowStopBtn": "Stop",
   "Network_HeaderDrive": "Drive",
   "Network_HeaderStatus": "Status",
   "Network_HeaderItems": "Items",

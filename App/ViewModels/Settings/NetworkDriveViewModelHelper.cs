@@ -39,7 +39,8 @@ internal static class NetworkDriveViewModelHelper
         HashSet<string> pendingRowRebuilds,
         HashSet<string> observedRowRebuilds)
     {
-        if (vm.IsBusy || !item.CanRunRowAction)
+        // A row showing Stop is exactly what's causing vm.IsBusy -- it must stay clickable through that.
+        if ((vm.IsBusy && item.RowAction != NetworkDriveRowAction.Stop) || !item.CanRunRowAction)
             return;
 
         item.CanRunRowAction = false;
@@ -79,6 +80,14 @@ internal static class NetworkDriveViewModelHelper
             if (!item.IsPresent)
                 item.IsEnabled = false;
         }
+        else if (item.RowAction == NetworkDriveRowAction.Stop)
+        {
+            // Don't touch item.State/RowAction here -- the next status poll (RefreshNetworkDrives) will
+            // pick up whatever Scheduler.CancelDrive actually settles on and re-derive both correctly.
+            pendingRowRebuilds.Remove(item.Drive);
+            observedRowRebuilds.Remove(item.Drive);
+            searchService.CancelNetworkDriveIndex(item.Drive);
+        }
         onTriggerFastRefresh?.Invoke();
     }
 
@@ -91,7 +100,8 @@ internal static class NetworkDriveViewModelHelper
         HashSet<string> pendingRowRebuilds,
         HashSet<string> observedRowRebuilds)
     {
-        if (vm.IsBusy || !item.CanRunRowAction)
+        // A row showing Stop is exactly what's causing vm.IsBusy -- it must stay clickable through that.
+        if ((vm.IsBusy && item.RowAction != NetworkDriveRowAction.Stop) || !item.CanRunRowAction)
             return;
 
         item.CanRunRowAction = false;
@@ -130,6 +140,12 @@ internal static class NetworkDriveViewModelHelper
             item.CanEditRefreshMode = item.IsPresent && !vm.IsBusy;
             if (!item.IsPresent)
                 item.IsEnabled = false;
+        }
+        else if (item.RowAction == NetworkDriveRowAction.Stop)
+        {
+            pendingRowRebuilds.Remove(item.UncPath);
+            observedRowRebuilds.Remove(item.UncPath);
+            searchService.CancelNetworkDriveIndex(item.UncPath);
         }
         onTriggerFastRefresh?.Invoke();
     }
