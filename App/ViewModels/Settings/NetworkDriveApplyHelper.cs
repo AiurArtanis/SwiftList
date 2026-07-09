@@ -30,16 +30,34 @@ internal static class NetworkDriveApplyHelper
             if (previous != null || string.IsNullOrWhiteSpace(resolvedDrive) || searchService.HasNetworkDriveCache(resolvedDrive))
                 continue;
 
-            if (await WaitForNetworkIdleAsync(searchService) && searchService.RefreshNetworkDriveIndex(resolvedDrive))
+            // ConfigureNetworkIndexes() above already auto-queues an initial refresh for this exact drive
+            // (new, no cache) -- if that's what's making the network subsystem busy, waiting on it (rather
+            // than excluding it) and then unconditionally re-triggering once it clears would restart the
+            // very thing a user's Stop click just interrupted, since a cancelled scan going idle looks
+            // identical to one that finished. Exclude the target drive from the "is anything else busy"
+            // wait, and re-check its own live status afterward -- a HasNetworkDriveCache recheck wouldn't
+            // catch a Stop click before the first checkpoint (no cache file yet either way), but the
+            // in-memory status already moved off "pending" the instant Configure()'s auto-queued refresh
+            // started, was stopped, finished, or errored -- any of which means there's nothing left for us
+            // to trigger here.
+            if (await WaitForNetworkIdleAsync(searchService, resolvedDrive)
+                && IsStillUntouched(searchService, resolvedDrive)
+                && searchService.RefreshNetworkDriveIndex(resolvedDrive))
                 await WaitForNetworkDriveRefreshAsync(searchService, resolvedDrive);
         }
     }
 
-    private static async Task<bool> WaitForNetworkIdleAsync(SearchService searchService)
+    private static bool IsStillUntouched(SearchService searchService, string drive)
+    {
+        var status = searchService.GetNetworkIndexStatuses().FirstOrDefault(s => s.Drive.Equals(drive, StringComparison.OrdinalIgnoreCase));
+        return status == null || status.State == "pending";
+    }
+
+    private static async Task<bool> WaitForNetworkIdleAsync(SearchService searchService, string excludeDrive)
     {
         for (var i = 0; i < 120; i++)
         {
-            if (!searchService.GetNetworkIndexStatuses().Any(s => s.State is "pending" or "indexing"))
+            if (!searchService.GetNetworkIndexStatuses().Any(s => s.State is "pending" or "indexing" && !s.Drive.Equals(excludeDrive, StringComparison.OrdinalIgnoreCase)))
                 return true;
 
             await Task.Delay(500);
