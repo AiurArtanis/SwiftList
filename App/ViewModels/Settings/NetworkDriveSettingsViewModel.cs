@@ -11,27 +11,34 @@ namespace SwiftList.App.ViewModels.Settings;
 public partial class NetworkDriveSettingsViewModel : ViewModelBase
 {
     private readonly SearchService _searchService;
-    private readonly UserSettings _userSettings;
     private readonly Action _onTriggerFastRefresh;
     private readonly HashSet<string> _pendingRowRebuilds = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _observedRowRebuilds = new(StringComparer.OrdinalIgnoreCase);
-    private string _indexSummary = TranslationManager.Instance["Network_SummaryBusy"];
-    private bool _canRebuild;
+    private string _networkIndexSummary = TranslationManager.Instance["Network_SummaryBusy"];
+    private string _wslIndexSummary = TranslationManager.Instance["Network_SummaryBusy"];
+    private string _folderIndexSummary = TranslationManager.Instance["Network_SummaryBusy"];
+    private bool _canRebuildDrives;
+    private bool _canRebuildWsl;
+    private bool _canRebuildFolders;
+    private bool _canAddFolder = true;
     private bool _isNetworkDrivesEmpty;
     private string _drivesPlaceholderText = string.Empty;
     private bool _hasPendingEdits;
-    private bool _canEditRefreshModes = true;
-    private bool _isBusy;
     private readonly LabeledOption[] _refreshModeOptions;
 
-    public NetworkDriveSettingsViewModel(SearchService searchService, UserSettings userSettings, Action onTriggerFastRefresh)
+    public NetworkDriveSettingsViewModel(SearchService searchService, Action onTriggerFastRefresh)
     {
         _searchService = searchService;
-        _userSettings = userSettings;
         _onTriggerFastRefresh = onTriggerFastRefresh;
-        RebuildCommand = new RelayCommand(
-            () => NetworkDriveViewModelHelper.Rebuild(this, _userSettings, _searchService, _onTriggerFastRefresh),
-            () => CanRebuild);
+        RebuildDrivesCommand = new RelayCommand(
+            () => NetworkDriveViewModelHelper.RebuildDrives(this, _searchService, _onTriggerFastRefresh),
+            () => CanRebuildDrives);
+        RebuildWslCommand = new RelayCommand(
+            () => NetworkDriveViewModelHelper.RebuildWsl(this, _searchService, _onTriggerFastRefresh),
+            () => CanRebuildWsl);
+        RebuildFoldersCommand = new RelayCommand(
+            () => NetworkDriveViewModelHelper.RebuildFolders(this, _searchService, _onTriggerFastRefresh),
+            () => CanRebuildFolders);
 
         _refreshModeOptions =
         [
@@ -65,20 +72,43 @@ public partial class NetworkDriveSettingsViewModel : ViewModelBase
     public ObservableCollection<WslSettingsItem> WslDrives { get; } = new();
 
     public bool HasPendingEdits { get => _hasPendingEdits; private set => SetProperty(ref _hasPendingEdits, value); }
-    public bool CanEditRefreshModes { get => _canEditRefreshModes; private set => SetProperty(ref _canEditRefreshModes, value); }
-    public bool IsBusy { get => _isBusy; set => SetProperty(ref _isBusy, value); }
     public bool IsWslPanelVisible => WslDrives.Count > 0;
 
     public IReadOnlyList<LabeledOption> RefreshModeOptions => _refreshModeOptions;
 
-    public ICommand RebuildCommand { get; }
-    public string IndexSummary { get => _indexSummary; set => SetProperty(ref _indexSummary, value); }
+    // Each of NetworkDrives/WslDrives/FolderIndexes gets its own Rebuild command, summary text, and
+    // enablement -- these three categories share this one ViewModel/page but their scan state, item
+    // counts, and busy-ness must never bleed into each other's display or actions.
+    public ICommand RebuildDrivesCommand { get; }
+    public ICommand RebuildWslCommand { get; }
+    public ICommand RebuildFoldersCommand { get; }
 
-    public bool CanRebuild
+    public string NetworkIndexSummary { get => _networkIndexSummary; set => SetProperty(ref _networkIndexSummary, value); }
+    public string WslIndexSummary { get => _wslIndexSummary; set => SetProperty(ref _wslIndexSummary, value); }
+    public string FolderIndexSummary { get => _folderIndexSummary; set => SetProperty(ref _folderIndexSummary, value); }
+
+    public bool CanRebuildDrives
     {
-        get => _canRebuild;
-        set { if (SetProperty(ref _canRebuild, value)) CommandManager.InvalidateRequerySuggested(); }
+        get => _canRebuildDrives;
+        set { if (SetProperty(ref _canRebuildDrives, value)) CommandManager.InvalidateRequerySuggested(); }
     }
+
+    public bool CanRebuildWsl
+    {
+        get => _canRebuildWsl;
+        set { if (SetProperty(ref _canRebuildWsl, value)) CommandManager.InvalidateRequerySuggested(); }
+    }
+
+    public bool CanRebuildFolders
+    {
+        get => _canRebuildFolders;
+        set { if (SetProperty(ref _canRebuildFolders, value)) CommandManager.InvalidateRequerySuggested(); }
+    }
+
+    // Deliberately just !folderBusy, not CanRebuildFolders itself -- CanRebuildFolders is also false
+    // whenever nothing is AppliedEnabled yet (e.g. a folder just added and not applied), which would
+    // disable Add right after adding your first folder, before you'd ever get a chance to add a second one.
+    public bool CanAddFolder { get => _canAddFolder; private set => SetProperty(ref _canAddFolder, value); }
 
     public bool IsNetworkDrivesEmpty { get => _isNetworkDrivesEmpty; set => SetProperty(ref _isNetworkDrivesEmpty, value); }
     public string DrivesPlaceholderText { get => _drivesPlaceholderText; set => SetProperty(ref _drivesPlaceholderText, value); }
@@ -141,60 +171,29 @@ public partial class NetworkDriveSettingsViewModel : ViewModelBase
         else
             RebuildRows(visibleDrives, visibleWsl, visibleFolders, statuses, resolvedByDrive, wslDistros, configured, configuredWsl, configuredFolders);
 
-        IsNetworkDrivesEmpty = NetworkDrives.Count == 0 && WslDrives.Count == 0 && FolderIndexes.Count == 0;
+        // Scoped to NetworkDrives alone -- this used to require every category empty at once, so the
+        // "no network drives" placeholder never showed as long as some unrelated folder or WSL distro was
+        // configured, leaving the Network tab's own list looking like a headers-only blank.
+        IsNetworkDrivesEmpty = NetworkDrives.Count == 0;
         DrivesPlaceholderText = TranslationManager.Instance["Network_Placeholder"];
 
-        var hasEnabled = NetworkDrives.Any(d => d.AppliedEnabled) || WslDrives.Any(w => w.AppliedEnabled) || FolderIndexes.Any(f => f.AppliedEnabled);
-        var isBusy = isGlobalBusy || _pendingRowRebuilds.Count > 0 || indexStatuses?.Any(s => s.State == "indexing" || s.State == "pending") == true;
-        _isBusy = isBusy;
-        CanRebuild = hasEnabled && !isBusy;
-        CanEditRefreshModes = !isBusy;
-        UpdateRowPermissions(isBusy);
+        // Per-category busy, so an indexing folder can't disable a network drive's row controls (or the
+        // reverse) just because this used to check one indexStatuses list combined across all three.
+        // isGlobalBusy (the elevated local USN service's reachability) still applies to drives/WSL as
+        // before -- only folders exclude it, since folder indexing never goes through that service.
+        var driveBusy = isGlobalBusy || IsCategoryBusy(NetworkDrives.Select(d => d.Drive), indexStatuses);
+        var wslBusy = isGlobalBusy || IsCategoryBusy(WslDrives.Select(w => $@"\\wsl$\{w.DistroName}"), indexStatuses);
+        var folderBusy = IsCategoryBusy(FolderIndexes.Select(f => f.Path), indexStatuses);
+        CanRebuildDrives = NetworkDrives.Any(d => d.AppliedEnabled) && !driveBusy;
+        CanRebuildWsl = WslDrives.Any(w => w.AppliedEnabled) && !wslBusy;
+        CanRebuildFolders = FolderIndexes.Any(f => f.AppliedEnabled) && !folderBusy;
+        CanAddFolder = !folderBusy;
+        UpdateRowPermissions(driveBusy, wslBusy, folderBusy);
+        UpdateSummaries(indexStatuses, driveBusy, wslBusy, folderBusy);
 
-        if (IsNetworkDrivesEmpty)
-        {
-            IndexSummary = TranslationManager.Instance["Network_DrivesEmpty"];
-        }
-        else
-        {
-            var enabledCount = NetworkDrives.Count(d => d.AppliedEnabled) + WslDrives.Count(w => w.AppliedEnabled) + FolderIndexes.Count(f => f.AppliedEnabled);
-            var totalItems = (indexStatuses ?? Array.Empty<NetworkIndexStatus>()).Sum(s => s.Items);
-            var state = isBusy ? TranslationManager.Instance["Network_StatusIndexing"] : TranslationManager.Instance["Status_Ready"];
-            IndexSummary = string.Format(TranslationManager.Instance["Network_SummaryTemplate"], state, enabledCount, totalItems);
-        }
         OnPropertyChanged(nameof(IsWslPanelVisible));
         OnPropertyChanged(nameof(IsFolderIndexesEmpty));
-    }
-
-    private void UpdateRowPermissions(bool isBusy)
-    {
-        foreach (var drive in NetworkDrives)
-        {
-            drive.CanEditEnabled = drive.IsPresent && !isBusy;
-            drive.CanEditRefreshMode = drive.IsPresent && !isBusy;
-            // Stop stays clickable through isBusy -- a Stop row is exactly what's causing it.
-            drive.CanRunRowAction = drive.RowAction == NetworkDriveRowAction.Stop
-                || (!isBusy && (drive.RowAction == NetworkDriveRowAction.Delete || CanRebuild && drive.RowAction == NetworkDriveRowAction.Rebuild));
-        }
-        foreach (var wsl in WslDrives)
-        {
-            wsl.CanEditEnabled = wsl.IsPresent && !isBusy;
-            wsl.CanEditRefreshMode = wsl.IsPresent && !isBusy;
-            wsl.CanRunRowAction = wsl.RowAction == NetworkDriveRowAction.Stop
-                || (!isBusy && (wsl.RowAction == NetworkDriveRowAction.Delete || CanRebuild && wsl.RowAction == NetworkDriveRowAction.Rebuild));
-        }
-        foreach (var folder in FolderIndexes)
-        {
-            folder.CanEditEnabled = folder.IsPresent && !isBusy;
-            folder.CanEditRefreshMode = folder.IsPresent && !isBusy;
-            // Delete also stays clickable through isBusy here, unlike drives/WSL: isBusy for this whole
-            // panel includes isGlobalBusy (!isServiceReady, the *local USN* service), which has nothing
-            // to do with folder indexing (it runs entirely in-process, never through that service) --
-            // removing a folder row that was never applied/cached must not get blocked by an unrelated
-            // service being unreachable.
-            folder.CanRunRowAction = folder.RowAction is NetworkDriveRowAction.Stop or NetworkDriveRowAction.Delete
-                || (!isBusy && CanRebuild && folder.RowAction == NetworkDriveRowAction.Rebuild);
-        }
+        OnPropertyChanged(nameof(HasFolderIndexes));
     }
 
     public void ResetPendingEdits() => HasPendingEdits = false;

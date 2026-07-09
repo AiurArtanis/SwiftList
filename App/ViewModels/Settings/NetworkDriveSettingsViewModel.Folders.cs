@@ -21,6 +21,9 @@ public partial class NetworkDriveSettingsViewModel
 
     public ObservableCollection<FolderIndexSettingsItem> FolderIndexes { get; } = new();
     public bool IsFolderIndexesEmpty => FolderIndexes.Count == 0;
+    // Companion bool for XAML Visibility bindings that need the opposite of IsFolderIndexesEmpty --
+    // there's no inverting BoolToVisibilityConverter registered in IndexSettingsPage.xaml.
+    public bool HasFolderIndexes => !IsFolderIndexesEmpty;
 
     public ICommand AddFolderCommand => _addFolderCommand ??= new RelayCommand(AddFolder);
 
@@ -48,7 +51,7 @@ public partial class NetworkDriveSettingsViewModel
 
         var item = new FolderIndexSettingsItem { Path = path, IsEnabled = true, IsPresent = true };
         item.RowActionCommand = new RelayCommand(
-            () => NetworkDriveViewModelHelper.RunFolderIndexAction(item, this, _userSettings, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds),
+            () => NetworkDriveViewModelHelper.RunFolderIndexAction(item, this, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds),
             () => item.CanRunRowAction);
         item.PropertyChanged += OnFolderItemChanged;
         FolderIndexes.Add(item);
@@ -96,7 +99,12 @@ public partial class NetworkDriveSettingsViewModel
     }
 
     // Configured (user-added, from UserSettings) union'd with anything the cache still remembers -- so a
-    // folder whose entry got unchecked but not deleted still shows a Delete row, mirroring visibleWsl.
+    // folder whose entry got unchecked but not deleted still shows a Delete row, mirroring visibleWsl. Also
+    // union'd with whatever's live in FolderIndexes itself -- a row AddFolder just created has neither a
+    // UserSettings entry (nothing's been Applied yet) nor a cache (never scanned), so without this it would
+    // never appear in this list at all and UpdateRowsInPlace would silently never touch it again: no state
+    // text, no item count, no row action, forever, until Apply -- and no way to back out of the addition
+    // without going through Apply first.
     private List<string> GetVisibleFolders(UserSettings userSettings)
     {
         var configuredPaths = userSettings.FolderIndexes
@@ -106,7 +114,8 @@ public partial class NetworkDriveSettingsViewModel
         // UNC) -- the same discriminator NetworkIndexerSearchExtensions.IsDriveAllowed uses.
         var cachedPaths = _searchService.GetCachedNetworkDrives()
             .Where(d => d.Length > 1 && !d.StartsWith(@"\\"));
-        return configuredPaths.Concat(cachedPaths)
+        var livePaths = FolderIndexes.Select(f => f.Path);
+        return configuredPaths.Concat(cachedPaths).Concat(livePaths)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -186,7 +195,7 @@ public partial class NetworkDriveSettingsViewModel
                 ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-",
                 RefreshMode = NetworkDriveSettingsHelper.NormalizeRefreshMode(saved?.RefreshMode)
             };
-            item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunDriveAction(item, this, _userSettings, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
+            item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunDriveAction(item, this, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
             TrackPendingRebuild(letter, indexStatus?.State);
             UpdateRowAction(item, drive != null && saved != null, indexStatus?.State);
             item.PropertyChanged += OnNetworkDriveItemChanged;
@@ -211,7 +220,7 @@ public partial class NetworkDriveSettingsViewModel
                 ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-",
                 RefreshMode = NetworkDriveSettingsHelper.NormalizeRefreshMode(saved?.RefreshMode)
             };
-            item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunWslDriveAction(item, this, _userSettings, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
+            item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunWslDriveAction(item, this, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
             TrackPendingRebuild(unc, indexStatus?.State);
             UpdateWslRowAction(item, isPresent && saved != null, indexStatus?.State);
             item.PropertyChanged += OnWslDriveItemChanged;
@@ -234,7 +243,7 @@ public partial class NetworkDriveSettingsViewModel
                 ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-",
                 RefreshMode = NetworkDriveSettingsHelper.NormalizeRefreshMode(saved?.RefreshMode)
             };
-            item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunFolderIndexAction(item, this, _userSettings, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
+            item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunFolderIndexAction(item, this, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
             TrackPendingRebuild(path, indexStatus?.State);
             UpdateFolderRowAction(item, isPresent && saved != null, indexStatus?.State);
             item.PropertyChanged += OnFolderItemChanged;

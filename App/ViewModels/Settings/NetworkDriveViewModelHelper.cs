@@ -6,70 +6,72 @@ namespace SwiftList.App.ViewModels.Settings;
 internal static class NetworkDriveViewModelHelper
 {
     // Split out of NetworkDriveSettingsViewModel to keep that file under the line-count limit.
-    public static void Rebuild(NetworkDriveSettingsViewModel vm, UserSettings userSettings, SearchService searchService, Action? onTriggerFastRefresh)
+    // Each of these three category-scoped rebuilds acts only on rows that are already AppliedEnabled (i.e.
+    // actually saved in UserSettings already) -- never on whatever happens to be checked live in the UI.
+    // These used to persist all three categories' live checkbox state before scanning, which meant clicking
+    // "Rebuild" silently applied (and started indexing) a drive/distro/folder someone had just added or
+    // re-checked but never confirmed via the window's own Apply/OK.
+    public static void RebuildDrives(NetworkDriveSettingsViewModel vm, SearchService searchService, Action? onTriggerFastRefresh)
     {
-        if (!vm.CanRebuild) return;
-        vm.IsBusy = true;
+        if (!vm.CanRebuildDrives) return;
 
-        userSettings.NetworkDrives = vm.NetworkDrives.Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id)).Select(d => new NetworkDriveSetting
+        vm.CanRebuildDrives = false;
+        vm.NetworkIndexSummary = TranslationManager.Instance["Network_Rebuilding"];
+        searchService.ConfigureNetworkIndexes();
+        foreach (var drive in vm.NetworkDrives.Where(d => d.AppliedEnabled))
         {
-            Id = d.Id,
-            RefreshMode = d.RefreshMode
-        }).ToList();
-        userSettings.WslSettings = vm.WslDrives.Where(w => w.IsEnabled && !string.IsNullOrWhiteSpace(w.Id)).Select(w => new WslSetting
-        {
-            Id = w.Id,
-            RefreshMode = w.RefreshMode
-        }).ToList();
-        userSettings.FolderIndexes = vm.FolderIndexes.Where(f => f.IsEnabled && !string.IsNullOrWhiteSpace(f.Path)).Select(f => new FolderIndexSetting
-        {
-            Path = f.Path,
-            RefreshMode = f.RefreshMode
-        }).ToList();
-        userSettings.Save();
-        vm.ResetPendingEdits();
+            searchService.RefreshNetworkDriveIndex(drive.Drive);
+        }
+        onTriggerFastRefresh?.Invoke();
+    }
 
-        vm.CanRebuild = false;
-        vm.IndexSummary = TranslationManager.Instance["Network_Rebuilding"];
-        searchService.RefreshNetworkIndexes();
+    public static void RebuildWsl(NetworkDriveSettingsViewModel vm, SearchService searchService, Action? onTriggerFastRefresh)
+    {
+        if (!vm.CanRebuildWsl) return;
+
+        vm.CanRebuildWsl = false;
+        vm.WslIndexSummary = TranslationManager.Instance["Network_Rebuilding"];
+        searchService.ConfigureNetworkIndexes();
+        foreach (var wsl in vm.WslDrives.Where(w => w.AppliedEnabled))
+        {
+            searchService.RefreshNetworkDriveIndex(wsl.UncPath);
+        }
+        onTriggerFastRefresh?.Invoke();
+    }
+
+    public static void RebuildFolders(NetworkDriveSettingsViewModel vm, SearchService searchService, Action? onTriggerFastRefresh)
+    {
+        if (!vm.CanRebuildFolders) return;
+
+        vm.CanRebuildFolders = false;
+        vm.FolderIndexSummary = TranslationManager.Instance["Network_Rebuilding"];
+        searchService.ConfigureNetworkIndexes();
+        foreach (var folder in vm.FolderIndexes.Where(f => f.AppliedEnabled))
+        {
+            searchService.RefreshNetworkDriveIndex(folder.Path);
+        }
         onTriggerFastRefresh?.Invoke();
     }
 
     public static void RunDriveAction(
         NetworkDriveSettingsItem item,
         NetworkDriveSettingsViewModel vm,
-        UserSettings userSettings,
         SearchService searchService,
         Action onTriggerFastRefresh,
         HashSet<string> pendingRowRebuilds,
         HashSet<string> observedRowRebuilds)
     {
-        // A row showing Stop is exactly what's causing vm.IsBusy -- it must stay clickable through that.
-        if ((vm.IsBusy && item.RowAction != NetworkDriveRowAction.Stop) || !item.CanRunRowAction)
+        if (!item.CanRunRowAction)
             return;
 
         item.CanRunRowAction = false;
         if (item.RowAction == NetworkDriveRowAction.Rebuild)
         {
-            vm.IsBusy = true;
-            userSettings.NetworkDrives = vm.NetworkDrives
-                .Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id))
-                .Select(d => new NetworkDriveSetting { Id = d.Id, RefreshMode = d.RefreshMode })
-                .ToList();
-            userSettings.WslSettings = vm.WslDrives
-                .Where(w => w.IsEnabled && !string.IsNullOrWhiteSpace(w.Id))
-                .Select(w => new WslSetting { Id = w.Id, RefreshMode = w.RefreshMode })
-                .ToList();
-            userSettings.FolderIndexes = vm.FolderIndexes
-                .Where(f => f.IsEnabled && !string.IsNullOrWhiteSpace(f.Path))
-                .Select(f => new FolderIndexSetting { Path = f.Path, RefreshMode = f.RefreshMode })
-                .ToList();
-            userSettings.Save();
-            searchService.ConfigureNetworkIndexes();
-            vm.ResetPendingEdits();
+            // RowAction == Rebuild only ever shows for a row that's already AppliedEnabled (see
+            // UpdateRowAction), so it's already correctly saved -- no need to re-persist anything here.
             item.State = TranslationManager.Instance["Network_StatusIndexing"];
             item.ItemCount = "-";
-            vm.IndexSummary = TranslationManager.Instance["Network_Rebuilding"];
+            vm.NetworkIndexSummary = TranslationManager.Instance["Network_Rebuilding"];
             pendingRowRebuilds.Add(item.Drive);
             if (!searchService.RefreshNetworkDriveIndex(item.Drive))
             {
@@ -84,8 +86,8 @@ internal static class NetworkDriveViewModelHelper
             item.State = item.IsPresent ? TranslationManager.Instance["Network_StatusConnected"] : TranslationManager.Instance["Network_StatusUnavailable"];
             item.ItemCount = "-";
             item.CanRunRowAction = false;
-            item.CanEditEnabled = item.IsPresent && !vm.IsBusy;
-            item.CanEditRefreshMode = item.IsPresent && !vm.IsBusy;
+            item.CanEditEnabled = item.IsPresent;
+            item.CanEditRefreshMode = item.IsPresent;
             if (!item.IsPresent)
                 item.IsEnabled = false;
         }
@@ -103,38 +105,22 @@ internal static class NetworkDriveViewModelHelper
     public static void RunWslDriveAction(
         WslSettingsItem item,
         NetworkDriveSettingsViewModel vm,
-        UserSettings userSettings,
         SearchService searchService,
         Action onTriggerFastRefresh,
         HashSet<string> pendingRowRebuilds,
         HashSet<string> observedRowRebuilds)
     {
-        // A row showing Stop is exactly what's causing vm.IsBusy -- it must stay clickable through that.
-        if ((vm.IsBusy && item.RowAction != NetworkDriveRowAction.Stop) || !item.CanRunRowAction)
+        if (!item.CanRunRowAction)
             return;
 
         item.CanRunRowAction = false;
         if (item.RowAction == NetworkDriveRowAction.Rebuild)
         {
-            vm.IsBusy = true;
-            userSettings.NetworkDrives = vm.NetworkDrives
-                .Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id))
-                .Select(d => new NetworkDriveSetting { Id = d.Id, RefreshMode = d.RefreshMode })
-                .ToList();
-            userSettings.WslSettings = vm.WslDrives
-                .Where(w => w.IsEnabled && !string.IsNullOrWhiteSpace(w.Id))
-                .Select(w => new WslSetting { Id = w.Id, RefreshMode = w.RefreshMode })
-                .ToList();
-            userSettings.FolderIndexes = vm.FolderIndexes
-                .Where(f => f.IsEnabled && !string.IsNullOrWhiteSpace(f.Path))
-                .Select(f => new FolderIndexSetting { Path = f.Path, RefreshMode = f.RefreshMode })
-                .ToList();
-            userSettings.Save();
-            searchService.ConfigureNetworkIndexes();
-            vm.ResetPendingEdits();
+            // RowAction == Rebuild only ever shows for a row that's already AppliedEnabled (see
+            // UpdateWslRowAction), so it's already correctly saved -- no need to re-persist anything here.
             item.State = TranslationManager.Instance["Network_StatusIndexing"];
             item.ItemCount = "-";
-            vm.IndexSummary = TranslationManager.Instance["Network_Rebuilding"];
+            vm.WslIndexSummary = TranslationManager.Instance["Network_Rebuilding"];
             pendingRowRebuilds.Add(item.UncPath);
             if (!searchService.RefreshNetworkDriveIndex(item.UncPath))
             {
@@ -149,8 +135,8 @@ internal static class NetworkDriveViewModelHelper
             item.State = item.IsPresent ? TranslationManager.Instance["Network_StatusConnected"] : TranslationManager.Instance["Network_StatusUnavailable"];
             item.ItemCount = "-";
             item.CanRunRowAction = false;
-            item.CanEditEnabled = item.IsPresent && !vm.IsBusy;
-            item.CanEditRefreshMode = item.IsPresent && !vm.IsBusy;
+            item.CanEditEnabled = item.IsPresent;
+            item.CanEditRefreshMode = item.IsPresent;
             if (!item.IsPresent)
                 item.IsEnabled = false;
         }
@@ -166,41 +152,22 @@ internal static class NetworkDriveViewModelHelper
     public static void RunFolderIndexAction(
         FolderIndexSettingsItem item,
         NetworkDriveSettingsViewModel vm,
-        UserSettings userSettings,
         SearchService searchService,
         Action onTriggerFastRefresh,
         HashSet<string> pendingRowRebuilds,
         HashSet<string> observedRowRebuilds)
     {
-        // A row showing Stop is exactly what's causing vm.IsBusy -- it must stay clickable through that.
-        // Delete also stays clickable: vm.IsBusy can be true purely because the unrelated local USN
-        // service is unreachable, which has nothing to do with removing a folder row (a local-only,
-        // never-applied-or-cached entry has no live indexing state to race with).
-        if ((vm.IsBusy && item.RowAction is not (NetworkDriveRowAction.Stop or NetworkDriveRowAction.Delete)) || !item.CanRunRowAction)
+        if (!item.CanRunRowAction)
             return;
 
         item.CanRunRowAction = false;
         if (item.RowAction == NetworkDriveRowAction.Rebuild)
         {
-            vm.IsBusy = true;
-            userSettings.NetworkDrives = vm.NetworkDrives
-                .Where(d => d.IsEnabled && !string.IsNullOrWhiteSpace(d.Id))
-                .Select(d => new NetworkDriveSetting { Id = d.Id, RefreshMode = d.RefreshMode })
-                .ToList();
-            userSettings.WslSettings = vm.WslDrives
-                .Where(w => w.IsEnabled && !string.IsNullOrWhiteSpace(w.Id))
-                .Select(w => new WslSetting { Id = w.Id, RefreshMode = w.RefreshMode })
-                .ToList();
-            userSettings.FolderIndexes = vm.FolderIndexes
-                .Where(f => f.IsEnabled && !string.IsNullOrWhiteSpace(f.Path))
-                .Select(f => new FolderIndexSetting { Path = f.Path, RefreshMode = f.RefreshMode })
-                .ToList();
-            userSettings.Save();
-            searchService.ConfigureNetworkIndexes();
-            vm.ResetPendingEdits();
+            // RowAction == Rebuild only ever shows for a row that's already AppliedEnabled (see
+            // UpdateFolderRowAction), so it's already correctly saved -- no need to re-persist anything here.
             item.State = TranslationManager.Instance["Network_StatusIndexing"];
             item.ItemCount = "-";
-            vm.IndexSummary = TranslationManager.Instance["Network_Rebuilding"];
+            vm.FolderIndexSummary = TranslationManager.Instance["Network_Rebuilding"];
             pendingRowRebuilds.Add(item.Path);
             if (!searchService.RefreshNetworkDriveIndex(item.Path))
             {

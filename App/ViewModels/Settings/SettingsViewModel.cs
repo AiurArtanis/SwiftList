@@ -29,7 +29,7 @@ public class SettingsViewModel : ViewModelBase
 
         LocalDrive = new LocalDriveSettingsViewModel(_searchService, RefreshLists);
 
-        NetworkDrive = new NetworkDriveSettingsViewModel(_searchService, _userSettings, RefreshLists);
+        NetworkDrive = new NetworkDriveSettingsViewModel(_searchService, RefreshLists);
         General = new GeneralSettingsViewModel(_userSettings);
         Exclusions = new ExclusionSettingsViewModel(_userSettings);
         Plugins = new PluginManagementViewModel(_userSettings);
