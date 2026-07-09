@@ -12,13 +12,13 @@ internal sealed partial class Scheduler
         CancellationTokenSource debounce;
         lock (_gate)
         {
-            if (_refreshCts == null || _refreshCts.IsCancellationRequested)
+            if (_lifetimeCts.IsCancellationRequested)
                 return;
 
             if (_debounceCts.TryGetValue(drive, out oldDebounce))
                 oldDebounce.Cancel();
 
-            debounce = CancellationTokenSource.CreateLinkedTokenSource(_refreshCts.Token);
+            debounce = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCts.Token);
             _debounceCts[drive] = debounce;
         }
 
@@ -33,7 +33,7 @@ internal sealed partial class Scheduler
             try
             {
                 await Task.Delay(reason == "configure" ? TimeSpan.Zero : TimeSpan.FromSeconds(2), debounce.Token).ConfigureAwait(false);
-                StartRefreshDriveIfIdle(drive, reason, debounce.Token);
+                StartRefreshDriveIfIdle(drive, reason);
             }
             catch (OperationCanceledException)
             {
@@ -59,27 +59,33 @@ internal sealed partial class Scheduler
         }, CancellationToken.None);
     }
 
-    private void StartRefreshDriveIfIdle(string drive, string reason, CancellationToken token)
+    private void StartRefreshDriveIfIdle(string drive, string reason)
     {
+        CancellationTokenSource active;
         lock (_gate)
         {
-            if (token.IsCancellationRequested || _refreshCts == null || _refreshCts.IsCancellationRequested)
+            if (_lifetimeCts.IsCancellationRequested)
                 return;
 
-            if (_refreshingDrives.Contains(drive))
+            if (_activeCts.ContainsKey(drive))
             {
                 _pendingRefreshDrives.Add(drive);
                 return;
             }
 
-            _refreshingDrives.Add(drive);
+            // Linked to _lifetimeCts (not a per-Configure()-call token): this drive only stops early if
+            // it's genuinely removed from config (StartRefresh cancels this specific entry) or the whole
+            // Scheduler is disposed -- an unrelated Configure() call never touches it.
+            active = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCts.Token);
+            _activeCts[drive] = active;
         }
 
-        _ = Task.Run(() => RefreshDriveLoop(drive, reason, token), token);
+        _ = Task.Run(() => RefreshDriveLoop(drive, reason, active), active.Token);
     }
 
-    private void RefreshDriveLoop(string drive, string reason, CancellationToken token)
+    private void RefreshDriveLoop(string drive, string reason, CancellationTokenSource active)
     {
+        var token = active.Token;
         try
         {
             while (!token.IsCancellationRequested)
@@ -101,20 +107,26 @@ internal sealed partial class Scheduler
         }
         finally
         {
-            // If Configure/StartRefresh replaced _refreshCts while this loop was still running (e.g. a
-            // manual "rebuild" clicked while the drive's own initial scan was in flight), this loop's
-            // `token` is now permanently cancelled, so the while condition above exits without ever
-            // consuming a fresh pending request queued against the *new* token. Left alone, that request
-            // is silently dropped and the drive's status stays stuck at "indexing" forever (nothing else
-            // re-triggers a Manual-mode drive). Re-queue it through the normal path so it runs against
-            // whatever token is current now.
             bool stillPending;
             lock (_gate)
             {
-                _refreshingDrives.Remove(drive);
                 stillPending = _pendingRefreshDrives.Remove(drive);
+                // Only clean up if this is still the entry for our own run -- a removed-then-quickly-
+                // re-added drive may already have a newer entry (a fresh StartRefreshDriveIfIdle call) by
+                // the time this finally block runs; removing/disposing that one would corrupt the busy
+                // bookkeeping for the loop that's actually still using it.
+                if (_activeCts.TryGetValue(drive, out var current) && ReferenceEquals(current, active))
+                {
+                    _activeCts.Remove(drive);
+                    try { active.Dispose(); } catch { }
+                }
             }
-            if (stillPending)
+
+            // A request queued in the narrow window between this loop's own pending-check and reaching
+            // here still deserves a run. But if the token is cancelled, this drive was removed from
+            // config by StartRefresh -- re-queueing then would resurrect a drive just intentionally
+            // stopped, so only re-queue on a normal (non-cancelled) exit.
+            if (stillPending && !token.IsCancellationRequested)
                 QueueRefreshDrive(drive, "pending changes");
         }
     }
