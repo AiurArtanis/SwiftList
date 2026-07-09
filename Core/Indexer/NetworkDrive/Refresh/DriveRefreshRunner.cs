@@ -1,25 +1,27 @@
 using System.Diagnostics;
 
-namespace SwiftList.Core.Indexer.NetworkDrive;
+namespace SwiftList.Core.Indexer.NetworkDrive.Refresh;
 
-// The actual per-drive scan pass (RefreshDrive) and its resume-progress logging, split out of Scheduler.cs
-// to keep it under the project's line limit.
-internal sealed partial class Scheduler
+// The actual per-drive scan pass, extracted out of Scheduler (composition, not a partial class) to keep
+// that type's files under the project's line limit. Takes Scheduler's own status/checkpoint/completion
+// callbacks as explicit parameters rather than reaching into Scheduler's private fields.
+internal static class DriveRefreshRunner
 {
-    private void RefreshDrive(string drive, CancellationToken token)
+    public static void RefreshDrive(
+        string drive,
+        CancellationToken token,
+        Action<string, string, int?, string?> setStatus,
+        Func<string, FileRecordStore?> getPreviousStore,
+        Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> onPublishCheckpoint,
+        Action<string, NetworkIndex> onRefreshFinished)
     {
-        // A bare letter needs ":\"; a UNC or folder-index path is already rooted as-is.
-        var root = drive.Length == 1 ? drive + @":\" : drive;
-        if (!root.EndsWith(Path.DirectorySeparatorChar.ToString()) && !root.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
-        {
-            root += Path.DirectorySeparatorChar;
-        }
+        var root = PathHelpers.BuildSourceRoot(drive);
         var physicalRoot = root;
 
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            _setStatus(drive, "indexing", 0, null);
+            setStatus(drive, "indexing", 0, null);
             var settings = UserSettings.Load();
             var options = new WalkOptions(
                 settings.ExcludedPaths,
@@ -28,7 +30,7 @@ internal sealed partial class Scheduler
                 0,
                 0,
                 true);
-            var previousStore = _getPreviousStore(drive);
+            var previousStore = getPreviousStore(drive);
             LogResumeProgress(drive, previousStore);
             var index = NetworkIndex.Build(
                 drive,
@@ -38,8 +40,8 @@ internal sealed partial class Scheduler
                 token,
                 // Fires every ~1024 items; unguarded, this can race past CancelDrive's "cached" revert
                 // and clobber it back to "indexing" -- what made the Stop button lose that race sometimes.
-                count => { if (!token.IsCancellationRequested) _setStatus(drive, "indexing", count, null); },
-                (store, stats) => _onPublishCheckpoint(drive, store, stats, token),
+                count => { if (!token.IsCancellationRequested) setStatus(drive, "indexing", count, null); },
+                (store, stats) => onPublishCheckpoint(drive, store, stats, token),
                 previousStore);
             token.ThrowIfCancellationRequested();
             // Reaching here without cancellation only means TreeBuilder.Run() drained its queue -- NOT
@@ -56,7 +58,7 @@ internal sealed partial class Scheduler
             stopwatch.Stop();
             Logger.Log($"[NetworkIndexer] {drive}: finished in {stopwatch.Elapsed.TotalSeconds:F1}s, {index.Count} records.");
 
-            _onRefreshFinished(drive, index);
+            onRefreshFinished(drive, index);
         }
         catch (OperationCanceledException)
         {
@@ -66,12 +68,12 @@ internal sealed partial class Scheduler
             // this only actually reverts the status for a drive a user stopped via CancelDrive while it
             // remains configured, so it shows what's on disk from the last checkpoint instead of being
             // stuck on "indexing" forever.
-            _setStatus(drive, "cached", null, null);
+            setStatus(drive, "cached", null, null);
         }
         catch (Exception ex)
         {
             Logger.Log($"[NetworkIndexer] Failed to index {drive}: {ex.Message}", LogLevel.Error);
-            _setStatus(drive, "error", null, ex.Message);
+            setStatus(drive, "error", null, ex.Message);
         }
     }
 

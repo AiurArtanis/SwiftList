@@ -40,11 +40,10 @@ public static class FuzzyMatcher
                     continue;
 
                 // Same quality bar the core index scan applies to its own alias fallback (see
-                // RecordSearch/CacheExtensions.cs) -- reject a match whose span is disproportionately
+                // FzfPattern.IsAcceptableAliasMatch) -- reject a match whose span is disproportionately
                 // wider than the query, or whose score is too low, so a weak coincidental alias hit
                 // doesn't count as a match here either.
-                var span = aliasMatch.MaxEnd - aliasMatch.MinBegin;
-                if (span > Math.Max(queryLen * 3, 20) || aliasMatch.Score < queryLen * 5)
+                if (!fzf.IsAcceptableAliasMatch(aliasMatch, queryLen))
                     continue;
 
                 return true;

@@ -19,7 +19,7 @@ internal static class LocalDriveCacheLocator
         FileRecordStoreSummary? summary;
         try
         {
-            summary = FileRecordStoreSerializer.LoadSummary(cacheDir, key);
+            summary = FileRecordStoreSummaryLoader.LoadSummary(cacheDir, key);
         }
         catch (IOException)
         {
@@ -60,7 +60,7 @@ internal static class LocalDriveCacheLocator
             FileRecordStoreSummary? summary;
             try
             {
-                summary = FileRecordStoreSerializer.LoadSummary(cacheDir, key);
+                summary = FileRecordStoreSummaryLoader.LoadSummary(cacheDir, key);
             }
             catch (IOException)
             {

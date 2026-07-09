@@ -1,6 +1,6 @@
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
-public sealed partial class NetworkIndexer : IDisposable
+public sealed class NetworkIndexer : IDisposable
 {
     public event Action<IReadOnlyList<NetworkIndexStatus>>? StatusesChanged;
 
@@ -13,22 +13,29 @@ public sealed partial class NetworkIndexer : IDisposable
 
     private WatcherManager? _watcherManager;
     private Scheduler? _scheduler;
+    private readonly NetworkIndexerPublisher _publisher;
 
     public NetworkIndexer()
     {
+        _publisher = new NetworkIndexerPublisher(
+            _gate, _statuses, _indexes,
+            drive => _watcherManager?.EnsureWatcher(drive),
+            GetStatuses,
+            statuses => StatusesChanged?.Invoke(statuses));
+
         _watcherManager = new WatcherManager(
             (drive, reason) => _scheduler?.QueueRefreshDrive(drive, reason),
             drive => { lock (_gate) { _indexes.TryGetValue(drive, out var idx); return idx; } },
-            (drive, idx) => PublishIncrementalUpdate(drive, idx)
+            (drive, idx) => _publisher.PublishIncrementalUpdate(drive, idx)
         );
 
         _scheduler = new Scheduler(
             (drive, mode) => _watcherManager?.EnsureWatcher(drive),
             drive => _watcherManager?.RemoveWatcher(drive),
-            SetStatus,
-            OnRefreshFinished,
-            PublishCheckpoint,
-            GetPreviousStore
+            _publisher.SetStatus,
+            _publisher.OnRefreshFinished,
+            _publisher.PublishCheckpoint,
+            _publisher.GetPreviousStore
         );
     }
 
@@ -137,7 +144,7 @@ public sealed partial class NetworkIndexer : IDisposable
         }
 
         _scheduler?.StartRefresh(enabledDrives, refreshModes, forceRefresh ? null : cachedDrives, forceRefresh ? null : lastUpdatedTimes);
-        PublishStatusesChanged();
+        _publisher.PublishStatusesChanged();
     }
 
     public bool RefreshDrive(string drive)
@@ -155,7 +162,7 @@ public sealed partial class NetworkIndexer : IDisposable
                 return false;
         }
 
-        SetStatus(drive, "indexing", 0, null);
+        _publisher.SetStatus(drive, "indexing", 0, null);
         _scheduler?.QueueRefreshDrive(drive, "manual");
         return true;
     }
@@ -195,7 +202,7 @@ public sealed partial class NetworkIndexer : IDisposable
             _indexes.Remove(drive);
             _statuses.Remove(drive);
         }
-        PublishStatusesChanged();
+        _publisher.PublishStatusesChanged();
     }
 
     public void Dispose()

@@ -3,34 +3,50 @@ using System.Threading.Channels;
 
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
-internal sealed partial class TreeBuilder
+// Checkpoint/snapshot logic lives in TreeBuilderCheckpointExtensions.cs and diff-reuse logic in
+// TreeBuilderDiffExtensions.cs (extension methods, matching RuntimeIndex's BucketExtensions/
+// QueryExtensions split) instead of partial classes, to keep this file under the project's line limit.
+// Both need broad access to this walker's shared mutable state, so the fields/methods they touch are
+// `internal` rather than `private`.
+internal sealed class TreeBuilder
 {
-    private const int RecordBatchSize = 256;
-    private const int ProgressBatchSize = 1024;
-    private const int CheckpointBatchSize = 4096;
-    private readonly FileRecordStore _store;
+    internal const int RecordBatchSize = 256;
+    internal const int ProgressBatchSize = 1024;
+    internal const int CheckpointBatchSize = 4096;
+    internal readonly FileRecordStore _store;
     private readonly string _root;
     private readonly string _physicalRoot;
-    private readonly WalkFilter _filter;
-    private readonly CancellationToken _token;
-    private readonly Action<int> _onProgress;
-    private readonly Action<FileRecordStore, NetworkDriveWalkStats>? _onCheckpoint;
+    internal readonly WalkFilter _filter;
+    internal readonly CancellationToken _token;
+    internal readonly Action<int> _onProgress;
+    internal readonly Action<FileRecordStore, NetworkDriveWalkStats>? _onCheckpoint;
     private readonly Channel<WorkItem> _pending;
-    private readonly object _recordsGate = new();
-    private readonly FileRecordNamePool _namePool = new();
+    internal readonly object _recordsGate = new();
+    internal readonly FileRecordNamePool _namePool = new();
     private readonly HashSet<UInt128> _enqueuedIds = new();
     private int _pendingDirectories;
-    private int _countSinceProgress;
-    private int _indexedItems;
-    private int _skippedItems;
-    private int _errors;
-    private int _enumerateErrors;
-    private int _attributeErrors;
-    private int _reparseSkipped;
-    private int _slowDirectories;
-    private int _countSinceCheckpoint;
-    private int _checkpointInFlight;
-    private int _reusedDirectories;
+    internal int _countSinceProgress;
+    internal int _indexedItems;
+    internal int _skippedItems;
+    internal int _errors;
+    internal int _enumerateErrors;
+    internal int _attributeErrors;
+    internal int _reparseSkipped;
+    internal int _slowDirectories;
+    internal int _countSinceCheckpoint;
+    internal int _checkpointInFlight;
+    internal int _reusedDirectories;
+
+    // Diff-aware reuse state (TreeBuilderDiffExtensions): reusing a directory's cached children instead
+    // of re-listing it over the network when TreeDiffBaseline confirms nothing changed, and tracking
+    // which directories in THIS store have been fully enumerated (FileRecordFlags.Listed) so a future
+    // resume can trust them the same way.
+    internal readonly TreeDiffBaseline? _diffBaseline;
+    // True when the exclusion rules fingerprint on the previous store doesn't match the current one --
+    // see NetworkIndex.Build. A reused (mtime-unchanged) directory's cached children were filtered under
+    // whatever rules were active *then*; a path just un-excluded since would never surface without this.
+    internal readonly bool _recheckExclusions;
+    internal readonly Dictionary<UInt128, int> _indexById = new();
 
     public TreeBuilder(
         FileRecordStore store,
@@ -57,7 +73,7 @@ internal sealed partial class TreeBuilder
             SingleReader = false,
             SingleWriter = false
         });
-        RegisterDirectoryIndices(0, _store.Records);
+        this.RegisterDirectoryIndices(0, _store.Records);
     }
 
     public NetworkDriveWalkStats Run()
@@ -103,7 +119,7 @@ internal sealed partial class TreeBuilder
 
     private void WalkDirectory(WorkItem current)
     {
-        if (_diffBaseline != null && TryReuseUnchangedDirectory(current))
+        if (_diffBaseline != null && this.TryReuseUnchangedDirectory(current))
             return;
 
         var ignoreRules = _filter.LoadIgnoreRules(current.Path, current.LogicalPath, current.IgnoreRules);
@@ -115,7 +131,7 @@ internal sealed partial class TreeBuilder
         }
         catch
         {
-            CountError(ref _enumerateErrors);
+            this.CountError(ref _enumerateErrors);
             return;
         }
 
@@ -124,10 +140,10 @@ internal sealed partial class TreeBuilder
         {
             _token.ThrowIfCancellationRequested();
 
-            var createResult = TryCreateRecord(child, current.LogicalPath, current.LocalId, out var record, out var isDirectory, out var logicalFullPath);
+            var createResult = this.TryCreateRecord(child, current.LogicalPath, current.LocalId, out var record, out var isDirectory, out var logicalFullPath);
             if (createResult != WalkRecordResult.Success)
             {
-                CountCreateFailure(createResult);
+                this.CountCreateFailure(createResult);
                 continue;
             }
 
@@ -159,89 +175,16 @@ internal sealed partial class TreeBuilder
                 _onProgress(indexedItems);
             }
 
-            MaybeCheckpoint(indexedItems);
+            this.MaybeCheckpoint(indexedItems);
         }
 
         FlushRecords(batch);
-        MarkListed(current.LocalId);
+        this.MarkListed(current.LocalId);
         if (stopwatch.ElapsedMilliseconds >= 2_000)
             Interlocked.Increment(ref _slowDirectories);
     }
 
-    private WalkRecordResult TryCreateRecord(string child, string logicalParentPath, UInt128 parentId, out NetworkWalkRecord record, out bool isDirectory, out string fullPath)
-    {
-        record = default;
-        isDirectory = false;
-        fullPath = string.Empty;
-
-        FileInfo info;
-        FileAttributes attributes;
-        try
-        {
-            info = new FileInfo(child);
-            attributes = info.Attributes;
-        }
-        catch
-        {
-            return WalkRecordResult.AttributeError;
-        }
-
-        if ((attributes & FileAttributes.ReparsePoint) != 0)
-            return WalkRecordResult.ReparsePoint;
-
-        isDirectory = (attributes & FileAttributes.Directory) != 0;
-        var name = Path.GetFileName(child.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-        if (string.IsNullOrEmpty(name))
-            return WalkRecordResult.InvalidName;
-
-        var logicalPath = Path.Combine(logicalParentPath, name);
-        fullPath = PathHelpers.NormalizePath(logicalPath, isDirectory);
-        var id = PathHelpers.HashPath64(fullPath);
-        var flags = FileRecordFlagsHelper.FromAttributes(attributes);
-        // Length can still throw on a flaky network share even though Attributes just succeeded; that's
-        // supplementary metadata, not worth failing the whole record over.
-        long size = 0;
-        if (!isDirectory)
-        {
-            try { size = info.Length; } catch { }
-        }
-        var fileRecord = new FileRecord(
-            id,
-            parentId,
-            _namePool.Get(name),
-            flags,
-            size,
-            FileTimeHelper.ToUnixSeconds(info.CreationTimeUtc),
-            FileTimeHelper.ToUnixSeconds(info.LastWriteTimeUtc),
-            FileTimeHelper.ToUnixSeconds(info.LastAccessTimeUtc));
-        record = new NetworkWalkRecord(fileRecord, attributes);
-        return WalkRecordResult.Success;
-    }
-
-    private void CountCreateFailure(WalkRecordResult result)
-    {
-        switch (result)
-        {
-            case WalkRecordResult.AttributeError:
-                CountError(ref _attributeErrors);
-                break;
-            case WalkRecordResult.ReparsePoint:
-                Interlocked.Increment(ref _reparseSkipped);
-                Interlocked.Increment(ref _skippedItems);
-                break;
-            default:
-                Interlocked.Increment(ref _skippedItems);
-                break;
-        }
-    }
-
-    private void CountError(ref int counter)
-    {
-        Interlocked.Increment(ref counter);
-        Interlocked.Increment(ref _errors);
-    }
-
-    private void FlushRecords(List<FileRecord> batch)
+    internal void FlushRecords(List<FileRecord> batch)
     {
         if (batch.Count == 0)
             return;
@@ -250,7 +193,7 @@ internal sealed partial class TreeBuilder
         {
             var startIndex = _store.Records.Count;
             _store.Records.AddRange(batch);
-            RegisterDirectoryIndices(startIndex, batch);
+            this.RegisterDirectoryIndices(startIndex, batch);
         }
 
         batch.Clear();
@@ -262,7 +205,7 @@ internal sealed partial class TreeBuilder
 
     // parentId here is this directory's OWN id (becomes WorkItem.LocalId), not its parent's -- matches the
     // naming TryCreateRecord's callers already use when they pass record.Id through as this parameter.
-    private void EnqueueDirectory(string path, string logicalPath, UInt128 parentId, int depth, NetworkIgnoreRuleSet ignoreRules)
+    internal void EnqueueDirectory(string path, string logicalPath, UInt128 parentId, int depth, NetworkIgnoreRuleSet ignoreRules)
     {
         // Last-resort guard against processing the same directory twice in one run: a corrupted diff
         // baseline (e.g. a duplicate row left by some earlier bug) could otherwise get a directory enqueued

@@ -1,11 +1,48 @@
+using SwiftList.Core.Indexer.NetworkDrive.Refresh;
+
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
-// Debounce-and-run queueing for refreshes, split out of Scheduler.cs to keep it under the project's line
-// limit. QueueRefreshDrive debounces bursts of requests for the same drive (e.g. several watcher events
-// in a row); StartRefreshDriveIfIdle/RefreshDriveLoop make sure only one refresh runs per drive at a time,
-// re-running immediately if changes arrived while it was busy.
-internal sealed partial class Scheduler
+// Debounce-and-run queueing for refreshes -- extracted out of Scheduler (composition, not a partial
+// class) to keep that type's files under the project's line limit. QueueRefreshDrive debounces bursts
+// of requests for the same drive (e.g. several watcher events in a row); StartRefreshDriveIfIdle/
+// RefreshDriveLoop make sure only one refresh runs per drive at a time, re-running immediately if
+// changes arrived while it was busy. Shares Scheduler's own _gate/_debounceCts/_activeCts/
+// _pendingRefreshDrives/_lifetimeCts by reference rather than owning copies, since both types need to
+// observe and mutate the same live bookkeeping under the same lock.
+internal sealed class SchedulerQueueRunner
 {
+    private readonly object _gate;
+    private readonly Dictionary<string, CancellationTokenSource> _debounceCts;
+    private readonly Dictionary<string, CancellationTokenSource> _activeCts;
+    private readonly HashSet<string> _pendingRefreshDrives;
+    private readonly CancellationTokenSource _lifetimeCts;
+    private readonly Action<string, string, int?, string?> _setStatus;
+    private readonly Func<string, FileRecordStore?> _getPreviousStore;
+    private readonly Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> _onPublishCheckpoint;
+    private readonly Action<string, NetworkIndex> _onRefreshFinished;
+
+    public SchedulerQueueRunner(
+        object gate,
+        Dictionary<string, CancellationTokenSource> debounceCts,
+        Dictionary<string, CancellationTokenSource> activeCts,
+        HashSet<string> pendingRefreshDrives,
+        CancellationTokenSource lifetimeCts,
+        Action<string, string, int?, string?> setStatus,
+        Func<string, FileRecordStore?> getPreviousStore,
+        Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> onPublishCheckpoint,
+        Action<string, NetworkIndex> onRefreshFinished)
+    {
+        _gate = gate;
+        _debounceCts = debounceCts;
+        _activeCts = activeCts;
+        _pendingRefreshDrives = pendingRefreshDrives;
+        _lifetimeCts = lifetimeCts;
+        _setStatus = setStatus;
+        _getPreviousStore = getPreviousStore;
+        _onPublishCheckpoint = onPublishCheckpoint;
+        _onRefreshFinished = onRefreshFinished;
+    }
+
     public void QueueRefreshDrive(string drive, string reason)
     {
         CancellationTokenSource? oldDebounce = null;
@@ -91,7 +128,7 @@ internal sealed partial class Scheduler
             while (!token.IsCancellationRequested)
             {
                 Logger.Log($"[NetworkIndexer] Refreshing {drive}: because {reason}");
-                RefreshDrive(drive, token);
+                DriveRefreshRunner.RefreshDrive(drive, token, _setStatus, _getPreviousStore, _onPublishCheckpoint, _onRefreshFinished);
 
                 lock (_gate)
                 {

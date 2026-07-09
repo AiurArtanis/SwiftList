@@ -3,9 +3,7 @@ using SwiftList.Core.Indexer.Usn;
 
 namespace SwiftList.Core;
 
-// Split across SearchService.cs (status/search/recent-files) and SearchService.Management.cs (drive and
-// settings admin pass-throughs) to stay under the repo's per-file line limit -- both halves are one type.
-public partial class SearchService : IDisposable
+public class SearchService : IDisposable
 {
     private readonly Dictionary<string, List<SearchResult>> _sessionDirectoryCache = new(StringComparer.OrdinalIgnoreCase);
 
@@ -215,7 +213,7 @@ public partial class SearchService : IDisposable
         return (limit > 0 ? merged.Take(limit) : merged).ToList();
     }
 
-    private async Task<PipeResponse> SendPipeCommandAsync(SearchRequestMessage msg, CancellationToken token)
+    internal async Task<PipeResponse> SendPipeCommandAsync(SearchRequestMessage msg, CancellationToken token)
     {
         try
         {

@@ -1,40 +1,29 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.IO;
-using System.Windows.Input;
-using SwiftList.App.Helpers;
-using SwiftList.App.Views.Controls;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.NetworkDrive;
+using SwiftList.App.Helpers;
 using SwiftList.App.Services;
+using SwiftList.App.Views.Controls;
 
-namespace SwiftList.App.ViewModels.Settings;
+namespace SwiftList.App.ViewModels.Settings.NetworkDrive;
 
 // Folder-index half of NetworkDriveSettingsViewModel -- a third row category alongside NetworkDrives/
 // WslDrives, riding the same NetworkIndexer/Scheduler machinery with a full folder path as the opaque
-// key instead of a drive letter or WSL UNC path. Split out to keep the main file under the line limit;
-// also owns the two big per-refresh methods (UpdateRowsInPlace/RebuildRows) since they now interleave
-// all three categories.
-public partial class NetworkDriveSettingsViewModel
+// key instead of a drive letter or WSL UNC path. Extracted (composition, not a partial class) to keep
+// the main file under the line limit; also owns the two big per-refresh methods (UpdateRowsInPlace/
+// RebuildRows) since they now interleave all three categories.
+internal static class NetworkDriveFolderHelper
 {
-    private ICommand? _addFolderCommand;
-
-    public ObservableCollection<FolderIndexSettingsItem> FolderIndexes { get; } = new();
-    public bool IsFolderIndexesEmpty => FolderIndexes.Count == 0;
-    // Companion bool for XAML Visibility bindings that need the opposite of IsFolderIndexesEmpty --
-    // there's no inverting BoolToVisibilityConverter registered in IndexSettingsPage.xaml.
-    public bool HasFolderIndexes => !IsFolderIndexesEmpty;
-
-    public ICommand AddFolderCommand => _addFolderCommand ??= new RelayCommand(AddFolder);
-
-    private void AddFolder()
+    public static void AddFolder(NetworkDriveSettingsViewModel vm, SearchService searchService, Action onTriggerFastRefresh, HashSet<string> pendingRowRebuilds, HashSet<string> observedRowRebuilds)
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog();
         if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FolderName))
             return;
 
-        // A drive/share root belongs on the "网络驱动器"/"本地驱动器" tabs (whole-drive indexing), not
-        // here -- folder indexing exists specifically for a single subfolder, not an entire volume.
+        // A local drive root or WSL distro root belongs on the "网络驱动器"/"本地驱动器"/WSL tabs
+        // (whole-volume indexing), not here. A UNC share root ("\\server\share") is let through, though
+        // -- unlike a local drive, there's no drive-letter tab that can index an unmapped share at all,
+        // so the share root is the finest-grained indexable unit available for it.
         if (IsDriveRoot(dialog.FolderName))
         {
             CustomMessageBox.Show(
@@ -46,56 +35,41 @@ public partial class NetworkDriveSettingsViewModel
         }
 
         var path = dialog.FolderName.TrimEnd('\\');
-        if (FolderIndexes.Any(f => f.Path.Equals(path, StringComparison.OrdinalIgnoreCase)))
+        if (vm.FolderIndexes.Any(f => f.Path.Equals(path, StringComparison.OrdinalIgnoreCase)))
             return;
 
         var item = new FolderIndexSettingsItem { Path = path, IsEnabled = true, IsPresent = true };
         item.RowActionCommand = new RelayCommand(
-            () => NetworkDriveViewModelHelper.RunFolderIndexAction(item, this, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds),
+            () => NetworkDriveViewModelHelper.RunFolderIndexAction(item, vm, searchService, onTriggerFastRefresh, pendingRowRebuilds, observedRowRebuilds),
             () => item.CanRunRowAction);
-        item.PropertyChanged += OnFolderItemChanged;
-        FolderIndexes.Add(item);
-        HasPendingEdits = true;
-        OnPropertyChanged(nameof(IsFolderIndexesEmpty));
+        item.PropertyChanged += vm.OnFolderItemChanged;
+        vm.FolderIndexes.Add(item);
+        vm.HasPendingEdits = true;
+        vm.NotifyFolderIndexesEmptyChanged();
     }
 
     private static bool IsDriveRoot(string path)
     {
         try
         {
+            var trimmed = path.TrimEnd('\\');
+            // A non-WSL UNC path ("\\server\share", including its own root) has no drive-letter tab
+            // that can index it, so it's never blocked here regardless of depth -- unlike a local
+            // drive, even the share root itself is a legitimate folder-index target. A WSL path falls
+            // through to the same root-vs-subfolder comparison below as a local drive: only the exact
+            // distro root ("\\wsl$\Ubuntu") stays blocked (it already has its own tab), a subfolder
+            // within it ("\\wsl$\Ubuntu\home\user\projects") is just as legitimate a target as a UNC
+            // share subfolder.
+            if (trimmed.StartsWith(@"\\", StringComparison.Ordinal) && !NetworkDriveSettingsHelper.IsWslPath(trimmed))
+                return false;
+
             var root = Path.GetPathRoot(path);
-            return !string.IsNullOrEmpty(root) && path.TrimEnd('\\').Equals(root.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+            return !string.IsNullOrEmpty(root) && trimmed.Equals(root.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
         }
         catch (ArgumentException)
         {
             return false;
         }
-    }
-
-    private void OnFolderItemChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName is nameof(FolderIndexSettingsItem.IsEnabled) or nameof(FolderIndexSettingsItem.RefreshMode)) HasPendingEdits = true;
-    }
-
-    private void UpdateFolderRowAction(FolderIndexSettingsItem item, bool appliedEnabled, string? state)
-    {
-        item.AppliedEnabled = appliedEnabled;
-        // Unlike a drive/WSL row (which stays visible as "an OS-resolvable thing you're just not
-        // indexing" even after Delete), a folder row only exists because the user explicitly added it --
-        // there's no other reason to keep showing it once it's unchecked, whether or not it ever got far
-        // enough to have a cache. So Delete is unconditional here, not gated on HasNetworkDriveCache.
-        item.RowAction = appliedEnabled
-            ? (state == "indexing" ? NetworkDriveRowAction.Stop : NetworkDriveRowAction.Rebuild)
-            : NetworkDriveRowAction.Delete;
-    }
-
-    // Called from NetworkDriveViewModelHelper.RunFolderIndexAction's Delete branch -- removes the row
-    // from view entirely (not just resetting its RowAction, since there's nothing left to show for it).
-    internal void RemoveFolderIndex(FolderIndexSettingsItem item)
-    {
-        item.PropertyChanged -= OnFolderItemChanged;
-        FolderIndexes.Remove(item);
-        OnPropertyChanged(nameof(IsFolderIndexesEmpty));
     }
 
     // Configured (user-added, from UserSettings) union'd with anything the cache still remembers -- so a
@@ -105,80 +79,87 @@ public partial class NetworkDriveSettingsViewModel
     // never appear in this list at all and UpdateRowsInPlace would silently never touch it again: no state
     // text, no item count, no row action, forever, until Apply -- and no way to back out of the addition
     // without going through Apply first.
-    private List<string> GetVisibleFolders(UserSettings userSettings)
+    public static List<string> GetVisibleFolders(NetworkDriveSettingsViewModel vm, SearchService searchService, UserSettings userSettings)
     {
         var configuredPaths = userSettings.FolderIndexes
             .Where(f => !string.IsNullOrWhiteSpace(f.Path))
             .Select(f => f.Path.TrimEnd('\\'));
-        // A folder-index key is longer than a bare drive letter and doesn't start with "\\" (that's WSL/
-        // UNC) -- the same discriminator NetworkIndexerSearchExtensions.IsDriveAllowed uses.
-        var cachedPaths = _searchService.GetCachedNetworkDrives()
-            .Where(d => d.Length > 1 && !d.StartsWith(@"\\"));
-        var livePaths = FolderIndexes.Select(f => f.Path);
+        // A folder-index key is longer than a bare drive letter and isn't a WSL distro's "\\wsl$\..." key
+        // -- a genuine UNC share key ("\\server\share", now indexable via the folder-index feature) is
+        // NOT excluded here, only WSL is.
+        var cachedPaths = searchService.GetCachedNetworkDrives()
+            .Where(d => d.Length > 1 && !NetworkDriveSettingsHelper.IsWslPath(d));
+        var livePaths = vm.FolderIndexes.Select(f => f.Path);
         return configuredPaths.Concat(cachedPaths).Concat(livePaths)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
-    private void UpdateRowsInPlace(
+    public static void UpdateRowsInPlace(
+        NetworkDriveSettingsViewModel vm, SearchService searchService,
         List<string> visibleDrives, List<string> visibleWsl, List<string> visibleFolders,
         Dictionary<string, NetworkIndexStatus> statuses, Dictionary<string, ResolvedNetworkDrive> resolvedByDrive, List<string> wslDistros,
         Dictionary<string, NetworkDriveSetting> configured, Dictionary<string, WslSetting> configuredWsl, Dictionary<string, FolderIndexSetting> configuredFolders)
     {
         foreach (var letter in visibleDrives)
         {
-            var item = NetworkDrives.FirstOrDefault(d => d.Drive.Equals(letter, StringComparison.OrdinalIgnoreCase));
+            var item = vm.NetworkDrives.FirstOrDefault(d => d.Drive.Equals(letter, StringComparison.OrdinalIgnoreCase));
             if (item == null) continue;
             statuses.TryGetValue(letter, out var indexStatus);
             resolvedByDrive.TryGetValue(letter, out var drive);
             item.Id = NetworkDriveResolver.GetNetworkId(letter);
             item.IsPresent = drive != null;
             if (!item.IsPresent) item.IsEnabled = false;
-            TrackPendingRebuild(letter, indexStatus?.State);
+            vm.TrackPendingRebuild(letter, indexStatus?.State);
             item.State = drive == null ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(drive, indexStatus);
             item.ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-";
             configured.TryGetValue(item.Id, out var saved);
-            UpdateRowAction(item, item.IsPresent && saved != null, indexStatus?.State);
+            vm.UpdateRowAction(item, item.IsPresent && saved != null, indexStatus?.State, i => searchService.HasNetworkDriveCache(i.Drive));
         }
         foreach (var name in visibleWsl)
         {
-            var item = WslDrives.FirstOrDefault(d => d.DistroName.Equals(name, StringComparison.OrdinalIgnoreCase));
+            var item = vm.WslDrives.FirstOrDefault(d => d.DistroName.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (item == null) continue;
             var unc = $@"\\wsl$\{name}";
             statuses.TryGetValue(unc, out var indexStatus);
             var isPresent = wslDistros.Contains(name, StringComparer.OrdinalIgnoreCase);
             item.IsPresent = isPresent;
             if (!item.IsPresent) item.IsEnabled = false;
-            TrackPendingRebuild(unc, indexStatus?.State);
+            vm.TrackPendingRebuild(unc, indexStatus?.State);
             item.State = !isPresent ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(null, indexStatus);
             item.ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-";
             configuredWsl.TryGetValue(name, out var saved);
-            UpdateWslRowAction(item, isPresent && saved != null, indexStatus?.State);
+            vm.UpdateRowAction(item, isPresent && saved != null, indexStatus?.State, i => searchService.HasNetworkDriveCache(i.UncPath));
         }
         foreach (var path in visibleFolders)
         {
-            var item = FolderIndexes.FirstOrDefault(f => f.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+            var item = vm.FolderIndexes.FirstOrDefault(f => f.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
             if (item == null) continue;
             statuses.TryGetValue(path, out var indexStatus);
             var isPresent = Directory.Exists(path);
             item.IsPresent = isPresent;
             if (!isPresent) item.IsEnabled = false;
-            TrackPendingRebuild(path, indexStatus?.State);
+            vm.TrackPendingRebuild(path, indexStatus?.State);
             item.State = !isPresent ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(null, indexStatus);
             item.ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-";
             configuredFolders.TryGetValue(path, out var saved);
-            UpdateFolderRowAction(item, isPresent && saved != null, indexStatus?.State);
+            // Unlike a drive/WSL row (which stays visible as "an OS-resolvable thing you're just not
+            // indexing" even after Delete), a folder row only exists because the user explicitly added
+            // it -- there's no other reason to keep showing it once unchecked, whether or not it ever
+            // got far enough to have a cache. So Delete is unconditional here, not gated on cache state.
+            vm.UpdateRowAction(item, isPresent && saved != null, indexStatus?.State, _ => true);
         }
     }
 
-    private void RebuildRows(
+    public static void RebuildRows(
+        NetworkDriveSettingsViewModel vm, SearchService searchService, Action onTriggerFastRefresh, HashSet<string> pendingRowRebuilds, HashSet<string> observedRowRebuilds,
         List<string> visibleDrives, List<string> visibleWsl, List<string> visibleFolders,
         Dictionary<string, NetworkIndexStatus> statuses, Dictionary<string, ResolvedNetworkDrive> resolvedByDrive, List<string> wslDistros,
         Dictionary<string, NetworkDriveSetting> configured, Dictionary<string, WslSetting> configuredWsl, Dictionary<string, FolderIndexSetting> configuredFolders)
     {
-        foreach (var existing in NetworkDrives) existing.PropertyChanged -= OnNetworkDriveItemChanged;
-        NetworkDrives.Clear();
+        foreach (var existing in vm.NetworkDrives) existing.PropertyChanged -= vm.OnNetworkDriveItemChanged;
+        vm.NetworkDrives.Clear();
         foreach (var letter in visibleDrives)
         {
             statuses.TryGetValue(letter, out var indexStatus);
@@ -195,15 +176,15 @@ public partial class NetworkDriveSettingsViewModel
                 ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-",
                 RefreshMode = NetworkDriveSettingsHelper.NormalizeRefreshMode(saved?.RefreshMode)
             };
-            item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunDriveAction(item, this, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
-            TrackPendingRebuild(letter, indexStatus?.State);
-            UpdateRowAction(item, drive != null && saved != null, indexStatus?.State);
-            item.PropertyChanged += OnNetworkDriveItemChanged;
-            NetworkDrives.Add(item);
+            item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunDriveAction(item, vm, searchService, onTriggerFastRefresh, pendingRowRebuilds, observedRowRebuilds), () => item.CanRunRowAction);
+            vm.TrackPendingRebuild(letter, indexStatus?.State);
+            vm.UpdateRowAction(item, drive != null && saved != null, indexStatus?.State, i => searchService.HasNetworkDriveCache(i.Drive));
+            item.PropertyChanged += vm.OnNetworkDriveItemChanged;
+            vm.NetworkDrives.Add(item);
         }
 
-        foreach (var existing in WslDrives) existing.PropertyChanged -= OnWslDriveItemChanged;
-        WslDrives.Clear();
+        foreach (var existing in vm.WslDrives) existing.PropertyChanged -= vm.OnWslDriveItemChanged;
+        vm.WslDrives.Clear();
         foreach (var name in visibleWsl)
         {
             var unc = $@"\\wsl$\{name}";
@@ -220,15 +201,15 @@ public partial class NetworkDriveSettingsViewModel
                 ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-",
                 RefreshMode = NetworkDriveSettingsHelper.NormalizeRefreshMode(saved?.RefreshMode)
             };
-            item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunWslDriveAction(item, this, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
-            TrackPendingRebuild(unc, indexStatus?.State);
-            UpdateWslRowAction(item, isPresent && saved != null, indexStatus?.State);
-            item.PropertyChanged += OnWslDriveItemChanged;
-            WslDrives.Add(item);
+            item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunWslDriveAction(item, vm, searchService, onTriggerFastRefresh, pendingRowRebuilds, observedRowRebuilds), () => item.CanRunRowAction);
+            vm.TrackPendingRebuild(unc, indexStatus?.State);
+            vm.UpdateRowAction(item, isPresent && saved != null, indexStatus?.State, i => searchService.HasNetworkDriveCache(i.UncPath));
+            item.PropertyChanged += vm.OnWslDriveItemChanged;
+            vm.WslDrives.Add(item);
         }
 
-        foreach (var existing in FolderIndexes) existing.PropertyChanged -= OnFolderItemChanged;
-        FolderIndexes.Clear();
+        foreach (var existing in vm.FolderIndexes) existing.PropertyChanged -= vm.OnFolderItemChanged;
+        vm.FolderIndexes.Clear();
         foreach (var path in visibleFolders)
         {
             statuses.TryGetValue(path, out var indexStatus);
@@ -243,11 +224,11 @@ public partial class NetworkDriveSettingsViewModel
                 ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-",
                 RefreshMode = NetworkDriveSettingsHelper.NormalizeRefreshMode(saved?.RefreshMode)
             };
-            item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunFolderIndexAction(item, this, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds), () => item.CanRunRowAction);
-            TrackPendingRebuild(path, indexStatus?.State);
-            UpdateFolderRowAction(item, isPresent && saved != null, indexStatus?.State);
-            item.PropertyChanged += OnFolderItemChanged;
-            FolderIndexes.Add(item);
+            item.RowActionCommand = new RelayCommand(() => NetworkDriveViewModelHelper.RunFolderIndexAction(item, vm, searchService, onTriggerFastRefresh, pendingRowRebuilds, observedRowRebuilds), () => item.CanRunRowAction);
+            vm.TrackPendingRebuild(path, indexStatus?.State);
+            vm.UpdateRowAction(item, isPresent && saved != null, indexStatus?.State, _ => true);
+            item.PropertyChanged += vm.OnFolderItemChanged;
+            vm.FolderIndexes.Add(item);
         }
     }
 }

@@ -45,9 +45,9 @@ public static class NetworkIndexerSearchExtensions
     private static bool IsDriveAllowed(string indexDrive, ParsedSearchQuery parsed, string? directoryFilterLower)
     {
         // The "d:foo" query-scoping modifier only makes sense against a bare drive letter -- a
-        // folder-index or UNC key (anything longer) can never match it, so it never gets excluded on
-        // that basis.
-        if (indexDrive.Length == 1 && parsed.TargetDrive != null && !parsed.TargetDrive.Equals(indexDrive, StringComparison.OrdinalIgnoreCase))
+        // folder-index or UNC key (anything longer) can never equal it, so it's always excluded once
+        // a target drive is requested.
+        if (parsed.TargetDrive != null && !(indexDrive.Length == 1 && parsed.TargetDrive.Equals(indexDrive, StringComparison.OrdinalIgnoreCase)))
             return false;
 
         if (directoryFilterLower == null)
@@ -56,9 +56,13 @@ public static class NetworkIndexerSearchExtensions
         if (indexDrive.Length == 1)
             return directoryFilterLower.StartsWith(indexDrive + @":\", StringComparison.OrdinalIgnoreCase);
 
-        // A folder-index or UNC key is already a full rooted path -- compare directly, with a trailing
-        // separator so "D:\Foo" doesn't also match a filter under a sibling "D:\FooBar".
+        // A folder-index or UNC key is already a full rooted path -- allow either direction: the
+        // filter scope nested under the index root, or the index root nested under a broader filter
+        // scope (e.g. a folder index for D:\Projects\ProjectA should still be searched when the
+        // filter scope is the parent D:\Projects\). Compare with a trailing separator on both sides
+        // so "D:\Foo" doesn't also match a filter under a sibling "D:\FooBar".
         var rootedDrive = indexDrive.EndsWith(Path.DirectorySeparatorChar) ? indexDrive : indexDrive + Path.DirectorySeparatorChar;
-        return directoryFilterLower.StartsWith(rootedDrive, StringComparison.OrdinalIgnoreCase);
+        var rootedFilter = directoryFilterLower.EndsWith(Path.DirectorySeparatorChar) ? directoryFilterLower : directoryFilterLower + Path.DirectorySeparatorChar;
+        return rootedFilter.StartsWith(rootedDrive, StringComparison.OrdinalIgnoreCase) || rootedDrive.StartsWith(rootedFilter, StringComparison.OrdinalIgnoreCase);
     }
 }

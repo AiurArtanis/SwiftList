@@ -23,9 +23,9 @@ internal sealed class FileRecordNamePool
     }
 }
 
-public static partial class FileRecordStoreSerializer
+public static class FileRecordStoreSerializer
 {
-    private const string MetaMagic = "SLRCMETA";
+    internal const string MetaMagic = "SLRCMETA";
     private const string RecordsMagic = "SLRCREC";
     private const string NamesMagic = "SLRCNAME";
     // v9: $MFT-based one-to-many hard-link index. Bumping this invalidates older single-name caches

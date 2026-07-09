@@ -3,7 +3,7 @@ using SwiftList.App.Services;
 
 namespace SwiftList.App.ViewModels.Settings;
 
-public class NetworkDriveSettingsItem : ViewModelBase
+public class NetworkDriveSettingsItem : ViewModelBase, INetworkRowItem
 {
     private bool _isEnabled;
     private string _refreshMode = "Manual";

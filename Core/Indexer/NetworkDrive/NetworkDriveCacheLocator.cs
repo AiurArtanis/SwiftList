@@ -123,7 +123,7 @@ internal static class NetworkDriveCacheLocator
             FileRecordStoreSummary? summary;
             try
             {
-                summary = FileRecordStoreSerializer.LoadSummary(cacheDir, storageKey);
+                summary = FileRecordStoreSummaryLoader.LoadSummary(cacheDir, storageKey);
             }
             catch (IOException)
             {

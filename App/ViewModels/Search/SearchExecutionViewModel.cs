@@ -2,17 +2,18 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using SwiftList.Core;
 using SwiftList.App.Helpers;
+using SwiftList.App.ViewModels.Search.Dispatch;
 
 namespace SwiftList.App.ViewModels.Search;
 
-public partial class SearchExecutionViewModel : ViewModelBase, IDisposable
+public class SearchExecutionViewModel : ViewModelBase, IDisposable
 {
     private readonly QuickSearchViewModel _mainVm;
     private readonly SearchExecutionEngine _engine;
     private readonly StartupPanelController _startupPanel;
+    private readonly SearchDispatchController _dispatcher;
 
     private string _searchQuery = null!;
-    private IReadOnlyList<string> _queryTokens = Array.Empty<string>();
     private bool _isSearching;
     private bool _isResultsListEnabled = true;
     private AppSearchResult? _selectedResult;
@@ -33,6 +34,19 @@ public partial class SearchExecutionViewModel : ViewModelBase, IDisposable
         _startupPanel = new StartupPanelController(searchService, ReplaceResults);
         _startupPanel.PropertyChanged += (s, e) => { if (e.PropertyName == nameof(StartupPanelController.Visibility)) OnPropertyChanged(nameof(StartupPanelVisibility)); };
 
+        _dispatcher = new SearchDispatchController(
+            _engine,
+            _startupPanel,
+            _mainVm,
+            getSearchScope: () => SearchScope,
+            getIsInlineSearchContext: () => IsInlineSearchContext,
+            getSearchQuery: () => SearchQuery,
+            setIsSearching: v => IsSearching = v,
+            setResultsPanelVisibility: v => ResultsPanelVisibility = v,
+            setResultsSeparatorVisibility: v => ResultsSeparatorVisibility = v,
+            replaceResults: ReplaceResults,
+            getResultsCount: () => Results.Count);
+
         // Coalesce multiple providers finishing their (background, unawaited) load in quick succession
         // (e.g. right after app startup) into a single re-run of the current query, not one per provider.
         _providerLoadedRefreshTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
@@ -40,7 +54,7 @@ public partial class SearchExecutionViewModel : ViewModelBase, IDisposable
         {
             _providerLoadedRefreshTimer.Stop();
             if (!IsActionsMode && !string.IsNullOrWhiteSpace(_searchQuery))
-                DispatchSearch(_searchQuery);
+                _dispatcher.DispatchSearch(_searchQuery);
         };
         SearchableItemMapper.ProviderLoaded += OnSearchableItemProviderLoaded;
     }
@@ -96,11 +110,11 @@ public partial class SearchExecutionViewModel : ViewModelBase, IDisposable
                 if (string.IsNullOrWhiteSpace(value))
                 {
                     _engine.CancelPendingSearch();
-                    PerformSearch(value);
+                    _dispatcher.PerformSearch(value);
                 }
                 else
                 {
-                    DispatchSearch(value);
+                    _dispatcher.DispatchSearch(value);
                 }
             }
         }
@@ -148,8 +162,10 @@ public partial class SearchExecutionViewModel : ViewModelBase, IDisposable
     public void RefreshEmptyState()
     {
         if (string.IsNullOrWhiteSpace(_searchQuery))
-            PerformSearch(_searchQuery);
+            _dispatcher.PerformSearch(_searchQuery);
     }
+
+    public void PerformSearch(string query) => _dispatcher.PerformSearch(query);
 
     private void ReplaceResults(IEnumerable<AppSearchResult> results) =>
         SearchResultsReconciler.Replace(Results, results, SelectedResult, v => SelectedResult = v);

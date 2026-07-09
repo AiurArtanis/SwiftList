@@ -8,11 +8,17 @@ using SwiftList.App.ViewModels.Settings;
 
 namespace SwiftList.App;
 
-// Title-bar search box + results popup. Split from SettingsWindow.xaml.cs (window chrome, sidebar) to
-// stay under the file-length convention.
-public partial class SettingsWindow
+// Title-bar search box + results popup for SettingsWindow, as extension methods (matching RuntimeIndex's
+// BucketExtensions/QueryExtensions split) instead of an extra partial-class file, to stay under the
+// file-length convention. SettingsWindow.xaml.cs itself must stay partial (the WPF/XAML tooling
+// requires it), but this second file is not that generated half -- it's purely this session's own
+// split, so it follows the same composition/extension-method pattern as everywhere else in the project.
+// The three XAML-wired event handlers (TextChanged/PreviewKeyDown/MouseUp) stay as thin instance methods
+// on SettingsWindow itself, since XAML event wiring resolves by reflection and can't target an
+// extension method; everything they call into lives here.
+internal static class SettingsWindowSearchExtensions
 {
-    private void CloseSearchPopup() => SearchResultsPopup.IsOpen = false;
+    public static void CloseSearchPopup(this SettingsWindow window) => window.SearchResultsPopup.IsOpen = false;
 
     // "Section", "Section > Tab", or "Section > Tab > SubTab" -- entries whose own LabelKey names a
     // tab/sub-tab leave TabLabelKey/SubTabLabelKey null (see SettingsSearchEntry), so their breadcrumb
@@ -27,12 +33,12 @@ public partial class SettingsWindow
         return string.Join(" › ", parts);
     }
 
-    private void TxtSettingsSearch_TextChanged(object sender, TextChangedEventArgs e)
+    public static void OnSettingsSearchTextChanged(this SettingsWindow window)
     {
-        var query = TxtSettingsSearch.Text?.Trim() ?? string.Empty;
+        var query = window.TxtSettingsSearch.Text?.Trim() ?? string.Empty;
         if (query.Length == 0)
         {
-            CloseSearchPopup();
+            window.CloseSearchPopup();
             return;
         }
 
@@ -46,7 +52,7 @@ public partial class SettingsWindow
 
         // These three collections have no static Entries above -- their labels only exist at runtime
         // (whatever plugins happen to be loaded), so search the same live models each page renders from.
-        if (DataContext is SettingsViewModel vm)
+        if (window.DataContext is SettingsViewModel vm)
         {
             var pluginsSectionLabel = TranslationManager.Instance["Settings_Plugins"];
             foreach (var plugin in vm.Plugins.Plugins)
@@ -105,76 +111,76 @@ public partial class SettingsWindow
             }
         }
 
-        LstSearchResults.ItemsSource = results;
-        LstSearchResults.Visibility = results.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        TxtSearchNoResults.Visibility = results.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        SearchResultsPopup.IsOpen = true;
+        window.LstSearchResults.ItemsSource = results;
+        window.LstSearchResults.Visibility = results.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        window.TxtSearchNoResults.Visibility = results.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        window.SearchResultsPopup.IsOpen = true;
         // Highlights the top result so Enter picks it immediately, matching Windows 11 Settings search.
         // Doesn't navigate by itself -- only Enter/click (see ActivateSearchResult) commits a result.
-        LstSearchResults.SelectedIndex = results.Count > 0 ? 0 : -1;
+        window.LstSearchResults.SelectedIndex = results.Count > 0 ? 0 : -1;
     }
 
     // Wired to PreviewKeyDown, not KeyDown: the TextBox's default template hosts its text in a
     // ScrollViewer (PART_ContentHost), whose own class handler consumes Up/Down/PageUp/PageDown for
     // scrolling and marks them Handled before a bubbling KeyDown on the TextBox itself would ever see
     // them. Tunneling PreviewKeyDown fires first, top-down, so we get first refusal on those keys.
-    private void TxtSettingsSearch_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    public static void OnSettingsSearchKeyDown(this SettingsWindow window, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
         {
-            if (LstSearchResults.SelectedItem is SettingsSearchResultItem item)
-                ActivateSearchResult(item);
+            if (window.LstSearchResults.SelectedItem is SettingsSearchResultItem item)
+                window.ActivateSearchResult(item);
             e.Handled = true;
         }
-        else if (e.Key == Key.Down && LstSearchResults.Items.Count > 0)
+        else if (e.Key == Key.Down && window.LstSearchResults.Items.Count > 0)
         {
             // Wraps: Down past the last result loops back to the first.
-            LstSearchResults.SelectedIndex = (LstSearchResults.SelectedIndex + 1) % LstSearchResults.Items.Count;
-            ScrollSelectedResultIntoView();
+            window.LstSearchResults.SelectedIndex = (window.LstSearchResults.SelectedIndex + 1) % window.LstSearchResults.Items.Count;
+            window.ScrollSelectedResultIntoView();
             e.Handled = true;
         }
-        else if (e.Key == Key.Up && LstSearchResults.Items.Count > 0)
+        else if (e.Key == Key.Up && window.LstSearchResults.Items.Count > 0)
         {
             // Wraps: Up past the first result loops back to the last.
-            var count = LstSearchResults.Items.Count;
-            LstSearchResults.SelectedIndex = (LstSearchResults.SelectedIndex - 1 + count) % count;
-            ScrollSelectedResultIntoView();
+            var count = window.LstSearchResults.Items.Count;
+            window.LstSearchResults.SelectedIndex = (window.LstSearchResults.SelectedIndex - 1 + count) % count;
+            window.ScrollSelectedResultIntoView();
             e.Handled = true;
         }
         else if (e.Key == Key.Escape)
         {
             // Clearing the text fires TxtSettingsSearch_TextChanged, which closes the popup.
-            TxtSettingsSearch.Text = string.Empty;
+            window.TxtSettingsSearch.Text = string.Empty;
             e.Handled = true;
         }
     }
 
     // Setting SelectedIndex from code doesn't scroll -- that only happens as a side effect of the
-    // ListBox's own internal keyboard handling, which we bypass entirely (see TxtSettingsSearch_KeyDown
+    // ListBox's own internal keyboard handling, which we bypass entirely (see OnSettingsSearchKeyDown
     // above; the ListBox itself never has focus).
-    private void ScrollSelectedResultIntoView()
+    private static void ScrollSelectedResultIntoView(this SettingsWindow window)
     {
-        if (LstSearchResults.SelectedItem != null)
-            LstSearchResults.ScrollIntoView(LstSearchResults.SelectedItem);
+        if (window.LstSearchResults.SelectedItem != null)
+            window.LstSearchResults.ScrollIntoView(window.LstSearchResults.SelectedItem);
     }
 
     // Deliberately not driven by SelectionChanged: SelectedIndex also changes for the "highlight the
     // top result" default and for Up/Down navigation, neither of which should navigate away. Mouse
     // clicks and Enter both funnel through here instead, only on an explicit commit.
-    private void LstSearchResults_MouseUp(object sender, MouseButtonEventArgs e)
+    public static void OnSettingsSearchResultsMouseUp(this SettingsWindow window, MouseButtonEventArgs e)
     {
         if (e.ChangedButton == MouseButton.Left && e.OriginalSource is FrameworkElement { DataContext: SettingsSearchResultItem item })
-            ActivateSearchResult(item);
+            window.ActivateSearchResult(item);
     }
 
-    private void ActivateSearchResult(SettingsSearchResultItem item)
+    private static void ActivateSearchResult(this SettingsWindow window, SettingsSearchResultItem item)
     {
-        if (DataContext is SettingsViewModel vm)
+        if (window.DataContext is SettingsViewModel vm)
             item.Activate?.Invoke(vm);
 
-        SelectSection(item.Section);
+        window.SelectSection(item.Section);
         // Clearing the text fires TxtSettingsSearch_TextChanged, which closes the popup.
-        TxtSettingsSearch.Text = string.Empty;
+        window.TxtSettingsSearch.Text = string.Empty;
 
         // Switching section/tab alone doesn't reset scroll position -- a page's ScrollViewer just
         // clamps whatever offset it already had to the newly-visible content's (possibly shorter)
@@ -186,9 +192,9 @@ public partial class SettingsWindow
         {
             var targetName = item.TargetElementName;
             var section = item.Section;
-            Dispatcher.BeginInvoke(new Action(() =>
+            window.Dispatcher.BeginInvoke(new Action(() =>
             {
-                if (ResolveNamedElement(GetSectionPage(section), targetName) is FrameworkElement target)
+                if (ResolveNamedElement(window.GetSectionPage(section), targetName) is FrameworkElement target)
                 {
                     target.BringIntoView();
                     SettingsSearchHighlight.Show(target);
@@ -199,9 +205,9 @@ public partial class SettingsWindow
         {
             var reveal = item.Reveal;
             var section = item.Section;
-            Dispatcher.BeginInvoke(new Action(() =>
+            window.Dispatcher.BeginInvoke(new Action(() =>
             {
-                if (GetSectionPage(section)?.FindName(reveal.ListElementName) is not ItemsControl list
+                if (window.GetSectionPage(section)?.FindName(reveal.ListElementName) is not ItemsControl list
                     || list.ItemContainerGenerator.ContainerFromItem(reveal.GroupItem) is not FrameworkElement groupContainer)
                     return;
 
@@ -247,17 +253,17 @@ public partial class SettingsWindow
         return null;
     }
 
-    private FrameworkElement? GetSectionPage(string section) => section switch
+    private static FrameworkElement? GetSectionPage(this SettingsWindow window, string section) => section switch
     {
-        "Service" => PageService,
-        "Index" => PageIndex,
-        "General" => PageGeneral,
-        "Hotkeys" => PageHotkeys,
-        "Plugins" => PagePlugins,
-        "History" => PageHistory,
-        "Favorites" => PageFavorites,
-        "StartupPanel" => PageStartupPanel,
-        "About" => PageAbout,
+        "Service" => window.PageService,
+        "Index" => window.PageIndex,
+        "General" => window.PageGeneral,
+        "Hotkeys" => window.PageHotkeys,
+        "Plugins" => window.PagePlugins,
+        "History" => window.PageHistory,
+        "Favorites" => window.PageFavorites,
+        "StartupPanel" => window.PageStartupPanel,
+        "About" => window.PageAbout,
         _ => null,
     };
 }

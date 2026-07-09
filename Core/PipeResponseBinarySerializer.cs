@@ -23,11 +23,7 @@ public readonly struct PipeResponse
     public List<SearchResult>? RecentFiles { get; init; }
     public bool IsOk => Kind != PipeResponseKind.Error;
 }
-// Split across PipeResponseBinarySerializer.cs (dispatch + Ok/Error/Status/MachineSettings/FileMetadata)
-// and PipeResponseBinarySerializer.RecentFiles.cs (the RecentFiles kind's own codec) to stay under the
-// repo's per-file line limit -- both halves are one type; the RecentFiles-only entry point and its
-// read/write/size helpers just live in the other file.
-public static partial class PipeResponseBinarySerializer
+public static class PipeResponseBinarySerializer
 {
     private const int Magic = 0x52504C53; // SLPR
     private const int Version = 4; // v4: RecentFiles entries gained ModifiedUtc (originally CreatedUtc)
@@ -67,12 +63,12 @@ public static partial class PipeResponseBinarySerializer
             PipeResponseKind.Status => new PipeResponse { Kind = kind, Status = PipeResponseStatusSerializer.Read(payload, ref offset) },
             PipeResponseKind.MachineSettings => new PipeResponse { Kind = kind, MachineSettings = ReadMachineSettings(payload, ref offset) },
             PipeResponseKind.FileMetadata => new PipeResponse { Kind = kind, FileMetadata = ReadFileMetadata(payload, ref offset) },
-            PipeResponseKind.RecentFiles => new PipeResponse { Kind = kind, RecentFiles = ReadRecentFiles(payload, ref offset) },
+            PipeResponseKind.RecentFiles => new PipeResponse { Kind = kind, RecentFiles = RecentFilesResponseCodec.ReadRecentFiles(payload, ref offset) },
             _ => throw new InvalidDataException($"Unknown pipe response kind: {kind}.")
         };
     }
 
-    private static async Task WriteAsync(Stream stream, PipeResponse response, CancellationToken token)
+    internal static async Task WriteAsync(Stream stream, PipeResponse response, CancellationToken token)
     {
         var payloadSize = 1; // Kind byte
         switch (response.Kind)
@@ -90,7 +86,7 @@ public static partial class PipeResponseBinarySerializer
                 payloadSize += CalculateFileMetadataSize(response.FileMetadata ?? new Dictionary<string, FileMetadataEntry>());
                 break;
             case PipeResponseKind.RecentFiles:
-                payloadSize += CalculateRecentFilesSize(response.RecentFiles ?? new List<SearchResult>());
+                payloadSize += RecentFilesResponseCodec.CalculateRecentFilesSize(response.RecentFiles ?? new List<SearchResult>());
                 break;
         }
         var totalSize = 12 + payloadSize; // Magic(4) + Version(4) + Length(4) + Payload
@@ -116,7 +112,7 @@ public static partial class PipeResponseBinarySerializer
                     WriteFileMetadata(span, ref offset, response.FileMetadata ?? new Dictionary<string, FileMetadataEntry>());
                     break;
                 case PipeResponseKind.RecentFiles:
-                    WriteRecentFiles(span, ref offset, response.RecentFiles ?? new List<SearchResult>());
+                    RecentFilesResponseCodec.WriteRecentFiles(span, ref offset, response.RecentFiles ?? new List<SearchResult>());
                     break;
             }
 

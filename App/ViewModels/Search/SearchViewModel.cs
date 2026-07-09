@@ -4,18 +4,20 @@ using System.Windows.Input;
 using SwiftList.Core;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
+using SwiftList.App.ViewModels.Search.Dispatch;
 using SwiftList.App.ViewModels.Service;
 
 namespace SwiftList.App.ViewModels.Search;
 
-public partial class SearchViewModel : ViewModelBase, IDisposable
+public class SearchViewModel : ViewModelBase, IDisposable
 {
-    private const int FullSearchFileLimit = 1000;
-    private const int FullSearchAppLimit = 0;
+    internal const int FullSearchFileLimit = 1000;
+    internal const int FullSearchAppLimit = 0;
 
     private readonly SearchService _searchService;
     private readonly SearchExecutionEngine _searchEngine;
     private readonly SearchServiceStatusViewModel _serviceStatus;
+    private readonly SearchQueryDispatchController _dispatcher;
 
     private string _advancedQuery = string.Empty;
     private List<AppSearchResult> _allResults = new();
@@ -44,6 +46,16 @@ public partial class SearchViewModel : ViewModelBase, IDisposable
 
         _serviceStatus = new SearchServiceStatusViewModel(this, _searchService);
         _serviceStatus.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
+
+        _dispatcher = new SearchQueryDispatchController(
+            _searchEngine,
+            _serviceStatus,
+            getAllResults: () => _allResults,
+            setAllResults: v => _allResults = v,
+            setIsSearching: v => IsSearching = v,
+            setLoadingPanelVisibility: v => LoadingPanelVisibility = v,
+            setIsSearchBoxEnabled: v => IsSearchBoxEnabled = v,
+            applyFiltersAndRender: ApplyFiltersAndRender);
 
         // Initialize dynamic plugin sidebar groups
         var orderedProviders = PluginManager.Instance.SidebarFilterProviders
@@ -84,11 +96,11 @@ public partial class SearchViewModel : ViewModelBase, IDisposable
                 if (string.IsNullOrWhiteSpace(value))
                 {
                     _searchEngine.CancelPendingSearch();
-                    PerformSearch(value);
+                    _dispatcher.PerformSearch(value);
                 }
                 else
                 {
-                    OnAdvancedQueryChanged(value);
+                    _dispatcher.OnAdvancedQueryChanged(value);
                 }
                 OnPropertyChanged(nameof(ShowWelcomeHint));
                 OnPropertyChanged(nameof(ShowNoResultsHint));
@@ -135,7 +147,6 @@ public partial class SearchViewModel : ViewModelBase, IDisposable
 
     private string _currentSortColumn = string.Empty;
     private bool _isSortAscending = true;
-    private IReadOnlyList<string> _queryTokens = Array.Empty<string>();
 
     public bool IsSortAscending => _isSortAscending;
 
@@ -201,6 +212,8 @@ public partial class SearchViewModel : ViewModelBase, IDisposable
 
     public bool ShowNoResultsHint => !IsActionsMode && FilteredResults.Count == 0 && !string.IsNullOrWhiteSpace(AdvancedQuery);
     public bool ShowWelcomeHint => !IsActionsMode && string.IsNullOrWhiteSpace(AdvancedQuery);
+
+    internal void PerformSearch(string query) => _dispatcher.PerformSearch(query);
 
     public void Dispose()
     {

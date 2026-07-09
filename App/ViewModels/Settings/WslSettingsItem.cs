@@ -3,7 +3,7 @@ using SwiftList.App.Services;
 
 namespace SwiftList.App.ViewModels.Settings;
 
-public class WslSettingsItem : ViewModelBase
+public class WslSettingsItem : ViewModelBase, INetworkRowItem
 {
     private bool _isEnabled;
     private string _refreshMode = "Manual";

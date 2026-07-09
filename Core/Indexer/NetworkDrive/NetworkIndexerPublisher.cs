@@ -1,10 +1,35 @@
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
-// Status/index publishing half of NetworkIndexer, split out to keep NetworkIndexer.cs under the project's
-// line limit.
-public sealed partial class NetworkIndexer
+// Status/index publishing for NetworkIndexer -- extracted into its own class (composition, not a
+// partial class) to keep NetworkIndexer.cs under the project's line limit. Shares NetworkIndexer's own
+// _gate/_statuses/_indexes dictionaries by reference rather than owning copies, since both types need
+// to observe the same live state.
+internal sealed class NetworkIndexerPublisher
 {
-    private void SetStatus(string drive, string state, int? items, string? error)
+    private readonly object _gate;
+    private readonly Dictionary<string, NetworkIndexStatus> _statuses;
+    private readonly Dictionary<string, NetworkIndex> _indexes;
+    private readonly Action<string> _ensureWatcher;
+    private readonly Func<IReadOnlyList<NetworkIndexStatus>> _getStatuses;
+    private readonly Action<IReadOnlyList<NetworkIndexStatus>> _raiseStatusesChanged;
+
+    public NetworkIndexerPublisher(
+        object gate,
+        Dictionary<string, NetworkIndexStatus> statuses,
+        Dictionary<string, NetworkIndex> indexes,
+        Action<string> ensureWatcher,
+        Func<IReadOnlyList<NetworkIndexStatus>> getStatuses,
+        Action<IReadOnlyList<NetworkIndexStatus>> raiseStatusesChanged)
+    {
+        _gate = gate;
+        _statuses = statuses;
+        _indexes = indexes;
+        _ensureWatcher = ensureWatcher;
+        _getStatuses = getStatuses;
+        _raiseStatusesChanged = raiseStatusesChanged;
+    }
+
+    public void SetStatus(string drive, string state, int? items, string? error)
     {
         lock (_gate)
         {
@@ -22,24 +47,24 @@ public sealed partial class NetworkIndexer
 
     // Whatever's currently loaded for this drive (a completed index, or an interrupted checkpoint) becomes
     // TreeBuilder's diff baseline for the refresh about to run -- see TreeDiffBaseline.
-    private FileRecordStore? GetPreviousStore(string drive)
+    public FileRecordStore? GetPreviousStore(string drive)
     {
         lock (_gate)
             return _indexes.TryGetValue(drive, out var index) ? index.ToStore() : null;
     }
 
-    private void OnRefreshFinished(string drive, NetworkIndex index)
+    public void OnRefreshFinished(string drive, NetworkIndex index)
     {
         lock (_gate)
         {
             _indexes[drive] = index;
             _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "ready", index.Count, index, null);
         }
-        _watcherManager?.EnsureWatcher(drive);
+        _ensureWatcher(drive);
         PublishStatusesChanged();
     }
 
-    private void PublishIncrementalUpdate(string drive, NetworkIndex index)
+    public void PublishIncrementalUpdate(string drive, NetworkIndex index)
     {
         IndexerHelper.Save(index);
         lock (_gate)
@@ -50,7 +75,7 @@ public sealed partial class NetworkIndexer
         PublishStatusesChanged();
     }
 
-    private void PublishCheckpoint(string drive, FileRecordStore store, NetworkDriveWalkStats stats, CancellationToken token)
+    public void PublishCheckpoint(string drive, FileRecordStore store, NetworkDriveWalkStats stats, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
 
@@ -106,11 +131,11 @@ public sealed partial class NetworkIndexer
         }
     }
 
-    private void PublishStatusesChanged()
+    public void PublishStatusesChanged()
     {
         try
         {
-            StatusesChanged?.Invoke(GetStatuses());
+            _raiseStatusesChanged(_getStatuses());
         }
         catch
         {

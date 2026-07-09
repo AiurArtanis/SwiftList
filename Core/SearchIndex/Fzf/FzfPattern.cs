@@ -26,6 +26,20 @@ internal sealed class FzfPattern
         return len;
     }
 
+    // Shared quality bar every alias-fallback caller applies: reject a match whose span is
+    // disproportionately wider than the query, or whose score is too low, so a weak coincidental
+    // alias hit doesn't count as a match.
+    public bool IsAcceptableAliasMatch(FzfPatternResult aliasMatch) => IsAcceptableAliasMatch(aliasMatch, GetTotalTermLength());
+
+    // Overload for a caller checking multiple alias matches against the same pattern (e.g. looping over
+    // several alias providers/aliases per match attempt) -- GetTotalTermLength() only depends on the
+    // pattern itself, so hoisting it once avoids recomputing it per alias.
+    public bool IsAcceptableAliasMatch(FzfPatternResult aliasMatch, int queryLen)
+    {
+        var span = aliasMatch.MaxEnd - aliasMatch.MinBegin;
+        return span <= Math.Max(queryLen * 3, 20) && aliasMatch.Score >= queryLen * 5;
+    }
+
     public static FzfPattern Parse(string query)
     {
         string? targetDrive = null;

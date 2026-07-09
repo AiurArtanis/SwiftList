@@ -1,8 +1,8 @@
 namespace SwiftList.Core.SearchIndex.RecordIndex;
 
-// Load/ToStore (the on-disk (de)serialization half) live in RuntimeIndex.Store.cs -- split out to keep
-// this file under the line-count limit.
-public sealed partial class RuntimeIndex
+// Load/ToStore (the on-disk (de)serialization half) live in StoreExtensions.cs as extension methods --
+// split out to keep this file under the line-count limit.
+public sealed class RuntimeIndex
 {
     private int _loadedCount;
     private readonly Dictionary<UInt128, int> _deltaIdToIndex = new();

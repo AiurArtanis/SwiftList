@@ -2,19 +2,22 @@ using System.Text;
 
 namespace SwiftList.Core;
 
-public static partial class FileRecordStoreSerializer
+// Reads just the .meta header of a FileRecordStoreSerializer-produced cache (no .records/.names
+// parsing) -- kept as its own static class (not a partial split of FileRecordStoreSerializer) to stay
+// under the per-file line limit.
+public static class FileRecordStoreSummaryLoader
 {
     public static FileRecordStoreSummary? LoadSummary(string cacheDir, string sourceKey)
     {
-        var basePath = GetBasePath(cacheDir, sourceKey);
+        var basePath = FileRecordStoreSerializer.GetBasePath(cacheDir, sourceKey);
         try
         {
-            if (!Exists(cacheDir, sourceKey))
+            if (!FileRecordStoreSerializer.Exists(cacheDir, sourceKey))
                 return null;
 
             using var meta = File.OpenRead(basePath + ".meta");
             using var reader = new BinaryReader(meta, Encoding.UTF8);
-            if (reader.ReadString() != MetaMagic || reader.ReadInt32() != Version)
+            if (reader.ReadString() != FileRecordStoreSerializer.MetaMagic || reader.ReadInt32() != FileRecordStoreSerializer.Version)
                 return null;
 
             var storeSourceKey = reader.ReadString();
@@ -54,7 +57,7 @@ public static partial class FileRecordStoreSerializer
         }
         catch (Exception ex)
         {
-            Logger.Log($"[FileRecordStoreSerializer] Failed to load summary {basePath}: {ex.Message}", LogLevel.Error);
+            Logger.Log($"[FileRecordStoreSummaryLoader] Failed to load summary {basePath}: {ex.Message}", LogLevel.Error);
             return null;
         }
     }

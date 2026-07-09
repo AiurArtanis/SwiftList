@@ -1,20 +1,20 @@
 using SwiftList.Core.Indexer.NetworkDrive;
 
-namespace SwiftList.App.ViewModels.Settings;
+namespace SwiftList.App.ViewModels.Settings.NetworkDrive;
 
-// Per-row editability/action permissions, split out of NetworkDriveSettingsViewModel.cs to keep that file
-// under the line limit.
-public partial class NetworkDriveSettingsViewModel
+// Per-row editability/action permissions for NetworkDriveSettingsViewModel -- extracted (composition,
+// not a partial class) purely to keep that file under the repo's per-file line limit.
+internal static class NetworkDrivePermissionsHelper
 {
     // Each category gets its own busy flag (see the driveBusy/wslBusy/folderBusy computation in
-    // RefreshNetworkDrives) so an indexing folder can't disable a network drive's row controls, or the
-    // reverse -- including the Rebuild-row-action gate below, which used to reference the single global
-    // CanRebuild (hasEnabled across all three categories && nothing anywhere busy) regardless of which
-    // category the row actually belonged to.
-    private void UpdateRowPermissions(bool driveBusy, bool wslBusy, bool folderBusy)
+    // NetworkDriveSettingsViewModel.RefreshNetworkDrives) so an indexing folder can't disable a network
+    // drive's row controls, or the reverse -- including the Rebuild-row-action gate below, which used to
+    // reference a single global CanRebuild (hasEnabled across all three categories && nothing anywhere
+    // busy) regardless of which category the row actually belonged to.
+    public static void UpdateRowPermissions(NetworkDriveSettingsViewModel vm, bool driveBusy, bool wslBusy, bool folderBusy)
     {
-        var canRebuildDrives = NetworkDrives.Any(d => d.AppliedEnabled) && !driveBusy;
-        foreach (var drive in NetworkDrives)
+        var canRebuildDrives = vm.NetworkDrives.Any(d => d.AppliedEnabled) && !driveBusy;
+        foreach (var drive in vm.NetworkDrives)
         {
             drive.CanEditEnabled = drive.IsPresent && !driveBusy;
             drive.CanEditRefreshMode = drive.IsPresent && !driveBusy;
@@ -22,15 +22,15 @@ public partial class NetworkDriveSettingsViewModel
             drive.CanRunRowAction = drive.RowAction == NetworkDriveRowAction.Stop
                 || (!driveBusy && (drive.RowAction == NetworkDriveRowAction.Delete || canRebuildDrives && drive.RowAction == NetworkDriveRowAction.Rebuild));
         }
-        var canRebuildWsl = WslDrives.Any(w => w.AppliedEnabled) && !wslBusy;
-        foreach (var wsl in WslDrives)
+        var canRebuildWsl = vm.WslDrives.Any(w => w.AppliedEnabled) && !wslBusy;
+        foreach (var wsl in vm.WslDrives)
         {
             wsl.CanEditEnabled = wsl.IsPresent && !wslBusy;
             wsl.CanEditRefreshMode = wsl.IsPresent && !wslBusy;
             wsl.CanRunRowAction = wsl.RowAction == NetworkDriveRowAction.Stop
                 || (!wslBusy && (wsl.RowAction == NetworkDriveRowAction.Delete || canRebuildWsl && wsl.RowAction == NetworkDriveRowAction.Rebuild));
         }
-        foreach (var folder in FolderIndexes)
+        foreach (var folder in vm.FolderIndexes)
         {
             folder.CanEditEnabled = folder.IsPresent && !folderBusy;
             folder.CanEditRefreshMode = folder.IsPresent && !folderBusy;
@@ -40,17 +40,17 @@ public partial class NetworkDriveSettingsViewModel
             // folder row that was never applied/cached must not get blocked by an unrelated service being
             // unreachable.
             folder.CanRunRowAction = folder.RowAction is NetworkDriveRowAction.Stop or NetworkDriveRowAction.Delete
-                || (!folderBusy && CanRebuildFolders && folder.RowAction == NetworkDriveRowAction.Rebuild);
+                || (!folderBusy && vm.CanRebuildFolders && folder.RowAction == NetworkDriveRowAction.Rebuild);
         }
     }
 
     // Scoped membership check: is anything in this one category (by its own drive/UNC/folder keys)
-    // currently queued-to-rebuild or actively indexing/pending -- as opposed to the old single isBusy that
+    // currently queued-to-rebuild or actively indexing/pending -- as opposed to a single isBusy that
     // looked at indexStatuses across all three categories combined.
-    private bool IsCategoryBusy(IEnumerable<string> keys, IReadOnlyList<NetworkIndexStatus>? indexStatuses)
+    public static bool IsCategoryBusy(HashSet<string> pendingRowRebuilds, IEnumerable<string> keys, IReadOnlyList<NetworkIndexStatus>? indexStatuses)
     {
         var keySet = new HashSet<string>(keys, StringComparer.OrdinalIgnoreCase);
-        if (_pendingRowRebuilds.Any(keySet.Contains))
+        if (pendingRowRebuilds.Any(keySet.Contains))
             return true;
         return indexStatuses?.Any(s => keySet.Contains(s.Drive) && (s.State == "indexing" || s.State == "pending")) == true;
     }

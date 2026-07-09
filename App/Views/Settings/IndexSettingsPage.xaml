@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:services="clr-namespace:SwiftList.App.Services"
+             xmlns:indexSettings="clr-namespace:SwiftList.App.Views.Settings.IndexSettings"
              mc:Ignorable="d"
              d:DesignHeight="550" d:DesignWidth="700">
     <UserControl.Resources>
@@ -12,294 +13,8 @@
                 <ResourceDictionary Source="pack://application:,,,/SwiftList.App;component/Resources/Styles.xaml"/>
                 <ResourceDictionary Source="../../Resources/Styles/SearchWindow.xaml"/>
                 <ResourceDictionary Source="../../Resources/Styles/SettingsWindow.xaml"/>
+                <ResourceDictionary Source="IndexSettings/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-
-            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-
-            <Style x:Key="RuleTextBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                <Setter Property="Height" Value="34"/>
-                <Setter Property="Padding" Value="10,6"/>
-
-                <Setter Property="FontSize" Value="13"/>
-                <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
-                <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="VerticalContentAlignment" Value="Center"/>
-            </Style>
-
-            <Style x:Key="RuleBulkTextBox" TargetType="TextBox" BasedOn="{StaticResource RuleTextBox}">
-                <Setter Property="Height" Value="132"/>
-                <Setter Property="AcceptsReturn" Value="True"/>
-                <Setter Property="AcceptsTab" Value="True"/>
-                <Setter Property="TextWrapping" Value="NoWrap"/>
-                <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-                <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
-                <Setter Property="VerticalContentAlignment" Value="Top"/>
-                <Setter Property="FontFamily" Value="Cascadia Mono, Consolas"/>
-            </Style>
-
-            <Style x:Key="RuleIconButton" TargetType="Button">
-                <Setter Property="Width" Value="32"/>
-                <Setter Property="Height" Value="32"/>
-                <Setter Property="Margin" Value="6,0,0,0"/>
-                <Setter Property="Padding" Value="0"/>
-                <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-                <Setter Property="Foreground" Value="{DynamicResource TextSecondary2}"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
-                <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
-                <Setter Property="FontSize" Value="14"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" CornerRadius="6" Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBackground}"/>
-                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-
-            <DataTemplate x:Key="RuleItemTemplate">
-                <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="24"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                   Foreground="{DynamicResource AccentColor}" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="13"
-                                   Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis"/>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="&#xE70F;"
-                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_EditTooltip]}"
-                                    Style="{StaticResource RuleIconButton}"
-                                    Command="{Binding DataContext.Exclusions.EditPathCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"/>
-                            <Button Content="&#xE74D;"
-                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_RemoveTooltip]}"
-                                    Style="{StaticResource RuleIconButton}"
-                                    Command="{Binding DataContext.Exclusions.RemovePathCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-            </DataTemplate>
-
-            <DataTemplate x:Key="GlobItemTemplate">
-                <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="24"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                   Foreground="{DynamicResource AccentColor}" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="13"
-                                   Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis"/>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="&#xE70F;"
-                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_EditTooltip]}"
-                                    Style="{StaticResource RuleIconButton}"
-                                    Command="{Binding DataContext.Exclusions.EditGlobCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"/>
-                            <Button Content="&#xE74D;"
-                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_RemoveTooltip]}"
-                                    Style="{StaticResource RuleIconButton}"
-                                    Command="{Binding DataContext.Exclusions.RemoveGlobCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-            </DataTemplate>
-
-            <DataTemplate x:Key="RegexItemTemplate">
-                <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="24"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                   Foreground="{DynamicResource AccentColor}" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="13"
-                                   Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis"/>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="&#xE70F;"
-                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_EditTooltip]}"
-                                    Style="{StaticResource RuleIconButton}"
-                                    Command="{Binding DataContext.Exclusions.EditRegexCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"/>
-                            <Button Content="&#xE74D;"
-                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_RemoveTooltip]}"
-                                    Style="{StaticResource RuleIconButton}"
-                                    Command="{Binding DataContext.Exclusions.RemoveRegexCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-            </DataTemplate>
-
-            <DataTemplate x:Key="LocalDriveTemplate">
-                <Border Style="{StaticResource SettingsRow}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40"/><ColumnDefinition Width="70"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1*"/><ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}" IsEnabled="{Binding CanEditEnabled}" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="2" Text="{Binding Kind}" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="3" Text="{Binding State}" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="4" Text="{Binding ItemCount}" VerticalAlignment="Center"/>
-                        <Button Grid.Column="5"
-                                Style="{StaticResource SettingsButton}"
-                                MinWidth="72"
-                                Height="28"
-                                Padding="10,0"
-                                Content="{Binding RowActionText}"
-                                Command="{Binding RowActionCommand}"
-                                IsEnabled="{Binding CanRunRowAction}"
-                                Visibility="{Binding IsRowActionVisible, Converter={StaticResource BoolToVis}}"/>
-                    </Grid>
-                </Border>
-            </DataTemplate>
-
-            <DataTemplate x:Key="NetworkDriveTemplate">
-                <Border Style="{StaticResource SettingsRow}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40"/>
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="1.2*"/>
-                            <ColumnDefinition Width="1.1*"/>
-                            <ColumnDefinition Width="1.4*" MinWidth="126"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                  IsEnabled="{Binding CanEditEnabled}"
-                                  VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Drive, StringFormat={}{0}:}" FontSize="13" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="2" Text="{Binding State}" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="3" Text="{Binding ItemCount}" VerticalAlignment="Center"/>
-                        <ComboBox Grid.Column="4"
-                                  Width="116"
-                                  HorizontalAlignment="Left"
-                                  VerticalAlignment="Center"
-                                  Style="{StaticResource SettingsComboBox}"
-                                  ItemsSource="{Binding DataContext.NetworkDrive.RefreshModeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                  DisplayMemberPath="Label"
-                                  SelectedValuePath="Value"
-                                  SelectedValue="{Binding RefreshMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                  IsEnabled="{Binding CanEditRefreshMode}"/>
-                        <Button Grid.Column="5"
-                                Style="{StaticResource SettingsButton}"
-                                MinWidth="72"
-                                Height="28"
-                                Padding="10,0"
-                                Content="{Binding RowActionText}"
-                                Command="{Binding RowActionCommand}"
-                                IsEnabled="{Binding CanRunRowAction}"
-                                Visibility="{Binding IsRowActionVisible, Converter={StaticResource BoolToVis}}"/>
-                    </Grid>
-                </Border>
-            </DataTemplate>
-
-            <DataTemplate x:Key="WslDriveTemplate">
-                <Border Style="{StaticResource SettingsRow}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40"/>
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="1.2*"/>
-                            <ColumnDefinition Width="1.1*"/>
-                            <ColumnDefinition Width="1.4*" MinWidth="126"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                  IsEnabled="{Binding CanEditEnabled}"
-                                  VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding DistroName}" FontSize="13" VerticalAlignment="Center" ToolTip="{Binding UncPath}"/>
-                        <TextBlock Grid.Column="2" Text="{Binding State}" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="3" Text="{Binding ItemCount}" VerticalAlignment="Center"/>
-                        <ComboBox Grid.Column="4"
-                                  Width="116"
-                                  HorizontalAlignment="Left"
-                                  VerticalAlignment="Center"
-                                  Style="{StaticResource SettingsComboBox}"
-                                  ItemsSource="{Binding DataContext.NetworkDrive.RefreshModeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                  DisplayMemberPath="Label"
-                                  SelectedValuePath="Value"
-                                  SelectedValue="{Binding RefreshMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                  IsEnabled="{Binding CanEditRefreshMode}"/>
-                        <Button Grid.Column="5"
-                                Style="{StaticResource SettingsButton}"
-                                MinWidth="72"
-                                Height="28"
-                                Padding="10,0"
-                                Content="{Binding RowActionText}"
-                                Command="{Binding RowActionCommand}"
-                                IsEnabled="{Binding CanRunRowAction}"
-                                Visibility="{Binding IsRowActionVisible, Converter={StaticResource BoolToVis}}"/>
-                    </Grid>
-                </Border>
-            </DataTemplate>
-
-            <DataTemplate x:Key="FolderIndexTemplate">
-                <Border Style="{StaticResource SettingsRow}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40"/>
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="1.2*"/>
-                            <ColumnDefinition Width="1.1*"/>
-                            <ColumnDefinition Width="1.4*" MinWidth="126"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                  IsEnabled="{Binding CanEditEnabled}"
-                                  VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}" FontSize="13" VerticalAlignment="Center" ToolTip="{Binding Path}"/>
-                        <TextBlock Grid.Column="2" Text="{Binding State}" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="3" Text="{Binding ItemCount}" VerticalAlignment="Center"/>
-                        <ComboBox Grid.Column="4"
-                                  Width="116"
-                                  HorizontalAlignment="Left"
-                                  VerticalAlignment="Center"
-                                  Style="{StaticResource SettingsComboBox}"
-                                  ItemsSource="{Binding DataContext.NetworkDrive.RefreshModeOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                  DisplayMemberPath="Label"
-                                  SelectedValuePath="Value"
-                                  SelectedValue="{Binding RefreshMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                  IsEnabled="{Binding CanEditRefreshMode}"/>
-                        <Button Grid.Column="5"
-                                Style="{StaticResource SettingsButton}"
-                                MinWidth="72"
-                                Height="28"
-                                Padding="10,0"
-                                Content="{Binding RowActionText}"
-                                Command="{Binding RowActionCommand}"
-                                IsEnabled="{Binding CanRunRowAction}"
-                                Visibility="{Binding IsRowActionVisible, Converter={StaticResource BoolToVis}}"/>
-                    </Grid>
-                </Border>
-            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -447,9 +162,9 @@
             <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
 
             <!-- Tab: Local -->
-            <StackPanel x:Name="TabLocal">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <indexSettings:LocalTab x:Name="TabLocal">
+                <indexSettings:LocalTab.Style>
+                    <Style TargetType="UserControl">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding LocalDrive.SelectedTab}" Value="Local">
@@ -457,69 +172,13 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
-
-                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Local_Hint]}"/>
-
-                <Border x:Name="RowLocalRebuild" Style="{StaticResource SettingsCard}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Local_IndexStatus]}"
-                                       FontWeight="SemiBold" FontSize="13" />
-                            <TextBlock Text="{Binding LocalDrive.IndexSummary}"
-                                       Foreground="{DynamicResource TextSecondary2}" Margin="0,5,0,0"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Style="{StaticResource PrimarySettingsButton}"
-                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Local_RebuildBtn]}"
-                                    Command="{Binding LocalDrive.RebuildCommand}" IsEnabled="{Binding LocalDrive.CanRebuild}"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource SettingsCard}">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="40"/><ColumnDefinition Width="70"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1*"/><ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Local_HeaderDrive]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Local_HeaderFileSystem]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                            <TextBlock Grid.Column="3"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Local_HeaderStatus]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                            <TextBlock Grid.Column="4"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Local_HeaderItems]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                        </Grid>
-
-                        <!-- Empty Placeholder Item -->
-                        <Border Background="{DynamicResource EmptyPlaceholderBackground}" BorderBrush="{DynamicResource EmptyPlaceholderBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="24,32" Margin="0,8,0,0"
-                                Visibility="{Binding LocalDrive.IsLocalDrivesEmpty, Converter={StaticResource BoolToVis}}">
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE783;" FontFamily="Segoe MDL2 Assets" FontSize="36" Foreground="{DynamicResource EmptyPlaceholderIcon}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                                <TextBlock Text="{Binding LocalDrive.DrivesPlaceholderText}" FontSize="13" Foreground="{DynamicResource TextSecondary2}" HorizontalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-
-                        <ItemsControl ItemsSource="{Binding LocalDrive.LocalDrives}" ItemTemplate="{StaticResource LocalDriveTemplate}"/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
+                </indexSettings:LocalTab.Style>
+            </indexSettings:LocalTab>
 
             <!-- Tab: Network -->
-            <StackPanel x:Name="TabNetwork">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <indexSettings:NetworkTab x:Name="TabNetwork">
+                <indexSettings:NetworkTab.Style>
+                    <Style TargetType="UserControl">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding LocalDrive.SelectedTab}" Value="Network">
@@ -527,76 +186,13 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
-
-                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_Hint]}"/>
-
-                <Border x:Name="RowNetworkRebuild" Style="{StaticResource SettingsCard}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_IndexStatus]}"
-                                       FontWeight="SemiBold" FontSize="13" />
-                            <TextBlock Text="{Binding NetworkDrive.NetworkIndexSummary}"
-                                       Foreground="{DynamicResource TextSecondary2}" Margin="0,5,0,0"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Style="{StaticResource PrimarySettingsButton}"
-                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_RebuildBtn]}"
-                                    Command="{Binding NetworkDrive.RebuildDrivesCommand}"
-                                    IsEnabled="{Binding NetworkDrive.CanRebuildDrives}"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource SettingsCard}">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="2*"/>
-                                <ColumnDefinition Width="1.2*"/>
-                                <ColumnDefinition Width="1.1*"/>
-                                <ColumnDefinition Width="1.4*" MinWidth="126"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderDrive]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderStatus]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                            <TextBlock Grid.Column="3"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderItems]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                            <TextBlock Grid.Column="4"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderMode]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                        </Grid>
-                        <Border Background="{DynamicResource EmptyPlaceholderBackground}" BorderBrush="{DynamicResource EmptyPlaceholderBorderBrush}" BorderThickness="1" CornerRadius="6"
-                                Padding="24,32" Margin="0,8,0,0"
-                                Visibility="{Binding NetworkDrive.IsNetworkDrivesEmpty, Converter={StaticResource BoolToVis}}">
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE968;" FontFamily="Segoe MDL2 Assets" FontSize="36"
-                                           Foreground="{DynamicResource EmptyPlaceholderIcon}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                                <TextBlock Text="{Binding NetworkDrive.DrivesPlaceholderText}" FontSize="13"
-                                           Foreground="{DynamicResource TextSecondary2}" HorizontalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-
-                        <ItemsControl ItemsSource="{Binding NetworkDrive.NetworkDrives}" ItemTemplate="{StaticResource NetworkDriveTemplate}"/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
+                </indexSettings:NetworkTab.Style>
+            </indexSettings:NetworkTab>
 
             <!-- Tab: WSL -->
-            <StackPanel x:Name="TabWsl">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <indexSettings:WslTab x:Name="TabWsl">
+                <indexSettings:WslTab.Style>
+                    <Style TargetType="UserControl">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding LocalDrive.SelectedTab}" Value="Wsl">
@@ -604,66 +200,13 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
-
-                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_WslSectionHint]}"/>
-
-                <Border x:Name="RowWslRebuild" Style="{StaticResource SettingsCard}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_IndexStatus]}"
-                                       FontWeight="SemiBold" FontSize="13" />
-                            <TextBlock Text="{Binding NetworkDrive.WslIndexSummary}"
-                                       Foreground="{DynamicResource TextSecondary2}" Margin="0,5,0,0"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Style="{StaticResource PrimarySettingsButton}"
-                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_RebuildBtn]}"
-                                    Command="{Binding NetworkDrive.RebuildWslCommand}"
-                                    IsEnabled="{Binding NetworkDrive.CanRebuildWsl}"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource SettingsCard}">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="2*"/>
-                                <ColumnDefinition Width="1.2*"/>
-                                <ColumnDefinition Width="1.1*"/>
-                                <ColumnDefinition Width="1.4*" MinWidth="126"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_WslHeaderDistro]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderStatus]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                            <TextBlock Grid.Column="3"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderItems]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                            <TextBlock Grid.Column="4"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderMode]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                        </Grid>
-
-                        <ItemsControl ItemsSource="{Binding NetworkDrive.WslDrives}" ItemTemplate="{StaticResource WslDriveTemplate}"/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
+                </indexSettings:WslTab.Style>
+            </indexSettings:WslTab>
 
             <!-- Tab: Folders -->
-            <StackPanel x:Name="TabFolders">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <indexSettings:FoldersTab x:Name="TabFolders">
+                <indexSettings:FoldersTab.Style>
+                    <Style TargetType="UserControl">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding LocalDrive.SelectedTab}" Value="Folders">
@@ -671,81 +214,13 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
-
-                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Folder_SectionHint]}"/>
-
-                <Border x:Name="RowFolderRebuild" Style="{StaticResource SettingsCard}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_IndexStatus]}"
-                                       FontWeight="SemiBold" FontSize="13" />
-                            <TextBlock Text="{Binding NetworkDrive.FolderIndexSummary}"
-                                       Foreground="{DynamicResource TextSecondary2}" Margin="0,5,0,0"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Style="{StaticResource PrimarySettingsButton}" Margin="0,0,8,0"
-                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_RebuildBtn]}"
-                                    Command="{Binding NetworkDrive.RebuildFoldersCommand}"
-                                    IsEnabled="{Binding NetworkDrive.CanRebuildFolders}"
-                                    Visibility="{Binding NetworkDrive.HasFolderIndexes, Converter={StaticResource BoolToVis}}"/>
-                            <Button Style="{StaticResource PrimarySettingsButton}"
-                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Folder_AddBtn]}"
-                                    Command="{Binding NetworkDrive.AddFolderCommand}"
-                                    IsEnabled="{Binding NetworkDrive.CanAddFolder}"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource SettingsCard}">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="2*"/>
-                                <ColumnDefinition Width="1.2*"/>
-                                <ColumnDefinition Width="1.1*"/>
-                                <ColumnDefinition Width="1.4*" MinWidth="126"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Folder_HeaderPath]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderStatus]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                            <TextBlock Grid.Column="3"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderItems]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                            <TextBlock Grid.Column="4"
-                                       Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Network_HeaderMode]}"
-                                       Foreground="{DynamicResource TextSecondary2}"/>
-                        </Grid>
-                        <Border Background="{DynamicResource EmptyPlaceholderBackground}" BorderBrush="{DynamicResource EmptyPlaceholderBorderBrush}" BorderThickness="1" CornerRadius="6"
-                                Padding="24,32" Margin="0,8,0,0"
-                                Visibility="{Binding NetworkDrive.IsFolderIndexesEmpty, Converter={StaticResource BoolToVis}}">
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="36"
-                                           Foreground="{DynamicResource EmptyPlaceholderIcon}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Folder_Placeholder]}" FontSize="13"
-                                           Foreground="{DynamicResource TextSecondary2}" HorizontalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-
-                        <ItemsControl ItemsSource="{Binding NetworkDrive.FolderIndexes}" ItemTemplate="{StaticResource FolderIndexTemplate}"/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
+                </indexSettings:FoldersTab.Style>
+            </indexSettings:FoldersTab>
 
             <!-- Tab: Exclusions -->
-            <StackPanel>
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <indexSettings:ExclusionsTab x:Name="TabExclusions">
+                <indexSettings:ExclusionsTab.Style>
+                    <Style TargetType="UserControl">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding LocalDrive.SelectedTab}" Value="Exclusions">
@@ -753,211 +228,8 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
-
-                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12" TextWrapping="Wrap"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_Hint]}"/>
-
-                <!-- Sub-tab header row -->
-                <StackPanel Orientation="Horizontal">
-                    <StackPanel Margin="0,0,24,0">
-                        <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_TabPath]}"
-                                Command="{Binding Exclusions.SelectSubTabCommand}" CommandParameter="Path">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Exclusions.SelectedSubTab}" Value="Path">
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-                                            <Setter Property="FontWeight" Value="SemiBold"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Border>
-                            <Border.Style>
-                                <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Exclusions.SelectedSubTab}" Value="Path">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
-                    </StackPanel>
-                    <StackPanel Margin="0,0,24,0">
-                        <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_TabGlob]}"
-                                Command="{Binding Exclusions.SelectSubTabCommand}" CommandParameter="Glob">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Exclusions.SelectedSubTab}" Value="Glob">
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-                                            <Setter Property="FontWeight" Value="SemiBold"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Border>
-                            <Border.Style>
-                                <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Exclusions.SelectedSubTab}" Value="Glob">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
-                    </StackPanel>
-                    <StackPanel Margin="0,0,24,0">
-                        <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_TabRegex]}"
-                                Command="{Binding Exclusions.SelectSubTabCommand}" CommandParameter="Regex">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Exclusions.SelectedSubTab}" Value="Regex">
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-                                            <Setter Property="FontWeight" Value="SemiBold"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Border>
-                            <Border.Style>
-                                <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Exclusions.SelectedSubTab}" Value="Regex">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
-                    </StackPanel>
-                </StackPanel>
-                <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
-
-                <!-- Sub-tab: Path -->
-                <StackPanel x:Name="SubTabExclusionsPath">
-                    <StackPanel.Style>
-                        <Style TargetType="StackPanel">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Exclusions.SelectedSubTab}" Value="Path">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </StackPanel.Style>
-                    <Border Style="{StaticResource SettingsCard}">
-                        <StackPanel>
-                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_PathCardDesc]}"
-                                       Style="{StaticResource SettingsHintText}" Margin="0,0,0,10" TextWrapping="Wrap"/>
-                            <DockPanel Margin="0,0,0,10">
-                                <Button DockPanel.Dock="Right"
-                                        Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_AddBtn]}"
-                                        Style="{StaticResource PrimarySettingsButton}"
-                                        Command="{Binding Exclusions.AddPathCommand}" Margin="10,0,0,0"/>
-                                <TextBox Style="{StaticResource RuleTextBox}"
-                                         Text="{Binding Exclusions.NewExcludedPath, UpdateSourceTrigger=PropertyChanged}"/>
-                            </DockPanel>
-                            <ItemsControl ItemsSource="{Binding Exclusions.ExcludedPaths}" ItemTemplate="{StaticResource RuleItemTemplate}"/>
-                            <TextBox Style="{StaticResource RuleBulkTextBox}" Margin="0,10,0,8"
-                                     Text="{Binding Exclusions.ExcludedPathsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_GenerateBtn]}"
-                                        Style="{StaticResource SettingsButton}"
-                                        Command="{Binding Exclusions.ExportPathsTextCommand}" Margin="0,0,8,0"/>
-                                <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_ApplyBtn]}"
-                                        Style="{StaticResource PrimarySettingsButton}"
-                                        Command="{Binding Exclusions.ApplyPathsTextCommand}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- Sub-tab: Glob -->
-                <StackPanel x:Name="SubTabExclusionsGlob">
-                    <StackPanel.Style>
-                        <Style TargetType="StackPanel">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Exclusions.SelectedSubTab}" Value="Glob">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </StackPanel.Style>
-                    <Border Style="{StaticResource SettingsCard}">
-                        <StackPanel>
-                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_GlobCardDesc]}"
-                                       Style="{StaticResource SettingsHintText}" Margin="0,0,0,10" TextWrapping="Wrap"/>
-                            <DockPanel Margin="0,0,0,10">
-                                <Button DockPanel.Dock="Right"
-                                        Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_AddBtn]}"
-                                        Style="{StaticResource PrimarySettingsButton}"
-                                        Command="{Binding Exclusions.AddGlobCommand}" Margin="10,0,0,0"/>
-                                <TextBox Style="{StaticResource RuleTextBox}"
-                                         Text="{Binding Exclusions.NewIgnoredGlob, UpdateSourceTrigger=PropertyChanged}"/>
-                            </DockPanel>
-                            <ItemsControl ItemsSource="{Binding Exclusions.IgnoredGlobs}" ItemTemplate="{StaticResource GlobItemTemplate}"/>
-                            <TextBox Style="{StaticResource RuleBulkTextBox}" Margin="0,10,0,8"
-                                     Text="{Binding Exclusions.IgnoredGlobsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_GenerateBtn]}"
-                                        Style="{StaticResource SettingsButton}"
-                                        Command="{Binding Exclusions.ExportGlobsTextCommand}" Margin="0,0,8,0"/>
-                                <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_ApplyBtn]}"
-                                        Style="{StaticResource PrimarySettingsButton}"
-                                        Command="{Binding Exclusions.ApplyGlobsTextCommand}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- Sub-tab: Regex -->
-                <StackPanel x:Name="SubTabExclusionsRegex">
-                    <StackPanel.Style>
-                        <Style TargetType="StackPanel">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Exclusions.SelectedSubTab}" Value="Regex">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </StackPanel.Style>
-                    <Border Style="{StaticResource SettingsCard}">
-                        <StackPanel>
-                            <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_RegexCardDesc]}"
-                                       Style="{StaticResource SettingsHintText}" Margin="0,0,0,10" TextWrapping="Wrap"/>
-                            <DockPanel Margin="0,0,0,10">
-                                <Button DockPanel.Dock="Right"
-                                        Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_AddBtn]}"
-                                        Style="{StaticResource PrimarySettingsButton}"
-                                        Command="{Binding Exclusions.AddRegexCommand}" Margin="10,0,0,0"/>
-                                <TextBox Style="{StaticResource RuleTextBox}"
-                                         Text="{Binding Exclusions.NewIgnoredRegex, UpdateSourceTrigger=PropertyChanged}"/>
-                            </DockPanel>
-                            <ItemsControl ItemsSource="{Binding Exclusions.IgnoredRegexes}" ItemTemplate="{StaticResource RegexItemTemplate}"/>
-                            <TextBox Style="{StaticResource RuleBulkTextBox}" Margin="0,10,0,8"
-                                     Text="{Binding Exclusions.IgnoredRegexesText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_GenerateBtn]}"
-                                        Style="{StaticResource SettingsButton}"
-                                        Command="{Binding Exclusions.ExportRegexesTextCommand}" Margin="0,0,8,0"/>
-                                <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_ApplyBtn]}"
-                                        Style="{StaticResource PrimarySettingsButton}"
-                                        Command="{Binding Exclusions.ApplyRegexesTextCommand}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </StackPanel>
+                </indexSettings:ExclusionsTab.Style>
+            </indexSettings:ExclusionsTab>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

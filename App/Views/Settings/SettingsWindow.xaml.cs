@@ -7,7 +7,9 @@ using SwiftList.App.ViewModels.Settings;
 namespace SwiftList.App;
 
 // Window chrome and the sidebar's own section-switching. Search box/popup logic lives in
-// SettingsWindow.Search.cs (kept separate to stay under the file-length convention).
+// SettingsWindowSearchExtensions.cs (extension methods, kept separate to stay under the file-length
+// convention) -- the three XAML-wired event handlers below stay here since XAML event wiring resolves
+// by reflection and can't target an extension method.
 public partial class SettingsWindow : Window
 {
     private int _validationErrorCount;
@@ -31,8 +33,14 @@ public partial class SettingsWindow : Window
         // The popup is StaysOpen="True" (see its XAML comment), so it won't auto-close when the whole
         // window loses focus -- close it explicitly instead of leaving a stale flyout floating over
         // whatever the user alt-tabbed to.
-        Deactivated += (_, _) => CloseSearchPopup();
+        Deactivated += (_, _) => this.CloseSearchPopup();
     }
+
+    private void TxtSettingsSearch_TextChanged(object sender, TextChangedEventArgs e) => this.OnSettingsSearchTextChanged();
+
+    private void TxtSettingsSearch_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) => this.OnSettingsSearchKeyDown(e);
+
+    private void LstSearchResults_MouseUp(object sender, MouseButtonEventArgs e) => this.OnSettingsSearchResultsMouseUp(e);
 
     private void OnValidationError(object? sender, ValidationErrorEventArgs e)
     {

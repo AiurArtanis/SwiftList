@@ -268,7 +268,7 @@ public sealed class UsnServicePipeServer : IDisposable
         PipeResponseKind.Status => PipeResponseBinarySerializer.WriteStatusAsync(stream, response.Status ?? new Indexer.Usn.UsnIndexer.IndexerStatus { State = "error" }, token),
         PipeResponseKind.MachineSettings => PipeResponseBinarySerializer.WriteMachineSettingsAsync(stream, response.MachineSettings ?? new MachineSettings(), token),
         PipeResponseKind.FileMetadata => PipeResponseBinarySerializer.WriteFileMetadataAsync(stream, response.FileMetadata ?? new Dictionary<string, FileMetadataEntry>(), token),
-        PipeResponseKind.RecentFiles => PipeResponseBinarySerializer.WriteRecentFilesAsync(stream, response.RecentFiles ?? new List<SearchResult>(), token),
+        PipeResponseKind.RecentFiles => RecentFilesResponseCodec.WriteRecentFilesAsync(stream, response.RecentFiles ?? new List<SearchResult>(), token),
         _ => PipeResponseBinarySerializer.WriteErrorAsync(stream, "Unknown response kind", token)
     };
 

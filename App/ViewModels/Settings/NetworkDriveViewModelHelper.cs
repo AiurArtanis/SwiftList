@@ -3,6 +3,23 @@ using SwiftList.App.Services;
 
 namespace SwiftList.App.ViewModels.Settings;
 
+// Shape common to NetworkDriveSettingsItem/WslSettingsItem/FolderIndexSettingsItem -- lets
+// RunRowAction/RebuildCategory below act on any of the three without duplicating their bodies per
+// category. Implemented implicitly: each item class already had every one of these members before
+// this interface existed, just not declared as implementing anything.
+internal interface INetworkRowItem
+{
+    bool AppliedEnabled { get; set; }
+    bool CanRunRowAction { get; set; }
+    NetworkDriveRowAction RowAction { get; set; }
+    string State { get; set; }
+    string ItemCount { get; set; }
+    bool IsPresent { get; set; }
+    bool IsEnabled { get; set; }
+    bool CanEditEnabled { get; set; }
+    bool CanEditRefreshMode { get; set; }
+}
+
 internal static class NetworkDriveViewModelHelper
 {
     // Split out of NetworkDriveSettingsViewModel to keep that file under the line-count limit.
@@ -11,55 +28,80 @@ internal static class NetworkDriveViewModelHelper
     // These used to persist all three categories' live checkbox state before scanning, which meant clicking
     // "Rebuild" silently applied (and started indexing) a drive/distro/folder someone had just added or
     // re-checked but never confirmed via the window's own Apply/OK.
-    public static void RebuildDrives(NetworkDriveSettingsViewModel vm, SearchService searchService, Action? onTriggerFastRefresh)
+    public static void RebuildDrives(NetworkDriveSettingsViewModel vm, SearchService searchService, Action? onTriggerFastRefresh) =>
+        RebuildCategory(vm.CanRebuildDrives, v => vm.CanRebuildDrives = v, v => vm.NetworkIndexSummary = v, searchService, vm.NetworkDrives, d => d.Drive, onTriggerFastRefresh);
+
+    public static void RebuildWsl(NetworkDriveSettingsViewModel vm, SearchService searchService, Action? onTriggerFastRefresh) =>
+        RebuildCategory(vm.CanRebuildWsl, v => vm.CanRebuildWsl = v, v => vm.WslIndexSummary = v, searchService, vm.WslDrives, w => w.UncPath, onTriggerFastRefresh);
+
+    public static void RebuildFolders(NetworkDriveSettingsViewModel vm, SearchService searchService, Action? onTriggerFastRefresh) =>
+        RebuildCategory(vm.CanRebuildFolders, v => vm.CanRebuildFolders = v, v => vm.FolderIndexSummary = v, searchService, vm.FolderIndexes, f => f.Path, onTriggerFastRefresh);
+
+    private static void RebuildCategory<TItem>(
+        bool canRebuild, Action<bool> setCanRebuild, Action<string> setSummary,
+        SearchService searchService, IEnumerable<TItem> items, Func<TItem, string> getKey, Action? onTriggerFastRefresh)
+        where TItem : INetworkRowItem
     {
-        if (!vm.CanRebuildDrives) return;
+        if (!canRebuild) return;
 
-        vm.CanRebuildDrives = false;
-        vm.NetworkIndexSummary = TranslationManager.Instance["Network_Rebuilding"];
+        setCanRebuild(false);
+        setSummary(TranslationManager.Instance["Network_Rebuilding"]);
         searchService.ConfigureNetworkIndexes();
-        foreach (var drive in vm.NetworkDrives.Where(d => d.AppliedEnabled))
+        foreach (var item in items)
         {
-            searchService.RefreshNetworkDriveIndex(drive.Drive);
-        }
-        onTriggerFastRefresh?.Invoke();
-    }
-
-    public static void RebuildWsl(NetworkDriveSettingsViewModel vm, SearchService searchService, Action? onTriggerFastRefresh)
-    {
-        if (!vm.CanRebuildWsl) return;
-
-        vm.CanRebuildWsl = false;
-        vm.WslIndexSummary = TranslationManager.Instance["Network_Rebuilding"];
-        searchService.ConfigureNetworkIndexes();
-        foreach (var wsl in vm.WslDrives.Where(w => w.AppliedEnabled))
-        {
-            searchService.RefreshNetworkDriveIndex(wsl.UncPath);
-        }
-        onTriggerFastRefresh?.Invoke();
-    }
-
-    public static void RebuildFolders(NetworkDriveSettingsViewModel vm, SearchService searchService, Action? onTriggerFastRefresh)
-    {
-        if (!vm.CanRebuildFolders) return;
-
-        vm.CanRebuildFolders = false;
-        vm.FolderIndexSummary = TranslationManager.Instance["Network_Rebuilding"];
-        searchService.ConfigureNetworkIndexes();
-        foreach (var folder in vm.FolderIndexes.Where(f => f.AppliedEnabled))
-        {
-            searchService.RefreshNetworkDriveIndex(folder.Path);
+            if (item.AppliedEnabled)
+                searchService.RefreshNetworkDriveIndex(getKey(item));
         }
         onTriggerFastRefresh?.Invoke();
     }
 
     public static void RunDriveAction(
-        NetworkDriveSettingsItem item,
-        NetworkDriveSettingsViewModel vm,
-        SearchService searchService,
-        Action onTriggerFastRefresh,
-        HashSet<string> pendingRowRebuilds,
-        HashSet<string> observedRowRebuilds)
+        NetworkDriveSettingsItem item, NetworkDriveSettingsViewModel vm, SearchService searchService,
+        Action onTriggerFastRefresh, HashSet<string> pendingRowRebuilds, HashSet<string> observedRowRebuilds) =>
+        RunRowAction(item, item.Drive, searchService, onTriggerFastRefresh, pendingRowRebuilds, observedRowRebuilds,
+            v => vm.NetworkIndexSummary = v, ResetAfterDelete);
+
+    public static void RunWslDriveAction(
+        WslSettingsItem item, NetworkDriveSettingsViewModel vm, SearchService searchService,
+        Action onTriggerFastRefresh, HashSet<string> pendingRowRebuilds, HashSet<string> observedRowRebuilds) =>
+        RunRowAction(item, item.UncPath, searchService, onTriggerFastRefresh, pendingRowRebuilds, observedRowRebuilds,
+            v => vm.WslIndexSummary = v, ResetAfterDelete);
+
+    public static void RunFolderIndexAction(
+        FolderIndexSettingsItem item, NetworkDriveSettingsViewModel vm, SearchService searchService,
+        Action onTriggerFastRefresh, HashSet<string> pendingRowRebuilds, HashSet<string> observedRowRebuilds) =>
+        RunRowAction(item, item.Path, searchService, onTriggerFastRefresh, pendingRowRebuilds, observedRowRebuilds,
+            v => vm.FolderIndexSummary = v, deleted =>
+            {
+                // Unlike a drive/WSL row (which stays visible as "an OS-resolvable thing you're just not
+                // indexing" even after Delete), a folder row only exists because the user explicitly added
+                // it -- there's no other reason to keep showing it once it's unchecked, whether or not it
+                // ever got far enough to have a cache. Remove it from the list entirely instead of just
+                // resetting its RowAction, and forget any pending-rebuild bookkeeping for it too.
+                pendingRowRebuilds.Remove(item.Path);
+                observedRowRebuilds.Remove(item.Path);
+                vm.RemoveFolderIndex(deleted);
+            });
+
+    // A drive/WSL row stays visible after Delete (it's still "an OS-resolvable thing you're just not
+    // indexing"), so it resets back to a clean unindexed state instead of disappearing.
+    private static void ResetAfterDelete<TItem>(TItem item) where TItem : INetworkRowItem
+    {
+        item.RowAction = NetworkDriveRowAction.None;
+        item.State = item.IsPresent ? TranslationManager.Instance["Network_StatusConnected"] : TranslationManager.Instance["Network_StatusUnavailable"];
+        item.ItemCount = "-";
+        item.CanRunRowAction = false;
+        item.CanEditEnabled = item.IsPresent;
+        item.CanEditRefreshMode = item.IsPresent;
+        if (!item.IsPresent)
+            item.IsEnabled = false;
+    }
+
+    private static void RunRowAction<TItem>(
+        TItem item, string key, SearchService searchService, Action onTriggerFastRefresh,
+        HashSet<string> pendingRowRebuilds, HashSet<string> observedRowRebuilds,
+        Action<string> setRebuildingSummary, Action<TItem> onDeleted)
+        where TItem : INetworkRowItem
     {
         if (!item.CanRunRowAction)
             return;
@@ -68,127 +110,30 @@ internal static class NetworkDriveViewModelHelper
         if (item.RowAction == NetworkDriveRowAction.Rebuild)
         {
             // RowAction == Rebuild only ever shows for a row that's already AppliedEnabled (see
-            // UpdateRowAction), so it's already correctly saved -- no need to re-persist anything here.
+            // NetworkDriveSettingsViewModel.UpdateRowAction), so it's already correctly saved -- no
+            // need to re-persist anything here.
             item.State = TranslationManager.Instance["Network_StatusIndexing"];
             item.ItemCount = "-";
-            vm.NetworkIndexSummary = TranslationManager.Instance["Network_Rebuilding"];
-            pendingRowRebuilds.Add(item.Drive);
-            if (!searchService.RefreshNetworkDriveIndex(item.Drive))
+            setRebuildingSummary(TranslationManager.Instance["Network_Rebuilding"]);
+            pendingRowRebuilds.Add(key);
+            if (!searchService.RefreshNetworkDriveIndex(key))
             {
-                pendingRowRebuilds.Remove(item.Drive);
-                observedRowRebuilds.Remove(item.Drive);
+                pendingRowRebuilds.Remove(key);
+                observedRowRebuilds.Remove(key);
             }
         }
         else if (item.RowAction == NetworkDriveRowAction.Delete)
         {
-            searchService.DeleteNetworkDriveCache(item.Drive);
-            item.RowAction = NetworkDriveRowAction.None;
-            item.State = item.IsPresent ? TranslationManager.Instance["Network_StatusConnected"] : TranslationManager.Instance["Network_StatusUnavailable"];
-            item.ItemCount = "-";
-            item.CanRunRowAction = false;
-            item.CanEditEnabled = item.IsPresent;
-            item.CanEditRefreshMode = item.IsPresent;
-            if (!item.IsPresent)
-                item.IsEnabled = false;
+            searchService.DeleteNetworkDriveCache(key);
+            onDeleted(item);
         }
         else if (item.RowAction == NetworkDriveRowAction.Stop)
         {
             // Don't touch item.State/RowAction here -- the next status poll (RefreshNetworkDrives) will
             // pick up whatever Scheduler.CancelDrive actually settles on and re-derive both correctly.
-            pendingRowRebuilds.Remove(item.Drive);
-            observedRowRebuilds.Remove(item.Drive);
-            searchService.CancelNetworkDriveIndex(item.Drive);
-        }
-        onTriggerFastRefresh?.Invoke();
-    }
-
-    public static void RunWslDriveAction(
-        WslSettingsItem item,
-        NetworkDriveSettingsViewModel vm,
-        SearchService searchService,
-        Action onTriggerFastRefresh,
-        HashSet<string> pendingRowRebuilds,
-        HashSet<string> observedRowRebuilds)
-    {
-        if (!item.CanRunRowAction)
-            return;
-
-        item.CanRunRowAction = false;
-        if (item.RowAction == NetworkDriveRowAction.Rebuild)
-        {
-            // RowAction == Rebuild only ever shows for a row that's already AppliedEnabled (see
-            // UpdateWslRowAction), so it's already correctly saved -- no need to re-persist anything here.
-            item.State = TranslationManager.Instance["Network_StatusIndexing"];
-            item.ItemCount = "-";
-            vm.WslIndexSummary = TranslationManager.Instance["Network_Rebuilding"];
-            pendingRowRebuilds.Add(item.UncPath);
-            if (!searchService.RefreshNetworkDriveIndex(item.UncPath))
-            {
-                pendingRowRebuilds.Remove(item.UncPath);
-                observedRowRebuilds.Remove(item.UncPath);
-            }
-        }
-        else if (item.RowAction == NetworkDriveRowAction.Delete)
-        {
-            searchService.DeleteNetworkDriveCache(item.UncPath);
-            item.RowAction = NetworkDriveRowAction.None;
-            item.State = item.IsPresent ? TranslationManager.Instance["Network_StatusConnected"] : TranslationManager.Instance["Network_StatusUnavailable"];
-            item.ItemCount = "-";
-            item.CanRunRowAction = false;
-            item.CanEditEnabled = item.IsPresent;
-            item.CanEditRefreshMode = item.IsPresent;
-            if (!item.IsPresent)
-                item.IsEnabled = false;
-        }
-        else if (item.RowAction == NetworkDriveRowAction.Stop)
-        {
-            pendingRowRebuilds.Remove(item.UncPath);
-            observedRowRebuilds.Remove(item.UncPath);
-            searchService.CancelNetworkDriveIndex(item.UncPath);
-        }
-        onTriggerFastRefresh?.Invoke();
-    }
-
-    public static void RunFolderIndexAction(
-        FolderIndexSettingsItem item,
-        NetworkDriveSettingsViewModel vm,
-        SearchService searchService,
-        Action onTriggerFastRefresh,
-        HashSet<string> pendingRowRebuilds,
-        HashSet<string> observedRowRebuilds)
-    {
-        if (!item.CanRunRowAction)
-            return;
-
-        item.CanRunRowAction = false;
-        if (item.RowAction == NetworkDriveRowAction.Rebuild)
-        {
-            // RowAction == Rebuild only ever shows for a row that's already AppliedEnabled (see
-            // UpdateFolderRowAction), so it's already correctly saved -- no need to re-persist anything here.
-            item.State = TranslationManager.Instance["Network_StatusIndexing"];
-            item.ItemCount = "-";
-            vm.FolderIndexSummary = TranslationManager.Instance["Network_Rebuilding"];
-            pendingRowRebuilds.Add(item.Path);
-            if (!searchService.RefreshNetworkDriveIndex(item.Path))
-            {
-                pendingRowRebuilds.Remove(item.Path);
-                observedRowRebuilds.Remove(item.Path);
-            }
-        }
-        else if (item.RowAction == NetworkDriveRowAction.Delete)
-        {
-            // Unlike a drive/WSL row, a folder row has no OS-resolvable identity to fall back to once
-            // it's deleted -- remove it from the list entirely instead of just clearing its RowAction.
-            searchService.DeleteNetworkDriveCache(item.Path);
-            pendingRowRebuilds.Remove(item.Path);
-            observedRowRebuilds.Remove(item.Path);
-            vm.RemoveFolderIndex(item);
-        }
-        else if (item.RowAction == NetworkDriveRowAction.Stop)
-        {
-            pendingRowRebuilds.Remove(item.Path);
-            observedRowRebuilds.Remove(item.Path);
-            searchService.CancelNetworkDriveIndex(item.Path);
+            pendingRowRebuilds.Remove(key);
+            observedRowRebuilds.Remove(key);
+            searchService.CancelNetworkDriveIndex(key);
         }
         onTriggerFastRefresh?.Invoke();
     }

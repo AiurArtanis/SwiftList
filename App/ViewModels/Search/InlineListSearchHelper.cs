@@ -36,92 +36,36 @@ internal static class InlineListSearchHelper
                 if (string.IsNullOrWhiteSpace(item))
                     continue;
 
-                var isFullPath = false;
-                try
-                {
-                    isFullPath = Path.IsPathRooted(item);
-                }
-                catch { }
+                if (!TryBuildMatch(item, query, index, token, out var result))
+                    continue;
 
-                var displayName = item;
-                if (isFullPath)
+                listResults.Add(result);
+                index++;
+
+                if (listResults.Count - lastUpdateCount >= 50 || (DateTime.UtcNow - lastUpdateTime).TotalMilliseconds > 100)
                 {
-                    try
+                    var partialResults = new List<AppSearchResult>(uiResults);
+                    if (hasPluginSearchActions && listResults.Count > 0)
                     {
-                        displayName = Path.GetFileName(item.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                        SearchResultMapper.AddSectionHeader(partialResults, TranslationManager.Instance["Search_SectionHeader"], query);
                     }
-                    catch { }
-                }
-                if (string.IsNullOrWhiteSpace(displayName))
-                    displayName = item;
-
-                var isMatch = displayName.Contains(query, StringComparison.OrdinalIgnoreCase);
-                if (!isMatch)
-                {
-                    var highlights = new bool[displayName.Length];
-                    FuzzyHighlightMatcher.MarkFuzzyMatch(displayName, query, highlights, token);
-                    isMatch = highlights.Any(h => h);
-                }
-
-                if (isMatch)
-                {
-                    AppSearchResult result;
-                    if (isFullPath)
+                    foreach (var res in listResults)
                     {
-                        var isDir = false;
-                        try { isDir = Directory.Exists(item); } catch { }
-                        result = new AppSearchResult
-                        {
-                            Name = displayName,
-                            FullPath = item,
-                            ParentDir = string.Empty,
-                            ContextDirectory = isDir ? item : (Path.GetDirectoryName(item) ?? string.Empty),
-                            IsDir = isDir,
-                            Drive = Path.GetPathRoot(item)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, Path.VolumeSeparatorChar) ?? string.Empty,
-                            ResultKind = "File",
-                            Index = index,
-                            SearchQuery = query
-                        };
+                        res.Index = partialResults.Count;
+                        partialResults.Add(res);
                     }
-                    else
-                    {
-                        result = new AppSearchResult
-                        {
-                            Name = displayName,
-                            FullPath = item,
-                            ResultKind = "ListItem",
-                            Index = index,
-                            SearchQuery = query
-                        };
-                    }
-                    listResults.Add(result);
-                    index++;
 
-                    if (listResults.Count - lastUpdateCount >= 50 || (DateTime.UtcNow - lastUpdateTime).TotalMilliseconds > 100)
+                    System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
                     {
-                        var partialResults = new List<AppSearchResult>(uiResults);
-                        if (hasPluginSearchActions && listResults.Count > 0)
+                        if (searchVersion == getLatestSearchVersion() && !token.IsCancellationRequested)
                         {
-                            SearchResultMapper.AddSectionHeader(partialResults, TranslationManager.Instance["Search_SectionHeader"], query);
+                            var status = string.Format(TranslationManager.Instance["Search_StatsFilesOnly"], partialResults.Count);
+                            onResultsUpdated(partialResults, status, false);
                         }
-                        foreach (var res in listResults)
-                        {
-                            res.Index = partialResults.Count;
-                            partialResults.Add(res);
-                        }
+                    }));
 
-                        System.Windows.Application.Current.Dispatcher.Invoke(new Action(() =>
-                        {
-                            if (searchVersion == getLatestSearchVersion() && !token.IsCancellationRequested)
-                            {
-                                var status = string.Format(TranslationManager.Instance["Search_StatsFilesOnly"], partialResults.Count);
-                                onResultsUpdated(partialResults, status, false);
-                            }
-                        }));
-
-                        lastUpdateCount = listResults.Count;
-                        lastUpdateTime = DateTime.UtcNow;
-                    }
+                    lastUpdateCount = listResults.Count;
+                    lastUpdateTime = DateTime.UtcNow;
                 }
             }
         }
@@ -175,69 +119,81 @@ internal static class InlineListSearchHelper
             if (string.IsNullOrWhiteSpace(item))
                 continue;
 
-            var isFullPath = false;
-            try
-            {
-                isFullPath = Path.IsPathRooted(item);
-            }
-            catch { }
+            if (!TryBuildMatch(item, query, index, token, out var result))
+                continue;
 
-            var displayName = item;
-            if (isFullPath)
-            {
-                try
-                {
-                    displayName = Path.GetFileName(item.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                }
-                catch { }
-            }
-            if (string.IsNullOrWhiteSpace(displayName))
-                displayName = item;
-
-            var isMatch = displayName.Contains(query, StringComparison.OrdinalIgnoreCase);
-            if (!isMatch)
-            {
-                var highlights = new bool[displayName.Length];
-                FuzzyHighlightMatcher.MarkFuzzyMatch(displayName, query, highlights, token);
-                isMatch = highlights.Any(h => h);
-            }
-
-            if (isMatch)
-            {
-                AppSearchResult result;
-                if (isFullPath)
-                {
-                    var isDir = false;
-                    try { isDir = Directory.Exists(item); } catch { }
-                    result = new AppSearchResult
-                    {
-                        Name = displayName,
-                        FullPath = item,
-                        ParentDir = string.Empty,
-                        ContextDirectory = isDir ? item : (Path.GetDirectoryName(item) ?? string.Empty),
-                        IsDir = isDir,
-                        Drive = Path.GetPathRoot(item)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, Path.VolumeSeparatorChar) ?? string.Empty,
-                        ResultKind = "File",
-                        Index = index,
-                        SearchQuery = query
-                    };
-                }
-                else
-                {
-                    result = new AppSearchResult
-                    {
-                        Name = displayName,
-                        FullPath = item,
-                        ResultKind = "ListItem",
-                        Index = index,
-                        SearchQuery = query
-                    };
-                }
-                results.Add(result);
-                index++;
-            }
+            results.Add(result);
+            index++;
         }
         return results;
+    }
+
+    // Shared by PerformInlineListProviderSearch and GetLocalMatches: both walk the same raw item
+    // list, judging fuzzy-match against the display name and building the same AppSearchResult shape.
+    private static bool TryBuildMatch(string item, string query, int index, CancellationToken token, out AppSearchResult result)
+    {
+        var isFullPath = false;
+        try
+        {
+            isFullPath = Path.IsPathRooted(item);
+        }
+        catch { }
+
+        var displayName = item;
+        if (isFullPath)
+        {
+            try
+            {
+                displayName = Path.GetFileName(item.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            }
+            catch { }
+        }
+        if (string.IsNullOrWhiteSpace(displayName))
+            displayName = item;
+
+        var isMatch = displayName.Contains(query, StringComparison.OrdinalIgnoreCase);
+        if (!isMatch)
+        {
+            var highlights = new bool[displayName.Length];
+            FuzzyHighlightMatcher.MarkFuzzyMatch(displayName, query, highlights, token);
+            isMatch = highlights.Any(h => h);
+        }
+
+        if (!isMatch)
+        {
+            result = null!;
+            return false;
+        }
+
+        if (isFullPath)
+        {
+            var isDir = false;
+            try { isDir = Directory.Exists(item); } catch { }
+            result = new AppSearchResult
+            {
+                Name = displayName,
+                FullPath = item,
+                ParentDir = string.Empty,
+                ContextDirectory = isDir ? item : (Path.GetDirectoryName(item) ?? string.Empty),
+                IsDir = isDir,
+                Drive = Path.GetPathRoot(item)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, Path.VolumeSeparatorChar) ?? string.Empty,
+                ResultKind = "File",
+                Index = index,
+                SearchQuery = query
+            };
+        }
+        else
+        {
+            result = new AppSearchResult
+            {
+                Name = displayName,
+                FullPath = item,
+                ResultKind = "ListItem",
+                Index = index,
+                SearchQuery = query
+            };
+        }
+        return true;
     }
 
     public static List<AppSearchResult> MergeLocalMatches(
@@ -277,8 +233,15 @@ internal static class InlineListSearchHelper
         }
 
         combinedResults.AddRange(instantItems);
-        SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_LocalFolderHeader"] ?? "Current Folder", query);
-        combinedResults.AddRange(localMatches);
+        // Guarded the same way the "Global Search" header below is -- an empty "Current Folder"
+        // section with nothing under it is misleading on its own, and (since a SectionHeader isn't an
+        // "ordinary" File/Application row) it would also survive a query-token filter that finds
+        // nothing, leaving a header with no results and no "no results" placeholder either.
+        if (localMatches.Count > 0)
+        {
+            SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_LocalFolderHeader"] ?? "Current Folder", query);
+            combinedResults.AddRange(localMatches);
+        }
 
         if (globalItems.Count > 0)
         {

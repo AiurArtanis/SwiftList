@@ -3,7 +3,7 @@ using SwiftList.App.Services;
 
 namespace SwiftList.App.ViewModels.Settings;
 
-public class FolderIndexSettingsItem : ViewModelBase
+public class FolderIndexSettingsItem : ViewModelBase, INetworkRowItem
 {
     private bool _isEnabled;
     private string _refreshMode = "Manual";

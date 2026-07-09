@@ -61,4 +61,10 @@ internal static class NetworkDriveSettingsHelper
         "Daily" => "Daily",
         _ => "Manual"
     };
+
+    // "\\wsl$\..."/"\\wsl.localhost\..." specifically -- NOT every "\\"-prefixed path, so a real UNC
+    // share ("\\server\share", now indexable via the folder-index feature) isn't misclassified as a
+    // WSL distro just for sharing the same leading "\\".
+    private static readonly string[] WslUncPrefixes = { @"\\wsl$\", @"\\wsl.localhost\" };
+    public static bool IsWslPath(string path) => WslUncPrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
 }

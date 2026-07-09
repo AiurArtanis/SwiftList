@@ -1,6 +1,6 @@
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
-internal sealed partial class Scheduler : IDisposable
+internal sealed class Scheduler : IDisposable
 {
     private readonly object _gate = new();
     private readonly Dictionary<string, CancellationTokenSource> _debounceCts = new(StringComparer.OrdinalIgnoreCase);
@@ -23,6 +23,7 @@ internal sealed partial class Scheduler : IDisposable
     private readonly Action<string, NetworkIndex> _onRefreshFinished;
     private readonly Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> _onPublishCheckpoint;
     private readonly Func<string, FileRecordStore?> _getPreviousStore;
+    private readonly SchedulerQueueRunner _queueRunner;
 
     public Scheduler(Action<string, string> onWatcherEnsure, Action<string> onWatcherRemove, Action<string, string, int?, string?> setStatus,
         Action<string, NetworkIndex> onRefreshFinished, Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> onPublishCheckpoint,
@@ -31,7 +32,11 @@ internal sealed partial class Scheduler : IDisposable
         _onWatcherEnsure = onWatcherEnsure; _onWatcherRemove = onWatcherRemove; _setStatus = setStatus;
         _onRefreshFinished = onRefreshFinished; _onPublishCheckpoint = onPublishCheckpoint;
         _getPreviousStore = getPreviousStore;
+        _queueRunner = new SchedulerQueueRunner(_gate, _debounceCts, _activeCts, _pendingRefreshDrives, _lifetimeCts,
+            setStatus, getPreviousStore, onPublishCheckpoint, onRefreshFinished);
     }
+
+    public void QueueRefreshDrive(string drive, string reason) => _queueRunner.QueueRefreshDrive(drive, reason);
 
     public void StartRefresh(
         IReadOnlyList<string> drives,
