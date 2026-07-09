@@ -320,6 +320,7 @@
   "Plugins_TypeInlineSearchAdapter": "Inline Search Adapter",
   "Plugins_TypeFilePreviewProvider": "File Preview Provider",
   "Plugins_TypeQuickNavigationProvider": "Quick Navigation",
+  "QuickNav_EmptySubmenu": "(Empty)",
   "Plugins_TypeTranslationProvider": "Language Packs",
   "Plugins_TypeThemeProvider": "Theme Packs",
   "Plugins_TypeThumbnailProvider": "Thumbnail Provider",

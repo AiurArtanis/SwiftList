@@ -320,6 +320,7 @@
   "Plugins_TypeInlineSearchAdapter": "内联搜索适配器",
   "Plugins_TypeFilePreviewProvider": "预览提供者",
   "Plugins_TypeQuickNavigationProvider": "快捷导航",
+  "QuickNav_EmptySubmenu": "(空)",
   "Plugins_TypeTranslationProvider": "语言包",
   "Plugins_TypeThemeProvider": "主题包",
   "Plugins_TypeThumbnailProvider": "缩略图提供者",

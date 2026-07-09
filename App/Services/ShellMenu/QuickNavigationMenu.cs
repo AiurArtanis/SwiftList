@@ -4,6 +4,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Media.Imaging;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 using Imaging = System.Windows.Interop.Imaging;
 using MenuItem = System.Windows.Controls.MenuItem;
 using ContextMenu = System.Windows.Controls.ContextMenu;
@@ -261,5 +262,13 @@ public static class QuickNavigationMenu
         menuItem.Items.Clear();
         foreach (var subItem in provider.GetMenuItems(result, item.SubMenuHandle))
             menuItem.Items.Add(CreateMenuItem(subItem, result, provider, contextMenu, dialogHwndAtTrigger));
+
+        // A provider can legitimately return nothing here -- e.g. its backing data (favorites, a plugin's
+        // own cache) hasn't finished loading yet this soon after app startup, not just "this folder is
+        // empty". Applies at every level (root included), since this is the one shared load path every
+        // submenu -- root or nested -- goes through. Without this, the popup opens with zero items: a
+        // near-invisible, oddly-sized "bubble" instead of a normal-looking submenu.
+        if (menuItem.Items.Count == 0)
+            menuItem.Items.Add(new MenuItem { Header = TranslationService.Get("QuickNav_EmptySubmenu") ?? "(Empty)", IsEnabled = false });
     }
 }
