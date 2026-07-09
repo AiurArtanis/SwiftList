@@ -6,6 +6,8 @@ namespace SwiftList.App.Services;
 
 public static class ServiceInstallManager
 {
+    private const int InstallerTimeoutMs = 30000;
+    private const int StartTimeoutMs = 10000;
     private static int _silentInstallInFlight;
 
     public static string GetServiceExePath()
@@ -24,18 +26,10 @@ public static class ServiceInstallManager
         {
             var serviceExePath = GetServiceExePath();
             Logger.Log($"[ServiceInstallManager] Requesting service installation: {serviceExePath} --install");
-            var psi = new ProcessStartInfo
-            {
-                FileName = serviceExePath,
-                Arguments = "--install",
-                Verb = "runas",
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-
-            var proc = Process.Start(psi);
-            proc?.WaitForExit();
-            onCompleted?.Invoke();
+            if (RunElevatedInstaller("Service installation", serviceExePath))
+                onCompleted?.Invoke();
+            else
+                onError?.Invoke(new InvalidOperationException("Service installation did not complete successfully."));
         }
         catch (Exception ex)
         {
@@ -56,17 +50,19 @@ public static class ServiceInstallManager
         {
             var serviceExePath = GetServiceExePath();
             Logger.Log($"[ServiceInstallManager] Attempting silent service installation: {serviceExePath}");
-            var psi = new ProcessStartInfo
-            {
-                FileName = serviceExePath,
-                Arguments = "--install",
-                Verb = "runas",
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
+            if (!RunElevatedInstaller("Silent service installation", serviceExePath))
+                return true;
 
-            var proc = Process.Start(psi);
-            proc?.WaitForExit();
+            if (!IsInstalledAtCurrentPath())
+            {
+                Logger.Log("[ServiceInstallManager] Silent install finished but SwiftListService is not registered at the current service path.", LogLevel.Error);
+                return true;
+            }
+
+            if (TryStartWithoutElevation())
+                Logger.Log("[ServiceInstallManager] SwiftListService is registered at the current path and start command succeeded.");
+            else
+                Logger.Log("[ServiceInstallManager] SwiftListService is registered at the current path but start command failed.", LogLevel.Warn);
         }
         catch (Exception ex)
         {
@@ -79,6 +75,35 @@ public static class ServiceInstallManager
         }
 
         return true;
+    }
+
+    private static bool RunElevatedInstaller(string operation, string serviceExePath)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = serviceExePath,
+            Arguments = "--install",
+            Verb = "runas",
+            UseShellExecute = true,
+            WindowStyle = ProcessWindowStyle.Hidden
+        };
+
+        using var proc = Process.Start(psi);
+        if (proc == null)
+        {
+            Logger.Log($"[ServiceInstallManager] {operation} failed: Process.Start returned null.", LogLevel.Error);
+            return false;
+        }
+
+        if (!proc.WaitForExit(InstallerTimeoutMs))
+        {
+            Logger.Log($"[ServiceInstallManager] {operation} timed out after {InstallerTimeoutMs}ms.", LogLevel.Error);
+            TryKill(proc);
+            return false;
+        }
+
+        Logger.Log($"[ServiceInstallManager] {operation} exited with code {proc.ExitCode}.");
+        return proc.ExitCode == 0;
     }
 
     /// <summary>
@@ -142,9 +167,16 @@ public static class ServiceInstallManager
             using var proc = Process.Start(psi);
             if (proc == null)
                 return false;
-            proc.WaitForExit(10000);
+            if (!proc.WaitForExit(StartTimeoutMs))
+            {
+                Logger.Log($"[ServiceInstallManager] Non-elevated start timed out after {StartTimeoutMs}ms.", LogLevel.Warn);
+                TryKill(proc);
+                return false;
+            }
             // 0 = started; 1056 = ERROR_SERVICE_ALREADY_RUNNING.
-            return proc.ExitCode == 0 || proc.ExitCode == 1056;
+            var success = proc.ExitCode == 0 || proc.ExitCode == 1056;
+            Logger.Log($"[ServiceInstallManager] Non-elevated start exited with code {proc.ExitCode}.", success ? LogLevel.Info : LogLevel.Warn);
+            return success;
         }
         catch (Exception ex)
         {
@@ -159,4 +191,15 @@ public static class ServiceInstallManager
     /// </summary>
     public static bool TryStartExistingService()
         => IsInstalledAtCurrentPath() && TryStartWithoutElevation();
+
+    private static void TryKill(Process process)
+    {
+        try
+        {
+            process.Kill(entireProcessTree: true);
+        }
+        catch
+        {
+        }
+    }
 }

@@ -90,64 +90,34 @@ static class Program
 
             // Clean up any existing service instance to prevent "1073: service already exists" errors
             Logger.Log("Cleaning up existing service instance before install.");
-            var psiStop = new ProcessStartInfo
-            {
-                FileName = "sc.exe",
-                Arguments = "stop SwiftListService",
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-            Process.Start(psiStop)?.WaitForExit();
-
-            var psiDelete = new ProcessStartInfo
-            {
-                FileName = "sc.exe",
-                Arguments = "delete SwiftListService",
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-            Process.Start(psiDelete)?.WaitForExit();
+            ServiceControlRunner.Run("stop SwiftListService", 0, 1060, 1062);
+            ServiceControlRunner.Run("delete SwiftListService", 0, 1060);
 
             Logger.Log($"Installing service: sc.exe create SwiftListService binPath=\"{serviceExePath} --service\"");
 
-            var psiCreate = new ProcessStartInfo
-            {
-                FileName = "sc.exe",
-                Arguments = $"create SwiftListService binPath= \"\\\"{serviceExePath}\\\" --service\" start= auto DisplayName= \"SwiftList Background Service\"",
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-            var proc = Process.Start(psiCreate);
-            proc?.WaitForExit();
+            var create = ServiceControlRunner.Run($"create SwiftListService binPath= \"\\\"{serviceExePath}\\\" --service\" start= auto DisplayName= \"SwiftList Background Service\"");
+            if (!create.IsSuccess(0))
+                throw new InvalidOperationException("sc create failed. See service.log for details.");
 
             // Grant all authenticated users START/STOP/QUERY on the service so the non-elevated app can
             // start and stop it without a UAC prompt every time. Install is already elevated here, so this
             // one-time descriptor change is free. SYSTEM and Administrators keep full control.
             // AU ACE = CC LC SW RP WP LO RC = query-config/status, enum-deps, start, stop, interrogate, read.
             Logger.Log("Setting service security descriptor to allow non-admin start/stop.");
-            var psiSdset = new ProcessStartInfo
-            {
-                FileName = "sc.exe",
-                Arguments = "sdset SwiftListService D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)(A;;CCLCSWRPWPLORC;;;AU)S:(AU;FA;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;WD)",
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-            Process.Start(psiSdset)?.WaitForExit();
+            var sdset = ServiceControlRunner.Run("sdset SwiftListService D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;IU)(A;;CCLCSWLOCRRC;;;SU)(A;;CCLCSWRPWPLORC;;;AU)S:(AU;FA;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;WD)");
+            if (!sdset.IsSuccess(0))
+                Logger.Log("[ServiceInstaller] Service was created but sdset failed; non-admin start/stop may require elevation.", LogLevel.Warn);
 
             Logger.Log("Starting service: sc.exe start SwiftListService");
-            var psiStart = new ProcessStartInfo
-            {
-                FileName = "sc.exe",
-                Arguments = "start SwiftListService",
-                UseShellExecute = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-            Process.Start(psiStart)?.WaitForExit();
+            var start = ServiceControlRunner.Run("start SwiftListService", 0, 1056);
+            if (!start.IsSuccess(0, 1056))
+                throw new InvalidOperationException("sc start failed. See service.log for details.");
 
             Console.WriteLine("Service installed and started successfully!");
         }
         catch (Exception ex)
         {
+            Environment.ExitCode = 1;
             Console.WriteLine($"Failed to install service: {ex.Message}");
             Logger.Log($"Failed to install service: {ex}", LogLevel.Error);
         }
@@ -158,27 +128,18 @@ static class Program
         try
         {
             Logger.Log("Stopping service: sc.exe stop SwiftListService");
-            var psiStop = new ProcessStartInfo
-            {
-                FileName = "sc.exe",
-                Arguments = "stop SwiftListService",
-                UseShellExecute = true
-            };
-            Process.Start(psiStop)?.WaitForExit();
+            ServiceControlRunner.Run("stop SwiftListService", 0, 1060, 1062);
 
             Logger.Log("Deleting service: sc.exe delete SwiftListService");
-            var psiDelete = new ProcessStartInfo
-            {
-                FileName = "sc.exe",
-                Arguments = "delete SwiftListService",
-                UseShellExecute = true
-            };
-            Process.Start(psiDelete)?.WaitForExit();
+            var delete = ServiceControlRunner.Run("delete SwiftListService", 0, 1060);
+            if (!delete.IsSuccess(0, 1060))
+                throw new InvalidOperationException("sc delete failed. See service.log for details.");
 
             Console.WriteLine("Service uninstalled successfully!");
         }
         catch (Exception ex)
         {
+            Environment.ExitCode = 1;
             Console.WriteLine($"Failed to uninstall service: {ex.Message}");
             Logger.Log($"Failed to uninstall service: {ex}", LogLevel.Error);
         }
