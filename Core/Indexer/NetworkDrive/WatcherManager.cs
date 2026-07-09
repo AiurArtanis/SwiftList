@@ -134,7 +134,7 @@ internal class WatcherManager : IDisposable
                 if (exclusionRules.IsExcludedPath(logicalPath, isDirectory))
                     changed = index.ApplyDeleted(logicalPath);
                 else
-                    changed = index.ApplyCreatedOrChanged(drive + @":\", logicalPath, exclusionRules);
+                    changed = index.ApplyCreatedOrChanged(PathHelpers.BuildSourceRoot(drive), logicalPath, exclusionRules);
             }
 
             if (changed)
@@ -168,7 +168,7 @@ internal class WatcherManager : IDisposable
             var newIsDirectory = Directory.Exists(newPath);
             var changed = index.ApplyDeleted(logicalOldPath);
             if (!exclusionRules.IsExcludedPath(logicalNewPath, newIsDirectory))
-                changed |= index.ApplyCreatedOrChanged(drive + @":\", logicalNewPath, exclusionRules);
+                changed |= index.ApplyCreatedOrChanged(PathHelpers.BuildSourceRoot(drive), logicalNewPath, exclusionRules);
 
             if (changed)
             {

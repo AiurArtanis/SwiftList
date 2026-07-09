@@ -10,6 +10,16 @@ internal static class PathHelpers
         return normalized;
     }
 
+    // A bare drive letter ("Z") needs ":\" appended to form a root. A UNC path just needs a trailing
+    // separator. Anything else (a folder-index target, e.g. "Z:\AV") is already a full path -- appending
+    // ":\" there would produce "Z:\AV:\", a colon in the middle of the path that can never resolve.
+    // Mirrors RuntimeIndex.ComputeSourceRoot (same three cases, different owner -- WatcherManager needs
+    // this to translate a raw drive key back into a root before it can diff a watcher event against it).
+    public static string BuildSourceRoot(string sourceKey) =>
+        sourceKey.StartsWith(@"\\") || sourceKey.StartsWith(@"//") ? (sourceKey.EndsWith(@"\") ? sourceKey : sourceKey + @"\")
+        : sourceKey.Length == 1 ? sourceKey + @":\"
+        : sourceKey.EndsWith(@"\") ? sourceKey : sourceKey + @"\";
+
     public static UInt128 HashPath(string path)
     {
         var normalized = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
