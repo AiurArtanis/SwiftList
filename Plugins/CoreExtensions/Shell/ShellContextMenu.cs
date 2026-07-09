@@ -66,6 +66,11 @@ public class ShellMenuSession : IDisposable
     private static Dispatcher? _staDispatcher;
     private static uint _staThreadId;
     private static readonly object _staLock = new();
+    // Sticky: a machine where the STA worker never finishes starting (broken/hooked shell extension,
+    // DCOM policy, security software) will fail the exact same way every time. Retrying per-call would
+    // just spawn another thread wedged forever in OleInitialize on top of the last one -- give up once,
+    // permanently, for this process.
+    private static bool _staInitFailed;
 
     [DllImport("ole32.dll")]
     private static extern int OleInitialize(IntPtr pvReserved);
@@ -84,13 +89,15 @@ public class ShellMenuSession : IDisposable
 
     private const uint ThreadTerminateAccess = 0x0001;
 
-    private static Dispatcher StaDispatcher
+    private static Dispatcher? StaDispatcher
     {
         get
         {
+            if (_staInitFailed) return null;
             if (_staDispatcher != null) return _staDispatcher;
             lock (_staLock)
             {
+                if (_staInitFailed) return null;
                 if (_staDispatcher != null) return _staDispatcher;
                 using var ready = new ManualResetEventSlim();
                 var thread = new Thread(() =>
@@ -111,7 +118,20 @@ public class ShellMenuSession : IDisposable
                 };
                 thread.SetApartmentState(ApartmentState.STA);
                 thread.Start();
-                ready.Wait();
+
+                // If OleInitialize/thread startup itself never completes on this machine, this used to
+                // wait forever while holding _staLock -- wedging every other caller (including the
+                // startup warm-up) on this same lock right along with it. The thread we just leaked stays
+                // a harmless background thread (IsBackground=true won't block process exit); forcibly
+                // killing it mid-OleInitialize risks corrupting COM state for the rest of the process, so
+                // it's simply abandoned.
+                if (!ready.Wait(StaInvokeTimeoutMs))
+                {
+                    Logger.Log($"[ShellMenuSession] STA worker failed to start within {StaInvokeTimeoutMs}ms; disabling the native shell context menu for this session.", LogLevel.Error);
+                    _staInitFailed = true;
+                    return null;
+                }
+
                 return _staDispatcher!;
             }
         }
@@ -311,6 +331,9 @@ public class ShellMenuSession : IDisposable
     private static T? TryInvoke<T>(Func<T> callback)
     {
         var dispatcher = StaDispatcher;
+        if (dispatcher == null)
+            return default;
+
         var operation = dispatcher.InvokeAsync(callback);
         if (operation.Wait(TimeSpan.FromMilliseconds(StaInvokeTimeoutMs)) == DispatcherOperationStatus.Completed)
             return operation.Result;
