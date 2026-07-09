@@ -146,7 +146,25 @@
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0" Background="{DynamicResource SidebarBg}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,1,0">
-                        <ListBox x:Name="LstSections" BorderThickness="0" Background="Transparent" Margin="0,14"
+                        <DockPanel LastChildFill="True">
+                            <!-- Docked Bottom so "About" always sits at the sidebar's bottom edge regardless
+                                 of window height, instead of just trailing the last item in the main list. -->
+                            <ListBox x:Name="LstSectionsBottom" DockPanel.Dock="Bottom" BorderThickness="0" Background="Transparent"
+                                     Margin="0,0,0,14"
+                                     FontSize="15"
+                                     ItemContainerStyle="{StaticResource SidebarItemStyle}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                     SelectionChanged="LstSectionsBottom_SelectionChanged">
+                                <ListBoxItem Tag="About">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" Margin="0,0,12,0"/>
+                                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_About]}"/>
+                                    </StackPanel>
+                                </ListBoxItem>
+                            </ListBox>
+                            <Border DockPanel.Dock="Bottom" Height="1" Background="{DynamicResource BorderColor}" Margin="12,4"/>
+                            <ListBox x:Name="LstSections" BorderThickness="0" Background="Transparent" Margin="0,14"
                                  FontSize="15"
                                  ItemContainerStyle="{StaticResource SidebarItemStyle}"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -199,13 +217,8 @@
                                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_StartupPanel]}"/>
                                 </StackPanel>
                             </ListBoxItem>
-                            <ListBoxItem Tag="About">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" Margin="0,0,12,0"/>
-                                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_About]}"/>
-                                </StackPanel>
-                            </ListBoxItem>
                         </ListBox>
+                        </DockPanel>
                     </Border>
 
                     <!-- AdornerDecorator: this custom-chrome window (WindowStyle="None") has no default

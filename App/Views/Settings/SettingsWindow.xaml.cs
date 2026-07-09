@@ -19,7 +19,7 @@ public partial class SettingsWindow : Window
         ThemedWindowIconHelper.Apply(TitleBarLogo, this);
         var vm = new SettingsViewModel();
         DataContext = vm;
-        Loaded += (_, _) => { if (LstSections.SelectedItem == null) LstSections.SelectedIndex = 0; };
+        Loaded += (_, _) => { if (LstSections.SelectedItem == null && LstSectionsBottom.SelectedItem == null) LstSections.SelectedIndex = 0; };
         Closed += (_, _) =>
         {
             vm.Cleanup();
@@ -49,15 +49,25 @@ public partial class SettingsWindow : Window
 
     public void SelectSection(string tag)
     {
-        if (LstSections == null)
+        if (LstSections == null || LstSectionsBottom == null)
             return;
 
         foreach (ListBoxItem item in LstSections.Items)
         {
             if (item.Tag as string == tag)
             {
+                LstSectionsBottom.SelectedItem = null;
                 LstSections.SelectedItem = item;
-                break;
+                return;
+            }
+        }
+        foreach (ListBoxItem item in LstSectionsBottom.Items)
+        {
+            if (item.Tag as string == tag)
+            {
+                LstSections.SelectedItem = null;
+                LstSectionsBottom.SelectedItem = item;
+                return;
             }
         }
     }
@@ -72,7 +82,28 @@ public partial class SettingsWindow : Window
 
     private void BtnClose_Click(object sender, RoutedEventArgs e) => Close();
 
+    // The bottom-docked "About" entry lives in its own ListBox (see XAML comment on LstSectionsBottom) so
+    // it can be pinned to the sidebar's bottom edge -- both lists feed the same page-switching logic below
+    // and clear each other's selection so only one item is ever highlighted at a time.
     private void LstSections_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (LstSections.SelectedItem == null)
+            return;
+
+        LstSectionsBottom.SelectedItem = null;
+        ApplySelectedSection((LstSections.SelectedItem as ListBoxItem)?.Tag as string ?? "Service");
+    }
+
+    private void LstSectionsBottom_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (LstSectionsBottom.SelectedItem == null)
+            return;
+
+        LstSections.SelectedItem = null;
+        ApplySelectedSection((LstSectionsBottom.SelectedItem as ListBoxItem)?.Tag as string ?? "About");
+    }
+
+    private void ApplySelectedSection(string tag)
     {
         if (PageIndex == null)
             return;
@@ -80,8 +111,6 @@ public partial class SettingsWindow : Window
         // Covers navigating via the sidebar directly while a search popup happens to be open (typed a
         // query, then clicked a section instead of a result) -- clearing the text closes the popup too.
         TxtSettingsSearch.Text = string.Empty;
-
-        var tag = (LstSections.SelectedItem as ListBoxItem)?.Tag as string ?? "Service";
 
         PageService?.Visibility = tag == "Service" ? Visibility.Visible : Visibility.Collapsed;
 
