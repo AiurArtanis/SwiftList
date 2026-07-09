@@ -249,38 +249,26 @@ public class SettingsViewModel : ViewModelBase
         var settings = _latestMachineSettings;
         var networkStatuses = _latestNetworkStatuses;
         var isServiceReady = status.State != "error";
-        var isLocalDriveBusy = status.Drives.Any(d => d.State is "indexing" or "pending");
-        var isNetworkBusy = networkStatuses.Any(s => s.State is "indexing" or "pending");
-        // "indexing"/"pending" are set on this shared status both for the real startup scan AND for a
-        // later on-demand single-drive rebuild (SearchEngineDriveMaintenance.ForceRebuildDrive) -- the
-        // two are indistinguishable from status.State alone. Only "loading-cache" is unambiguous (it only
-        // ever happens once, before the settings page's own data -- local drives, machine settings -- has
-        // even loaded, so nothing is safe to save yet); "indexing"/"pending"/IsMaintenanceBusy always
-        // coincide with isLocalDriveBusy being true too, so treat those as local-drive-specific busy-ness,
-        // not general service-lifecycle busy-ness. Being unable to reach the service at all is the other
-        // unambiguous case -- nothing is safe to apply then either.
-        var isServiceLifecycleBusy = !isServiceReady || status.State == "loading-cache"
-            || (!isLocalDriveBusy && (status.State is "indexing" or "pending" || status.IsMaintenanceBusy));
         Service.UpdateStatus(status);
         LocalDrive.UpdateStatus(status, settings);
         // Network settings come from UserSettings.Load() (a separate local file, read once at startup)
         // and network indexing is its own subsystem -- neither depends on the local USN indexer's own
-        // lifecycle (loading-cache/indexing/pending/IsMaintenanceBusy are all local-indexer-specific, not
-        // signals that network data or connectivity isn't ready). The only thing that legitimately blocks
-        // network settings from a "service" perspective is not being able to reach the service at all.
+        // lifecycle. The only thing that legitimately blocks network settings from a "service"
+        // perspective is not being able to reach the service at all.
         NetworkDrive.RefreshNetworkDrives(_userSettings, networkStatuses, !isServiceReady);
         // The WSL tab hides itself once its drive list empties out (e.g. the last distro was removed).
         // If it was the active tab, fall back to Network so the page never lands on a hidden tab.
         if (LocalDrive.SelectedTab == "Wsl" && !NetworkDrive.IsWslPanelVisible)
             LocalDrive.SelectedTab = "Network";
-        // The shared Apply/OK button is different: it commits both sides' settings in one shot, so it
-        // should stay disabled while EITHER side is busy, even though neither side blocks the other's own
-        // panel controls.
-        var isBusy = isServiceLifecycleBusy || isLocalDriveBusy || isNetworkBusy;
+        // The shared Apply/OK button only needs the service to be reachable: MachineSettings is loaded
+        // synchronously at SearchEngine construction, before the indexer's own loading-cache/indexing/
+        // pending lifecycle even starts, so an active scan or cache load never means the data Apply()
+        // would read and save is stale or empty -- only an unreachable service does (RefreshLists()
+        // falls back to an empty MachineSettings() in that case).
         IsServiceReady = isServiceReady;
         Log.IsServiceReady = isServiceReady;
-        IsBusy = isBusy;
-        CanApply = !isBusy;
+        IsBusy = !isServiceReady;
+        CanApply = isServiceReady;
     }
 
 }
