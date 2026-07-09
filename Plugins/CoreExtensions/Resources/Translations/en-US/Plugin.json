@@ -16,6 +16,7 @@
   "Column_TypeExtFile": "{0} File",
   "WebUrl_Name": "Web Address",
   "CoreExtensions_QueryTokenProvider_Name": "Query Sort/Filter (:[SCMA] / .ext)",
+  "CoreExtensions_PathExclusionProvider_Name": "Path Match (::expression)",
   "WebUrl_OpenHint": "Enter or click to open in your browser",
   "Env_Name": "Environment Variables",
   "Env_PathNotExist": "Path (Not Exist)",

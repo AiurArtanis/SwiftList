@@ -8,7 +8,7 @@ using SwiftList.App.ViewModels.Service;
 
 namespace SwiftList.App.ViewModels.Search;
 
-public class SearchViewModel : ViewModelBase, IDisposable
+public partial class SearchViewModel : ViewModelBase, IDisposable
 {
     private const int FullSearchFileLimit = 1000;
     private const int FullSearchAppLimit = 0;
@@ -132,93 +132,6 @@ public class SearchViewModel : ViewModelBase, IDisposable
     public string LoadingStats => _serviceStatus.LoadingStats;
     public Visibility InstallButtonVisibility => _serviceStatus.InstallButtonVisibility;
     public ICommand InstallServiceCommand => _serviceStatus.InstallServiceCommand;
-
-    // ==========================================
-    // Typing Debounce & Search logic
-    // ==========================================
-
-    private void OnAdvancedQueryChanged(string query)
-    {
-        var cleanQuery = SearchQuerySortParser.Strip(query, out var tokens);
-        _queryTokens = tokens;
-
-        if (string.IsNullOrWhiteSpace(cleanQuery))
-        {
-            ClearResults();
-            return;
-        }
-
-        _searchEngine.QueueSearch(
-            cleanQuery,
-            searchScope: null,
-            isInlineSearchContext: false,
-            fileLimit: FullSearchFileLimit,
-            appLimit: FullSearchAppLimit,
-            resultMapper: (fileResults, _) =>
-            {
-                var results = new List<AppSearchResult>();
-                if (fileResults != null)
-                {
-                    for (var i = 0; i < fileResults.Count; i++)
-                    {
-                        results.Add(SearchResultMapper.CreateUiResult(fileResults[i], cleanQuery, results.Count, isApplication: false, scope: null));
-                    }
-                }
-                return results;
-            },
-            searching => IsSearching = searching,
-            (results, status, final) =>
-            {
-                _serviceStatus.ClearReconnectState();
-                LoadingPanelVisibility = Visibility.Collapsed;
-                IsSearchBoxEnabled = true;
-                // This window has its own "no results" hint (ShowNoResultsHint, keyed off an empty
-                // FilteredResults) -- the shared engine's synthetic "Empty" placeholder row is meant
-                // for the quick/inline windows, which have no such hint and render it inline instead.
-                // Left in here, it counts toward FilteredResults.Count and shows up as a real grid row.
-                var filteredResults = results.Where(r => !r.IsEmptyResult).ToList();
-                _allResults = filteredResults;
-                ApplyFiltersAndRender();
-                // Token providers (e.g. the built-in ":[SCMA]"/".ext" sort+filter plugin) run async --
-                // they may fetch metadata over IPC -- so their effect lands via a follow-up re-render
-                // rather than the render just above. Skipped if a newer search has since taken over.
-                if (_queryTokens.Count > 0)
-                    _ = RefreshAfterTokenDispatchAsync(filteredResults, _queryTokens);
-                if (final)
-                    IsSearching = false;
-            },
-            () => _serviceStatus.CheckServiceStatusOnStartup()
-        );
-    }
-
-    private async Task RefreshAfterTokenDispatchAsync(List<AppSearchResult> resultsSnapshot, IReadOnlyList<string> tokensSnapshot)
-    {
-        var dispatched = await QueryTokenDispatcher.ApplyAsync(resultsSnapshot, tokensSnapshot);
-        if (!ReferenceEquals(_allResults, resultsSnapshot) || !ReferenceEquals(_queryTokens, tokensSnapshot))
-            return;
-        _allResults = dispatched;
-        ApplyFiltersAndRender();
-    }
-
-    internal void PerformSearch(string query)
-    {
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            ClearResults();
-            return;
-        }
-
-        OnAdvancedQueryChanged(query);
-    }
-
-    private void ClearResults()
-    {
-        _searchEngine.CancelPendingSearch();
-        IsSearching = false;
-        _allResults.Clear();
-        ApplyFiltersAndRender();
-        LoadingPanelVisibility = Visibility.Collapsed;
-    }
 
     private string _currentSortColumn = string.Empty;
     private bool _isSortAscending = true;

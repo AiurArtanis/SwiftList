@@ -70,6 +70,10 @@ public class PluginManager : PluginRegistry
         PluginSdk.Services.FavoritesService.GetFavoritesFunc = () =>
             UserSettings.Load().Favorites.Select(f => new PluginSdk.Models.FavoriteItem { Name = f.Name, Path = f.Path });
 
+        // Wire up the fuzzy-match delegate for plugins wanting the host's own matching (with alias
+        // fallback) instead of reimplementing a fuzzy matcher of their own
+        PluginSdk.Services.FuzzyMatchService.IsMatchFunc = FuzzyMatcher.IsMatch;
+
         // Wire up the directory search delegate for plugins using CoreDirectoryIndexManager
         PluginSdk.Services.DirectoryIndexerService.SearchPluginDirectoriesFunc = async (pluginId, query, token) =>
         {

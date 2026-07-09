@@ -18,6 +18,7 @@
   "Column_TypeExtFile": "{0} 文件",
   "WebUrl_Name": "网址",
   "CoreExtensions_QueryTokenProvider_Name": "查询排序/过滤 (:[SCMA] / .后缀名)",
+  "CoreExtensions_PathExclusionProvider_Name": "路径匹配 (::表达式)",
   "WebUrl_OpenHint": "回车或点击用浏览器打开",
   "Env_Name": "环境变量解析器",
   "Env_PathNotExist": "路径(不存在)",

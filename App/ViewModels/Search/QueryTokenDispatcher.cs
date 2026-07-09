@@ -5,9 +5,12 @@ namespace SwiftList.App.ViewModels.Search;
 
 // Dispatches the raw tokens split out of a query's trailing ":a,b,c" suffix to whichever registered
 // IQueryTokenProvider plugin claims each one, chaining the result through providers in token order.
-// Only "ordinary" (File/Application) results are exposed to providers -- section headers, instant
-// results, and other synthetic rows are spliced back untouched at their original position. A token
-// no provider claims is simply skipped; the rest of the suffix still applies.
+// Only "ordinary" (File/Application) results are exposed to providers -- once any token is active,
+// section headers, "show N more", instant results (calculator, system settings, ...) and other
+// synthetic rows describe or act on the untouched result set, not the token-narrowed one, so they're
+// dropped rather than spliced back. A token no provider claims isn't silently ignored either -- it
+// reads as a typo'd/unsupported filter, and silently showing the un-narrowed results would look like
+// it worked when it didn't, so the whole query resolves to no results instead.
 internal static class QueryTokenDispatcher
 {
     public static async Task<List<AppSearchResult>> ApplyAsync(IReadOnlyList<AppSearchResult> results, IReadOnlyList<string> tokens)
@@ -15,48 +18,20 @@ internal static class QueryTokenDispatcher
         if (tokens.Count == 0)
             return results as List<AppSearchResult> ?? results.ToList();
 
-        var ordinaryIndices = new List<int>();
-        var ordinaryItems = new List<ISearchResult>();
-        for (var i = 0; i < results.Count; i++)
+        IReadOnlyList<ISearchResult> current = results.Where(IsOrdinaryResult).ToList();
+        foreach (var token in tokens)
         {
-            if (IsOrdinaryResult(results[i]))
-            {
-                ordinaryIndices.Add(i);
-                ordinaryItems.Add(results[i]);
-            }
+            var provider = PluginManager.Instance.QueryTokenProviders.FirstOrDefault(p => p.CanHandle(token));
+            if (provider == null)
+                return new List<AppSearchResult>();
+
+            current = await provider.ApplyAsync(token, current);
         }
 
-        IReadOnlyList<ISearchResult> current = ordinaryItems;
-        if (ordinaryItems.Count > 0)
-        {
-            foreach (var token in tokens)
-            {
-                var provider = PluginManager.Instance.QueryTokenProviders.FirstOrDefault(p => p.CanHandle(token));
-                if (provider == null)
-                    continue;
-
-                current = await provider.ApplyAsync(token, current);
-            }
-        }
-
-        // Sort-only tokens preserve count (current.Count == ordinaryIndices.Count); a filter token
-        // can only shrink it. Filling ordinary slots front-to-back with whatever remains in `current`
-        // reproduces the (possibly reordered) items in their new order and simply leaves trailing
-        // slots unfilled -- i.e. dropped -- once `current` runs out, compacting the list correctly.
-        var ordinarySet = new HashSet<int>(ordinaryIndices);
-        var output = new List<AppSearchResult>(results.Count);
-        var next = 0;
-        for (var i = 0; i < results.Count; i++)
-        {
-            if (!ordinarySet.Contains(i))
-            {
-                output.Add(results[i]);
-                continue;
-            }
-            if (next < current.Count)
-                output.Add((AppSearchResult)current[next++]);
-        }
-        return output;
+        // Callers decide whether the resulting (possibly empty) list needs its own "no results"
+        // placeholder (the quick/inline window renders one inline; the full search window already
+        // has its own hint bound to an empty result list).
+        return current.Cast<AppSearchResult>().ToList();
     }
 
     // Folders are ResultKind "File" too (IsDir just flags them) -- "Application" is the only other
