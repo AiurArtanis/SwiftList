@@ -1,7 +1,39 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
 internal static class IndexerHelper
 {
+    // Order-independent, case-insensitive fingerprint of the global exclusion settings -- lets a resumed
+    // walk tell whether rules changed since a previous store was produced (see FileRecordStore.
+    // ExclusionRulesFingerprint / TreeBuilder's recheckExclusions) without any external "rules changed"
+    // signal. Each category is sorted+deduped on its own so reordering entries (no membership change)
+    // never spuriously flags a recheck; the category tags keep "excluded path X" from colliding with
+    // "glob X"/"regex X" if the same literal string appears in more than one list.
+    public static string ComputeExclusionFingerprint(
+        IEnumerable<string> excludedPaths, IEnumerable<string> ignoredPathGlobs, IEnumerable<string> ignoredPathRegexes)
+    {
+        var sb = new StringBuilder();
+        AppendCategory(sb, 'P', excludedPaths);
+        AppendCategory(sb, 'G', ignoredPathGlobs);
+        AppendCategory(sb, 'R', ignoredPathRegexes);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()))).ToLowerInvariant();
+    }
+
+    private static void AppendCategory(StringBuilder sb, char tag, IEnumerable<string> values)
+    {
+        var normalized = values
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Select(v => v.Trim().ToLowerInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(v => v, StringComparer.Ordinal);
+        foreach (var value in normalized)
+        {
+            sb.Append(tag).Append(':').Append(value).Append('\n');
+        }
+    }
+
     public static string? NormalizeFilter(string? directoryFilter)
     {
         if (string.IsNullOrWhiteSpace(directoryFilter))

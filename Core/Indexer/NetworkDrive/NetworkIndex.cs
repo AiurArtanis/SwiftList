@@ -22,6 +22,8 @@ internal sealed class NetworkIndex
     // See FileRecordStore.IsComplete -- false for a checkpoint or an interrupted scan, true only once the
     // build that produced this index finished in full.
     public bool IsComplete { get; set; }
+    // See FileRecordStore.ExclusionRulesFingerprint.
+    public string ExclusionRulesFingerprint { get; set; } = string.Empty;
     public UInt128 RootId { get; private set; }
     public int Skipped { get; private set; }
     public int Errors { get; private set; }
@@ -44,6 +46,7 @@ internal sealed class NetworkIndex
         index.RootId = store.RootId;
         index.LastUpdated = store.LastUpdated;
         index.IsComplete = store.IsComplete;
+        index.ExclusionRulesFingerprint = store.ExclusionRulesFingerprint;
         lock (index._gate)
             index._runtime.Load(store);
         return index;
@@ -74,12 +77,17 @@ internal sealed class NetworkIndex
     {
         var index = new NetworkIndex(drive);
         const ulong rootId = 1;
+        // Setting this on the store itself (not just on `index` after the walk finishes) means every
+        // mid-walk checkpoint -- which serializes this same store, see TreeBuilder.CloneStore -- already
+        // carries the right fingerprint too, not just the final save.
+        var fingerprint = IndexerHelper.ComputeExclusionFingerprint(options.ExcludedPaths, options.IgnoredPathGlobs, options.IgnoredPathRegexes);
         var store = new FileRecordStore
         {
             SourceKey = drive,
             SourceKind = FileRecordSourceKind.NetworkMappedDrive,
             IdKind = FileRecordIdKind.SourceLocalId64,
-            RootId = rootId
+            RootId = rootId,
+            ExclusionRulesFingerprint = fingerprint
         };
         // Stat the real root mtime, the same as TryCreateRecord does for every other directory -- without
         // it this record would default to LastWriteTimeUnixSeconds=0, which TreeDiffBaseline could never
@@ -96,7 +104,12 @@ internal sealed class NetworkIndex
             lastWriteTimeUnixSeconds: rootLastWriteTime));
 
         var diffBaseline = TreeDiffBaseline.From(previousStore);
-        var builder = new TreeBuilder(store, root, physicalRoot, options, token, onProgress, onCheckpoint, diffBaseline);
+        // No previous store at all means this is a first-ever scan -- nothing to recheck, the normal fresh
+        // walk already covers everything. Otherwise, a fingerprint mismatch is the only thing that can make
+        // a reused (mtime-unchanged) directory's recorded children incomplete under the *current* rules --
+        // see TryReuseUnchangedDirectory's add/remove diff.
+        var recheckExclusions = previousStore != null && previousStore.ExclusionRulesFingerprint != fingerprint;
+        var builder = new TreeBuilder(store, root, physicalRoot, options, token, onProgress, onCheckpoint, diffBaseline, recheckExclusions);
         var stats = builder.Run();
 
         index.RootId = rootId;
@@ -107,6 +120,7 @@ internal sealed class NetworkIndex
         index.ReparseSkipped = stats.ReparseSkipped;
         index.SlowDirectories = stats.SlowDirectories;
         index.LastUpdated = DateTime.Now;
+        index.ExclusionRulesFingerprint = fingerprint;
         lock (index._gate)
             index._runtime.Load(store);
         onProgress(index.Count);
@@ -128,6 +142,7 @@ internal sealed class NetworkIndex
                 nextUsn: 0);
             store.LastUpdated = LastUpdated;
             store.IsComplete = IsComplete;
+            store.ExclusionRulesFingerprint = ExclusionRulesFingerprint;
             return store;
         }
     }

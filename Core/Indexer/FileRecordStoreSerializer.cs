@@ -50,7 +50,10 @@ public static partial class FileRecordStoreSerializer
     // v14: added FileRecordStore.IsComplete (meta) and FileRecordFlags.Listed (per directory record), for
     // resumable network/WSL drive scans (TreeDiffBaseline) -- force one rebuild since older caches have
     // neither bit and would otherwise look like a directory that was discovered but never actually listed.
-    public const int Version = 14;
+    // v15: added FileRecordStore.ExclusionRulesFingerprint (meta), so a resumed network/WSL/folder scan can
+    // tell whether exclusion rules changed since this store was produced without any external signal. Older
+    // caches were never stamped with one at all, so force one rebuild instead of guessing.
+    public const int Version = 15;
 
     public static string GetBasePath(string cacheDir, string sourceKey) => Path.Combine(cacheDir, sourceKey.ToLowerInvariant());
 
@@ -144,6 +147,7 @@ public static partial class FileRecordStoreSerializer
             writer.Write(store.Records.Count(r => !r.IsDeleted));
             writer.Write(store.LastUpdated.ToUniversalTime().Ticks);
             writer.Write(store.IsComplete);
+            writer.Write(store.ExclusionRulesFingerprint);
         }
 
         Replace(metaTemp, basePath + ".meta");
@@ -181,6 +185,7 @@ public static partial class FileRecordStoreSerializer
                 var ticks = reader.ReadInt64();
                 store.LastUpdated = new DateTime(ticks, DateTimeKind.Utc).ToLocalTime();
                 store.IsComplete = reader.ReadBoolean();
+                store.ExclusionRulesFingerprint = reader.ReadString();
             }
 
             var names = new List<string>();

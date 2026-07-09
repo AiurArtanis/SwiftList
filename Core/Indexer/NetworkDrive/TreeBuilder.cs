@@ -40,7 +40,8 @@ internal sealed partial class TreeBuilder
         CancellationToken token,
         Action<int> onProgress,
         Action<FileRecordStore, NetworkDriveWalkStats>? onCheckpoint = null,
-        TreeDiffBaseline? diffBaseline = null)
+        TreeDiffBaseline? diffBaseline = null,
+        bool recheckExclusions = false)
     {
         _store = store;
         _root = PathHelpers.NormalizePath(root, true);
@@ -50,6 +51,7 @@ internal sealed partial class TreeBuilder
         _onProgress = onProgress;
         _onCheckpoint = onCheckpoint;
         _diffBaseline = diffBaseline;
+        _recheckExclusions = recheckExclusions;
         _pending = Channel.CreateUnbounded<WorkItem>(new UnboundedChannelOptions
         {
             SingleReader = false,

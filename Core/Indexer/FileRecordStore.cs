@@ -145,6 +145,11 @@ public sealed class FileRecordStore
     // cache can be trusted as-is or the scan needs to resume/finish first -- see TreeDiffBaseline for how
     // a resumed scan still reuses whatever this store's directories already recorded as FileRecordFlags.Listed.
     public bool IsComplete { get; set; }
+    // A hash of the global exclusion settings (ExcludedPaths/IgnoredPathGlobs/IgnoredPathRegexes) as of the
+    // walk that produced this store -- lets a resumed walk tell whether exclusion rules changed since then
+    // without needing any external signal (see TreeDiffBaseline / TreeBuilder's recheckExclusions). Only
+    // meaningful for NetworkMappedDrive stores; a local MFT/USN store never sets it.
+    public string ExclusionRulesFingerprint { get; set; } = string.Empty;
     public List<FileRecord> Records { get; } = new();
 }
 

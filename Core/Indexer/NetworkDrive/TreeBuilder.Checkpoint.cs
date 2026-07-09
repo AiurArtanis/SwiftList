@@ -50,7 +50,11 @@ internal sealed partial class TreeBuilder
                 IdKind = _store.IdKind,
                 RootId = _store.RootId,
                 JournalId = _store.JournalId,
-                NextUsn = _store.NextUsn
+                NextUsn = _store.NextUsn,
+                // Without this, a checkpoint saved mid-walk would look fingerprint-less on the next resume,
+                // forcing an unnecessary (but harmless) recheck pass instead of correctly recognizing that
+                // exclusion rules haven't actually changed since this in-progress scan started.
+                ExclusionRulesFingerprint = _store.ExclusionRulesFingerprint
             };
             clone.Records.AddRange(_store.Records);
             return clone;
