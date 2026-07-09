@@ -14,6 +14,7 @@ public static class UserNetworkDriveSearch
     public static void Configure() => NetworkIndexer.Configure(UserSettings.Load().NetworkDrives, UserSettings.Load().WslSettings);
     public static void Refresh() => NetworkIndexer.Configure(UserSettings.Load().NetworkDrives, UserSettings.Load().WslSettings, forceRefresh: true);
     public static bool RefreshDrive(string drive) => NetworkIndexer.RefreshDrive(drive);
+    public static bool CancelDrive(string drive) => NetworkIndexer.CancelDrive(drive);
 
     public static IReadOnlyList<NetworkIndexStatus> GetStatuses() => NetworkIndexer.GetStatuses();
     public static bool HasCache(string drive) => IndexerHelper.HasCache(drive);

@@ -1,6 +1,6 @@
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
-public sealed class NetworkIndexer : IDisposable
+public sealed partial class NetworkIndexer : IDisposable
 {
     public event Action<IReadOnlyList<NetworkIndexStatus>>? StatusesChanged;
 
@@ -149,6 +149,22 @@ public sealed class NetworkIndexer : IDisposable
         return true;
     }
 
+    public bool CancelDrive(string drive)
+    {
+        drive = IndexerHelper.NormalizeDrive(drive);
+        if (drive.Length == 0)
+            return false;
+
+        lock (_gate)
+        {
+            if (!_refreshModes.ContainsKey(drive))
+                return false;
+        }
+
+        _scheduler?.CancelDrive(drive);
+        return true;
+    }
+
     public IReadOnlyList<NetworkIndexStatus> GetStatuses()
     {
         EnsureConfigured();
@@ -171,73 +187,6 @@ public sealed class NetworkIndexer : IDisposable
         PublishStatusesChanged();
     }
 
-    private void SetStatus(string drive, string state, int? items, string? error)
-    {
-        lock (_gate)
-        {
-            _statuses.TryGetValue(drive, out var current);
-            _statuses[drive] = NetworkIndexerHelper.CreateStatus(
-                drive, state, items ?? current?.Items ?? 0, null, current, error ?? string.Empty);
-        }
-        PublishStatusesChanged();
-    }
-
-    // Whatever's currently loaded for this drive (a completed index, or an interrupted checkpoint) becomes
-    // TreeBuilder's diff baseline for the refresh about to run -- see TreeDiffBaseline.
-    private FileRecordStore? GetPreviousStore(string drive)
-    {
-        lock (_gate)
-            return _indexes.TryGetValue(drive, out var index) ? index.ToStore() : null;
-    }
-
-    private void OnRefreshFinished(string drive, NetworkIndex index)
-    {
-        lock (_gate)
-        {
-            _indexes[drive] = index;
-            _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "ready", index.Count, index, null);
-        }
-        _watcherManager?.EnsureWatcher(drive);
-        PublishStatusesChanged();
-    }
-
-    private void PublishIncrementalUpdate(string drive, NetworkIndex index)
-    {
-        IndexerHelper.Save(index);
-        lock (_gate)
-        {
-            _statuses.TryGetValue(drive, out var current);
-            _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "ready", index.Count, index, current);
-        }
-        PublishStatusesChanged();
-    }
-
-    private void PublishCheckpoint(string drive, FileRecordStore store, NetworkDriveWalkStats stats, CancellationToken token)
-    {
-        token.ThrowIfCancellationRequested();
-
-        try
-        {
-            var index = NetworkIndex.FromStore(store, stats);
-            IndexerHelper.Save(index);
-
-            lock (_gate)
-            {
-                _indexes[drive] = index;
-                _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "indexing", index.Count, index, null);
-            }
-            PublishStatusesChanged();
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[NetworkIndexer] Failed to publish checkpoint for {drive}: {ex.Message}", LogLevel.Error);
-        }
-    }
-
     public void Dispose()
     {
         _scheduler?.Dispose();
@@ -245,16 +194,5 @@ public sealed class NetworkIndexer : IDisposable
 
         _watcherManager?.Dispose();
         _watcherManager = null;
-    }
-
-    private void PublishStatusesChanged()
-    {
-        try
-        {
-            StatusesChanged?.Invoke(GetStatuses());
-        }
-        catch
-        {
-        }
     }
 }

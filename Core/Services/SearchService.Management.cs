@@ -9,6 +9,7 @@ public partial class SearchService
     public void RefreshNetworkIndexes() => UserNetworkDriveSearch.Refresh();
     public void ConfigureNetworkIndexes() => UserNetworkDriveSearch.Configure();
     public bool RefreshNetworkDriveIndex(string drive) => UserNetworkDriveSearch.RefreshDrive(drive);
+    public bool CancelNetworkDriveIndex(string drive) => UserNetworkDriveSearch.CancelDrive(drive);
     public IReadOnlyList<NetworkIndexStatus> GetNetworkIndexStatuses() => UserNetworkDriveSearch.GetStatuses();
     public bool HasNetworkDriveCache(string drive) => UserNetworkDriveSearch.HasCache(drive);
     public IReadOnlyList<string> GetCachedNetworkDrives() => UserNetworkDriveSearch.GetCachedDrives();
