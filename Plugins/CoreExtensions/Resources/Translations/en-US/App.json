@@ -331,6 +331,7 @@
   "Plugins_TypeFilePreviewProvider": "File Preview Provider",
   "Plugins_TypeQuickNavigationProvider": "Quick Navigation",
   "QuickNav_EmptySubmenu": "(Empty)",
+  "QuickNav_Loading": "(Loading...)",
   "Plugins_TypeTranslationProvider": "Language Packs",
   "Plugins_TypeThemeProvider": "Theme Packs",
   "Plugins_TypeThumbnailProvider": "Thumbnail Provider",

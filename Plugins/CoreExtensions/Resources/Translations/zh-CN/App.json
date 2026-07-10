@@ -331,6 +331,7 @@
   "Plugins_TypeFilePreviewProvider": "预览提供者",
   "Plugins_TypeQuickNavigationProvider": "快捷导航",
   "QuickNav_EmptySubmenu": "(空)",
+  "QuickNav_Loading": "(加载中...)",
   "Plugins_TypeTranslationProvider": "语言包",
   "Plugins_TypeThemeProvider": "主题包",
   "Plugins_TypeThumbnailProvider": "缩略图提供者",

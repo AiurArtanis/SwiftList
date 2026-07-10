@@ -46,7 +46,7 @@ internal static class SettingsWindowSearchExtensions
         foreach (var entry in SettingsSearchIndex.Entries)
         {
             var label = TranslationManager.Instance[entry.LabelKey];
-            if (label.Contains(query, StringComparison.OrdinalIgnoreCase))
+            if (Core.FuzzyMatcher.IsMatch(query, label))
                 results.Add(new SettingsSearchResultItem(label, BuildBreadcrumb(entry), entry.Section, entry.Activate, entry.TargetElementName));
         }
 
@@ -60,13 +60,13 @@ internal static class SettingsWindowSearchExtensions
                 var capturedPlugin = plugin;
                 void ExpandPlugin(SettingsViewModel _) => capturedPlugin.IsExpanded = true;
 
-                if (plugin.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                if (Core.FuzzyMatcher.IsMatch(query, plugin.Name))
                     results.Add(new SettingsSearchResultItem(plugin.Name, pluginsSectionLabel, "Plugins", ExpandPlugin,
                         Reveal: new SettingsSearchDynamicReveal("PluginsList", capturedPlugin)));
 
                 foreach (var component in plugin.RawComponents)
                 {
-                    if (component.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    if (Core.FuzzyMatcher.IsMatch(query, component.DisplayName))
                         results.Add(new SettingsSearchResultItem(component.DisplayName, $"{pluginsSectionLabel} › {plugin.Name}", "Plugins", ExpandPlugin,
                             Reveal: new SettingsSearchDynamicReveal("PluginsList", capturedPlugin, component)));
                 }
@@ -79,13 +79,13 @@ internal static class SettingsWindowSearchExtensions
                 var capturedGroup = group;
                 void SelectPluginActionsTab(SettingsViewModel v) => v.Hotkeys.SelectedTab = "PluginActions";
 
-                if (group.PluginName.Contains(query, StringComparison.OrdinalIgnoreCase))
+                if (Core.FuzzyMatcher.IsMatch(query, group.PluginName))
                     results.Add(new SettingsSearchResultItem(group.PluginName, $"{hotkeysSectionLabel} › {pluginActionsTabLabel}", "Hotkeys", SelectPluginActionsTab,
                         Reveal: new SettingsSearchDynamicReveal("PluginActionGroupsList", capturedGroup)));
 
                 foreach (var action in group.Items)
                 {
-                    if (action.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    if (Core.FuzzyMatcher.IsMatch(query, action.DisplayName))
                         results.Add(new SettingsSearchResultItem(action.DisplayName, $"{hotkeysSectionLabel} › {pluginActionsTabLabel} › {group.PluginName}", "Hotkeys", SelectPluginActionsTab,
                             Reveal: new SettingsSearchDynamicReveal("PluginActionGroupsList", capturedGroup, action)));
                 }
@@ -98,13 +98,13 @@ internal static class SettingsWindowSearchExtensions
                 var capturedGroup = group;
                 void SelectPluginTabsSubTab(SettingsViewModel v) => v.StartupPanel.SelectedSubTab = "PluginTabs";
 
-                if (group.PluginName.Contains(query, StringComparison.OrdinalIgnoreCase))
+                if (Core.FuzzyMatcher.IsMatch(query, group.PluginName))
                     results.Add(new SettingsSearchResultItem(group.PluginName, $"{startupPanelSectionLabel} › {pluginTabsTabLabel}", "StartupPanel", SelectPluginTabsSubTab,
                         Reveal: new SettingsSearchDynamicReveal("PluginTabGroupsList", capturedGroup)));
 
                 foreach (var tab in group.Tabs)
                 {
-                    if (tab.Label.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    if (Core.FuzzyMatcher.IsMatch(query, tab.Label))
                         results.Add(new SettingsSearchResultItem(tab.Label, $"{startupPanelSectionLabel} › {pluginTabsTabLabel} › {group.PluginName}", "StartupPanel", SelectPluginTabsSubTab,
                             Reveal: new SettingsSearchDynamicReveal("PluginTabGroupsList", capturedGroup, tab)));
                 }

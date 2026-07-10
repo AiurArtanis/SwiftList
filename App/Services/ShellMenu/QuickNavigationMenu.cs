@@ -114,7 +114,7 @@ public static class QuickNavigationMenu
         contextMenu.IsOpen = true;
     }
 
-    private static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, IntPtr dialogHwndAtTrigger, bool enableRightClick = true, bool isRootItem = false)
+    internal static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, IntPtr dialogHwndAtTrigger, bool enableRightClick = true, bool isRootItem = false)
     {
         var menuItem = new MenuItem { Header = item.Text, IsEnabled = !item.IsDisabled, Focusable = !item.IsDisabled };
 
@@ -138,14 +138,14 @@ public static class QuickNavigationMenu
         if (item.HasSubMenu && item.SubMenuHandle != IntPtr.Zero)
         {
             itemPath = QuickNavigationPathResolver.TryResolveSubMenuPath(provider, item.SubMenuHandle);
-            menuItem.Items.Add(new MenuItem { Header = "Loading...", IsEnabled = false });
+            menuItem.Items.Add(new MenuItem { Header = TranslationService.Get("QuickNav_Loading") ?? "(Loading...)", IsEnabled = false });
             menuItem.GotKeyboardFocus += (s, e) =>
             {
-                EnsureSubItemsLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger);
+                QuickNavigationSubMenuLoader.EnsureLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger);
                 Application.Current.Dispatcher.BeginInvoke(new Action(() => { if (menuItem.IsKeyboardFocusWithin || menuItem.IsFocused) menuItem.IsSubmenuOpen = true; }));
             };
-            menuItem.MouseEnter += (s, e) => EnsureSubItemsLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger);
-            menuItem.SubmenuOpened += (s, e) => { if (e.OriginalSource == menuItem) EnsureSubItemsLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger); };
+            menuItem.MouseEnter += (s, e) => QuickNavigationSubMenuLoader.EnsureLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger);
+            menuItem.SubmenuOpened += (s, e) => { if (e.OriginalSource == menuItem) QuickNavigationSubMenuLoader.EnsureLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger); };
         }
         else
         {
@@ -256,22 +256,4 @@ public static class QuickNavigationMenu
         return null;
     }
 
-    private static void EnsureSubItemsLoaded(MenuItem menuItem, ISearchResult result, DynamicMenuItem item, IQuickNavigationProvider provider, ContextMenu contextMenu, IntPtr dialogHwndAtTrigger)
-    {
-        if (menuItem.Items.Count > 0 && (menuItem.Items[0] as MenuItem)?.Header?.ToString() != "Loading...") return;
-        menuItem.Items.Clear();
-        foreach (var subItem in provider.GetMenuItems(result, item.SubMenuHandle))
-            // Root items already do this IsSeparator check (see the ShowMenu loop above) -- missing here
-            // meant a separator nested inside any submenu rendered as a real MenuItem with an empty Header
-            // instead of an actual divider line, showing up as a blank row.
-            menuItem.Items.Add(subItem.IsSeparator ? new Separator() : CreateMenuItem(subItem, result, provider, contextMenu, dialogHwndAtTrigger));
-
-        // A provider can legitimately return nothing here -- e.g. its backing data (favorites, a plugin's
-        // own cache) hasn't finished loading yet this soon after app startup, not just "this folder is
-        // empty". Applies at every level (root included), since this is the one shared load path every
-        // submenu -- root or nested -- goes through. Without this, the popup opens with zero items: a
-        // near-invisible, oddly-sized "bubble" instead of a normal-looking submenu.
-        if (menuItem.Items.Count == 0)
-            menuItem.Items.Add(new MenuItem { Header = TranslationService.Get("QuickNav_EmptySubmenu") ?? "(Empty)", IsEnabled = false });
-    }
 }
