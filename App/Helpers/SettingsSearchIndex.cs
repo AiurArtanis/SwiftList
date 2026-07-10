@@ -9,17 +9,21 @@ namespace SwiftList.App.Helpers;
 // hop at a time. TabLabelKey/SubTabLabelKey are the ANCESTOR tab/group chain shown as the result's
 // breadcrumb, e.g. "Index > Network Drives" -- left null when the entry itself names that tab/group
 // (no point breadcrumbing a result to itself), set otherwise so same-named results in different tabs
-// (e.g. "Rebuild Index" under both Local and Network Drives) stay distinguishable. Hand-curated --
-// there's no data-driven model of "every settings control" to generate this from (each page is
-// hand-written XAML), so a newly added setting needs its own line here (and its own x:Name in the
-// page's XAML) to become searchable.
+// (e.g. "Rebuild Index" under both Local and Network Drives) stay distinguishable. IsVisible is for
+// the rare entry whose own tab/row is conditionally hidden in the XAML (e.g. the WSL tab, only shown
+// once a distribution is detected) -- left null for the overwhelming majority of entries that are
+// always reachable, so a search result never points at a control the user can't actually see right
+// now. Hand-curated -- there's no data-driven model of "every settings control" to generate this
+// from (each page is hand-written XAML), so a newly added setting needs its own line here (and its
+// own x:Name in the page's XAML) to become searchable.
 public sealed record SettingsSearchEntry(
     string LabelKey,
     string Section,
     Action<SettingsViewModel>? Activate = null,
     string? TargetElementName = null,
     string? TabLabelKey = null,
-    string? SubTabLabelKey = null);
+    string? SubTabLabelKey = null,
+    Func<SettingsViewModel, bool>? IsVisible = null);
 
 public static class SettingsSearchIndex
 {
@@ -43,7 +47,12 @@ public static class SettingsSearchIndex
         new("Settings_NetworkDrive", "Index", vm => vm.LocalDrive.SelectedTab = "Network", "TabNetwork"),
         new("Network_IndexStatus", "Index", vm => vm.LocalDrive.SelectedTab = "Network", "TabNetwork/RowNetworkRebuild", "Settings_NetworkDrive"),
         new("Network_RebuildBtn", "Index", vm => vm.LocalDrive.SelectedTab = "Network", "TabNetwork/RowNetworkRebuild", "Settings_NetworkDrive"),
-        new("Network_WslSectionTitle", "Index", vm => vm.LocalDrive.SelectedTab = "Wsl", "TabWsl"),
+        new("Network_WslSectionTitle", "Index", vm => vm.LocalDrive.SelectedTab = "Wsl", "TabWsl",
+            IsVisible: vm => vm.NetworkDrive.IsWslPanelVisible),
+        new("Settings_FolderIndex", "Index", vm => vm.LocalDrive.SelectedTab = "Folders", "TabFolders"),
+        new("Network_IndexStatus", "Index", vm => vm.LocalDrive.SelectedTab = "Folders", "TabFolders/RowFolderRebuild", "Settings_FolderIndex"),
+        new("Network_RebuildBtn", "Index", vm => vm.LocalDrive.SelectedTab = "Folders", "TabFolders/RowFolderRebuild", "Settings_FolderIndex"),
+        new("Folder_AddBtn", "Index", vm => vm.LocalDrive.SelectedTab = "Folders", "TabFolders/RowFolderRebuild", "Settings_FolderIndex"),
         new("Settings_Exclusions", "Index", vm => { vm.LocalDrive.SelectedTab = "Exclusions"; vm.Exclusions.SelectedSubTab = "Path"; }, "TabExclusions/SubTabExclusionsPath"),
         new("Exclusions_TabPath", "Index", vm => { vm.LocalDrive.SelectedTab = "Exclusions"; vm.Exclusions.SelectedSubTab = "Path"; }, "TabExclusions/SubTabExclusionsPath", "Settings_Exclusions"),
         new("Exclusions_TabGlob", "Index", vm => { vm.LocalDrive.SelectedTab = "Exclusions"; vm.Exclusions.SelectedSubTab = "Glob"; }, "TabExclusions/SubTabExclusionsGlob", "Settings_Exclusions"),
@@ -134,7 +143,7 @@ public static class SettingsSearchIndex
 
         // About
         new("Settings_About", "About"),
-        new("About_CheckUpdate", "About"),
+        new("About_CheckUpdate", "About", TargetElementName: "BtnCheckUpdate"),
     };
 }
 

@@ -43,8 +43,16 @@ internal static class SettingsWindowSearchExtensions
         }
 
         var results = new List<SettingsSearchResultItem>();
+        var vm = window.DataContext as SettingsViewModel;
         foreach (var entry in SettingsSearchIndex.Entries)
         {
+            // Entries like the WSL tab are only reachable while their own section is actually shown
+            // (IsVisible null for the overwhelming majority of entries, which are always reachable).
+            // Without vm (DataContext not yet set) there's no way to evaluate the predicate, so such
+            // an entry is conservatively excluded rather than shown as a dead link.
+            if (entry.IsVisible != null && (vm == null || !entry.IsVisible(vm)))
+                continue;
+
             var label = TranslationManager.Instance[entry.LabelKey];
             if (Core.FuzzyMatcher.IsMatch(query, label))
                 results.Add(new SettingsSearchResultItem(label, BuildBreadcrumb(entry), entry.Section, entry.Activate, entry.TargetElementName));
@@ -52,7 +60,7 @@ internal static class SettingsWindowSearchExtensions
 
         // These three collections have no static Entries above -- their labels only exist at runtime
         // (whatever plugins happen to be loaded), so search the same live models each page renders from.
-        if (window.DataContext is SettingsViewModel vm)
+        if (vm != null)
         {
             var pluginsSectionLabel = TranslationManager.Instance["Settings_Plugins"];
             foreach (var plugin in vm.Plugins.Plugins)
