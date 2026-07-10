@@ -6,7 +6,7 @@ namespace SwiftList.Plugins.FileFilters;
 public class FileFiltersSearchableItemProvider : ISearchableItemProvider, IDisposable
 {
     public string Id => "FileFiltersSearchableItemProvider";
-    public string Name => TranslationService.Get("FileFilters_ProviderName") ?? "File Filters";
+    public string Name => TranslationService.Get("FileFilters_ProviderName");
 
     public event Action? ItemsChanged;
 

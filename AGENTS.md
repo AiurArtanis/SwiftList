@@ -102,3 +102,7 @@ When interacting with this repository, performing code modification, compilation
    * **Do NOT use `#pragma warning disable` / `#pragma warning restore` as a shortcut to ignore compiler warnings**.
    * You must write clean, type-safe, and null-safe code that naturally resolves all compiler warnings (e.g., proper null checks, pattern matching, explicit casting). Warnings must be resolved programmatically rather than suppressed.
 
+9. **No Fallback Translation Strings in Code**
+   * **Do NOT append a hardcoded fallback string to a translation lookup** (e.g. `TranslationService.Get("Key") ?? "Some Default Text"`, `TranslationManager.Instance["Key"] ?? "Some Default Text"`). Both lookup APIs are non-nullable and already return a visible `[Key]` placeholder when a key is missing, so such a `??` fallback is always dead code — it can never actually run, and hides which translation would show a `[Key]` placeholder instead of surfacing the bug.
+   * If a translation key is missing from the locale JSON files, the fix is to add the key (in every locale the project ships), not to paper over it with an inline fallback string in the `.cs` file.
+

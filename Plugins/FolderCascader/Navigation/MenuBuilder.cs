@@ -77,7 +77,7 @@ public static class MenuBuilder
                 }
                 items.Add(new DynamicMenuItem
                 {
-                    Text = TranslationService.Get("FolderCascader_Favorites") ?? "Favorites",
+                    Text = TranslationService.Get("FolderCascader_Favorites"),
                     HasSubMenu = true,
                     SubMenuHandle = provider.AllocateHandle("foldercascader://favorites"),
                     HBitmapItem = Helper.FavoritesHBitmap
@@ -92,7 +92,7 @@ public static class MenuBuilder
                 }
                 items.Add(new DynamicMenuItem
                 {
-                    Text = TranslationService.Get("FolderCascader_History") ?? "History",
+                    Text = TranslationService.Get("FolderCascader_History"),
                     HasSubMenu = true,
                     SubMenuHandle = provider.AllocateHandle("foldercascader://history"),
                     HBitmapItem = Helper.HistoryHBitmap
@@ -141,7 +141,7 @@ public static class MenuBuilder
                     }
                 }
                 if (items.Count == 0)
-                    items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_NoHistory") ?? "(No history)", IsDisabled = true });
+                    items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_NoHistory"), IsDisabled = true });
             }
             else if (path == "foldercascader://favorites")
             {
@@ -181,7 +181,7 @@ public static class MenuBuilder
                     }
                 }
                 if (items.Count == 0)
-                    items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_NoFavorites") ?? "(No favorites)", IsDisabled = true });
+                    items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_NoFavorites"), IsDisabled = true });
             }
             else
             {
@@ -243,7 +243,7 @@ public static class MenuBuilder
                     {
                         items.Add(new DynamicMenuItem
                         {
-                            Text = TranslationService.Get("FolderCascader_EmptyFolder") ?? "(Empty)",
+                            Text = TranslationService.Get("FolderCascader_EmptyFolder"),
                             IsDisabled = true
                         });
                     }
@@ -252,7 +252,7 @@ public static class MenuBuilder
                 {
                     items.Add(new DynamicMenuItem
                     {
-                        Text = TranslationService.Get("FolderCascader_EmptyFolder") ?? "(Empty)",
+                        Text = TranslationService.Get("FolderCascader_EmptyFolder"),
                         IsDisabled = true
                     });
                 }

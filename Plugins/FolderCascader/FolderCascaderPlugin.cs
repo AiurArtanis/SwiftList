@@ -6,7 +6,7 @@ namespace SwiftList.Plugins.FolderCascader;
 
 public class FolderCascaderPlugin : IPlugin, IConfigurable
 {
-    public string Name => TranslationService.Get("FolderCascader_PluginName") ?? "Folder Cascader";
+    public string Name => TranslationService.Get("FolderCascader_PluginName");
 
 
 

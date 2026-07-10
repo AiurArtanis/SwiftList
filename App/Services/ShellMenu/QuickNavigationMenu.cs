@@ -138,7 +138,7 @@ public static class QuickNavigationMenu
         if (item.HasSubMenu && item.SubMenuHandle != IntPtr.Zero)
         {
             itemPath = QuickNavigationPathResolver.TryResolveSubMenuPath(provider, item.SubMenuHandle);
-            menuItem.Items.Add(new MenuItem { Header = TranslationService.Get("QuickNav_Loading") ?? "(Loading...)", IsEnabled = false });
+            menuItem.Items.Add(new MenuItem { Header = TranslationService.Get("QuickNav_Loading"), IsEnabled = false });
             menuItem.GotKeyboardFocus += (s, e) =>
             {
                 QuickNavigationSubMenuLoader.EnsureLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger);

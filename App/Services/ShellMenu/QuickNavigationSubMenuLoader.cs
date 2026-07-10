@@ -52,7 +52,7 @@ internal static class QuickNavigationSubMenuLoader
                 // popup opens with zero items: a near-invisible, oddly-sized "bubble" instead of a
                 // normal-looking submenu.
                 if (menuItem.Items.Count == 0)
-                    menuItem.Items.Add(new MenuItem { Header = TranslationService.Get("QuickNav_EmptySubmenu") ?? "(Empty)", IsEnabled = false });
+                    menuItem.Items.Add(new MenuItem { Header = TranslationService.Get("QuickNav_EmptySubmenu"), IsEnabled = false });
             }));
         });
     }

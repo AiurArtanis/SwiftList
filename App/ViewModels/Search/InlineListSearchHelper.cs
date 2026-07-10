@@ -239,13 +239,13 @@ internal static class InlineListSearchHelper
         // nothing, leaving a header with no results and no "no results" placeholder either.
         if (localMatches.Count > 0)
         {
-            SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_LocalFolderHeader"] ?? "Current Folder", query);
+            SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_LocalFolderHeader"], query);
             combinedResults.AddRange(localMatches);
         }
 
         if (globalItems.Count > 0)
         {
-            SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_GlobalSearchHeader"] ?? "Global Search", query);
+            SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_GlobalSearchHeader"], query);
             combinedResults.AddRange(globalItems);
         }
 

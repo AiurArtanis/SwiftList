@@ -54,7 +54,7 @@ public class CustomCommandsInstantProvider : IInstantResultProvider
         var argSuffix = parts.Length > 1 ? parts[1] : string.Empty;
 
         var matchedCmds = cmds.Where(c => c.Enabled && string.Equals(c.Keyword, keyword, StringComparison.OrdinalIgnoreCase));
-        
+
         foreach (var cmd in matchedCmds)
         {
             // Compile final target executable path, arguments, working directory, and window style.
@@ -62,7 +62,7 @@ public class CustomCommandsInstantProvider : IInstantResultProvider
             // to let the executor launch the process directly without wrapping in cmd.exe /c start.
             var finalArg = "";
             var resolvedParam = cmd.Parameter ?? "";
-            
+
             // Parse arguments supporting quotes (e.g., "a b" or 'a b')
             var parsedArgs = new List<string>();
             if (!string.IsNullOrEmpty(argSuffix))
@@ -183,7 +183,7 @@ public class CustomCommandsInstantProvider : IInstantResultProvider
             yield return new InstantResultItem
             {
                 Title = TranslationService.Format("CustomCommands_ResultTitle", title),
-                Description = string.Format(TranslationService.Get("CustomCommands_ResultDesc") ?? "运行 '{0}' {1}", cmd.Path, adminSuffix),
+                Description = string.Format(TranslationService.Get("CustomCommands_ResultDesc"), cmd.Path, adminSuffix),
                 IconData = iconData,
                 ActionType = "Execute",
                 ActionArgument = finalArg

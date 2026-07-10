@@ -44,7 +44,7 @@ public static class FavoriteSearchHelper
     public static AppSearchResult CreateFavoriteUiResult(FavoriteItemSetting fav, string query, int index)
     {
         var isDir = fav.Path.StartsWith("::") || fav.Path.StartsWith("shell:") || Directory.Exists(fav.Path);
-        var label = TranslationManager.Instance["Search_ResultFavorite"] ?? "Favorite";
+        var label = TranslationManager.Instance["Search_ResultFavorite"];
 
         var displayName = GetDisplayName(fav);
 

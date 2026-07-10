@@ -6,7 +6,7 @@ namespace SwiftList.Plugins.CustomActions;
 
 public class CustomActionsPlugin : IPlugin, IActionProvider, IConfigurable
 {
-    public string Name => TranslationService.Get("CustomActions_PluginName") ?? "自定义动作";
+    public string Name => TranslationService.Get("CustomActions_PluginName");
 
     public IEnumerable<ISearchResultAction> GetActions() => Array.Empty<ISearchResultAction>();
 

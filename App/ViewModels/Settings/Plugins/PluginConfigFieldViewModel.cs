@@ -20,7 +20,7 @@ public class PluginConfigFieldViewModel : ViewModelBase
     public string Label => string.IsNullOrEmpty(SchemaField.LabelKey) ? string.Empty : TranslationService.Get(SchemaField.LabelKey);
     public string Description => string.IsNullOrEmpty(SchemaField.DescriptionKey) ? string.Empty : TranslationService.Get(SchemaField.DescriptionKey);
     public string GroupKey => SchemaField.GroupKey;
-    public string GroupName => string.IsNullOrEmpty(GroupKey) ? string.Empty : (TranslationService.Get(GroupKey) ?? string.Empty);
+    public string GroupName => string.IsNullOrEmpty(GroupKey) ? string.Empty : TranslationService.Get(GroupKey);
     public ConfigFieldType FieldType => SchemaField.FieldType;
     public List<string>? Choices => SchemaField.Choices?.Select(c => TranslationService.Get(c)).ToList();
 

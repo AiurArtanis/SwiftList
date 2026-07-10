@@ -124,7 +124,7 @@ public class DirMenuProvider : IQuickNavigationProvider
         {
             items.Add(new DynamicMenuItem
             {
-                Text = TranslationService.Get("Plugins_TotalCommander_DirMenu_Empty") ?? "(Empty)",
+                Text = TranslationService.Get("Plugins_TotalCommander_DirMenu_Empty"),
                 IsDisabled = true
             });
         }

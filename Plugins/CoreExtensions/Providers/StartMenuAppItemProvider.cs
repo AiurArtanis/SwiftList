@@ -11,7 +11,7 @@ namespace SwiftList.Plugins.CoreExtensions.Providers;
 /// </summary>
 public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
 {
-    public string Name => TranslationService.Get("Plugins_StartMenuAppItemProviderName") ?? "Start Menu Applications";
+    public string Name => TranslationService.Get("Plugins_StartMenuAppItemProviderName");
 
     public event Action? ItemsChanged;
 
@@ -123,14 +123,14 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
         }
 
         // 4. Map to SearchableItem list with dynamic icon loading
-        var descTemplate = TranslationService.Get("Search_ResultAppDir") ?? "Application · {0}";
+        var descTemplate = TranslationService.Get("Search_ResultAppDir");
         foreach (var entry in deduped)
         {
             var capturedPath = entry.Path;
             var targetPath = StartMenuShortcutResolver.ResolveShortcutTarget(capturedPath) ?? capturedPath;
             var parentDir = Path.GetDirectoryName(targetPath);
             var desc = string.IsNullOrWhiteSpace(parentDir)
-                ? (TranslationService.Get("Search_ResultApp") ?? "Application")
+                ? TranslationService.Get("Search_ResultApp")
                 : string.Format(descTemplate, parentDir);
 
             var hBitmap = ShellPathHelper.GetIconHBitmapForPath(targetPath, 96);
@@ -177,7 +177,7 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
     private static void AppendAppsFolderApps(List<SearchableItem> list, IEnumerable<string> alreadyIndexedNames)
     {
         var existingNames = new HashSet<string>(alreadyIndexedNames, StringComparer.OrdinalIgnoreCase);
-        var appDesc = TranslationService.Get("Search_ResultApp") ?? "Application";
+        var appDesc = TranslationService.Get("Search_ResultApp");
 
         List<AppsFolderEnumerator.AppEntry> apps;
         try
