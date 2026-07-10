@@ -246,6 +246,10 @@ public sealed class UsnServicePipeServer : IDisposable
                 case SearchRequestId.ClearServiceLog:
                     Logger.ClearCurrentLog();
                     return new PipeResponse { Kind = PipeResponseKind.Ok };
+
+                case SearchRequestId.ClearPathCaches:
+                    _engine?.ClearPathCaches();
+                    return new PipeResponse { Kind = PipeResponseKind.Ok };
             }
 
             return new PipeResponse { Kind = PipeResponseKind.Error, Message = "Unknown command" };

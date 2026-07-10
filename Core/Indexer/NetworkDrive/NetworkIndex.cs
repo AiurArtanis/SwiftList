@@ -154,6 +154,15 @@ internal sealed class NetworkIndex
             _searcher.SearchStreaming(_runtime, rawQuery, limit, onResult, token, directoryFilterLower);
     }
 
+    // GetFullPath's per-row memo already self-caps at a high threshold (see PathQueryExtensions), but a
+    // search window closing/hiding is also a natural point to give the memory back proactively -- mirrors
+    // ShellIconHelper.ClearCache()'s existing trigger points.
+    public void ClearPathCache()
+    {
+        lock (_gate)
+            _runtime.ClearPathCache();
+    }
+
     // Backs NetworkIndexerRecentFilesExtensions.GetRecentFiles -- same in-memory subtree walk the local
     // NTFS/ReFS path uses (RecentFilesWalker), just pointed at this share's own RuntimeIndex.
     public void CollectRecentFiles(string dirLower, uint cutoffUtc, List<SearchResult> candidates)

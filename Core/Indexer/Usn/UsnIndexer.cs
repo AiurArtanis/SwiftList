@@ -116,6 +116,18 @@ public class UsnIndexer : IDisposable
 
     public void ClearCaches() => SearchCoordinator.ClearCaches();
 
+    // GetFullPath's per-row memo (RuntimeIndex.PathMemo) already self-caps at a high threshold (see
+    // PathQueryExtensions.GetFullPath), but a search window closing/hiding is also a natural point to
+    // give the memory back proactively -- mirrors ShellIconHelper.ClearCache()'s existing trigger points.
+    public void ClearAllPathCaches()
+    {
+        lock (LockObj)
+        {
+            foreach (var index in _recordIndexes.Values)
+                index.ClearPathCache();
+        }
+    }
+
     public void CompactStatusQueryMemory()
     {
         ClearCaches();

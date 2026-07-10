@@ -2,6 +2,13 @@ namespace SwiftList.Core.SearchIndex.RecordIndex;
 
 public static class PathQueryExtensions
 {
+    // PathMemo has no per-row eviction (every entry survives until explicitly cleared), so a session
+    // that resolves paths broadly across a large index would otherwise grow it unbounded. Capped high
+    // enough that a self-clear essentially never fires under normal use (measured: a simulated
+    // multi-thousand-search session peaks in the tens of thousands of distinct rows) -- this is only a
+    // backstop for a pathologically long-running or unusually broad session; ClearAllPathCaches (fired
+    // when a search window closes/hides) is the normal way memory gets given back.
+    private const int PathMemoCap = 200_000;
     public static bool TryResolvePath(this RuntimeIndex index, string pathLower, out UInt128 id, out string childPrefixLower, bool forceLastSegmentAsQuery = false)
     {
         id = default;
@@ -90,6 +97,8 @@ public static class PathQueryExtensions
         // Keyed by row index, not FRN: a hard-linked file has one FRN but several rows/paths, so an
         // FRN-keyed cache would collapse them all to whichever path was computed first.
         index.PathMemo.TryAdd(idx, path);
+        if (index.PathMemo.Count > PathMemoCap)
+            index.ClearPathCache();
         return path;
     }
 

@@ -15,7 +15,8 @@ public enum SearchRequestId : byte
     Initialize = 10,
     GetFileMetadata = 11,
     ClearServiceLog = 12,
-    GetRecentFiles = 13
+    GetRecentFiles = 13,
+    ClearPathCaches = 14
 }
 
 public struct SearchRequestMessage

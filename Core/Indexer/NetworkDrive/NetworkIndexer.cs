@@ -205,6 +205,18 @@ public sealed class NetworkIndexer : IDisposable
         _publisher.PublishStatusesChanged();
     }
 
+    // Fire-and-forget, called whenever a search window closes/hides (mirrors ShellIconHelper.ClearCache()'s
+    // existing trigger points and UsnIndexer.ClearAllPathCaches on the local-drive side).
+    public void ClearAllPathCaches()
+    {
+        NetworkIndex[] snapshots;
+        lock (_gate)
+            snapshots = _indexes.Values.ToArray();
+
+        foreach (var index in snapshots)
+            index.ClearPathCache();
+    }
+
     public void Dispose()
     {
         _scheduler?.Dispose();

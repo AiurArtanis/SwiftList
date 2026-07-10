@@ -28,6 +28,15 @@ public class SearchService : IDisposable
         return resp.Kind == PipeResponseKind.Ok;
     }
 
+    // Fire-and-forget, called whenever a search window closes/hides (mirrors ShellIconHelper.ClearCache()'s
+    // existing trigger points) -- gives back the local drives' per-row full-path memo, which otherwise
+    // only self-clears once it crosses its own high backstop threshold (see PathQueryExtensions).
+    public async Task ClearPathCachesAsync(CancellationToken token = default)
+    {
+        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.ClearPathCaches }, token).ConfigureAwait(false);
+        if (resp.Kind == PipeResponseKind.Error) Logger.Log($"[SearchService] CLEAR_PATH_CACHES failed: {resp.Message}", LogLevel.Error);
+    }
+
     public async Task<bool> SearchStreamingAsync(string query, int maxResults, int maxAppResults, string? directoryFilter, Action<SearchResult> onResult, CancellationToken token = default, Action? onLocalSearchFailed = null)
     {
         var exclusionRules = ExclusionRuleSet.From(UserSettings.Load());
