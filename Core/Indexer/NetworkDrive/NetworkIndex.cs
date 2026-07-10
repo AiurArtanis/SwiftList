@@ -163,6 +163,16 @@ internal sealed class NetworkIndex
             _runtime.ClearPathCache();
     }
 
+    // _searcher's candidate/rank cache (up to 2M candidate ids per cached term) otherwise only clears on
+    // a file-system change on THIS drive (see ApplyCreatedOrChanged/ApplyDeleted/ApplyRenamed below) --
+    // unlike the local-drive equivalent (SearchEngine's 3s idle timer), there's no time-based trim for
+    // network/WSL/folder-index drives, so a window closing is the only other natural point to give it back.
+    public void ClearCaches()
+    {
+        lock (_gate)
+            _searcher.ClearCaches();
+    }
+
     // Backs NetworkIndexerRecentFilesExtensions.GetRecentFiles -- same in-memory subtree walk the local
     // NTFS/ReFS path uses (RecentFilesWalker), just pointed at this share's own RuntimeIndex.
     public void CollectRecentFiles(string dirLower, uint cutoffUtc, List<SearchResult> candidates)

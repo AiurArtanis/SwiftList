@@ -29,7 +29,7 @@ public static class UserNetworkDriveSearch
     public static bool HasCache(string drive) => IndexerHelper.HasCache(drive);
     public static IReadOnlyList<string> GetCachedDrives() => IndexerHelper.GetCachedDrives();
     public static void DeleteCache(string drive) => NetworkIndexer.DeleteCache(drive);
-    public static void ClearAllPathCaches() => NetworkIndexer.ClearAllPathCaches();
+    public static void ClearAllCaches() => NetworkIndexer.ClearAllCaches();
 
 
     public static void SearchStreaming(string query, int limit, Action<SearchResult> onResult, CancellationToken token = default, string? directoryFilter = null) => NetworkIndexer.SearchStreaming(query, limit, onResult, token, directoryFilter);

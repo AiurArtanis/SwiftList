@@ -205,16 +205,21 @@ public sealed class NetworkIndexer : IDisposable
         _publisher.PublishStatusesChanged();
     }
 
-    // Fire-and-forget, called whenever a search window closes/hides (mirrors ShellIconHelper.ClearCache()'s
-    // existing trigger points and UsnIndexer.ClearAllPathCaches on the local-drive side).
-    public void ClearAllPathCaches()
+    // Called whenever a search window closes/hides (mirrors ShellIconHelper.ClearCache()'s existing
+    // trigger points and UsnIndexer.ClearAllPathCaches on the local-drive side). Unlike the local side,
+    // network/WSL/folder-index drives have no idle-timer-driven cache trim, so this also has to cover
+    // NetworkIndex.ClearCaches (candidate/rank cache), not just the path memo.
+    public void ClearAllCaches()
     {
         NetworkIndex[] snapshots;
         lock (_gate)
             snapshots = _indexes.Values.ToArray();
 
         foreach (var index in snapshots)
+        {
             index.ClearPathCache();
+            index.ClearCaches();
+        }
     }
 
     public void Dispose()
