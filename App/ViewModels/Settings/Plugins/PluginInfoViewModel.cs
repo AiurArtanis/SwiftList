@@ -40,11 +40,37 @@ public class PluginComponentGroupViewModel : ViewModelBase
     {
         ComponentType = componentType;
         Components = new ObservableCollection<PluginComponentViewModel>(components);
+        ToggleAllCommand = new RelayCommand(ToggleAllComponents);
+
+        // TranslationProvider/ThemeProvider components have no checkbox at all (see IsToggleable),
+        // so there's nothing for a select-all button to toggle in those groups.
+        foreach (var component in Components.Where(c => c.IsToggleable))
+            component.PropertyChanged += OnComponentIsEnabledChanged;
     }
 
     public PluginComponentType ComponentType { get; }
     public string GroupName => TranslationManager.Instance[$"Plugins_Type{ComponentType}"];
     public ObservableCollection<PluginComponentViewModel> Components { get; }
+
+    // A single toggleable component has nothing to "select all" -- its own checkbox already does that.
+    public bool HasToggleableComponents => Components.Count(c => c.IsToggleable) > 1;
+    public bool AreAllToggleableComponentsEnabled => Components.Where(c => c.IsToggleable).All(c => c.IsEnabled);
+    public string SelectAllToggleLabel => TranslationManager.Instance[AreAllToggleableComponentsEnabled ? "Common_DeselectAll" : "Common_SelectAll"];
+
+    public ICommand ToggleAllCommand { get; }
+
+    private void OnComponentIsEnabledChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PluginComponentViewModel.IsEnabled))
+            OnPropertyChanged(nameof(SelectAllToggleLabel));
+    }
+
+    private void ToggleAllComponents()
+    {
+        var setTo = !AreAllToggleableComponentsEnabled;
+        foreach (var component in Components.Where(c => c.IsToggleable))
+            component.IsEnabled = setTo;
+    }
 }
 
 /// <summary>
@@ -68,6 +94,7 @@ public class PluginInfoViewModel : ViewModelBase
         SdkVersion = sdkVersion;
         RawComponents = components;
         ConfigFields = new ObservableCollection<PluginConfigFieldViewModel>(configFields);
+        ToggleAllComponentsCommand = new RelayCommand(ToggleAllComponents);
 
         // Group components by type
         var groups = components
@@ -77,6 +104,11 @@ public class PluginInfoViewModel : ViewModelBase
             .ToList();
 
         ComponentGroups = new ObservableCollection<PluginComponentGroupViewModel>(groups);
+
+        // TranslationProvider/ThemeProvider components have no checkbox at all (see IsToggleable),
+        // so there's nothing for the plugin-wide select-all button to toggle for those.
+        foreach (var component in RawComponents.Where(c => c.IsToggleable))
+            component.PropertyChanged += OnComponentIsEnabledChanged;
     }
 
     public string Name { get; }
@@ -89,6 +121,28 @@ public class PluginInfoViewModel : ViewModelBase
 
     public bool HasConfigFields => ConfigFields.Count > 0;
     public bool HasNoComponents => RawComponents.Count == 0;
+
+    // Plugin-wide select-all/deselect-all, toggling every component across every group at once --
+    // separate from each PluginComponentGroupViewModel's own per-group toggle. Same single-item
+    // exception as the per-group button.
+    public bool HasToggleableComponents => RawComponents.Count(c => c.IsToggleable) > 1;
+    public bool AreAllToggleableComponentsEnabled => RawComponents.Where(c => c.IsToggleable).All(c => c.IsEnabled);
+    public string SelectAllToggleLabel => TranslationManager.Instance[AreAllToggleableComponentsEnabled ? "Common_DeselectAll" : "Common_SelectAll"];
+
+    public ICommand ToggleAllComponentsCommand { get; }
+
+    private void OnComponentIsEnabledChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PluginComponentViewModel.IsEnabled))
+            OnPropertyChanged(nameof(SelectAllToggleLabel));
+    }
+
+    private void ToggleAllComponents()
+    {
+        var setTo = !AreAllToggleableComponentsEnabled;
+        foreach (var component in RawComponents.Where(c => c.IsToggleable))
+            component.IsEnabled = setTo;
+    }
 
     public bool IsExpanded
     {

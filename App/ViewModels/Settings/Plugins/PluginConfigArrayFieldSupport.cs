@@ -1,0 +1,116 @@
+using SwiftList.App.Helpers;
+
+namespace SwiftList.App.ViewModels.Settings.Plugins;
+
+// Owns the Object/Array-field behavior for a PluginConfigFieldViewModel -- loading child items from
+// settings, adding/removing array rows, and re-serializing children back into LocalValueStore. Split
+// out purely to keep PluginConfigFieldViewModel under the file-length limit; this class has no
+// state of its own, it always operates on the one field that owns it.
+internal sealed class PluginConfigArrayFieldSupport
+{
+    private readonly PluginConfigFieldViewModel _field;
+
+    public PluginConfigArrayFieldSupport(PluginConfigFieldViewModel field) => _field = field;
+
+    public void LoadObjectChildren()
+    {
+        var rawSetting = _field.Settings.GetPluginSetting<object?>(_field.PluginId, _field.SchemaField.Key, null);
+        var dict = ConfigValueHelper.UnpackValue(rawSetting) as Dictionary<string, object>
+                   ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var sf in _field.SchemaField.SubFields!)
+        {
+            dict.TryGetValue(sf.Key, out var val);
+            var childVM = new PluginConfigFieldViewModel(_field.PluginId, sf, _field.Settings, SaveObjectFromChildren)
+            {
+                LocalValueStore = ConfigValueHelper.UnpackValue(val ?? sf.DefaultValue)
+            };
+            _field.Children.Add(childVM);
+        }
+    }
+
+    public void LoadArrayItems()
+    {
+        var rawSetting = _field.Settings.GetPluginSetting<object?>(_field.PluginId, _field.SchemaField.Key, null);
+        var list = ConfigValueHelper.UnpackValue(rawSetting) as System.Collections.IEnumerable
+                   ?? (_field.SchemaField.DefaultValue as System.Collections.IEnumerable);
+
+        if (list != null)
+        {
+            var hasAnyVal = false;
+            foreach (var item in list)
+            {
+                var unpackedItem = ConfigValueHelper.UnpackValue(item);
+                if (unpackedItem is Dictionary<string, object> d)
+                {
+                    if (d.Values.Any(v => v != null && !string.IsNullOrWhiteSpace(v.ToString())))
+                    {
+                        hasAnyVal = true;
+                        break;
+                    }
+                }
+                else if (unpackedItem != null && !string.IsNullOrWhiteSpace(unpackedItem.ToString()))
+                {
+                    hasAnyVal = true;
+                    break;
+                }
+            }
+
+            if (!hasAnyVal && rawSetting != null)
+                list = _field.SchemaField.DefaultValue as System.Collections.IEnumerable;
+
+            if (list != null)
+            {
+                foreach (var item in list)
+                    AddArrayItemViewModel(ConfigValueHelper.UnpackValue(item));
+            }
+        }
+
+        _field.SelectedArrayItem = _field.ArrayItems.FirstOrDefault();
+    }
+
+    public void AddArrayItem()
+    {
+        object? newItem;
+        if (_field.SchemaField.SubFields != null && _field.SchemaField.SubFields.Count > 0)
+        {
+            var dict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            foreach (var sf in _field.SchemaField.SubFields)
+                dict[sf.Key] = sf.DefaultValue;
+            newItem = dict;
+        }
+        else
+        {
+            newItem = string.Empty;
+        }
+
+        AddArrayItemViewModel(newItem);
+        _field.SelectedArrayItem = _field.ArrayItems[^1];
+        SaveArrayFromChildren();
+    }
+
+    private void AddArrayItemViewModel(object? itemValue)
+    {
+        PluginConfigArrayItemViewModel? itemVM = null;
+        itemVM = new PluginConfigArrayItemViewModel(_field, itemValue, () =>
+        {
+            var wasSelected = ReferenceEquals(_field.SelectedArrayItem, itemVM);
+            var index = _field.ArrayItems.IndexOf(itemVM!);
+            _field.ArrayItems.Remove(itemVM!);
+            if (wasSelected)
+                _field.SelectedArrayItem = _field.ArrayItems.Count > 0 ? _field.ArrayItems[Math.Min(index, _field.ArrayItems.Count - 1)] : null;
+            SaveArrayFromChildren();
+        });
+        _field.ArrayItems.Add(itemVM);
+    }
+
+    public void SaveObjectFromChildren()
+    {
+        var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var child in _field.Children)
+            dict[child.SchemaField.Key] = child.LocalValueStore;
+        _field.CommitLocalValue(dict);
+    }
+
+    public void SaveArrayFromChildren() => _field.CommitLocalValue(_field.ArrayItems.Select(item => item.GetValue()).ToList());
+}

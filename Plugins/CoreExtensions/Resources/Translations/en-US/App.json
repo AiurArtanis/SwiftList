@@ -57,6 +57,8 @@
   "Common_Configure": "Configure",
   "Common_Add": "Add Item",
   "Common_Delete": "Delete",
+  "Common_SelectAll": "Select All",
+  "Common_DeselectAll": "Deselect All",
   "Plugins_Config_TitleSuffix": "Configuration",
   "Plugins_Config_UntitledItem": "(Untitled)",
   "Service_Title": "Service Status",

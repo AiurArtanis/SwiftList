@@ -10,6 +10,7 @@ namespace SwiftList.App.ViewModels.Settings.Plugins;
 public class PluginConfigFieldViewModel : ViewModelBase
 {
     private readonly Action? _onValueChanged;
+    private readonly PluginConfigArrayFieldSupport _arraySupport;
     private object? _localValueStore;
 
     public string PluginId { get; }
@@ -118,7 +119,8 @@ public class PluginConfigFieldViewModel : ViewModelBase
         SchemaField = field;
         Settings = settings;
         _onValueChanged = onValueChanged;
-        AddCommand = new RelayCommand(AddArrayItem);
+        _arraySupport = new PluginConfigArrayFieldSupport(this);
+        AddCommand = new RelayCommand(_arraySupport.AddArrayItem);
 
         if (_onValueChanged == null)
         {
@@ -189,124 +191,26 @@ public class PluginConfigFieldViewModel : ViewModelBase
         }
         else if (IsObject && SchemaField.SubFields != null)
         {
-            var rawSetting = Settings.GetPluginSetting<object?>(PluginId, SchemaField.Key, null);
-            var dict = ConfigValueHelper.UnpackValue(rawSetting) as Dictionary<string, object>
-                       ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var sf in SchemaField.SubFields)
-            {
-                dict.TryGetValue(sf.Key, out var val);
-                var childVM = new PluginConfigFieldViewModel(PluginId, sf, Settings, SaveObjectFromChildren)
-                {
-                    LocalValueStore = ConfigValueHelper.UnpackValue(val ?? sf.DefaultValue)
-                };
-                Children.Add(childVM);
-            }
+            _arraySupport.LoadObjectChildren();
         }
         else if (IsArray)
         {
-            var rawSetting = Settings.GetPluginSetting<object?>(PluginId, SchemaField.Key, null);
-            var list = ConfigValueHelper.UnpackValue(rawSetting) as System.Collections.IEnumerable
-                       ?? (SchemaField.DefaultValue as System.Collections.IEnumerable);
-
-            if (list != null)
-            {
-                var hasAnyVal = false;
-                foreach (var item in list)
-                {
-                    var unpackedItem = ConfigValueHelper.UnpackValue(item);
-                    if (unpackedItem is Dictionary<string, object> d)
-                    {
-                        if (d.Values.Any(v => v != null && !string.IsNullOrWhiteSpace(v.ToString())))
-                        {
-                            hasAnyVal = true;
-                            break;
-                        }
-                    }
-                    else if (unpackedItem != null && !string.IsNullOrWhiteSpace(unpackedItem.ToString()))
-                    {
-                        hasAnyVal = true;
-                        break;
-                    }
-                }
-
-                if (!hasAnyVal && rawSetting != null)
-                {
-                    list = SchemaField.DefaultValue as System.Collections.IEnumerable;
-                }
-
-                if (list != null)
-                {
-                    foreach (var item in list)
-                    {
-                        AddArrayItemViewModel(ConfigValueHelper.UnpackValue(item));
-                    }
-                }
-            }
-
-            SelectedArrayItem = ArrayItems.FirstOrDefault();
+            _arraySupport.LoadArrayItems();
         }
-    }
-
-    private void AddArrayItem()
-    {
-        object? newItem = null;
-        if (SchemaField.SubFields != null && SchemaField.SubFields.Count > 0)
-        {
-            var dict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-            foreach (var sf in SchemaField.SubFields)
-            {
-                dict[sf.Key] = sf.DefaultValue;
-            }
-            newItem = dict;
-        }
-        else
-        {
-            newItem = string.Empty;
-        }
-
-        AddArrayItemViewModel(newItem);
-        SelectedArrayItem = ArrayItems[^1];
-        SaveArrayFromChildren();
-    }
-
-    private void AddArrayItemViewModel(object? itemValue)
-    {
-        PluginConfigArrayItemViewModel? itemVM = null;
-        itemVM = new PluginConfigArrayItemViewModel(this, itemValue, () =>
-        {
-            var wasSelected = ReferenceEquals(SelectedArrayItem, itemVM);
-            var index = ArrayItems.IndexOf(itemVM!);
-            ArrayItems.Remove(itemVM!);
-            if (wasSelected)
-                SelectedArrayItem = ArrayItems.Count > 0 ? ArrayItems[Math.Min(index, ArrayItems.Count - 1)] : null;
-            SaveArrayFromChildren();
-        });
-        ArrayItems.Add(itemVM);
     }
 
     public void OnChildChanged()
     {
-        if (IsArray) SaveArrayFromChildren();
-        else if (IsObject) SaveObjectFromChildren();
+        if (IsArray) _arraySupport.SaveArrayFromChildren();
+        else if (IsObject) _arraySupport.SaveObjectFromChildren();
         else _onValueChanged?.Invoke();
     }
 
-    private void SaveObjectFromChildren()
+    // Lets PluginConfigArrayFieldSupport re-serialize Children/ArrayItems back into this field's
+    // stored value without exposing the raw backing field or the protected change-notification API.
+    internal void CommitLocalValue(object? rawValue)
     {
-        var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-        foreach (var child in Children)
-        {
-            dict[child.SchemaField.Key] = child.LocalValueStore;
-        }
-        _localValueStore = dict;
-        OnPropertyChanged(nameof(Value));
-        _onValueChanged?.Invoke();
-    }
-
-    private void SaveArrayFromChildren()
-    {
-        _localValueStore = ArrayItems.Select(item => item.GetValue()).ToList();
+        _localValueStore = rawValue;
         OnPropertyChanged(nameof(Value));
         _onValueChanged?.Invoke();
     }

@@ -57,6 +57,8 @@
   "Common_Configure": "配置",
   "Common_Add": "添加项目",
   "Common_Delete": "删除",
+  "Common_SelectAll": "全选",
+  "Common_DeselectAll": "全不选",
   "Plugins_Config_TitleSuffix": "配置",
   "Plugins_Config_UntitledItem": "(无标题)",
   "Service_Title": "服务状态",

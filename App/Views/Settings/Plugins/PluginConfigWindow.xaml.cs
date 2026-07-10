@@ -1,7 +1,5 @@
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
-using Microsoft.Win32;
 using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings.Plugins;
 
@@ -20,8 +18,8 @@ public partial class PluginConfigWindow : Window
     // longer leave a large empty gap below their content), then this switches to Manual so the user
     // can still freely resize afterward -- SizeToContent and manual resizing can't be active at once.
     private void Window_Loaded(object sender, RoutedEventArgs e) =>
-        // Nested elements (e.g. each array field's detail panel, via ArrayDetailPanel_Loaded below)
-        // can still be growing the content after this Loaded fires -- Loaded ordering between a
+        // Nested elements (e.g. each array field's detail panel, via FieldRowTemplate.xaml.cs's
+        // ArrayDetailPanel_Loaded) can still be growing the content after this Loaded fires -- Loaded ordering between a
         // window and its descendants isn't guaranteed. Defer to ContextIdle so every such handler,
         // and the layout pass each one triggers, has already settled before this window "freezes"
         // its size; freezing too early has locked in a height shorter than the real content.
@@ -45,39 +43,6 @@ public partial class PluginConfigWindow : Window
                 Top = Owner.Top + (Owner.ActualHeight - ActualHeight) / 2;
             }
         }), System.Windows.Threading.DispatcherPriority.ContextIdle);
-
-    // Brings the newly-added (and newly-selected) row into view when the master list has more
-    // items than fit -- otherwise Add silently appends off-screen below the visible scroll area.
-    private void ArrayMasterList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-    {
-        if (sender is System.Windows.Controls.ListBox { SelectedItem: not null } listBox)
-            listBox.ScrollIntoView(listBox.SelectedItem);
-    }
-
-    // Keeps an array field's master list column exactly as tall as its detail panel, so only the
-    // ListBox itself scrolls (not the whole page). Driven from code rather than a pure Grid Auto-row
-    // + ElementName height binding, because that combination feeds back on itself: an unresolved
-    // first-pass height lets the master list's own (unbounded) natural size leak into the row's Auto
-    // height, which the detail panel -- if it were Stretch-aligned -- would then adopt too, permanently
-    // locking in an inflated value. Doing the sync explicitly after each real layout avoids that.
-    private void ArrayDetailPanel_Loaded(object sender, RoutedEventArgs e) => SyncArrayMasterListHeight(sender);
-
-    private void ArrayDetailPanel_SizeChanged(object sender, SizeChangedEventArgs e) => SyncArrayMasterListHeight(sender);
-
-    private static void SyncArrayMasterListHeight(object sender)
-    {
-        if (sender is not FrameworkElement detailPanel) return;
-        if (VisualTreeHelper.GetParent(detailPanel) is not System.Windows.Controls.Grid parentGrid) return;
-
-        var masterGrid = parentGrid.Children.OfType<System.Windows.Controls.Grid>()
-            .FirstOrDefault(g => g.Name == "ArrayMasterListGrid");
-        if (masterGrid == null) return;
-
-        // An empty array has no selected item, so the detail panel collapses to zero height. Don't
-        // mirror that onto the master list too -- that would hide the Add button along with it, which
-        // is exactly what's needed to add the very first item. Fall back to its own natural size instead.
-        masterGrid.Height = detailPanel.ActualHeight > 0 ? detailPanel.ActualHeight : double.NaN;
-    }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
@@ -124,33 +89,6 @@ public partial class PluginConfigWindow : Window
                     scrollViewer.LineLeft();
                 }
                 e.Handled = true;
-            }
-        }
-    }
-
-
-    private void BrowsePath_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not System.Windows.Controls.Button btn) return;
-        var panel = btn.Parent as System.Windows.Controls.StackPanel;
-        var textBox = panel?.Children.OfType<System.Windows.Controls.TextBox>().FirstOrDefault();
-
-        if (btn.Tag as string == "Folder")
-        {
-            var dlg = new OpenFolderDialog();
-            if (dlg.ShowDialog() == true)
-            {
-                textBox!.Text = dlg.FolderName;
-                textBox.GetBindingExpression(System.Windows.Controls.TextBox.TextProperty)?.UpdateSource();
-            }
-        }
-        else
-        {
-            var dlg = new Microsoft.Win32.OpenFileDialog();
-            if (dlg.ShowDialog() == true)
-            {
-                textBox!.Text = dlg.FileName;
-                textBox.GetBindingExpression(System.Windows.Controls.TextBox.TextProperty)?.UpdateSource();
             }
         }
     }

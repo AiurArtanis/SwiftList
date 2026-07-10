@@ -1,0 +1,168 @@
+<ResourceDictionary x:Class="SwiftList.App.Views.Settings.Plugins.PluginConfigFieldRowTemplate"
+                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:services="clr-namespace:SwiftList.App.Services"
+                    xmlns:vm="clr-namespace:SwiftList.App.ViewModels.Settings.Plugins">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Templates.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- Implicit DataTemplate for recursive/nested plugin config fields rendering -->
+    <DataTemplate DataType="{x:Type vm:PluginConfigFieldViewModel}">
+        <Border Style="{StaticResource SettingsRow}" Padding="8,6" Margin="0,0,0,6">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <!-- Label and its editor stay glued together as one left-anchored unit;
+                         the trailing * column just absorbs whatever's left of a wide window,
+                         instead of stretching the gap between the label and its own control.
+                         SharedSizeGroup syncs this column to the widest label on screen, so
+                         every row's editor/checkbox lines up at the same X (see the page-level
+                         IsSharedSizeScope="True" this relies on). -->
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="FieldLabel"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Label & Description for simple inputs -->
+                <StackPanel Grid.Column="0" Grid.Row="0" VerticalAlignment="Center" Margin="0,0,12,0"
+                            Visibility="{Binding IsSimpleField, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" TextWrapping="Wrap" MaxWidth="320" HorizontalAlignment="Left" Visibility="{Binding Label, Converter={StaticResource StringToVis}}"/>
+                    <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" MaxWidth="320" HorizontalAlignment="Left" Margin="0,2,0,0" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                </StackPanel>
+
+                <!-- Field Controls for simple inputs -->
+                <ContentControl Content="{Binding}" Grid.Column="1" Grid.Row="0" VerticalAlignment="Center" Focusable="False"
+                                Style="{StaticResource FieldValueEditorStyle}"/>
+
+                <!-- Object layout -->
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1" Margin="4,4,4,4"
+                            Visibility="{Binding IsObject, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" MaxWidth="600" HorizontalAlignment="Left" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+
+                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0">
+                        <ItemsControl ItemsSource="{Binding Children}"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Group layout -->
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1" Margin="4,4,4,4"
+                            Visibility="{Binding IsGroup, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource AccentBlue}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" MaxWidth="600" HorizontalAlignment="Left" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+
+                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0">
+                        <ItemsControl ItemsSource="{Binding Children}"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Array layout: shared heading, then either the object-array table or the
+                     scalar-array list below it. -->
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1" Margin="4,4,4,4"
+                            Visibility="{Binding IsArray, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Binding Description}" FontSize="10" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" MaxWidth="600" HorizontalAlignment="Left" Margin="0,0,0,6" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+
+                    <!-- Object-array master/detail: a compact selectable list on the left,
+                         the selected item's full editable fields on the right -->
+                    <Grid Margin="8,0,0,0" Visibility="{Binding IsObjectArray, Converter={StaticResource BoolToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="*" MinWidth="260"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Master list: height locked to the detail panel's natural height (kept
+                             in sync from code-behind, see ArrayDetailPanel_Loaded) so only the
+                             ListBox itself scrolls; the Add button stays pinned directly beneath it. -->
+                        <Grid x:Name="ArrayMasterListGrid" Grid.Column="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <ListBox Grid.Row="0" ItemsSource="{Binding ArrayItems}" SelectedItem="{Binding SelectedArrayItem, Mode=TwoWay}"
+                                     BorderThickness="0" Background="Transparent"
+                                     ItemContainerStyle="{StaticResource ArrayMasterListItemStyle}"
+                                     SelectionChanged="ArrayMasterList_SelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="22" Height="22" Margin="0,0,8,0" CornerRadius="4"
+                                                    Background="{DynamicResource ControlBackground}" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1"
+                                                    Visibility="{Binding IconField, Converter={StaticResource NullToVis}}">
+                                                <Path Data="{Binding IconField.Value}" Fill="{DynamicResource DefaultPluginIconColor}" Width="11" Height="11" Stretch="Uniform"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding TitleField.Value, Converter={StaticResource EmptyOrPlaceholder}}" FontSize="12" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                                <Border Background="{DynamicResource BadgeBackground}" BorderBrush="{DynamicResource BadgeBorderBrush}" BorderThickness="1"
+                                                        CornerRadius="4" Padding="5,0,5,1" Margin="0,3,0,0" HorizontalAlignment="Left"
+                                                        Visibility="{Binding BadgeField, Converter={StaticResource BadgeFieldToVis}}">
+                                                    <TextBlock Text="{Binding BadgeField.Value}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BadgeText}"/>
+                                                </Border>
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Style="{StaticResource ArrayRowDeleteButton}" VerticalAlignment="Center"
+                                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_Delete]}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <Button Grid.Row="1" Command="{Binding AddCommand}" Style="{StaticResource SettingsButton}" Height="26" Padding="8,0"
+                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_Add]}"
+                                    FontSize="11" Cursor="Hand" HorizontalContentAlignment="Center" Margin="0,6,0,0"/>
+                        </Grid>
+
+                        <!-- Detail panel for the selected item. VerticalAlignment="Top" keeps its
+                             ActualHeight equal to its own natural content size regardless of the
+                             row's resolved height, which ArrayDetailPanel_Loaded (code-behind)
+                             then mirrors onto ArrayMasterListGrid: a pure Grid-Auto-row approach
+                             here creates a feedback loop where a tall item list on the left drags
+                             this panel's height up with it instead of staying at its own size. -->
+                        <Border x:Name="ArrayDetailPanel" Grid.Column="2" VerticalAlignment="Top" BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Padding="12,0,0,0"
+                                Visibility="{Binding SelectedArrayItem, Converter={StaticResource NullToVis}}"
+                                Loaded="ArrayDetailPanel_Loaded" SizeChanged="ArrayDetailPanel_SizeChanged">
+                            <StackPanel DataContext="{Binding SelectedArrayItem}">
+                                <ItemsControl ItemsSource="{Binding Children}" ItemTemplate="{StaticResource ArrayDetailFieldTemplate}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Scalar-array list: a single value column, no header needed -->
+                    <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1,0,0,0" Margin="8,0,0,0" Padding="12,0,0,0"
+                            Visibility="{Binding IsScalarArray, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <ItemsControl ItemsSource="{Binding ArrayItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,0,0,1" Padding="0,4" Margin="0,0,0,4">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ContentControl Content="{Binding SimpleValueViewModel}" VerticalAlignment="Center" Focusable="False"
+                                                                 Style="{StaticResource FieldValueEditorStyle}"/>
+                                                <Button Style="{StaticResource ArrayRowDeleteButton}"
+                                                        ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_Delete]}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Button Command="{Binding AddCommand}" Style="{StaticResource PrimarySettingsButton}" Height="24" MinWidth="80" Padding="8,0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Common_Add]}" FontSize="11" Cursor="Hand" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </DataTemplate>
+</ResourceDictionary>
