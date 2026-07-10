@@ -203,7 +203,13 @@ internal sealed class SearchDispatchController
     private async Task ComposeAndApplyAsync(string query, List<AppSearchResult> uiResults, IReadOnlyList<string> tokensSnapshot, string statusText, bool final)
     {
         var fileRows = uiResults.Where(IsFileOrDirectory).ToList();
-        var instantRows = uiResults.Where(r => r.ResultKind == "InstantResult").ToList();
+        // ResultKind == "InstantResult" alone isn't enough: ISearchableItemProvider (a static catalog --
+        // System Settings shortcuts, Start Menu apps that don't resolve to a real file, etc., see
+        // SearchableItemMapper) also defaults an item's ResultKind to "InstantResult" when it isn't a
+        // File/Directory/Application, per the SDK's own documented default. A catalog shortcut has
+        // nothing to do with a query token's file filter either, so only rows from a genuine
+        // IInstantResultProvider (a per-query computed answer, e.g. a calculator result) survive here.
+        var instantRows = uiResults.Where(IsGenuineInstantResult).ToList();
 
         var processedFileRows = await QueryTokenDispatcher.ApplyAsync(fileRows, tokensSnapshot);
         if (_getSearchQuery() != query || !ReferenceEquals(_queryTokens, tokensSnapshot))
@@ -244,4 +250,7 @@ internal sealed class SearchDispatchController
     }
 
     private static bool IsFileOrDirectory(AppSearchResult r) => r.ResultKind is "File" or "Directory";
+
+    private static bool IsGenuineInstantResult(AppSearchResult r) =>
+        r.ResultKind == "InstantResult" && r.SourceProvider is PluginSdk.Abstractions.Plugins.IInstantResultProvider;
 }
