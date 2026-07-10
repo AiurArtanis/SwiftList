@@ -123,6 +123,7 @@ interface IDynamicActionProvider
     IReadOnlyList<string>? Parameters { get; }
     bool IsVisibleInSearch(IReadOnlyList<ISearchResult> selection, SearchWindowType windowType);
     bool IsVisibleInMenu(IReadOnlyList<ISearchResult> selection, SearchWindowType windowType);
+    void Init();
     bool CanProvide(IReadOnlyList<ISearchResult> selection);
     IEnumerable<DynamicMenuItem> GetMenuItems(IReadOnlyList<ISearchResult> selection, IntPtr hMenu);
     IEnumerable<(string Hotkey, Action Execute)> GetHotkeyActions(IReadOnlyList<ISearchResult> selection);
@@ -130,6 +131,12 @@ interface IDynamicActionProvider
     void ClearSession();
 }
 ```
+
+`Init()`由宿主在整个进程生命周期内最多调用一次——在任何一次动作菜单真正打开之前，即
+`CanProvide`/`GetMenuItems` 被调用之前触发。"最多一次"这个保证由宿主负责，具体实现不需要自己
+防止重复调用。适合用来做那种值得抢占先机的慢速一次性初始化(比如预热一个原生工作线程)，而不是
+和自己的 `CanProvide`/`GetMenuItems` 调用(紧随其后、没有任何提前量)抢时间——不能阻塞，真正
+耗时的工作要放到后台线程里做。默认实现是空操作。
 
 ## 支持模型
 

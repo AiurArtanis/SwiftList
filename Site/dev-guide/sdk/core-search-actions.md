@@ -124,6 +124,7 @@ interface IDynamicActionProvider
     IReadOnlyList<string>? Parameters { get; }
     bool IsVisibleInSearch(IReadOnlyList<ISearchResult> selection, SearchWindowType windowType);
     bool IsVisibleInMenu(IReadOnlyList<ISearchResult> selection, SearchWindowType windowType);
+    void Init();
     bool CanProvide(IReadOnlyList<ISearchResult> selection);
     IEnumerable<DynamicMenuItem> GetMenuItems(IReadOnlyList<ISearchResult> selection, IntPtr hMenu);
     IEnumerable<(string Hotkey, Action Execute)> GetHotkeyActions(IReadOnlyList<ISearchResult> selection);
@@ -131,6 +132,14 @@ interface IDynamicActionProvider
     void ClearSession();
 }
 ```
+
+`Init()` is called by the host at most once per process, the first time any actions menu opens —
+before `CanProvide`/`GetMenuItems` are actually invoked for any selection. The host guarantees the
+at-most-once part, so an implementation doesn't need to guard against repeat calls itself. Use it
+for slow one-time setup (e.g. warming up a native worker thread) that benefits from a genuine head
+start instead of racing your own `CanProvide`/`GetMenuItems` call, which follow immediately after
+with no lead time of their own — must not block, so do any real work on a background thread.
+Default implementation is a no-op.
 
 ## Supporting models
 
