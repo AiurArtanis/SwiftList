@@ -1,6 +1,6 @@
 # Index
 
-Three tabs: **Local Drives**, **Network Drives**, and **Exclusion Rules**.
+Four tabs: **Local Drives**, **Network Drives**, **Folders**, and **Exclusion Rules**.
 
 ## Local Drives
 
@@ -27,6 +27,17 @@ Three tabs: **Local Drives**, **Network Drives**, and **Exclusion Rules**.
 Network shares don't expose a change journal the way local NTFS volumes do, which is why they're
 refreshed on a schedule instead of in real time.
 
+## Folders
+
+Index arbitrary individual folders instead of a whole drive or share — useful for indexing just
+one subtree without pulling in everything else on that volume.
+
+- An **Add Folder** button opens a folder picker; a **Rebuild Index** button re-scans every folder
+  in the list.
+- One row per added folder: enable checkbox, path, status, item count, and the same **Refresh
+  Mode** dropdown (Manual / Every 15 minutes / Every hour / Daily) as network drives — folders are
+  scanned on a schedule rather than tracked continuously, the same way network shares are.
+
 ## Exclusion Rules
 
 Three sub-tabs, each with the same shape: a single-entry textbox + **Add** button, a list of
@@ -39,5 +50,5 @@ List** / **Apply to List** buttons for editing everything at once.
 - **Regex Patterns** — arbitrary regular expressions matched against the path/filename (partial
   match). Examples: `^\.` (hidden files), `~$` (Office temp files), `\.git\`.
 
-Exclusions apply to both local and network indexing, and network drives re-scan automatically after
-you apply exclusion changes.
+Exclusions apply to local, network, and folder indexing alike, and network drives/folders re-scan
+automatically after you apply exclusion changes.

@@ -11,6 +11,10 @@ to expand it and see its registered components, grouped by type (search provider
 providers, etc.) — each toggleable component has its own **enable/disable checkbox**; a component
 marked as required shows a lock icon instead and can't be turned off.
 
+When a group (or the plugin as a whole) has more than one toggleable component, a **Select
+All / Deselect All** link appears next to its header, letting you flip every checkbox in that
+scope at once instead of one at a time.
+
 If a plugin exposes its own configuration (custom settings beyond simple enable/disable), a
 **Configure** button appears in the card header, opening that plugin's own settings dialog.
 

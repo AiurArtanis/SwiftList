@@ -4,12 +4,13 @@ Manages the background indexing service, and gives you a live view of its logs.
 
 ## Service control
 
-A status indicator shows **Running**, **Stopped**, or **Not Installed**, with a matching action
-button:
+A status card shows the elevated indexer's current state — **Installing**, **Indexing**, **Ready**
+(with a live file/folder count), or **Error** — with a matching icon (spinner, checkmark, or error
+badge).
 
-- **Install & Start Service** (not installed)
-- **Start Service** / **Stop Service** (installed)
-- **Uninstall Service**
+An **Install & Start Service** button appears only when the service isn't installed yet or hit an
+error; once it's installed and running there's no manual start/stop/uninstall control on this
+page — the service is expected to just keep running in the background.
 
 ## Logs
 
