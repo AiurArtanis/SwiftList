@@ -13,7 +13,7 @@ published for every release:
 On first run, SwiftList installs and starts a Windows service (`SwiftList.Service`) that owns file
 indexing. This split exists on purpose — see [Architecture](../dev-guide/architecture) if you're
 curious why — but as a user, the only thing you need to know is: **Settings → Service Status**
-tells you whether the service is running, and lets you install/start/stop/uninstall it if needed.
+tells you whether the service is installed and running, and lets you install it if it isn't.
 
 ## The three windows
 

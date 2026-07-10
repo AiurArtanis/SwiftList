@@ -1,6 +1,7 @@
 # Index
 
-Four tabs: **Local Drives**, **Network Drives**, **Folders**, and **Exclusion Rules**.
+Five tabs, in order: **Local Drives**, **Network Drives**, **WSL** (only shown once a distribution
+is detected), **Folders**, and **Exclusion Rules**.
 
 ## Local Drives
 
@@ -20,12 +21,15 @@ Four tabs: **Local Drives**, **Network Drives**, **Folders**, and **Exclusion Ru
   - **Every 15 minutes**
   - **Every hour**
   - **Daily**
-- A **WSL Distributions** sub-section appears automatically if you have Windows Subsystem for
-  Linux installed, listing each distribution with the same enable/status/refresh-mode controls as
-  a network drive.
 
 Network shares don't expose a change journal the way local NTFS volumes do, which is why they're
 refreshed on a schedule instead of in real time.
+
+## WSL
+
+Only shown once at least one WSL distribution is detected — same shape as Network Drives (status
+card, **Rebuild Index** button, and one row per distribution with status/item count/**Refresh
+Mode**). Distributions are detected automatically; there's no manual "add" step.
 
 ## Folders
 
