@@ -9,7 +9,7 @@ SwiftList 自带两个插件，都是很有参考价值的真实案例——都�
 - **`IActionProvider.GetActions()`** 返回十个内置的 `ISearchResultAction`——打开、在资源管理器中
   定位、复制路径、复制/剪切文件本身、在其所在位置打开命令提示符、touch/mkdir，以及打开和命令提
   示符的提权(以管理员身份运行)变体。
-- **`IActionProvider.GetDynamicProviders()`** 返回一个 `IDynamicActionProvider`——
+- **`IActionProvider.GetDynamicActionProviders()`** 返回一个 `IDynamicActionProvider`——
   `ShellMenuActionProvider`——正是它让真正的 Windows 右键菜单(包括"发送到"这类级联子菜单)出现
   在 SwiftList 自己的动作菜单里。如果你想在 SwiftList 里呈现*任何*外部、动态构建的菜单，而不是
   一份固定的动作列表，这是值得照抄的模式。

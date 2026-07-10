@@ -11,7 +11,7 @@ namespace SwiftList.App.ViewModels.Settings.Plugins;
 public enum PluginComponentType
 {
     Action,
-    DynamicProvider,
+    DynamicActionProvider,
     InstantProvider,
     SearchableItemProvider,
     FilterProvider,

@@ -9,5 +9,5 @@ public interface IActionProvider
     IEnumerable<ISearchResultAction> GetActions();
 
     /// <summary>Returns the dynamic action providers (e.g. Shell Context Menu) provided by this plugin.</summary>
-    IEnumerable<IDynamicActionProvider> GetDynamicProviders();
+    IEnumerable<IDynamicActionProvider> GetDynamicActionProviders();
 }

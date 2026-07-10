@@ -83,7 +83,7 @@ interface IQueryTokenProvider
 interface IActionProvider
 {
     IEnumerable<ISearchResultAction> GetActions();
-    IEnumerable<IDynamicActionProvider> GetDynamicProviders();
+    IEnumerable<IDynamicActionProvider> GetDynamicActionProviders();
 }
 ```
 

@@ -102,7 +102,7 @@ public static class QuickNavigationMenu
             // the freed pages to the OS. Deferred + off the UI thread so WPF first tears down the menu
             // visual tree (matching QuickSearch's hide path); otherwise the GC still sees it referenced.
             foreach (var provider in PluginManager.Instance.QuickNavigationProviders) provider.ClearSession();
-            foreach (var provider in PluginManager.Instance.DynamicProviders) provider.ClearSession();
+            foreach (var provider in PluginManager.Instance.DynamicActionProviders) provider.ClearSession();
             _ = Task.Delay(100).ContinueWith(_ =>
             {
                 try { ShellIconHelper.ClearCache(); } catch { }

@@ -5,7 +5,7 @@ using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.CustomActions;
 
-public class DynamicProvider : IDynamicActionProvider
+public class DynamicActionProvider : IDynamicActionProvider
 {
     public string GroupName => TranslationService.Get("CustomActions_GroupName") ?? "自定义动作";
 

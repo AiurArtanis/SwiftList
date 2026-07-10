@@ -178,10 +178,10 @@ public static class PluginLoaderHelper
             var id = MakeId(dllName, PluginComponentType.SearchableItemProvider, prov.Id);
             components.Add(new PluginComponentViewModel(id, PluginComponentType.SearchableItemProvider, prov.Name, !disabledSet.Contains(id)));
         }
-        foreach (var prov in manager.AllDynamicProviders.Where(p => p.GetType().Assembly == assembly))
+        foreach (var prov in manager.AllDynamicActionProviders.Where(p => p.GetType().Assembly == assembly))
         {
-            var id = MakeId(dllName, PluginComponentType.DynamicProvider, prov.GetType().Name);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.DynamicProvider, prov.GroupName, !disabledSet.Contains(id)));
+            var id = MakeId(dllName, PluginComponentType.DynamicActionProvider, prov.GetType().Name);
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.DynamicActionProvider, prov.GroupName, !disabledSet.Contains(id)));
         }
         foreach (var prov in manager.AllQuickNavigationProviders.Where(p => p.GetType().Assembly == assembly))
         {

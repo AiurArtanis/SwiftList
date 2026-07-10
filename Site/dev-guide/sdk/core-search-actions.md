@@ -83,7 +83,7 @@ The container a plugin implements to expose both static and dynamic actions:
 interface IActionProvider
 {
     IEnumerable<ISearchResultAction> GetActions();
-    IEnumerable<IDynamicActionProvider> GetDynamicProviders();
+    IEnumerable<IDynamicActionProvider> GetDynamicActionProviders();
 }
 ```
 

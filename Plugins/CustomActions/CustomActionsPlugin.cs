@@ -10,7 +10,7 @@ public class CustomActionsPlugin : IPlugin, IActionProvider, IConfigurable
 
     public IEnumerable<ISearchResultAction> GetActions() => Array.Empty<ISearchResultAction>();
 
-    public IEnumerable<IDynamicActionProvider> GetDynamicProviders() => new[] { new DynamicProvider() };
+    public IEnumerable<IDynamicActionProvider> GetDynamicActionProviders() => new[] { new DynamicActionProvider() };
 
     public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
     {

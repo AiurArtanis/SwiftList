@@ -23,7 +23,7 @@ public class CoreExtensionsPlugin : IPlugin, IActionProvider, IConfigurable
             new MkdirAction()
         };
 
-    public IEnumerable<IDynamicActionProvider> GetDynamicProviders() => new IDynamicActionProvider[]
+    public IEnumerable<IDynamicActionProvider> GetDynamicActionProviders() => new IDynamicActionProvider[]
         {
             new ShellMenuActionProvider()
         };

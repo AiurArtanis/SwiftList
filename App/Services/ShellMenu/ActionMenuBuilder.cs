@@ -113,7 +113,7 @@ internal static class ActionMenuBuilder
         if (hMenu == IntPtr.Zero)
         {
             // Root: every dynamic provider (e.g. shell context menu), sorted by Priority descending.
-            foreach (var provider in PluginManager.Instance.DynamicProviders.OrderByDescending(p => p.Priority))
+            foreach (var provider in PluginManager.Instance.DynamicActionProviders.OrderByDescending(p => p.Priority))
             {
                 if (provider.Keywords.Count > 0)
                     continue;

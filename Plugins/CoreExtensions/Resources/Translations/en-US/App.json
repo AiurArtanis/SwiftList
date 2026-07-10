@@ -319,7 +319,7 @@
   "Plugins_ComponentsTitle": "Components",
   "Plugins_NoComponents": "This plugin has no registered components.",
   "Plugins_TypeAction": "Action",
-  "Plugins_TypeDynamicProvider": "Dynamic Menu",
+  "Plugins_TypeDynamicActionProvider": "Dynamic Menu",
   "Plugins_TypeInstantProvider": "Instant Result",
   "Plugins_TypeSearchableItemProvider": "Searchable Items",
   "Plugins_TypeFilterProvider": "Sidebar Filter",

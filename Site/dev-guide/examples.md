@@ -11,7 +11,7 @@ Two plugins ship with SwiftList itself and are useful, real-world references —
 - **`IActionProvider.GetActions()`** returns ten built-in `ISearchResultAction`s — open, locate in
   Explorer, copy path, copy/cut the file itself, open a command prompt at its location, touch/mkdir,
   and elevated (run-as-admin) variants of open and command-prompt.
-- **`IActionProvider.GetDynamicProviders()`** returns a single `IDynamicActionProvider` —
+- **`IActionProvider.GetDynamicActionProviders()`** returns a single `IDynamicActionProvider` —
   `ShellMenuActionProvider` — which is what makes the real Windows right-click menu (including
   nested cascade submenus like "Send to") appear inside SwiftList's own Actions menu. This is the
   pattern to copy if you want to surface *any* external, dynamically-built menu inside SwiftList

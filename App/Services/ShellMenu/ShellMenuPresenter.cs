@@ -97,7 +97,7 @@ public class ShellMenuPresenter : IDisposable
         _commandToProviderMap.Clear();
         _subMenuToProviderMap.Clear();
 
-        foreach (var provider in PluginManager.Instance.DynamicProviders)
+        foreach (var provider in PluginManager.Instance.DynamicActionProviders)
         {
             provider.ClearSession();
             // Fired before anything else below (static actions render, then CanProvide/GetMenuItems run
@@ -226,7 +226,7 @@ public class ShellMenuPresenter : IDisposable
     public void ExitActionsMode()
     {
         _activeResult = null;
-        foreach (var provider in PluginManager.Instance.DynamicProviders)
+        foreach (var provider in PluginManager.Instance.DynamicActionProviders)
         {
             provider.ClearSession();
         }
@@ -260,7 +260,7 @@ public class ShellMenuPresenter : IDisposable
 
     public void HandleActionsPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) => _mouseHandler.HandleActionsPreviewMouseLeftButtonUp(sender, e);
 
-    public void Dispose() { foreach (var p in PluginManager.Instance.DynamicProviders) p.ClearSession(); }
+    public void Dispose() { foreach (var p in PluginManager.Instance.DynamicActionProviders) p.ClearSession(); }
 
     private SearchWindowType GetWindowType() =>
         _view.GetType().Name switch

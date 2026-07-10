@@ -21,7 +21,7 @@ public class PluginManager : PluginRegistry
 
     private readonly List<PluginSdk.Abstractions.Plugins.IPlugin> _plugins = new();
     private readonly List<PluginActionRegistration> _actions = new();
-    private readonly List<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> _dynamicProviders = new();
+    private readonly List<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> _dynamicActionProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.IInstantResultProvider> _instantResultProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.ISearchableItemProvider> _searchableItemProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.ISidebarFilterProvider> _sidebarFilterProviders = new();
@@ -129,8 +129,8 @@ public class PluginManager : PluginRegistry
         {
             foreach (var action in actionProvider.GetActions())
                 _actions.Add(new PluginActionRegistration(_nextRuntimeActionId++, plugin, action));
-            foreach (var provider in actionProvider.GetDynamicProviders())
-                _dynamicProviders.Add(provider);
+            foreach (var provider in actionProvider.GetDynamicActionProviders())
+                _dynamicActionProviders.Add(provider);
         }
     }
 
@@ -141,8 +141,8 @@ public class PluginManager : PluginRegistry
     public IEnumerable<PluginActionRegistration> Actions
         => _actions.Where(a => _filter.IsEnabled(ComponentFilter.GetDllName(a.Plugin), PluginComponentType.Action, a.Action.Id));
 
-    public IEnumerable<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> DynamicProviders
-        => _dynamicProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.DynamicProvider, p.GetType().Name));
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> DynamicActionProviders
+        => _dynamicActionProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.DynamicActionProvider, p.GetType().Name));
 
     public IEnumerable<PluginSdk.Abstractions.Plugins.IQuickNavigationProvider> QuickNavigationProviders
         => _quickNavigationProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.QuickNavigationProvider, p.GetType().Name));
@@ -197,7 +197,7 @@ public class PluginManager : PluginRegistry
     public IEnumerable<PluginSdk.Abstractions.Plugins.IThumbnailProvider> AllThumbnailProviders => _thumbnailProviders;
 
     public IEnumerable<PluginActionRegistration> AllActions => _actions;
-    public IEnumerable<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> AllDynamicProviders => _dynamicProviders;
+    public IEnumerable<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> AllDynamicActionProviders => _dynamicActionProviders;
     public IEnumerable<PluginSdk.Abstractions.Plugins.IInstantResultProvider> AllInstantResultProviders => _instantResultProviders;
     public IEnumerable<PluginSdk.Abstractions.Plugins.ISearchableItemProvider> AllSearchableItemProviders => _searchableItemProviders;
     public IEnumerable<PluginSdk.Abstractions.Plugins.ISidebarFilterProvider> AllSidebarFilterProviders => _sidebarFilterProviders;

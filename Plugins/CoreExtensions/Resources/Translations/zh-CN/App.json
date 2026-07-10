@@ -319,7 +319,7 @@
   "Plugins_ComponentsTitle": "功能组件",
   "Plugins_NoComponents": "该插件未注册任何功能组件。",
   "Plugins_TypeAction": "动作",
-  "Plugins_TypeDynamicProvider": "动态菜单",
+  "Plugins_TypeDynamicActionProvider": "动态菜单",
   "Plugins_TypeInstantProvider": "即时结果",
   "Plugins_TypeSearchableItemProvider": "可搜索内容",
   "Plugins_TypeFilterProvider": "侧边栏筛选",
