@@ -24,6 +24,16 @@ public interface IDynamicActionProvider
     /// <summary>Determines whether this provider should be visible in the right-click / action menu.</summary>
     bool IsVisibleInMenu(IReadOnlyList<ISearchResult> results, SearchWindowType windowType) => Keywords.Count == 0;
 
+    /// <summary>
+    /// Called by the host at most once per process, the first time any actions menu starts opening --
+    /// before CanProvide/GetMenuItems are actually invoked. The host guarantees this, so implementations
+    /// don't need to guard against repeat calls themselves. Lets a provider kick off slow one-time setup
+    /// (e.g. warming up a native worker thread) with a genuine head start instead of racing its own
+    /// CanProvide/GetMenuItems call, which happen back-to-back with no lead time of their own. Must not
+    /// block; do any real work on a background thread. Default: no-op.
+    /// </summary>
+    void Init() { }
+
     /// <summary>Determines if this provider can handle the given (one or more) search results.</summary>
     bool CanProvide(IReadOnlyList<ISearchResult> results);
 

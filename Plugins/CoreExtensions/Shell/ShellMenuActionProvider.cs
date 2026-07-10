@@ -16,33 +16,34 @@ public class ShellMenuActionProvider : IDynamicActionProvider
     private ShellMenuSession? _session;
     private string? _lastPath;
 
-    private static int _warmedUp;
-
-    public ShellMenuActionProvider()
-    {
-        // Warm up the STA worker and the folder shell extensions in the background at startup, so the
-        // FIRST real menu open is already warm. Otherwise the first open cold-loads folder handlers and
-        // shows incomplete items, only becoming complete on the second open. Once per process.
-        if (Interlocked.Exchange(ref _warmedUp, 1) != 0)
-            return;
-        _ = Task.Run(() =>
-        {
-            try
-            {
-                var warmPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                if (!string.IsNullOrEmpty(warmPath) && Directory.Exists(warmPath))
-                {
-                    var session = ShellMenuSession.Create(warmPath);
-                    session?.EnumerateItems();
-                    session?.Dispose();
-                }
-            }
-            catch
-            {
-                // Warm-up is best-effort.
-            }
-        });
-    }
+    // Called by the host right as the actions menu starts opening (see ShellMenuPresenter.EnterActionsMode),
+    // well before CanProvide/GetMenuItems run for real -- unlike triggering the warm-up from inside
+    // CanProvide itself, this gives it a genuine head start instead of racing the real GetMenuItems
+    // call that follows moments later on the same shared, single-threaded STA worker (a race the
+    // warm-up would usually lose, making it pure overhead instead of actually warming anything). Still
+    // the same risky in-process COM call a buggy shell extension could crash on (see GetMenuItems
+    // below); moving the trigger doesn't remove that risk, but a crash here can now only happen once
+    // the app is already up and the user is opening an actions menu, not on every single launch
+    // regardless of whether they ever touch this feature. The host guarantees this is only ever called
+    // once per process, so there's no need to self-guard against repeat calls here. Runs on a
+    // background task so it never delays the actions menu the user is looking at right now.
+    public void Init() => _ = Task.Run(() =>
+                               {
+                                   try
+                                   {
+                                       var warmPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                                       if (!string.IsNullOrEmpty(warmPath) && Directory.Exists(warmPath))
+                                       {
+                                           var session = ShellMenuSession.Create(warmPath);
+                                           session?.EnumerateItems();
+                                           session?.Dispose();
+                                       }
+                                   }
+                                   catch
+                                   {
+                                       // Warm-up is best-effort.
+                                   }
+                               });
 
     public bool CanProvide(IReadOnlyList<ISearchResult> results)
     {

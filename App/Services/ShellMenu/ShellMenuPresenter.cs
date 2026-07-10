@@ -1,7 +1,6 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Interop;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 namespace SwiftList.App.Services;
@@ -17,9 +16,8 @@ public class ShellMenuPresenter : IDisposable
     private bool _isInActionsMode;
     private AppSearchResult? _activeResult;
     private IReadOnlyList<AppSearchResult> _activeResults = Array.Empty<AppSearchResult>();
-    private readonly Stack<IntPtr> _menuStack = new();
-    private readonly Stack<int> _menuSelectedIndexStack = new();
-    private readonly Stack<string> _menuTitleStack = new();
+    private readonly ActionsMenuNavigator _navigator;
+    private readonly ActionsMenuExecutor _executor;
     private readonly ShellMenuMouseInputHandler _mouseHandler;
 
     // Mappings to trace which provider owns which item/submenu at runtime
@@ -31,9 +29,15 @@ public class ShellMenuPresenter : IDisposable
     private List<ActionMenuItem> _currentRawItems = new();
     private int _actionsGeneration;
 
+    // Process-wide (not per-instance/per-window) record of which providers have already had Init()
+    // called -- see the comment at the call site in EnterActionsMode.
+    private static readonly HashSet<IDynamicActionProvider> _initializedProviders = new();
+
     public ShellMenuPresenter(ISearchWindow view)
     {
         _view = view;
+        _navigator = new ActionsMenuNavigator(view, LoadMenuItems, ExitActionsMode);
+        _executor = new ActionsMenuExecutor(view, _commandToProviderMap, _navigator, ExitActionsMode);
         _mouseHandler = new ShellMenuMouseInputHandler(this, view);
         _view.SearchTextBox.TextChanged += (s, e) =>
         {
@@ -89,15 +93,22 @@ public class ShellMenuPresenter : IDisposable
         _savedSearchQuery = _view.SearchTextBox.Text;
         _activeResults = items;
         _activeResult = result;
-        _menuStack.Clear();
-        _menuSelectedIndexStack.Clear();
-        _menuTitleStack.Clear();
+        _navigator.Reset();
         _commandToProviderMap.Clear();
         _subMenuToProviderMap.Clear();
 
         foreach (var provider in PluginManager.Instance.DynamicProviders)
         {
             provider.ClearSession();
+            // Fired before anything else below (static actions render, then CanProvide/GetMenuItems run
+            // on a background task, see step 2) so a provider's own one-time setup (e.g.
+            // ShellMenuActionProvider's native worker warm-up) gets genuine lead time instead of racing
+            // its own CanProvide/GetMenuItems call. The host -- not the provider -- guarantees this fires
+            // at most once per process: ShellMenuPresenter is created per search window (Main/Quick/Inline
+            // each get their own), so without this static, process-wide guard, every window's first
+            // actions-menu open would call Init() again.
+            if (_initializedProviders.Add(provider))
+                provider.Init();
         }
 
         // 1. Show the built-in (static) actions immediately — this part is instant, so a slow shell
@@ -171,9 +182,9 @@ public class ShellMenuPresenter : IDisposable
             _view.TxtActionsTarget.Text = Path.GetFileName(_activeResult.FullPath);
         }
 
-        else if (_menuTitleStack.Count > 0)
+        else if (_navigator.CurrentSubMenuTitle is { } subMenuTitle)
         {
-            _view.TxtActionsTarget.Text = _menuTitleStack.Peek();
+            _view.TxtActionsTarget.Text = subMenuTitle;
         }
 
         var finalItems = ActionMenuBuilder.Build(
@@ -206,58 +217,11 @@ public class ShellMenuPresenter : IDisposable
         }
     }
 
-    public void NavigateActionsList(int direction)
-    {
-        var count = _view.LstActions.Items.Count;
-        if (count == 0) return;
-        var index = _view.LstActions.SelectedIndex;
-        var originalIndex = index;
+    public void NavigateActionsList(int direction) => _navigator.NavigateActionsList(direction);
 
-        do
-        {
-            index = (index + direction + count) % count;
-            if (index == originalIndex) break;
-            if (_view.LstActions.Items[index] is ActionMenuItem item && !item.IsSeparator && !item.IsSectionHeader && !item.IsDisabled)
-            {
-                _view.LstActions.SelectedIndex = index;
-                _view.LstActions.ScrollIntoView(_view.LstActions.SelectedItem);
-                break;
-            }
+    public void EnterSubMenu() => _navigator.EnterSubMenu();
 
-        } while (true);
-    }
-
-    public void EnterSubMenu()
-    {
-        if (_view.LstActions.SelectedItem is ActionMenuItem item && item.HasSubMenu && item.SubMenuHandle != IntPtr.Zero)
-        {
-            _menuStack.Push(item.SubMenuHandle);
-            _menuSelectedIndexStack.Push(_view.LstActions.SelectedIndex);
-            _menuTitleStack.Push(item.Text);
-            LoadMenuItems(item.SubMenuHandle);
-        }
-    }
-
-    public void GoBackMenuOrExit()
-    {
-        if (_menuStack.Count > 0)
-        {
-            _menuStack.Pop();
-            if (_menuTitleStack.Count > 0) _menuTitleStack.Pop();
-            var parentMenu = _menuStack.Count > 0 ? _menuStack.Peek() : IntPtr.Zero;
-            LoadMenuItems(parentMenu);
-            if (_menuSelectedIndexStack.Count > 0)
-            {
-                var prevIndex = _menuSelectedIndexStack.Pop();
-                if (prevIndex >= 0 && prevIndex < _view.LstActions.Items.Count)
-                {
-                    _view.LstActions.SelectedIndex = prevIndex;
-                    _view.LstActions.ScrollIntoView(_view.LstActions.SelectedItem);
-                }
-            }
-        }
-        else ExitActionsMode();
-    }
+    public void GoBackMenuOrExit() => _navigator.GoBackMenuOrExit();
 
     public void ExitActionsMode()
     {
@@ -269,9 +233,7 @@ public class ShellMenuPresenter : IDisposable
 
         _commandToProviderMap.Clear();
         _subMenuToProviderMap.Clear();
-        _menuStack.Clear();
-        _menuSelectedIndexStack.Clear();
-        _menuTitleStack.Clear();
+        _navigator.Reset();
         _view.GridActions.Visibility = Visibility.Collapsed;
         _view.GridSearchResults.Visibility = Visibility.Visible;
         _view.UpdateActionsLayout();
@@ -294,67 +256,7 @@ public class ShellMenuPresenter : IDisposable
         _view.FocusSearch();
     }
 
-    public void ExecuteSelectedAction()
-    {
-        if (_view.LstActions.SelectedItem is ActionMenuItem item)
-        {
-            if (item.IsSeparator || item.IsSectionHeader || item.IsDisabled) return;
-
-            // 0. Direct delegate (e.g. CustomActions dynamic provider)
-            if (item.OnExecute != null)
-            {
-                _view.HideWindow();
-                item.OnExecute();
-                return;
-            }
-
-            // 1. Handle custom SwiftList actions dynamically from PluginManager
-
-            var registration = PluginManager.Instance.GetActionByRuntimeId(item.CommandId);
-            if (registration != null)
-            {
-                var resultToExecute = _activeResult;
-                if (resultToExecute != null)
-                {
-                    if (!_view.GetType().Name.Equals("SearchWindow", StringComparison.Ordinal))
-                    {
-                        _view.HideWindow();
-                    }
-
-                    registration.Action.Execute(_activeResults, _view);
-                }
-
-                ExitActionsMode();
-                return;
-            }
-
-            // 2. Handle submenus
-
-            if (item.HasSubMenu)
-            {
-                EnterSubMenu();
-                return;
-            }
-
-            // 3. Handle dynamic action provider executions
-
-            if (_commandToProviderMap.TryGetValue(item.CommandId, out var provider))
-            {
-                var resultToExecute = _activeResult;
-                if (resultToExecute != null)
-                {
-                    var hwnd = new WindowInteropHelper(_view as Window ?? System.Windows.Application.Current.MainWindow).Handle;
-                    provider.ExecuteCommand(_activeResults, item.CommandId, hwnd);
-                    if (!_view.GetType().Name.Equals("SearchWindow", StringComparison.Ordinal))
-                    {
-                        _view.HideWindow();
-                    }
-                }
-
-                ExitActionsMode();
-            }
-        }
-    }
+    public void ExecuteSelectedAction() => _executor.Execute(_activeResult, _activeResults);
 
     public void HandleActionsPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) => _mouseHandler.HandleActionsPreviewMouseLeftButtonUp(sender, e);
 
