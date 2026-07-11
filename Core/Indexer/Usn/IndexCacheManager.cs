@@ -1,4 +1,4 @@
-using SwiftList.Core.SearchIndex.RecordIndex;
+using SwiftList.Core.IndexV2;
 
 namespace SwiftList.Core.Indexer.Usn;
 
@@ -61,10 +61,14 @@ internal static class IndexCacheManager
         return store;
     }
 
+    // force:true throughout -- matches the old engine's SaveDrivesToCache, which always wrote a full
+    // serialization whenever called (callers already gate WHETHER to call this, e.g. only after a
+    // catch-up actually ran); a periodic idle-triggered compactor is a different call site that can
+    // afford to skip when nothing changed (LiveIndex.Compact's force:false path).
     public static void SaveDrivesToCache(
         string cacheDir,
         List<(string Drive, ulong JournalId, long NextUsn)> driveMetadata,
-        IReadOnlyDictionary<string, RuntimeIndex> recordIndexes,
+        IReadOnlyDictionary<string, LiveIndex> recordIndexes,
         IReadOnlyDictionary<string, UsnIndexer.DriveRuntimeMetadata> driveMetadataMap)
     {
         foreach (var meta in driveMetadata)
@@ -72,19 +76,11 @@ internal static class IndexCacheManager
             if (!driveMetadataMap.TryGetValue(meta.Drive, out var metadata))
                 continue;
 
-            if (recordIndexes.TryGetValue(meta.Drive, out var runtime))
+            if (recordIndexes.TryGetValue(meta.Drive, out var live))
             {
                 metadata.JournalId = meta.JournalId;
                 metadata.NextUsn = meta.NextUsn;
-                var store = runtime.ToStore(
-                    metadata.SourceKind,
-                    metadata.IdKind,
-                    metadata.FileSystemType,
-                    metadata.VolumeSerialNumber,
-                    metadata.RootId,
-                    metadata.JournalId,
-                    metadata.NextUsn);
-                LocalDriveCacheLocator.Save(cacheDir, meta.Drive, store);
+                live.Compact(LocalDriveCacheLocator.GetV2Path(cacheDir, meta.Drive), new CompactionStamp(meta.JournalId, meta.NextUsn), force: true);
             }
         }
     }

@@ -1,4 +1,4 @@
-using SwiftList.Core.SearchIndex.RecordIndex;
+using SwiftList.Core.IndexV2;
 
 namespace SwiftList.Core.Indexer.Usn;
 
@@ -23,35 +23,22 @@ public static class UsnIndexerCacheExtensions
         lock (indexer.LockObj)
         {
             indexer._driveMetadata.Clear();
+            foreach (var live in indexer._recordIndexes.Values)
+                live.Dispose();
             indexer._recordIndexes.Clear();
             indexer.Status.ActiveDrives.Clear();
             indexer.Status.TotalFiles = 0;
             indexer.Status.TotalDirs = 0;
         }
 
-        var loaded = new List<(string Drive, RuntimeIndex Runtime, UsnIndexer.DriveRuntimeMetadata Metadata, ulong JournalId, long NextUsn)>();
+        var loaded = new List<(string Drive, LiveIndex Live, UsnIndexer.DriveRuntimeMetadata Metadata, ulong JournalId, long NextUsn)>();
         foreach (var drive in drives)
         {
-            var runtime = new RuntimeIndex();
-            string? basePath = null;
-            try
-            {
-                var metaPath = LocalDriveCacheLocator.GetCachePath(cacheDir, drive);
-                if (!string.IsNullOrEmpty(metaPath) && metaPath.EndsWith(".meta", StringComparison.OrdinalIgnoreCase))
-                {
-                    basePath = metaPath.Substring(0, metaPath.Length - 5);
-                }
-            }
-            catch { }
-
-            if (basePath == null)
+            var opened = TryOpenV2(cacheDir, drive);
+            if (opened == null)
                 continue;
 
-            var metadata = runtime.LoadFromCacheDirect(basePath);
-            if (metadata == null || !IsCurrentVolumeCache(drive, metadata))
-                continue;
-
-            loaded.Add((drive, runtime, metadata, metadata.JournalId, metadata.NextUsn));
+            loaded.Add((drive, opened.Value.Live, opened.Value.Metadata, opened.Value.Metadata.JournalId, opened.Value.Metadata.NextUsn));
 
             GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
             Win32Api.TrimWorkingSet();
@@ -63,9 +50,10 @@ public static class UsnIndexerCacheExtensions
             foreach (var item in loaded)
             {
                 indexer._driveMetadata[item.Drive] = item.Metadata;
-                indexer._recordIndexes[item.Drive] = item.Runtime;
-                indexer.Status.TotalFiles += item.Runtime.TotalFiles;
-                indexer.Status.TotalDirs += item.Runtime.TotalDirs;
+                indexer._recordIndexes[item.Drive] = item.Live;
+                var (files, dirs) = item.Live.GetCounts();
+                indexer.Status.TotalFiles += files;
+                indexer.Status.TotalDirs += dirs;
                 indexer.Status.ActiveDrives.Add(item.Drive);
                 metadata.Add((item.Drive, item.JournalId, item.NextUsn));
                 indexer.UpdateDriveCounts(item.Drive);
@@ -87,35 +75,22 @@ public static class UsnIndexerCacheExtensions
         string cacheDir,
         string drive)
     {
-        var runtime = new RuntimeIndex();
-        string? basePath = null;
-        try
-        {
-            var metaPath = LocalDriveCacheLocator.GetCachePath(cacheDir, drive);
-            if (!string.IsNullOrEmpty(metaPath) && metaPath.EndsWith(".meta", StringComparison.OrdinalIgnoreCase))
-            {
-                basePath = metaPath.Substring(0, metaPath.Length - 5);
-            }
-        }
-        catch { }
-
-        if (basePath == null)
+        var opened = TryOpenV2(cacheDir, drive);
+        if (opened == null)
             return null;
-
-        var metadata = runtime.LoadFromCacheDirect(basePath);
-        if (metadata == null || !IsCurrentVolumeCache(drive, metadata))
-            return null;
+        var (live, metadata) = opened.Value;
 
         lock (indexer.LockObj)
         {
             indexer._driveMetadata[drive] = metadata;
-            indexer._recordIndexes[drive] = runtime;
+            indexer._recordIndexes[drive] = live;
 
             if (!indexer.Status.ActiveDrives.Contains(drive, StringComparer.OrdinalIgnoreCase))
                 indexer.Status.ActiveDrives.Add(drive);
 
-            indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
-            indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
+            var totals = indexer._recordIndexes.Values.Select(r => r.GetCounts()).ToList();
+            indexer.Status.TotalFiles = totals.Sum(t => t.Files);
+            indexer.Status.TotalDirs = totals.Sum(t => t.Dirs);
             indexer.Status.State = "ready";
             indexer.Status.Progress = 100;
             indexer.UpdateDriveCounts(drive);
@@ -128,11 +103,52 @@ public static class UsnIndexerCacheExtensions
         lock (indexer.LockObj)
         {
             indexer._driveMetadata.Remove(drive);
-            indexer._recordIndexes.Remove(drive);
+            if (indexer._recordIndexes.Remove(drive, out var live))
+                live.Dispose();
             indexer.Status.ActiveDrives.RemoveAll(d => d.Equals(drive, StringComparison.OrdinalIgnoreCase));
-            indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
-            indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
+            var totals = indexer._recordIndexes.Values.Select(r => r.GetCounts()).ToList();
+            indexer.Status.TotalFiles = totals.Sum(t => t.Files);
+            indexer.Status.TotalDirs = totals.Sum(t => t.Dirs);
         }
+    }
+
+    // Opens a drive's V2 cache. No legacy v15 (.meta/.records/.names) migration -- a pre-V2 cache is
+    // simply not found here, so the normal "no cache" path in the caller does a full fresh rebuild
+    // instead. Returns null if no .idx2 exists, it fails to open, or the volume identity has changed
+    // since the cache was written (IsCurrentVolumeCache).
+    private static (LiveIndex Live, UsnIndexer.DriveRuntimeMetadata Metadata)? TryOpenV2(string cacheDir, string drive)
+    {
+        var v2Path = LocalDriveCacheLocator.GetV2Path(cacheDir, drive);
+        if (!File.Exists(v2Path))
+            return null;
+
+        Snapshot snapshot;
+        try
+        {
+            snapshot = Snapshot.Open(v2Path);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[UsnIndexer] Failed to open IndexV2 cache for drive {drive}: {ex.Message}", LogLevel.Error);
+            return null;
+        }
+
+        var metadata = new UsnIndexer.DriveRuntimeMetadata
+        {
+            SourceKind = snapshot.SourceKind,
+            IdKind = snapshot.IdKind,
+            FileSystemType = snapshot.FileSystemType,
+            VolumeSerialNumber = snapshot.VolumeSerialNumber,
+            RootId = snapshot.RootId,
+            JournalId = snapshot.JournalId,
+            NextUsn = snapshot.NextUsn,
+        };
+        if (!IsCurrentVolumeCache(drive, metadata))
+        {
+            snapshot.Dispose();
+            return null;
+        }
+        return (new LiveIndex(snapshot), metadata);
     }
 
     private static bool IsCurrentVolumeCache(string drive, UsnIndexer.DriveRuntimeMetadata metadata)

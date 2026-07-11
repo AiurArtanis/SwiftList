@@ -8,11 +8,15 @@
     <RootNamespace>SwiftList.Core</RootNamespace>
     <Version>1.6.3</Version>
     <GenerateDependencyFile>false</GenerateDependencyFile>
+    <!-- IndexV2 reads its memory-mapped snapshot through typed spans over a raw view pointer. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\PluginSdk\PluginSdk.csproj" />
     <InternalsVisibleTo Include="TestSearch" />
+    <InternalsVisibleTo Include="IndexMemBench" />
+    <InternalsVisibleTo Include="ProdIndexBench" />
   </ItemGroup>
 
 </Project>

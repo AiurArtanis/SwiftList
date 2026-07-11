@@ -98,12 +98,14 @@ public sealed class NetworkIndexer : IDisposable
 
         var cachedDrives = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var lastUpdatedTimes = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        var removedIndexes = new List<NetworkIndex>();
 
         lock (_gate)
         {
             foreach (var removed in _indexes.Keys.Except(enabledDrives, StringComparer.OrdinalIgnoreCase).ToList())
             {
-                _indexes.Remove(removed);
+                if (_indexes.Remove(removed, out var removedIndex))
+                    removedIndexes.Add(removedIndex);
                 _statuses.Remove(removed);
                 _refreshModes.Remove(removed);
             }
@@ -142,6 +144,11 @@ public sealed class NetworkIndexer : IDisposable
                 }
             }
         }
+
+        // Disposed outside the lock -- see OnRefreshFinished's comment on why (LiveIndex.Dispose() can
+        // briefly block on an in-flight search's read lock).
+        foreach (var removedIndex in removedIndexes)
+            removedIndex.Dispose();
 
         _scheduler?.StartRefresh(enabledDrives, refreshModes, forceRefresh ? null : cachedDrives, forceRefresh ? null : lastUpdatedTimes);
         _publisher.PublishStatusesChanged();
@@ -197,11 +204,13 @@ public sealed class NetworkIndexer : IDisposable
             return;
 
         IndexerHelper.DeleteCache(drive);
+        NetworkIndex? removedIndex;
         lock (_gate)
         {
-            _indexes.Remove(drive);
+            _indexes.Remove(drive, out removedIndex);
             _statuses.Remove(drive);
         }
+        removedIndex?.Dispose();
         _publisher.PublishStatusesChanged();
     }
 
@@ -229,5 +238,12 @@ public sealed class NetworkIndexer : IDisposable
 
         _watcherManager?.Dispose();
         _watcherManager = null;
+
+        lock (_gate)
+        {
+            foreach (var index in _indexes.Values)
+                index.Dispose();
+            _indexes.Clear();
+        }
     }
 }

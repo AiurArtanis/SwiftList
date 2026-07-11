@@ -1,4 +1,4 @@
-using SwiftList.Core.SearchIndex.RecordIndex;
+using SwiftList.Core.IndexV2;
 
 namespace SwiftList.Core.Indexer.Usn;
 
@@ -33,11 +33,16 @@ public class UsnIndexer : IDisposable
     internal readonly object _lockObj = new();
     internal readonly JournalReader _reader = new();
     internal readonly Dictionary<string, DriveRuntimeMetadata> _driveMetadata = new(StringComparer.OrdinalIgnoreCase);
-    internal readonly Dictionary<string, RuntimeIndex> _recordIndexes = new(StringComparer.OrdinalIgnoreCase);
+    // Guarded by _lockObj for structural changes (add/remove a drive); each LiveIndex then guards its
+    // own Snapshot/DeltaOverlay pair independently -- see SearchCoordinator's header comment.
+    internal readonly Dictionary<string, LiveIndex> _recordIndexes = new(StringComparer.OrdinalIgnoreCase);
 
     public IndexerStatus Status { get; } = new();
     public object LockObj => _lockObj;
 
+    // JournalId/NextUsn here are the LIVE catch-up position, updated on every USN batch; a LiveIndex's
+    // own Snapshot.JournalId/NextUsn only reflect the position as of its last compaction. The other
+    // fields are immutable identity, carried straight through from the store that first built this drive.
     internal sealed class DriveRuntimeMetadata
     {
         public FileRecordSourceKind SourceKind { get; init; }
@@ -116,16 +121,12 @@ public class UsnIndexer : IDisposable
 
     public void ClearCaches() => SearchCoordinator.ClearCaches();
 
-    // GetFullPath's per-row memo (RuntimeIndex.PathMemo) already self-caps at a high threshold (see
-    // PathQueryExtensions.GetFullPath), but a search window closing/hiding is also a natural point to
-    // give the memory back proactively -- mirrors ShellIconHelper.ClearCache()'s existing trigger points.
+    // IndexV2's Snapshot has no per-row path memo to clear -- GetFullPath rebuilds a path from cheap
+    // mmap reads every call, so there's nothing to reclaim here. Kept as a no-op so callers (a search
+    // window closing/hiding, mirroring ShellIconHelper.ClearCache()'s trigger points) don't need to
+    // know that.
     public void ClearAllPathCaches()
     {
-        lock (LockObj)
-        {
-            foreach (var index in _recordIndexes.Values)
-                index.ClearPathCache();
-        }
     }
 
     public void CompactStatusQueryMemory()
@@ -139,6 +140,8 @@ public class UsnIndexer : IDisposable
         lock (LockObj)
         {
             _driveMetadata.Clear();
+            foreach (var live in _recordIndexes.Values)
+                live.Dispose();
             _recordIndexes.Clear();
             Status.ActiveDrives.Clear();
             Status.TotalFiles = Status.Drives.Sum(d => d.Files);
@@ -164,8 +167,9 @@ public class UsnIndexer : IDisposable
 
     internal void UpdateTotalsFromRuntime()
     {
-        Status.TotalFiles = _recordIndexes.Values.Sum(r => r.TotalFiles);
-        Status.TotalDirs = _recordIndexes.Values.Sum(r => r.TotalDirs);
+        var totals = _recordIndexes.Values.Select(r => r.GetCounts()).ToList();
+        Status.TotalFiles = totals.Sum(t => t.Files);
+        Status.TotalDirs = totals.Sum(t => t.Dirs);
     }
 
     internal void UpdateDriveCounts(string drive)
@@ -174,10 +178,11 @@ public class UsnIndexer : IDisposable
         if (item == null)
             return;
 
-        if (_recordIndexes.TryGetValue(drive, out var runtime))
+        if (_recordIndexes.TryGetValue(drive, out var live))
         {
-            item.Files = runtime.TotalFiles;
-            item.Dirs = runtime.TotalDirs;
+            var (files, dirs) = live.GetCounts();
+            item.Files = files;
+            item.Dirs = dirs;
         }
         item.State = "ready";
     }
@@ -185,6 +190,8 @@ public class UsnIndexer : IDisposable
     public void Dispose()
     {
         _driveMetadata.Clear();
+        foreach (var live in _recordIndexes.Values)
+            live.Dispose();
         _recordIndexes.Clear();
     }
 

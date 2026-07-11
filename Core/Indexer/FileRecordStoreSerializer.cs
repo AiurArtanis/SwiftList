@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace SwiftList.Core;
 
 internal sealed class FileRecordNamePool
@@ -26,8 +24,6 @@ internal sealed class FileRecordNamePool
 public static class FileRecordStoreSerializer
 {
     internal const string MetaMagic = "SLRCMETA";
-    private const string RecordsMagic = "SLRCREC";
-    private const string NamesMagic = "SLRCNAME";
     // v9: $MFT-based one-to-many hard-link index. Bumping this invalidates older single-name caches
     // so existing installs rebuild once and pick up full hard-link paths.
     // v10: force one rebuild to purge records orphaned by incremental USN updates (parent collapsed to a
@@ -67,21 +63,6 @@ public static class FileRecordStoreSerializer
                                                           File.Exists(basePath + ".records") &&
                                                           File.Exists(basePath + ".names");
 
-    public static List<string> ListSourceKeys(string cacheDir)
-    {
-        if (!Directory.Exists(cacheDir))
-            return new List<string>();
-
-        return Directory.EnumerateFiles(cacheDir, "*.meta")
-            .Select(Path.GetFileNameWithoutExtension)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Select(name => name!.ToUpperInvariant())
-            .Where(key => Exists(cacheDir, key))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
     public static void Delete(string cacheDir, string sourceKey) => DeleteBasePath(GetBasePath(cacheDir, sourceKey));
 
     public static void DeleteBasePath(string basePath)
@@ -90,162 +71,6 @@ public static class FileRecordStoreSerializer
         TryDelete(basePath + ".records");
         TryDelete(basePath + ".names");
     }
-
-    public static void Save(string cacheDir, FileRecordStore store) => Save(cacheDir, store, store.SourceKey);
-
-    public static void Save(string cacheDir, FileRecordStore store, string storageKey)
-    {
-        store.Records.Sort((a, b) => a.Id.CompareTo(b.Id));
-        Directory.CreateDirectory(cacheDir);
-        var basePath = GetBasePath(cacheDir, storageKey);
-        var metaTemp = basePath + ".meta.tmp";
-        var recordsTemp = basePath + ".records.tmp";
-        var namesTemp = basePath + ".names.tmp";
-
-        using (var names = new FileStream(namesTemp, FileMode.Create, FileAccess.Write, FileShare.None))
-        using (var records = new FileStream(recordsTemp, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024))
-        using (var writer = new BinaryWriter(names, Encoding.UTF8))
-        using (var recordWriter = new BinaryWriter(records, Encoding.UTF8))
-        {
-            writer.Write(NamesMagic);
-            writer.Write(Version);
-            recordWriter.Write(RecordsMagic);
-            recordWriter.Write(Version);
-            recordWriter.Write(store.Records.Count);
-
-            for (var i = 0; i < store.Records.Count; i++)
-            {
-                var record = store.Records[i];
-                writer.Write(record.Name);
-                recordWriter.Write((ulong)record.Id);
-                recordWriter.Write((ulong)(record.Id >> 64));
-                recordWriter.Write((ulong)record.ParentId);
-                recordWriter.Write((ulong)(record.ParentId >> 64));
-                recordWriter.Write((ushort)record.Flags);
-                recordWriter.Write(record.Size);
-                recordWriter.Write(record.CreationTimeUnixSeconds);
-                recordWriter.Write(record.LastWriteTimeUnixSeconds);
-                recordWriter.Write(record.LastAccessTimeUnixSeconds);
-            }
-        }
-
-        using (var meta = new FileStream(metaTemp, FileMode.Create, FileAccess.Write, FileShare.None))
-        using (var writer = new BinaryWriter(meta, Encoding.UTF8))
-        {
-            writer.Write(MetaMagic);
-            writer.Write(Version);
-            writer.Write(store.SourceKey);
-            writer.Write((byte)store.SourceKind);
-            writer.Write((byte)store.IdKind);
-            writer.Write(store.FileSystemType);
-            writer.Write(store.VolumeSerialNumber);
-            writer.Write((ulong)store.RootId);
-            writer.Write((ulong)(store.RootId >> 64));
-            writer.Write(store.JournalId);
-            writer.Write(store.NextUsn);
-            writer.Write(store.Records.Count);
-            writer.Write(store.Records.Count(r => !r.IsDeleted));
-            writer.Write(store.LastUpdated.ToUniversalTime().Ticks);
-            writer.Write(store.IsComplete);
-            writer.Write(store.ExclusionRulesFingerprint);
-        }
-
-        Replace(metaTemp, basePath + ".meta");
-        Replace(recordsTemp, basePath + ".records");
-        Replace(namesTemp, basePath + ".names");
-    }
-
-    public static FileRecordStore? Load(string cacheDir, string sourceKey)
-    {
-        var basePath = GetBasePath(cacheDir, sourceKey);
-        try
-        {
-            if (!Exists(cacheDir, sourceKey))
-                return null;
-
-            var store = new FileRecordStore();
-            using (var meta = File.OpenRead(basePath + ".meta"))
-            using (var reader = new BinaryReader(meta, Encoding.UTF8))
-            {
-                if (reader.ReadString() != MetaMagic || reader.ReadInt32() != Version)
-                    return null;
-
-                store.SourceKey = reader.ReadString();
-                store.SourceKind = (FileRecordSourceKind)reader.ReadByte();
-                store.IdKind = (FileRecordIdKind)reader.ReadByte();
-                store.FileSystemType = reader.ReadString();
-                store.VolumeSerialNumber = reader.ReadUInt32();
-                var rootLow = reader.ReadUInt64();
-                var rootHigh = reader.ReadUInt64();
-                store.RootId = new UInt128(rootHigh, rootLow);
-                store.JournalId = reader.ReadUInt64();
-                store.NextUsn = reader.ReadInt64();
-                _ = reader.ReadInt32();
-                _ = reader.ReadInt32();
-                var ticks = reader.ReadInt64();
-                store.LastUpdated = new DateTime(ticks, DateTimeKind.Utc).ToLocalTime();
-                store.IsComplete = reader.ReadBoolean();
-                store.ExclusionRulesFingerprint = reader.ReadString();
-            }
-
-            var names = new List<string>();
-            var namePool = new FileRecordNamePool();
-            using (var nameStream = File.OpenRead(basePath + ".names"))
-            using (var reader = new BinaryReader(nameStream, Encoding.UTF8))
-            {
-                if (reader.ReadString() != NamesMagic || reader.ReadInt32() != Version)
-                    return null;
-
-                while (nameStream.Position < nameStream.Length)
-                {
-                    names.Add(namePool.Get(reader.ReadString()));
-                }
-            }
-
-            using (var records = File.OpenRead(basePath + ".records"))
-            using (var reader = new BinaryReader(records, Encoding.UTF8))
-            {
-                if (reader.ReadString() != RecordsMagic || reader.ReadInt32() != Version)
-                    return null;
-
-                var count = reader.ReadInt32();
-                store.Records.Capacity = count;
-                for (var i = 0; i < count; i++)
-                {
-                    var idLow = reader.ReadUInt64();
-                    var idHigh = reader.ReadUInt64();
-                    var parentIdLow = reader.ReadUInt64();
-                    var parentIdHigh = reader.ReadUInt64();
-                    var id = new UInt128(idHigh, idLow);
-                    var parentId = new UInt128(parentIdHigh, parentIdLow);
-                    var flags = (FileRecordFlags)reader.ReadUInt16();
-                    var size = reader.ReadInt64();
-                    var creationTimeUtc = reader.ReadUInt32();
-                    var lastWriteTimeUtc = reader.ReadUInt32();
-                    var lastAccessTimeUtc = reader.ReadUInt32();
-                    store.Records.Add(new FileRecord(
-                        id,
-                        parentId,
-                        i < names.Count ? names[i] : string.Empty,
-                        flags,
-                        size,
-                        creationTimeUtc,
-                        lastWriteTimeUtc,
-                        lastAccessTimeUtc));
-                }
-            }
-
-            return store;
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[FileRecordStoreSerializer] Failed to load {basePath}: {ex.Message}", LogLevel.Error);
-            return null;
-        }
-    }
-
-    private static void Replace(string tempPath, string finalPath)
-        => FileRecordStoreReplaceHelper.ReplaceWithRetry(tempPath, finalPath, TryDelete);
 
     private static void TryDelete(string path)
     {

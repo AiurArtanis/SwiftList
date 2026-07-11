@@ -1,15 +1,16 @@
-using SwiftList.Core.SearchIndex.RecordIndex;
-using SwiftList.Core.SearchIndex.RecordSearch;
+using SwiftList.Core.IndexV2;
 
 namespace SwiftList.Core.Indexer.Usn;
 
+// Fans a query out across every local drive's LiveIndex. Unlike the old RuntimeIndex-based coordinator
+// (which held UsnIndexer's single coarse lock for the ENTIRE search, serializing all drives' searches
+// against each other AND against USN update application), each LiveIndex now owns its own
+// reader-writer lock -- so the outer lock here only protects the brief `.ToArray()` snapshot of which
+// drives currently exist, not the search work itself. Strictly finer-grained than before, never coarser.
 internal static class SearchCoordinator
 {
-    private static readonly Searcher _recordSearcher = new();
-
-
     public static void SearchStreaming(
-        Dictionary<string, RuntimeIndex> recordIndexes,
+        Dictionary<string, LiveIndex> recordIndexes,
         object lockObj,
         string query,
         int limit,
@@ -17,43 +18,48 @@ internal static class SearchCoordinator
         CancellationToken token,
         string? directoryFilter)
     {
+        LiveIndex[] drives;
         lock (lockObj)
         {
-            var snapshots = recordIndexes.Values.ToArray();
+            drives = recordIndexes.Values.ToArray();
+        }
 
-            if (snapshots.Length == 0)
-                return;
+        if (drives.Length == 0)
+            return;
 
-            if (snapshots.Length == 1)
+        if (drives.Length == 1)
+        {
+            IndexV2Searcher.SearchStreaming(drives[0], query, limit, onResult, token, directoryFilter);
+            return;
+        }
+
+        var writeLock = new object();
+        Parallel.For(
+            0,
+            drives.Length,
+            new ParallelOptions
             {
-                _recordSearcher.SearchStreaming(snapshots[0], query, limit, onResult, token, directoryFilter);
-                return;
-            }
-
-            var writeLock = new object();
-            Parallel.For(
-                0,
-                snapshots.Length,
-                new ParallelOptions
-                {
-                    CancellationToken = token,
-                    MaxDegreeOfParallelism = Math.Min(snapshots.Length, Math.Clamp(Environment.ProcessorCount, 2, 8))
-                },
-                i =>
+                CancellationToken = token,
+                MaxDegreeOfParallelism = Math.Min(drives.Length, Math.Clamp(Environment.ProcessorCount, 2, 8))
+            },
+            i =>
+            {
+                token.ThrowIfCancellationRequested();
+                IndexV2Searcher.SearchStreaming(drives[i], query, limit, result =>
                 {
                     token.ThrowIfCancellationRequested();
-                    _recordSearcher.SearchStreaming(snapshots[i], query, limit, result =>
+                    lock (writeLock)
                     {
                         token.ThrowIfCancellationRequested();
-                        lock (writeLock)
-                        {
-                            token.ThrowIfCancellationRequested();
-                            onResult(result);
-                        }
-                    }, token, directoryFilter);
-                });
-        }
+                        onResult(result);
+                    }
+                }, token, directoryFilter);
+            });
     }
 
-    public static void ClearCaches() => _recordSearcher.ClearCaches();
+    // IndexV2 has no cross-search rank/candidate cache yet (a known follow-up, not a correctness gap
+    // -- see the IndexV2 migration notes); kept as a no-op call site so callers don't need to know that.
+    public static void ClearCaches()
+    {
+    }
 }

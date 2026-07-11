@@ -1,4 +1,4 @@
-using SwiftList.Core.SearchIndex.RecordIndex;
+using SwiftList.Core.IndexV2;
 
 namespace SwiftList.Core.Indexer.Usn;
 
@@ -30,6 +30,8 @@ public static class UsnIndexerBuildExtensions
                 indexer.Status.TotalFiles = 0;
                 indexer.Status.TotalDirs = 0;
                 indexer._driveMetadata.Clear();
+                foreach (var live in indexer._recordIndexes.Values)
+                    live.Dispose();
                 indexer._recordIndexes.Clear();
                 indexer.Status.ActiveDrives.Clear();
             }
@@ -47,131 +49,24 @@ public static class UsnIndexerBuildExtensions
             }
         }
 
+        // IndexV2 has no pure in-memory construction path (mmap is the only runtime representation),
+        // so a cache directory is required -- every production call site already supplies one
+        // (SearchEngineInitializer, DriveRecovery, SearchEngineDriveMaintenance); the parameterless
+        // cacheDir default only existed for the old in-memory RuntimeIndex.Load path and is unused.
+        if (string.IsNullOrWhiteSpace(cacheDir))
+        {
+            Logger.Log("[UsnIndexer] BuildDrives requires a cache directory under IndexV2; no drives will be built.", LogLevel.Error);
+            return new List<(string, ulong, long)>();
+        }
+
         return IndexBuilder.BuildDrives(
             indexer._reader,
             drives,
             indexer.SetDriveState,
             indexer.UpdateDriveProgress,
             (drive, onProgress) => FolderDriveScanner.BuildStreaming(drive, onProgress, CancellationToken.None),
-            (drive, result, progress, index) =>
-            {
-                indexer.DropDriveFromRuntime(drive);
-
-                RuntimeIndex runtime;
-                UsnIndexer.DriveRuntimeMetadata? metadata;
-
-                if (!string.IsNullOrWhiteSpace(cacheDir))
-                {
-                    LocalDriveCacheLocator.Save(cacheDir, drive, result.Store);
-                    result.Store.Records.Clear();
-                    result.Store.Records.TrimExcess();
-
-                    GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
-                    Win32Api.TrimWorkingSet();
-
-                    string? basePath = null;
-                    try
-                    {
-                        var metaPath = LocalDriveCacheLocator.GetCachePath(cacheDir, drive);
-                        if (!string.IsNullOrEmpty(metaPath) && metaPath.EndsWith(".meta", StringComparison.OrdinalIgnoreCase))
-                        {
-                            basePath = metaPath.Substring(0, metaPath.Length - 5);
-                        }
-                    }
-                    catch { }
-
-                    if (basePath != null)
-                    {
-                        runtime = new RuntimeIndex();
-                        metadata = runtime.LoadFromCacheDirect(basePath);
-                    }
-                    else
-                    {
-                        runtime = new RuntimeIndex();
-                        runtime.Load(result.Store);
-                        metadata = UsnIndexer.CreateMetadata(result.Store);
-                    }
-                }
-                else
-                {
-                    runtime = new RuntimeIndex();
-                    runtime.Load(result.Store);
-                    metadata = UsnIndexer.CreateMetadata(result.Store);
-                }
-
-                if (metadata != null)
-                {
-                    lock (indexer.LockObj)
-                    {
-                        indexer._driveMetadata[drive] = metadata;
-                        indexer._recordIndexes[drive] = runtime;
-                        indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
-                        indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
-                        indexer.Status.Progress = progress;
-                        indexer.UpdateDriveCounts(drive);
-                    }
-                }
-            },
-            (drive, result, progress, index) =>
-            {
-                indexer.DropDriveFromRuntime(drive);
-
-                RuntimeIndex runtime;
-                UsnIndexer.DriveRuntimeMetadata? metadata;
-
-                if (!string.IsNullOrWhiteSpace(cacheDir))
-                {
-                    LocalDriveCacheLocator.Save(cacheDir, drive, result.Store);
-                    result.Store.Records.Clear();
-                    result.Store.Records.TrimExcess();
-
-                    GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
-                    Win32Api.TrimWorkingSet();
-
-                    string? basePath = null;
-                    try
-                    {
-                        var metaPath = LocalDriveCacheLocator.GetCachePath(cacheDir, drive);
-                        if (!string.IsNullOrEmpty(metaPath) && metaPath.EndsWith(".meta", StringComparison.OrdinalIgnoreCase))
-                        {
-                            basePath = metaPath.Substring(0, metaPath.Length - 5);
-                        }
-                    }
-                    catch { }
-
-                    if (basePath != null)
-                    {
-                        runtime = new RuntimeIndex();
-                        metadata = runtime.LoadFromCacheDirect(basePath);
-                    }
-                    else
-                    {
-                        runtime = new RuntimeIndex();
-                        runtime.Load(result.Store);
-                        metadata = UsnIndexer.CreateMetadata(result.Store);
-                    }
-                }
-                else
-                {
-                    runtime = new RuntimeIndex();
-                    runtime.Load(result.Store);
-                    metadata = UsnIndexer.CreateMetadata(result.Store);
-                }
-
-                if (metadata != null)
-                {
-                    lock (indexer.LockObj)
-                    {
-                        indexer._driveMetadata[drive] = metadata;
-                        indexer._recordIndexes[drive] = runtime;
-                        indexer.Status.TotalFiles = indexer._recordIndexes.Values.Sum(r => r.TotalFiles);
-                        indexer.Status.TotalDirs = indexer._recordIndexes.Values.Sum(r => r.TotalDirs);
-
-                        indexer.Status.Progress = progress;
-                        indexer.UpdateDriveCounts(drive);
-                    }
-                }
-            },
+            (drive, result, progress, index) => OnDriveCompleted(indexer, cacheDir, drive, result.Store, progress),
+            (drive, result, progress, index) => OnDriveCompleted(indexer, cacheDir, drive, result.Store, progress),
             elapsedSeconds =>
             {
                 lock (indexer.LockObj)
@@ -186,5 +81,36 @@ public static class UsnIndexerBuildExtensions
                 Win32Api.TrimWorkingSet();
             }
         );
+    }
+
+    // Writes the just-scanned store straight to its V2 cache file, THEN frees the in-memory
+    // List<FileRecord> before mapping the file back in -- same "don't hold both the raw scan AND the
+    // loaded index in memory at once" shape the old engine's LoadFromCacheDirect round-trip had, now
+    // free (mmap opening is O(1), not a parse) instead of merely cheaper.
+    private static void OnDriveCompleted(UsnIndexer indexer, string cacheDir, string drive, FileRecordStore store, int progress)
+    {
+        indexer.DropDriveFromRuntime(drive);
+
+        var path = LocalDriveCacheLocator.GetV2Path(cacheDir, drive);
+        SnapshotWriter.Write(store, path);
+        var metadata = UsnIndexer.CreateMetadata(store);
+        store.Records.Clear();
+        store.Records.TrimExcess();
+
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        Win32Api.TrimWorkingSet();
+
+        var live = new LiveIndex(Snapshot.Open(path));
+
+        lock (indexer.LockObj)
+        {
+            indexer._driveMetadata[drive] = metadata;
+            indexer._recordIndexes[drive] = live;
+            var totals = indexer._recordIndexes.Values.Select(r => r.GetCounts()).ToList();
+            indexer.Status.TotalFiles = totals.Sum(t => t.Files);
+            indexer.Status.TotalDirs = totals.Sum(t => t.Dirs);
+            indexer.Status.Progress = progress;
+            indexer.UpdateDriveCounts(drive);
+        }
     }
 }

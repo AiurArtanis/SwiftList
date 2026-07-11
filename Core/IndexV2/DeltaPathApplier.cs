@@ -1,30 +1,47 @@
 using SwiftList.Core.Indexer.NetworkDrive;
-using SwiftList.Core.SearchIndex.RecordIndex;
 
-namespace SwiftList.Core.Indexer.Shared;
+namespace SwiftList.Core.IndexV2;
 
-internal static class PathDeltaApplier
+// Watcher-family (folder-scan / FAT drive-letter) path-based delta application, mirroring
+// Indexer.Shared.PathDeltaApplier but targeting a DeltaOverlay instead of a RuntimeIndex. Ids are path
+// hashes (PathHelpers.HashPath64), not FRNs -- the watcher side of the "one family per drive"
+// invariant; USN drives use DeltaLinkOps instead (see DeltaOverlay's header comment).
+//
+// ApplyDeleted no longer needs a manual recursive subtree walk the way the old RuntimeIndex-based
+// RemoveSubtree did: DeltaOverlay.Remove already cascades a directory's children (base, overridden,
+// and delta-added alike) via TombstoneCascade/RemoveAddedCascade, so one Remove() call on the target
+// id is enough.
+public static class DeltaPathApplier
 {
-    public static bool ApplyCreatedOrChanged(RuntimeIndex runtime, UInt128 rootId, string root, string path, ExclusionRuleSet? exclusionRules = null) => UpsertPath(runtime, rootId, root, path, includeChildren: Directory.Exists(path), exclusionRules);
+    public static bool ApplyCreatedOrChanged(DeltaOverlay delta, UInt128 rootId, string root, string path, ExclusionRuleSet? exclusionRules = null)
+        => UpsertPath(delta, rootId, root, path, includeChildren: Directory.Exists(path), exclusionRules);
 
-    public static bool ApplyDeleted(RuntimeIndex runtime, string path)
+    public static bool ApplyDeleted(DeltaOverlay delta, string path)
     {
         var filePath = PathHelpers.NormalizePath(path, isDirectory: false);
-        var removed = RemoveSubtree(runtime, (UInt128)PathHelpers.HashPath64(filePath));
+        var fileId = (UInt128)PathHelpers.HashPath64(filePath);
+        var removedFile = delta.Exists(fileId);
+        delta.Remove(fileId);
+
         var directoryPath = PathHelpers.NormalizePath(path, isDirectory: true);
+        var removedDir = false;
         if (!directoryPath.Equals(filePath, StringComparison.OrdinalIgnoreCase))
-            removed |= RemoveSubtree(runtime, (UInt128)PathHelpers.HashPath64(directoryPath));
-        return removed;
+        {
+            var dirId = (UInt128)PathHelpers.HashPath64(directoryPath);
+            removedDir = delta.Exists(dirId);
+            delta.Remove(dirId);
+        }
+        return removedFile || removedDir;
     }
 
-    public static bool ApplyRenamed(RuntimeIndex runtime, UInt128 rootId, string root, string oldPath, string newPath, ExclusionRuleSet? exclusionRules = null)
+    public static bool ApplyRenamed(DeltaOverlay delta, UInt128 rootId, string root, string oldPath, string newPath, ExclusionRuleSet? exclusionRules = null)
     {
-        var changed = ApplyDeleted(runtime, oldPath);
-        changed |= UpsertPath(runtime, rootId, root, newPath, includeChildren: Directory.Exists(newPath), exclusionRules);
+        var changed = ApplyDeleted(delta, oldPath);
+        changed |= UpsertPath(delta, rootId, root, newPath, includeChildren: Directory.Exists(newPath), exclusionRules);
         return changed;
     }
 
-    private static bool UpsertPath(RuntimeIndex runtime, UInt128 rootId, string root, string path, bool includeChildren, ExclusionRuleSet? exclusionRules)
+    private static bool UpsertPath(DeltaOverlay delta, UInt128 rootId, string root, string path, bool includeChildren, ExclusionRuleSet? exclusionRules)
     {
         FileInfo info;
         FileAttributes attributes;
@@ -43,14 +60,14 @@ internal static class PathDeltaApplier
 
         var isDirectory = (attributes & FileAttributes.Directory) != 0;
         if (exclusionRules?.IsExcludedPath(path, isDirectory) == true)
-            return ApplyDeleted(runtime, path);
+            return ApplyDeleted(delta, path);
 
         var normalized = PathHelpers.NormalizePath(path, isDirectory);
         var normalizedRoot = PathHelpers.NormalizePath(root, isDirectory: true);
         if (normalized.Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase))
             return false;
 
-        EnsureParentChain(runtime, rootId, normalizedRoot, normalized);
+        EnsureParentChain(delta, rootId, normalizedRoot, normalized);
 
         var name = Path.GetFileName(normalized.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         if (string.IsNullOrWhiteSpace(name))
@@ -62,7 +79,7 @@ internal static class PathDeltaApplier
             : (UInt128)PathHelpers.HashPath64(PathHelpers.NormalizePath(parentPath, true));
 
         var size = isDirectory ? 0 : info.Length;
-        runtime.Upsert(new FileRecord(
+        delta.Upsert(
             (UInt128)PathHelpers.HashPath64(normalized),
             parentId,
             name,
@@ -70,15 +87,15 @@ internal static class PathDeltaApplier
             size,
             FileTimeHelper.ToUnixSeconds(info.CreationTimeUtc),
             FileTimeHelper.ToUnixSeconds(info.LastWriteTimeUtc),
-            FileTimeHelper.ToUnixSeconds(info.LastAccessTimeUtc)));
+            FileTimeHelper.ToUnixSeconds(info.LastAccessTimeUtc));
 
         if (includeChildren && isDirectory)
-            UpsertDirectoryChildren(runtime, rootId, root, normalized, exclusionRules);
+            UpsertDirectoryChildren(delta, rootId, root, normalized, exclusionRules);
 
         return true;
     }
 
-    private static void UpsertDirectoryChildren(RuntimeIndex runtime, UInt128 rootId, string root, string directory, ExclusionRuleSet? exclusionRules)
+    private static void UpsertDirectoryChildren(DeltaOverlay delta, UInt128 rootId, string root, string directory, ExclusionRuleSet? exclusionRules)
     {
         IEnumerable<string> children;
         try
@@ -91,10 +108,10 @@ internal static class PathDeltaApplier
         }
 
         foreach (var child in children)
-            UpsertPath(runtime, rootId, root, child, includeChildren: true, exclusionRules);
+            UpsertPath(delta, rootId, root, child, includeChildren: true, exclusionRules);
     }
 
-    private static void EnsureParentChain(RuntimeIndex runtime, UInt128 rootId, string normalizedRoot, string normalizedPath)
+    private static void EnsureParentChain(DeltaOverlay delta, UInt128 rootId, string normalizedRoot, string normalizedPath)
     {
         var parentPath = Path.GetDirectoryName(normalizedPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         if (string.IsNullOrWhiteSpace(parentPath))
@@ -105,10 +122,10 @@ internal static class PathDeltaApplier
             return;
 
         var parentId = (UInt128)PathHelpers.HashPath64(normalizedParent);
-        if (runtime.TryGetIndexById(parentId, out _))
+        if (delta.Exists(parentId))
             return;
 
-        EnsureParentChain(runtime, rootId, normalizedRoot, normalizedParent);
+        EnsureParentChain(delta, rootId, normalizedRoot, normalizedParent);
 
         var parentParentPath = Path.GetDirectoryName(normalizedParent.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         var parentParentId = string.IsNullOrWhiteSpace(parentParentPath) || PathHelpers.NormalizePath(parentParentPath, true).Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase)
@@ -119,33 +136,6 @@ internal static class PathDeltaApplier
         if (string.IsNullOrWhiteSpace(parentName))
             return;
 
-        runtime.Upsert(new FileRecord(
-            parentId,
-            parentParentId,
-            parentName,
-            FileRecordFlags.Directory));
-    }
-
-    private static bool RemoveSubtree(RuntimeIndex runtime, UInt128 id)
-    {
-        if (!runtime.TryGetIndexById(id, out var idx))
-            return false;
-
-        var removed = false;
-        var stack = new Stack<int>();
-        stack.Push(idx);
-        while (stack.Count > 0)
-        {
-            var current = stack.Pop();
-            if (runtime.TryGetChildren(current, out var children) && children != null)
-            {
-                foreach (var child in children)
-                    stack.Push(child);
-            }
-            runtime.Remove(runtime.GetId(current));
-            removed = true;
-        }
-
-        return removed;
+        delta.Upsert(parentId, parentParentId, parentName, FileRecordFlags.Directory, 0, 0, 0, 0);
     }
 }

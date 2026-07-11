@@ -217,12 +217,13 @@ internal sealed class SearchEngineDriveMaintenance
                     continue;
                 }
 
-                if (_indexer._recordIndexes.TryGetValue(drive.Drive, out var runtime))
+                if (_indexer._recordIndexes.TryGetValue(drive.Drive, out var live))
                 {
-                    drive.Files = runtime.TotalFiles;
-                    drive.Dirs = runtime.TotalDirs;
-                    totalFiles += runtime.TotalFiles;
-                    totalDirs += runtime.TotalDirs;
+                    var (files, dirs) = live.GetCounts();
+                    drive.Files = files;
+                    drive.Dirs = dirs;
+                    totalFiles += files;
+                    totalDirs += dirs;
                     continue;
                 }
 

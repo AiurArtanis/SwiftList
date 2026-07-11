@@ -1,28 +1,28 @@
-using SwiftList.Core.SearchIndex.RecordIndex;
-using SwiftList.Core.SearchIndex.RecordSearch;
-using SwiftList.Core.Indexer.Shared;
+using SwiftList.Core.IndexV2;
 
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
-internal sealed class NetworkIndex
+// Wraps one network/WSL/folder-index drive's IndexV2 LiveIndex. IsComplete/ExclusionRulesFingerprint/
+// LastUpdated are plain mutable properties here (not read live from the snapshot) because callers
+// (DriveRefreshRunner) mutate them AFTER a scan/load finishes and before persisting -- Save()/ToStore()
+// stamp the current property values into the snapshot via CompactionStamp, mirroring how UsnIndexer
+// keeps JournalId/NextUsn external to the snapshot for the same reason.
+//
+// IDisposable now (holds a memory-mapped file via LiveIndex) unlike the old RuntimeIndex-based version,
+// which had nothing to release -- every place that REPLACES a drive's NetworkIndex (checkpoint publish,
+// refresh-finished, Configure's removal sweep, DeleteCache) must Dispose the outgoing instance. A search
+// already in flight against a just-disposed instance sees ObjectDisposedException from the read lock,
+// not memory corruption (LiveIndex.Dispose() takes the write lock first) -- callers on the search path
+// treat that as "this drive's index just got swapped out from under us" and skip it for that pass.
+internal sealed class NetworkIndex : IDisposable
 {
-    private readonly object _gate = new();
-    private readonly RuntimeIndex _runtime = new();
-    private readonly Searcher _searcher = new();
+    private LiveIndex? _live;
 
-    public NetworkIndex(string drive)
-    {
-        Drive = drive;
-        // ponytail: restrict background search thread usage inside UI process to prevent stutter
-        _searcher.MaxDegreeOfParallelism = 2;
-    }
+    public NetworkIndex(string drive) => Drive = drive;
 
     public string Drive { get; }
     public DateTime LastUpdated { get; set; } = DateTime.Now;
-    // See FileRecordStore.IsComplete -- false for a checkpoint or an interrupted scan, true only once the
-    // build that produced this index finished in full.
     public bool IsComplete { get; set; }
-    // See FileRecordStore.ExclusionRulesFingerprint.
     public string ExclusionRulesFingerprint { get; set; } = string.Empty;
     public UInt128 RootId { get; private set; }
     public int Skipped { get; private set; }
@@ -35,20 +35,27 @@ internal sealed class NetworkIndex
     {
         get
         {
-            lock (_gate)
-                return Math.Max(0, _runtime.TotalFiles + _runtime.TotalDirs - 1);
+            if (_live == null)
+                return 0;
+            var (files, dirs) = _live.GetCounts();
+            return Math.Max(0, files + dirs - 1); // -1: exclude the root row itself
         }
     }
 
+    // Writes `store` as this drive's V2 cache and opens it -- the shared tail of every construction
+    // path (initial build, checkpoint, legacy-cache migration) that starts from a fresh FileRecordStore.
     public static NetworkIndex FromStore(FileRecordStore store)
     {
-        var index = new NetworkIndex(store.SourceKey);
-        index.RootId = store.RootId;
-        index.LastUpdated = store.LastUpdated;
-        index.IsComplete = store.IsComplete;
-        index.ExclusionRulesFingerprint = store.ExclusionRulesFingerprint;
-        lock (index._gate)
-            index._runtime.Load(store);
+        var index = new NetworkIndex(store.SourceKey)
+        {
+            RootId = store.RootId,
+            LastUpdated = store.LastUpdated,
+            IsComplete = store.IsComplete,
+            ExclusionRulesFingerprint = store.ExclusionRulesFingerprint,
+        };
+        var path = NetworkDriveCacheLocator.GetV2Path(store.SourceKey);
+        SnapshotWriter.Write(store, path);
+        index._live = new LiveIndex(Snapshot.Open(path));
         return index;
     }
 
@@ -65,6 +72,22 @@ internal sealed class NetworkIndex
         return index;
     }
 
+    // Opens an EXISTING V2 cache file directly -- the fast startup-load path once a drive has already
+    // been migrated (no rewrite, unlike FromStore).
+    internal static NetworkIndex FromSnapshotFile(string drive, string path)
+    {
+        var snapshot = Snapshot.Open(path);
+        var index = new NetworkIndex(drive)
+        {
+            RootId = snapshot.RootId,
+            LastUpdated = snapshot.LastUpdated,
+            IsComplete = snapshot.IsComplete,
+            ExclusionRulesFingerprint = snapshot.ExclusionRulesFingerprint,
+            _live = new LiveIndex(snapshot),
+        };
+        return index;
+    }
+
     public static NetworkIndex Build(
         string drive,
         string root,
@@ -75,7 +98,6 @@ internal sealed class NetworkIndex
         Action<FileRecordStore, NetworkDriveWalkStats>? onCheckpoint = null,
         FileRecordStore? previousStore = null)
     {
-        var index = new NetworkIndex(drive);
         const ulong rootId = 1;
         // Setting this on the store itself (not just on `index` after the walk finishes) means every
         // mid-walk checkpoint -- which serializes this same store, see TreeBuilder.CloneStore -- already
@@ -112,114 +134,129 @@ internal sealed class NetworkIndex
         var builder = new TreeBuilder(store, root, physicalRoot, options, token, onProgress, onCheckpoint, diffBaseline, recheckExclusions);
         var stats = builder.Run();
 
+        var index = FromStore(store, stats);
         index.RootId = rootId;
-        index.Skipped = stats.Skipped;
-        index.Errors = stats.Errors;
-        index.EnumerateErrors = stats.EnumerateErrors;
-        index.AttributeErrors = stats.AttributeErrors;
-        index.ReparseSkipped = stats.ReparseSkipped;
-        index.SlowDirectories = stats.SlowDirectories;
-        index.LastUpdated = DateTime.Now;
         index.ExclusionRulesFingerprint = fingerprint;
-        lock (index._gate)
-            index._runtime.Load(store);
         onProgress(index.Count);
         return index;
     }
 
     public FileRecordStore ToStore()
     {
-        lock (_gate)
-        {
-            var unc = (Drive.StartsWith(@"\\") || Drive.StartsWith(@"//")) ? Drive : NetworkDriveResolver.GetUncPath(Drive);
-            var store = _runtime.ToStore(
-                FileRecordSourceKind.NetworkMappedDrive,
-                FileRecordIdKind.SourceLocalId64,
-                fileSystemType: unc,
-                volumeSerialNumber: 0,
-                RootId,
-                journalId: 0,
-                nextUsn: 0);
-            store.LastUpdated = LastUpdated;
-            store.IsComplete = IsComplete;
-            store.ExclusionRulesFingerprint = ExclusionRulesFingerprint;
-            return store;
-        }
+        if (_live == null)
+            return new FileRecordStore { SourceKey = Drive, SourceKind = FileRecordSourceKind.NetworkMappedDrive, IdKind = FileRecordIdKind.SourceLocalId64, RootId = RootId };
+        var store = _live.ToStore();
+        // ToStore() reads these back off the snapshot's OWN frozen header (as of last compaction) --
+        // overwrite with this NetworkIndex's current values, which may be newer (see the class comment).
+        store.LastUpdated = LastUpdated;
+        store.IsComplete = IsComplete;
+        store.ExclusionRulesFingerprint = ExclusionRulesFingerprint;
+        return store;
     }
 
+    // Folds the current live state into `path` (the drive's own V2 cache file) and swaps it in,
+    // stamping this NetworkIndex's own IsComplete/ExclusionRulesFingerprint/LastUpdated -- mirrors the
+    // old engine's unconditional-write SaveDrivesToCache semantics (force:true; a caller decides
+    // whether/when to call this at all, so there's no periodic-skip case to support here).
+    internal void SaveToCache(string path)
+    {
+        if (_live == null)
+            return;
+        var stamp = new CompactionStamp(IsComplete: IsComplete, ExclusionRulesFingerprint: ExclusionRulesFingerprint, LastUpdated: LastUpdated);
+        _live.Compact(path, stamp, force: true);
+    }
 
     public void SearchStreaming(ParsedSearchQuery parsed, string rawQuery, string? directoryFilterLower, int limit, Action<SearchResult> onResult, CancellationToken token)
     {
-        lock (_gate)
-            _searcher.SearchStreaming(_runtime, rawQuery, limit, onResult, token, directoryFilterLower);
+        if (_live == null)
+            return;
+        try
+        {
+            IndexV2Searcher.SearchStreaming(_live, rawQuery, limit, onResult, token, directoryFilterLower);
+        }
+        catch (ObjectDisposedException)
+        {
+            // This drive's index was swapped out (checkpoint/refresh/delete) mid-search -- treat as no
+            // results from the stale snapshot rather than crashing the caller.
+        }
     }
 
-    // GetFullPath's per-row memo already self-caps at a high threshold (see PathQueryExtensions), but a
-    // search window closing/hiding is also a natural point to give the memory back proactively -- mirrors
-    // ShellIconHelper.ClearCache()'s existing trigger points.
     public void ClearPathCache()
     {
-        lock (_gate)
-            _runtime.ClearPathCache();
+        // IndexV2's Snapshot has no per-row path memo to clear -- see UsnIndexer.ClearAllPathCaches.
     }
 
-    // _searcher's candidate/rank cache (up to 2M candidate ids per cached term) otherwise only clears on
-    // a file-system change on THIS drive (see ApplyCreatedOrChanged/ApplyDeleted/ApplyRenamed below) --
-    // unlike the local-drive equivalent (SearchEngine's 3s idle timer), there's no time-based trim for
-    // network/WSL/folder-index drives, so a window closing is the only other natural point to give it back.
     public void ClearCaches()
     {
-        lock (_gate)
-            _searcher.ClearCaches();
+        // IndexV2 has no cross-search rank/candidate cache yet -- see SearchCoordinator.ClearCaches.
     }
 
-    // Backs NetworkIndexerRecentFilesExtensions.GetRecentFiles -- same in-memory subtree walk the local
-    // NTFS/ReFS path uses (RecentFilesWalker), just pointed at this share's own RuntimeIndex.
     public void CollectRecentFiles(string dirLower, uint cutoffUtc, List<SearchResult> candidates)
     {
-        lock (_gate)
-            RecentFilesWalker.CollectFromDirectory(_runtime, dirLower, Drive, cutoffUtc, candidates);
+        if (_live == null)
+            return;
+        try
+        {
+            IndexV2Searcher.GetRecentFiles(_live, dirLower, cutoffUtc, candidates);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
     }
 
     public bool ApplyCreatedOrChanged(string root, string path, ExclusionRuleSet? exclusionRules = null)
     {
-        lock (_gate)
+        if (_live == null)
+            return false;
+        try
         {
-            var changed = PathDeltaApplier.ApplyCreatedOrChanged(_runtime, RootId, root, path, exclusionRules);
+            var changed = false;
+            _live.Mutate((_, delta) => changed = DeltaPathApplier.ApplyCreatedOrChanged(delta, RootId, root, path, exclusionRules));
             if (changed)
-            {
                 LastUpdated = DateTime.Now;
-                _searcher.ClearCaches();
-            }
             return changed;
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
         }
     }
 
     public bool ApplyDeleted(string path)
     {
-        lock (_gate)
+        if (_live == null)
+            return false;
+        try
         {
-            var removed = PathDeltaApplier.ApplyDeleted(_runtime, path);
+            var removed = false;
+            _live.Mutate((_, delta) => removed = DeltaPathApplier.ApplyDeleted(delta, path));
             if (removed)
-            {
                 LastUpdated = DateTime.Now;
-                _searcher.ClearCaches();
-            }
             return removed;
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
         }
     }
 
     public bool ApplyRenamed(string root, string oldPath, string newPath, ExclusionRuleSet? exclusionRules = null)
     {
-        lock (_gate)
+        if (_live == null)
+            return false;
+        try
         {
-            var changed = PathDeltaApplier.ApplyRenamed(_runtime, RootId, root, oldPath, newPath, exclusionRules);
+            var changed = false;
+            _live.Mutate((_, delta) => changed = DeltaPathApplier.ApplyRenamed(delta, RootId, root, oldPath, newPath, exclusionRules));
             if (changed)
-            {
                 LastUpdated = DateTime.Now;
-                _searcher.ClearCaches();
-            }
             return changed;
         }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
     }
+
+    public void Dispose() => _live?.Dispose();
 }

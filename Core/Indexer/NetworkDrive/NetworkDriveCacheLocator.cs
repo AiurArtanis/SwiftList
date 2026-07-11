@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using SwiftList.Core.IndexV2;
 
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
@@ -8,10 +9,17 @@ internal static class NetworkDriveCacheLocator
     public static string GetCachePath(string drive)
         => FileRecordStoreSerializer.GetBasePath(Path.Combine(Logger.UserDataDir, "indexes"), GetStorageKeyOrFallback(drive)) + ".meta";
 
+    // IndexV2's single-file snapshot, keyed by the same UNC/fallback identity as the legacy trio.
+    public static string GetV2Path(string drive)
+        => FileRecordStoreSerializer.GetBasePath(Path.Combine(Logger.UserDataDir, "indexes"), GetStorageKeyOrFallback(drive)) + ".idx2";
+
     public static bool HasCache(string drive)
     {
         var key = TryResolveStorageKey(drive);
-        return key != null && FileRecordStoreSerializer.Exists(Path.Combine(Logger.UserDataDir, "indexes"), key);
+        if (key == null)
+            return false;
+        var cacheDir = Path.Combine(Logger.UserDataDir, "indexes");
+        return File.Exists(FileRecordStoreSerializer.GetBasePath(cacheDir, key) + ".idx2") || FileRecordStoreSerializer.Exists(cacheDir, key);
     }
 
     public static IReadOnlyList<string> GetCachedDrives()
@@ -41,8 +49,11 @@ internal static class NetworkDriveCacheLocator
     public static void DeleteCache(string drive)
     {
         var storageKey = TryResolveStorageKey(drive);
-        if (storageKey != null)
-            FileRecordStoreSerializer.Delete(Path.Combine(Logger.UserDataDir, "indexes"), storageKey);
+        if (storageKey == null)
+            return;
+        var cacheDir = Path.Combine(Logger.UserDataDir, "indexes");
+        TryDelete(FileRecordStoreSerializer.GetBasePath(cacheDir, storageKey) + ".idx2");
+        FileRecordStoreSerializer.Delete(cacheDir, storageKey);
     }
 
     public static bool TryLoad(string drive, out NetworkIndex index)
@@ -52,25 +63,24 @@ internal static class NetworkDriveCacheLocator
         if (storageKey == null)
             return false;
 
-        var store = FileRecordStoreSerializer.Load(Path.Combine(Logger.UserDataDir, "indexes"), storageKey);
-        if (store == null)
-            return false;
+        var cacheDir = Path.Combine(Logger.UserDataDir, "indexes");
+        var v2Path = FileRecordStoreSerializer.GetBasePath(cacheDir, storageKey) + ".idx2";
+        if (!File.Exists(v2Path))
+            return false; // no legacy-cache migration -- caller does a full fresh rebuild instead
 
         try
         {
-            store.SourceKey = IndexerHelper.NormalizeDrive(drive);
-            index = NetworkIndex.FromStore(store);
+            index = NetworkIndex.FromSnapshotFile(IndexerHelper.NormalizeDrive(drive), v2Path);
             return true;
         }
         catch (Exception ex)
         {
-            Logger.Log($"[NetworkDriveCacheLocator] Failed to load network drive {drive}: {ex.Message}", LogLevel.Error);
+            Logger.Log($"[NetworkDriveCacheLocator] Failed to open IndexV2 cache for {drive}: {ex.Message}", LogLevel.Error);
             return false;
         }
     }
 
-    public static void Save(NetworkIndex index)
-        => FileRecordStoreSerializer.Save(Path.Combine(Logger.UserDataDir, "indexes"), index.ToStore(), GetStorageKeyOrFallback(index.Drive));
+    public static void Save(NetworkIndex index) => index.SaveToCache(GetV2Path(index.Drive));
 
     private static string GetStorageKeyOrFallback(string drive)
     {
@@ -90,36 +100,68 @@ internal static class NetworkDriveCacheLocator
         if (!string.IsNullOrWhiteSpace(unc))
             return BuildStorageKey(unc);
 
+        var cacheDir = Path.Combine(Logger.UserDataDir, "indexes");
+
         // A folder-index target has no UNC to resolve, ever -- GetStorageKeyOrFallback saved it under
-        // BuildFallbackStorageKey(drive) directly. Check that exact key before falling through to the
-        // FileSystemType-based scan below, which for a folder index is empty (never a real UNC) and would
-        // resolve to a filename nothing was ever saved under, silently orphaning the cache on delete/reload.
+        // BuildFallbackStorageKey(drive) directly. Check that exact key (either format) before falling
+        // through to the FileSystemType-based scan below, which for a folder index is empty (never a
+        // real UNC) and would resolve to a filename nothing was ever saved under, silently orphaning
+        // the cache on delete/reload.
         var fallbackKey = BuildFallbackStorageKey(normalizedDrive);
-        if (FileRecordStoreSerializer.Exists(Path.Combine(Logger.UserDataDir, "indexes"), fallbackKey))
+        if (File.Exists(FileRecordStoreSerializer.GetBasePath(cacheDir, fallbackKey) + ".idx2") || FileRecordStoreSerializer.Exists(cacheDir, fallbackKey))
             return fallbackKey;
 
         // Last resort for a drive/share that WAS connected when saved (so its cache's FileSystemType holds
         // the real UNC it was keyed under) but is disconnected right now.
         var fallback = EnumerateNetworkStores()
-            .Cast<FileRecordStoreSummary?>()
-            .FirstOrDefault(store => store.HasValue && store.Value.SourceKey.TrimEnd(':')
+            .FirstOrDefault(store => store.SourceKey.TrimEnd(':')
                 .Equals(normalizedDrive.TrimEnd(':'), StringComparison.OrdinalIgnoreCase));
-        return !fallback.HasValue ? null : BuildStorageKey(fallback.Value.FileSystemType);
+        return fallback.SourceKey == null ? null : BuildStorageKey(fallback.FileSystemType);
     }
 
-    private static IEnumerable<FileRecordStoreSummary> EnumerateNetworkStores()
+    // Unifies legacy .meta and IndexV2 .idx2 summaries under one shape for discovery/fallback-key scans
+    // -- both formats carry the same fields, just via different readers.
+    private readonly record struct StoreSummary(string SourceKey, string FileSystemType, FileRecordSourceKind SourceKind);
+
+    private static IEnumerable<StoreSummary> EnumerateNetworkStores()
     {
         var cacheDir = Path.Combine(Logger.UserDataDir, "indexes");
         if (!Directory.Exists(cacheDir))
             yield break;
 
-        foreach (var path in Directory.EnumerateFiles(cacheDir, "*.meta"))
+        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var path in Directory.EnumerateFiles(cacheDir, "*.idx2"))
         {
-            var name = Path.GetFileNameWithoutExtension(path);
-            if (string.IsNullOrWhiteSpace(name))
+            var storageKey = Path.GetFileNameWithoutExtension(path);
+            if (string.IsNullOrWhiteSpace(storageKey) || !seenKeys.Add(storageKey))
                 continue;
 
-            var storageKey = name;
+            SnapshotFormat.Meta? meta;
+            try
+            {
+                meta = SnapshotFormat.TryReadHeaderFromFile(path);
+            }
+            catch (IOException)
+            {
+                continue; // mid-write, not corruption -- picked up again next enumeration
+            }
+
+            if (meta == null)
+            {
+                TryDelete(path);
+                continue;
+            }
+            if (meta.SourceKind == FileRecordSourceKind.NetworkMappedDrive)
+                yield return new StoreSummary(meta.SourceKey, meta.FileSystemType, meta.SourceKind);
+        }
+
+        foreach (var path in Directory.EnumerateFiles(cacheDir, "*.meta"))
+        {
+            var storageKey = Path.GetFileNameWithoutExtension(path);
+            if (string.IsNullOrWhiteSpace(storageKey) || !seenKeys.Add(storageKey))
+                continue;
+
             FileRecordStoreSummary? summary;
             try
             {
@@ -127,21 +169,30 @@ internal static class NetworkDriveCacheLocator
             }
             catch (IOException)
             {
-                // Busy right now -- most likely a checkpoint save mid-write for this exact drive. Skip this
-                // pass without touching the file; it'll be picked up again next time this is enumerated.
                 continue;
             }
 
             if (!summary.HasValue)
             {
-                // Delete outdated or corrupted caches immediately to prevent infinite retry loops and CPU spikes
                 FileRecordStoreSerializer.Delete(cacheDir, storageKey);
                 continue;
             }
 
             var val = summary.Value;
             if (val.SourceKind == FileRecordSourceKind.NetworkMappedDrive)
-                yield return val;
+                yield return new StoreSummary(val.SourceKey, val.FileSystemType, val.SourceKind);
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
         }
     }
 

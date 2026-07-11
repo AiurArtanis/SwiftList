@@ -82,7 +82,20 @@ internal sealed class TreeBuilder
         var workers = GetWorkerCount();
         var tasks = new Task[workers];
         for (var i = 0; i < workers; i++)
-            tasks[i] = DedicatedWorkerThread.Run(WorkerLoopAsync, "NetworkDriveScan");
+        {
+            var worker = DedicatedWorkerThread.Run(WorkerLoopAsync, "NetworkDriveScan");
+            // Task.WaitAll(tasks, _token) below can return early via ITS OWN token cancelling while a
+            // DIFFERENT worker is still running and later faults independently (a real fault, not a
+            // cancellation -- DedicatedWorkerThread already handles the pure-cancellation case). That
+            // worker's Task would then never get awaited/observed by anyone, and an unobserved faulted
+            // Task crashes the whole process via TaskScheduler.UnobservedTaskException when the GC
+            // finalizes it -- exactly what happened in the wild for a network-share timestamp bug this
+            // continuation would have contained to a logged error instead. Touching .Exception marks a
+            // faulted task observed regardless of whether WaitAll ever waited on it.
+            worker.ContinueWith(t => Logger.Log($"[NetworkIndexer] Worker task faulted after WaitAll returned: {t.Exception}", LogLevel.Error),
+                CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            tasks[i] = worker;
+        }
 
         Task.WaitAll(tasks, _token);
         // Temporary diagnostic for a resumed scan finishing with far fewer records than the drive

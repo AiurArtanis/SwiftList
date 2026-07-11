@@ -55,11 +55,18 @@ internal sealed class NetworkIndexerPublisher
 
     public void OnRefreshFinished(string drive, NetworkIndex index)
     {
+        NetworkIndex? old;
         lock (_gate)
         {
+            _indexes.TryGetValue(drive, out old);
             _indexes[drive] = index;
             _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "ready", index.Count, index, null);
         }
+        // Dispose OUTSIDE the lock: LiveIndex.Dispose() takes its own write lock and can briefly block
+        // on an in-flight search holding its read lock -- doing that while holding _gate would stall
+        // every other drive's status/index access for no reason.
+        if (old != null && !ReferenceEquals(old, index))
+            old.Dispose();
         _ensureWatcher(drive);
         PublishStatusesChanged();
     }
@@ -79,9 +86,15 @@ internal sealed class NetworkIndexerPublisher
     {
         token.ThrowIfCancellationRequested();
 
+        // `index` owns a mmap-backed LiveIndex now (unlike the old engine's plain in-memory checkpoint) --
+        // every path below that doesn't end up storing it into _indexes must still Dispose it, or a
+        // re-validation pass against an already-complete index (the common `alreadyComplete` case) leaks
+        // one mmap per checkpoint (~every 4096 items).
+        NetworkIndex? index = null;
+        var stored = false;
         try
         {
-            var index = NetworkIndex.FromStore(store, stats);
+            index = NetworkIndex.FromStore(store, stats);
 
             // A checkpoint is always a partial, in-progress snapshot (IsComplete is never true here). If
             // what's currently cached for this drive is a fully complete, trusted index, a checkpoint from
@@ -111,13 +124,18 @@ internal sealed class NetworkIndexerPublisher
             else
             {
                 IndexerHelper.Save(index);
+                NetworkIndex? old = null;
                 lock (_gate)
                 {
                     if (token.IsCancellationRequested)
                         return;
+                    _indexes.TryGetValue(drive, out old);
                     _indexes[drive] = index;
+                    stored = true;
                     _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "indexing", index.Count, index, null);
                 }
+                if (old != null && !ReferenceEquals(old, index))
+                    old.Dispose();
             }
             PublishStatusesChanged();
         }
@@ -128,6 +146,11 @@ internal sealed class NetworkIndexerPublisher
         catch (Exception ex)
         {
             Logger.Log($"[NetworkIndexer] Failed to publish checkpoint for {drive}: {ex.Message}", LogLevel.Error);
+        }
+        finally
+        {
+            if (!stored)
+                index?.Dispose();
         }
     }
 

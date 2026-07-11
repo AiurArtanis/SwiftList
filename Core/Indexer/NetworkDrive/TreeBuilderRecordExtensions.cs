@@ -35,22 +35,29 @@ internal static class TreeBuilderRecordExtensions
         fullPath = PathHelpers.NormalizePath(logicalPath, isDirectory);
         var id = PathHelpers.HashPath64(fullPath);
         var flags = FileRecordFlagsHelper.FromAttributes(attributes);
-        // Length can still throw on a flaky network share even though Attributes just succeeded; that's
-        // supplementary metadata, not worth failing the whole record over.
+        // Length/timestamps can still throw on a flaky network share even though Attributes just
+        // succeeded -- e.g. a real crash seen in the wild: LastAccessTimeUtc throwing
+        // ArgumentOutOfRangeException("Not a valid Win32 FileTime") for a share that reports a
+        // timestamp .NET can't represent. All of this is supplementary metadata, not worth failing
+        // the whole record over.
         long size = 0;
         if (!isDirectory)
         {
             try { size = info.Length; } catch { }
         }
+        uint creationUtc = 0, lastWriteUtc = 0, lastAccessUtc = 0;
+        try { creationUtc = FileTimeHelper.ToUnixSeconds(info.CreationTimeUtc); } catch { }
+        try { lastWriteUtc = FileTimeHelper.ToUnixSeconds(info.LastWriteTimeUtc); } catch { }
+        try { lastAccessUtc = FileTimeHelper.ToUnixSeconds(info.LastAccessTimeUtc); } catch { }
         var fileRecord = new FileRecord(
             id,
             parentId,
             builder._namePool.Get(name),
             flags,
             size,
-            FileTimeHelper.ToUnixSeconds(info.CreationTimeUtc),
-            FileTimeHelper.ToUnixSeconds(info.LastWriteTimeUtc),
-            FileTimeHelper.ToUnixSeconds(info.LastAccessTimeUtc));
+            creationUtc,
+            lastWriteUtc,
+            lastAccessUtc);
         record = new NetworkWalkRecord(fileRecord, attributes);
         return WalkRecordResult.Success;
     }
