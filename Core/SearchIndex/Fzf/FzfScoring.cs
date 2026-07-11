@@ -2,12 +2,11 @@ namespace SwiftList.Core.SearchIndex.Fzf;
 
 internal static class FzfScoring
 {
-    public static bool FindFuzzyScope(string text, string pattern, bool caseSensitive, out int start, out int end)
+    public static bool FindFuzzyScope(ReadOnlySpan<char> text, string pattern, bool caseSensitive, out int start, out int end)
     {
         start = -1;
         end = -1;
 
-        var textSpan = text.AsSpan();
         var currentIdx = 0;
         var lastChar = '\0';
 
@@ -17,15 +16,15 @@ internal static class FzfScoring
             int offset;
             if (caseSensitive)
             {
-                offset = textSpan.Slice(currentIdx).IndexOf(target);
+                offset = text.Slice(currentIdx).IndexOf(target);
             }
             else
             {
                 var lower = char.ToLowerInvariant(target);
                 var upper = char.ToUpperInvariant(target);
                 offset = lower == upper
-                    ? textSpan.Slice(currentIdx).IndexOf(lower)
-                    : textSpan.Slice(currentIdx).IndexOfAny(lower, upper);
+                    ? text.Slice(currentIdx).IndexOf(lower)
+                    : text.Slice(currentIdx).IndexOfAny(lower, upper);
             }
 
             if (offset < 0)
@@ -43,8 +42,8 @@ internal static class FzfScoring
 
         var l = char.ToLowerInvariant(lastChar);
         var u = char.ToUpperInvariant(lastChar);
-        var lastOffset = caseSensitive ? textSpan.Slice(end).LastIndexOf(lastChar)
-            : (l == u ? textSpan.Slice(end).LastIndexOf(l) : textSpan.Slice(end).LastIndexOfAny(l, u));
+        var lastOffset = caseSensitive ? text.Slice(end).LastIndexOf(lastChar)
+            : (l == u ? text.Slice(end).LastIndexOf(l) : text.Slice(end).LastIndexOfAny(l, u));
 
         if (lastOffset >= 0)
             end = end + lastOffset + 1;
@@ -52,22 +51,22 @@ internal static class FzfScoring
         return true;
     }
 
-    public static int CalculateScore(string text, string pattern, int start, int end, bool caseSensitive, FzfScoringScheme scheme)
+    public static int CalculateScore(ReadOnlySpan<char> text, string pattern, int start, int end, bool caseSensitive, FzfScoringScheme scheme)
     {
         var patternIndex = 0;
         var score = 0;
         var inGap = false;
         var consecutive = 0;
         var firstBonus = 0;
-        var previousClass = start > 0 ? FzfAlgorithm.GetClass(text[start - 1]) : FzfAlgorithm.InitialClass(scheme);
+        var previousClass = start > 0 ? FzfCharTables.GetClass(text[start - 1]) : (byte)FzfAlgorithm.InitialClass(scheme);
 
         for (var i = start; i < end; i++)
         {
-            var currentClass = FzfAlgorithm.GetClass(text[i]);
-            var matched = patternIndex < pattern.Length && FzfAlgorithm.CharsEqual(text[i], pattern[patternIndex], caseSensitive);
+            var currentClass = FzfCharTables.GetClass(text[i]);
+            var matched = patternIndex < pattern.Length && FzfCharTables.CharsEqual(text[i], pattern[patternIndex], caseSensitive);
             if (matched)
             {
-                var bonus = FzfAlgorithm.BonusFor(previousClass, currentClass, scheme);
+                int bonus = FzfCharTables.Bonus(scheme, previousClass, currentClass);
                 score += FzfAlgorithm.ScoreMatch;
                 if (consecutive == 0)
                 {

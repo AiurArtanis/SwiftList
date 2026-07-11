@@ -2,7 +2,7 @@ namespace SwiftList.Core.SearchIndex.Fzf;
 
 internal static class FzfExactMatcher
 {
-    public static FzfMatchResult ExactMatch(string text, string pattern, bool caseSensitive, FzfScoringScheme scheme, bool boundaryCheck)
+    public static FzfMatchResult ExactMatch(ReadOnlySpan<char> text, string pattern, bool caseSensitive, FzfScoringScheme scheme, bool boundaryCheck)
     {
         if (pattern.Length == 0 || pattern.Length > text.Length)
             return FzfMatchResult.NoMatch;
@@ -10,19 +10,18 @@ internal static class FzfExactMatcher
         var bestPos = -1;
         var bestBonus = -1;
 
-        var textSpan = text.AsSpan();
         var patternSpan = pattern.AsSpan();
         var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 
         var offset = 0;
         while (offset <= text.Length - pattern.Length)
         {
-            var index = textSpan.Slice(offset).IndexOf(patternSpan, comparison);
+            var index = text.Slice(offset).IndexOf(patternSpan, comparison);
             if (index < 0)
                 break;
 
             var i = offset + index;
-            var bonus = FzfAlgorithm.BonusAt(text, i, scheme);
+            var bonus = BonusAt(text, i, scheme);
             if (!boundaryCheck || IsBoundaryMatch(text, i, i + pattern.Length, bonus))
             {
                 if (bonus > bestBonus)
@@ -47,7 +46,7 @@ internal static class FzfExactMatcher
         return new FzfMatchResult(bestPos, end, score);
     }
 
-    public static FzfMatchResult PrefixMatch(string text, string pattern, bool caseSensitive, FzfScoringScheme scheme)
+    public static FzfMatchResult PrefixMatch(ReadOnlySpan<char> text, string pattern, bool caseSensitive, FzfScoringScheme scheme)
     {
         if (pattern.Length == 0)
             return new FzfMatchResult(0, 0, 0);
@@ -59,7 +58,7 @@ internal static class FzfExactMatcher
         return new FzfMatchResult(start, end, FzfScoring.CalculateScore(text, pattern, start, end, caseSensitive, scheme));
     }
 
-    public static FzfMatchResult SuffixMatch(string text, string pattern, bool caseSensitive, FzfScoringScheme scheme)
+    public static FzfMatchResult SuffixMatch(ReadOnlySpan<char> text, string pattern, bool caseSensitive, FzfScoringScheme scheme)
     {
         var trimmedLength = pattern.Length == 0 || !char.IsWhiteSpace(pattern[^1])
             ? text.Length - FzfAlgorithm.TrailingWhitespaces(text)
@@ -74,7 +73,7 @@ internal static class FzfExactMatcher
         return new FzfMatchResult(start, trimmedLength, FzfScoring.CalculateScore(text, pattern, start, trimmedLength, caseSensitive, scheme));
     }
 
-    public static FzfMatchResult EqualMatch(string text, string pattern, bool caseSensitive, FzfScoringScheme scheme)
+    public static FzfMatchResult EqualMatch(ReadOnlySpan<char> text, string pattern, bool caseSensitive, FzfScoringScheme scheme)
     {
         if (pattern.Length == 0)
             return FzfMatchResult.NoMatch;
@@ -89,14 +88,21 @@ internal static class FzfExactMatcher
             (FzfAlgorithm.ScoreMatch + FzfAlgorithm.BonusBoundaryWhite) * pattern.Length + (FzfAlgorithm.BonusFirstCharMultiplier - 1) * FzfAlgorithm.BonusBoundaryWhite);
     }
 
-    private static bool SpanEquals(string text, int start, string pattern, bool caseSensitive) => text.AsSpan(start, pattern.Length).Equals(pattern, caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
+    public static int BonusAt(ReadOnlySpan<char> text, int index, FzfScoringScheme scheme)
+    {
+        if (index == 0)
+            return FzfCharTables.Bonus(scheme, (byte)FzfAlgorithm.InitialClass(scheme), FzfCharTables.GetClass(text[index]));
+        return FzfCharTables.Bonus(scheme, FzfCharTables.GetClass(text[index - 1]), FzfCharTables.GetClass(text[index]));
+    }
 
-    private static bool IsBoundaryMatch(string text, int start, int end, int startBonus)
+    private static bool SpanEquals(ReadOnlySpan<char> text, int start, string pattern, bool caseSensitive) => text.Slice(start, pattern.Length).Equals(pattern, caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsBoundaryMatch(ReadOnlySpan<char> text, int start, int end, int startBonus)
     {
         if (startBonus < FzfAlgorithm.BonusBoundary)
             return false;
-        if (start > 0 && FzfAlgorithm.GetClass(text[start - 1]) > FzfAlgorithm.CharClass.Delimiter)
+        if (start > 0 && FzfCharTables.GetClass(text[start - 1]) > (byte)FzfAlgorithm.CharClass.Delimiter)
             return false;
-        return end >= text.Length || FzfAlgorithm.GetClass(text[end]) <= FzfAlgorithm.CharClass.Delimiter;
+        return end >= text.Length || FzfCharTables.GetClass(text[end]) <= (byte)FzfAlgorithm.CharClass.Delimiter;
     }
 }

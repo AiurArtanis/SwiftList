@@ -9,6 +9,10 @@ internal enum SnapshotSection
     ChildStarts, Children, UidStarts, UidRows,
     AliasStarts, AliasEntryOffsets, AliasProviderIds, AliasBlob,
     OrphanRows, OrphanFrns,
+    // One bit per unique name: 1 = pure ASCII, so its raw UTF-8 bytes ARE its chars and the search
+    // hot path can match them with zero decode (FzfBytePattern). Baked at write time instead of
+    // re-probing per candidate per query.
+    UniqueAsciiBits,
 }
 
 // Single source of truth for the V2 snapshot layout: one memory-mappable file whose columnar
@@ -18,7 +22,7 @@ internal enum SnapshotSection
 internal static class SnapshotFormat
 {
     public const ulong Magic = 0x0000005844494C53; // "SLIDX\0\0\0" little-endian
-    public const int Version = 2;
+    public const int Version = 3;
     public const int SectionAlignment = 16;
 
     internal sealed class Meta
@@ -165,6 +169,7 @@ internal static class SnapshotFormat
             meta.AliasBlobLength,          // AliasBlob
             4L * meta.OrphanCount,         // OrphanRows
             16L * meta.OrphanCount,        // OrphanFrns
+            8L * ((meta.UniqueCount + 63) / 64), // UniqueAsciiBits
         };
 
         var offsets = new long[sizes.Length];

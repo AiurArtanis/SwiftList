@@ -97,21 +97,32 @@ internal static class NameSearch
 
         if (matchAll)
         {
-            for (var row = 0; row < snapshot.Count; row++)
+            // Unique-first like the pattern path below: the empty-pattern sort key depends only on the
+            // name, so it's computed once per unique instead of materializing a string per row.
+            // Superseded rows are skipped in the fanout, so no override name can be needed here.
+            var worker = SearchMatcher.RentWorker();
+            for (var uid = 0; uid < snapshot.UniqueCount; uid++)
             {
-                if (snapshot.IsDeleted(row) || delta.IsSuperseded(row))
+                var utf8 = snapshot.UniqueNameUtf8(uid);
+                if (utf8.Length == 0)
                     continue;
-                var name = delta.NameOf(row);
-                if (name.Length == 0)
-                    continue;
-                if (membership != null && !RowMatchesFilter(snapshot, delta, row, delta.GetFullPath(row), ctx, membership))
-                    continue;
-                add(FzfResultRank.ForDefaultScheme(row, name, EmptyPatternMatch));
+                var sortKey = MatchAllSortKey(snapshot, uid, worker, utf8);
+                foreach (var row in snapshot.RowsForUid(uid))
+                {
+                    if (snapshot.IsDeleted(row) || delta.IsSuperseded(row))
+                        continue;
+                    if (membership != null && !RowMatchesFilter(snapshot, delta, row, delta.GetFullPath(row), ctx, membership))
+                        continue;
+                    add(new FzfRank(row, 0, sortKey));
+                }
             }
+            SearchMatcher.ReturnWorker(worker);
         }
         else
         {
-            foreach (var m in SearchMatcher.MatchUniques(snapshot, pattern))
+            var hits = SearchMatcher.RentHitList();
+            SearchMatcher.MatchUniques(snapshot, pattern, hits);
+            foreach (var m in hits)
             {
                 foreach (var row in snapshot.RowsForUid(m.Uid))
                 {
@@ -119,12 +130,25 @@ internal static class NameSearch
                         continue;
                     if (membership != null && !RowMatchesFilter(snapshot, delta, row, delta.GetFullPath(row), ctx, membership))
                         continue;
-                    add(FzfResultRank.ForDefaultScheme(row, m.Name, m.Match));
+                    // The per-unique sort key applies verbatim to every row of that unique --
+                    // EntryIndex isn't packed into the key, so nothing is recomputed per row.
+                    add(new FzfRank(row, m.Match.Score, m.SortKey));
                 }
             }
+            SearchMatcher.ReturnHitList(hits);
         }
 
         MatchDeltaRows(snapshot, delta, pattern, matchAll, ctx, add);
+    }
+
+    private static ulong MatchAllSortKey(Snapshot snapshot, int uid, SearchMatcher.Worker worker, ReadOnlySpan<byte> utf8)
+    {
+        if (snapshot.IsUniqueAscii(uid))
+            return FzfBytePattern.ForDefaultScheme(0, utf8, EmptyPatternMatch).SortKey;
+        if (worker.Scratch.Length < utf8.Length)
+            worker.Scratch = new char[Math.Max(utf8.Length, worker.Scratch.Length * 2)];
+        var written = System.Text.Encoding.UTF8.GetChars(utf8, worker.Scratch);
+        return FzfResultRank.ForDefaultScheme(0, worker.Scratch.AsSpan(0, written), EmptyPatternMatch).SortKey;
     }
 
     // Delta churn is always small (live USN/watcher batches, not bulk scans), so both loops just check
@@ -140,7 +164,7 @@ internal static class NameSearch
             if (record.Name.Length == 0)
                 continue;
             var match = EmptyPatternMatch;
-            if (!matchAll && !SearchMatcher.TryMatchNameOrAliases(pattern, record.Name, record.Aliases, record.ProviderIds, queryLen, slab, out match))
+            if (!matchAll && !SearchMatcherRow.TryMatchNameOrAliases(pattern, record.Name, record.Aliases, record.ProviderIds, queryLen, slab, out match))
                 continue;
             if (ctx.FilterLower != null && !delta.GetFullPath(row).StartsWith(ctx.FilterLower, StringComparison.OrdinalIgnoreCase))
                 continue;
@@ -152,7 +176,7 @@ internal static class NameSearch
             if (record.Removed || record.Name.Length == 0)
                 continue;
             var match = EmptyPatternMatch;
-            if (!matchAll && !SearchMatcher.TryMatchNameOrAliases(pattern, record.Name, record.Aliases, record.ProviderIds, queryLen, slab, out match))
+            if (!matchAll && !SearchMatcherRow.TryMatchNameOrAliases(pattern, record.Name, record.Aliases, record.ProviderIds, queryLen, slab, out match))
                 continue;
             if (ctx.FilterLower != null && !delta.GetFullPath(record).StartsWith(ctx.FilterLower, StringComparison.OrdinalIgnoreCase))
                 continue;

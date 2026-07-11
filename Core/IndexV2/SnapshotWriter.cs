@@ -119,6 +119,18 @@ public static class SnapshotWriter
             if (parentIndexes[n] >= 0)
                 children[childCursor[parentIndexes[n]]++] = n;
 
+        var asciiBits = new ulong[(uidByName.Count + 63) / 64];
+        {
+            var blob = nameBlob.GetBuffer();
+            for (var uid = 0; uid < uidByName.Count; uid++)
+            {
+                var start = (int)nameOffsets[uid];
+                var length = (int)(nameOffsets[uid + 1] - nameOffsets[uid]);
+                if (System.Text.Ascii.IsValid(blob.AsSpan(start, length)))
+                    asciiBits[uid >> 6] |= 1UL << (uid & 63);
+            }
+        }
+
         var uidStarts = new int[uidByName.Count + 1];
         for (var n = 0; n < count; n++)
             uidStarts[nameIds[n] + 1]++;
@@ -187,6 +199,7 @@ public static class SnapshotWriter
             WriteSection(stream, offsets, SnapshotSection.AliasBlob, aliasBlob.GetBuffer().AsSpan(0, (int)aliasBlob.Length));
             WriteSection(stream, offsets, SnapshotSection.OrphanRows, MemoryMarshal.AsBytes<int>(CollectionsMarshal.AsSpan(orphanRows)));
             WriteSection(stream, offsets, SnapshotSection.OrphanFrns, MemoryMarshal.AsBytes<UInt128>(CollectionsMarshal.AsSpan(orphanFrns)));
+            WriteSection(stream, offsets, SnapshotSection.UniqueAsciiBits, MemoryMarshal.AsBytes<ulong>(asciiBits));
             stream.SetLength(totalLength);
         }
 

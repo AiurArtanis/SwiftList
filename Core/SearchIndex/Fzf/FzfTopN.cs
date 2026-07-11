@@ -21,6 +21,15 @@ internal sealed class FzfTopN
     }
 
     public int Count => _count;
+    public int Capacity => _capacity;
+
+    // Lets an instance (and its three arrays) be pooled across searches instead of re-allocated per
+    // query -- entries above _count are never read, so no clearing is needed.
+    public void Reset()
+    {
+        _count = 0;
+        _worstIndex = -1;
+    }
 
     public void Add(FzfRank rank)
     {
@@ -48,6 +57,14 @@ internal sealed class FzfTopN
     {
         foreach (var rank in ranks)
             Add(rank);
+    }
+
+    // Merges this instance's retained entries into another -- lets parallel workers keep private,
+    // bounded top-N sets and fold them together at the end instead of contending on one shared set.
+    public void DrainInto(FzfTopN other)
+    {
+        for (var i = 0; i < _count; i++)
+            other.Add(new FzfRank(_entryIndices[i], _scores[i], _sortKeys[i]));
     }
 
     public List<FzfRank> Finish(int limit)

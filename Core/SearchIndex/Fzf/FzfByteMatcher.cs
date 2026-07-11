@@ -1,11 +1,26 @@
+
 namespace SwiftList.Core.SearchIndex.Fzf;
 
-// Text is a ReadOnlySpan<char> (strings convert implicitly), so callers can match a candidate decoded
-// into a reusable scratch buffer without materializing a string per candidate; per-char class/case/
-// bonus lookups go through FzfCharTables' ASCII tables.
-internal static class FzfFuzzyMatcher
+// Byte-path fuzzy matcher: for a pure-ASCII name matched against a pure-ASCII pattern, UTF-8 bytes ARE
+// the chars (1:1, same offsets), so the whole match can run on the raw snapshot bytes with zero
+// decode. Same algorithm as FzfFuzzyMatcher; only the text representation differs. The DP-side slab
+// arrays (bonus/first/scores/consecutive) are shared with the char path; only the normalized-text
+// buffer needs its own byte scratch.
+internal sealed class FzfByteBuffers
 {
-    public static FzfMatchResult FuzzyMatchV2(ReadOnlySpan<char> text, string pattern, bool caseSensitive, FzfScoringScheme scheme, FzfSlab? slab = null)
+    private byte[] _norm = new byte[256];
+
+    public byte[] Norm(int length)
+    {
+        if (_norm.Length < length)
+            _norm = new byte[Math.Max(length, _norm.Length * 2)];
+        return _norm;
+    }
+}
+
+internal static class FzfByteMatcher
+{
+    public static FzfMatchResult FuzzyMatchV2(ReadOnlySpan<byte> text, byte[] pattern, bool caseSensitive, FzfScoringScheme scheme, FzfSlab slab, FzfByteBuffers buffers)
     {
         var m = pattern.Length;
         if (m == 0)
@@ -13,16 +28,16 @@ internal static class FzfFuzzyMatcher
         var n = text.Length;
         if (m > n)
             return FzfMatchResult.NoMatch;
-        if (!FzfScoring.FindFuzzyScope(text, pattern, caseSensitive, out var minIdx, out var maxIdx))
+        if (!FindFuzzyScope(text, pattern, caseSensitive, out var minIdx, out var maxIdx))
             return FzfMatchResult.NoMatch;
 
         var scopedLength = maxIdx - minIdx;
         if (m > 1000 || (long)scopedLength * m > FzfAlgorithm.MaxV2Cells)
             return FuzzyMatchV1(text, pattern, caseSensitive, scheme);
 
-        var chars = slab?.Chars(scopedLength) ?? new char[scopedLength];
-        var bonus = slab?.Bonus(scopedLength) ?? new short[scopedLength];
-        var first = slab?.First(m) ?? new int[m];
+        var chars = buffers.Norm(scopedLength);
+        var bonus = slab.Bonus(scopedLength);
+        var first = slab.First(m);
         Array.Fill(first, -1, 0, m);
 
         var patternIndex = 0;
@@ -75,8 +90,8 @@ internal static class FzfFuzzyMatcher
         var f0 = first[0];
         var width = lastIdx - f0 + 1;
         var matrixLength = m * width;
-        var scores = slab?.Scores(matrixLength) ?? new short[matrixLength];
-        var consecutive = slab?.Consecutive(matrixLength) ?? new short[matrixLength];
+        var scores = slab.Scores(matrixLength);
+        var consecutive = slab.Consecutive(matrixLength);
 
         var inGap = false;
         short previous = 0;
@@ -166,15 +181,15 @@ internal static class FzfFuzzyMatcher
             }
         }
 
-        var startIndex = BacktrackStart(scores, consecutive, first, f0, width, m, maxScorePos);
+        var startIndex = FzfFuzzyMatcher.BacktrackStart(scores, consecutive, first, f0, width, m, maxScorePos);
         return new FzfMatchResult(minIdx + startIndex, minIdx + maxScorePos + 1, maxScore);
     }
 
-    public static FzfMatchResult FuzzyMatchV1(ReadOnlySpan<char> text, string pattern, bool caseSensitive, FzfScoringScheme scheme)
+    public static FzfMatchResult FuzzyMatchV1(ReadOnlySpan<byte> text, byte[] pattern, bool caseSensitive, FzfScoringScheme scheme)
     {
         if (pattern.Length == 0)
             return new FzfMatchResult(0, 0, 0);
-        if (!FzfScoring.FindFuzzyScope(text, pattern, caseSensitive, out var start, out var end))
+        if (!FindFuzzyScope(text, pattern, caseSensitive, out var start, out var end))
             return FzfMatchResult.NoMatch;
 
         var patternIndex = pattern.Length - 1;
@@ -192,44 +207,56 @@ internal static class FzfFuzzyMatcher
             }
         }
 
-        var score = FzfScoring.CalculateScore(text, pattern, shrinkStart, end, caseSensitive, scheme);
+        var score = FzfByteExactMatcher.CalculateScore(text, pattern, shrinkStart, end, caseSensitive, scheme);
         return new FzfMatchResult(shrinkStart, end, score);
     }
 
-    // Shared with the byte-path fuzzy matcher (FzfByteMatcher) -- operates on the slab arrays only,
-    // never on the text, so it is text-representation-agnostic.
-    internal static int BacktrackStart(short[] scores, short[] consecutive, int[] first, int f0, int width, int patternLength, int maxScorePos)
+    public static bool FindFuzzyScope(ReadOnlySpan<byte> text, byte[] pattern, bool caseSensitive, out int start, out int end)
     {
-        var i = patternLength - 1;
-        var j = maxScorePos;
-        var preferMatch = true;
-        while (i >= 0 && j >= first[i])
-        {
-            var row = i * width;
-            var rel = j - f0;
-            var score = scores[row + rel];
-            var diagonal = i > 0 && rel > 0 ? scores[row - width + rel - 1] : (short)0;
-            var left = rel > 0 ? scores[row + rel - 1] : (short)0;
+        start = -1;
+        end = -1;
 
-            if (score > diagonal && (score > left || score == left && preferMatch))
+        var currentIdx = 0;
+        byte lastChar = 0;
+
+        for (var patternIndex = 0; patternIndex < pattern.Length; patternIndex++)
+        {
+            var target = pattern[patternIndex];
+            int offset;
+            if (caseSensitive)
             {
-                if (i == 0)
-                    return j;
-                i--;
+                offset = text.Slice(currentIdx).IndexOf(target);
+            }
+            else
+            {
+                var lower = (byte)FzfCharTables.LowerOfAscii[target];
+                var upper = (byte)FzfCharTables.UpperOfAscii[target];
+                offset = lower == upper
+                    ? text.Slice(currentIdx).IndexOf(lower)
+                    : text.Slice(currentIdx).IndexOfAny(lower, upper);
             }
 
-            // Only consult the next row's cell if THIS match actually wrote it (each row is only
-            // written from its own first[]-guard onward; the slab is reused, not zeroed). The old
-            // guard was a raw array-length bound, so this read stale cells from whatever match used
-            // the slab before -- making the chosen match START (a tie-break, never the score) depend
-            // on which candidate happened to be matched previously on the same worker. An unwritten
-            // cell semantically means "no match possible here," i.e. consecutive == 0.
-            preferMatch = consecutive[row + rel] > 1 ||
-                          (i < patternLength - 1 && rel + 1 < width && rel + 1 >= first[i + 1] - f0 - 1
-                           && consecutive[row + width + rel + 1] > 0);
-            j--;
+            if (offset < 0)
+                return false;
+
+            var absoluteIdx = currentIdx + offset;
+            if (patternIndex == 0)
+                start = Math.Max(0, absoluteIdx - 1);
+
+            lastChar = target;
+            currentIdx = absoluteIdx + 1;
         }
 
-        return Math.Max(0, first[0]);
+        end = currentIdx;
+
+        var l = (byte)FzfCharTables.LowerOfAscii[lastChar];
+        var u = (byte)FzfCharTables.UpperOfAscii[lastChar];
+        var lastOffset = caseSensitive ? text.Slice(end).LastIndexOf(lastChar)
+            : (l == u ? text.Slice(end).LastIndexOf(l) : text.Slice(end).LastIndexOfAny(l, u));
+
+        if (lastOffset >= 0)
+            end = end + lastOffset + 1;
+
+        return true;
     }
 }

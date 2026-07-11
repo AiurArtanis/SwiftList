@@ -4,7 +4,7 @@ internal readonly record struct FzfRank(int EntryIndex, int Score, ulong SortKey
 
 internal static class FzfResultRank
 {
-    public static FzfRank ForPathScheme(int entryIndex, string text, FzfPatternResult match)
+    public static FzfRank ForPathScheme(int entryIndex, ReadOnlySpan<char> text, FzfPatternResult match)
     {
         var point0 = ScorePoint(match.Score);
         var point1 = PathnamePoint(text, match);
@@ -12,7 +12,7 @@ internal static class FzfResultRank
         return new FzfRank(entryIndex, match.Score, Pack(point1, point2, point0, 0));
     }
 
-    public static FzfRank ForDefaultScheme(int entryIndex, string text, FzfPatternResult match)
+    public static FzfRank ForDefaultScheme(int entryIndex, ReadOnlySpan<char> text, FzfPatternResult match)
     {
         var point0 = MatchPositionPoint(text, match);
         var point1 = MatchSpanPoint(match);
@@ -20,6 +20,11 @@ internal static class FzfResultRank
         var point3 = LengthPoint(text);
         return new FzfRank(entryIndex, match.Score, Pack(point0, point1, point3, point2));
     }
+
+    // The name-dependent low 32 bits of the Default-scheme sort key (match-position point | span
+    // point << 16) -- path mode reuses these per-unique and rebuilds the upper 32 bits per row.
+    public static uint RankLow32(ReadOnlySpan<char> text, FzfPatternResult match)
+        => MatchPositionPoint(text, match) | ((uint)MatchSpanPoint(match) << 16);
 
     public static int Compare(FzfRank left, FzfRank right)
     {
@@ -40,9 +45,9 @@ internal static class FzfResultRank
 
     private static ushort ScorePoint(int score) => (ushort)(ushort.MaxValue - ClampToUShort(score));
 
-    private static ushort LengthPoint(string text) => ClampToUShort(text.Trim().Length);
+    private static ushort LengthPoint(ReadOnlySpan<char> text) => ClampToUShort(text.Trim().Length);
 
-    private static ushort MatchPositionPoint(string text, FzfPatternResult match)
+    private static ushort MatchPositionPoint(ReadOnlySpan<char> text, FzfPatternResult match)
     {
         if (!match.ValidOffsetFound)
             return ushort.MaxValue;
@@ -61,7 +66,7 @@ internal static class FzfResultRank
         return ClampToUShort(Math.Max(0, match.MaxEnd - match.MinBegin));
     }
 
-    private static bool IsWordBoundary(string text, int index)
+    private static bool IsWordBoundary(ReadOnlySpan<char> text, int index)
     {
         if (index <= 0 || index >= text.Length)
             return index == 0;
@@ -74,7 +79,7 @@ internal static class FzfResultRank
         return char.IsLower(previous) && (char.IsUpper(current) || char.IsDigit(current));
     }
 
-    private static ushort PathnamePoint(string text, FzfPatternResult match)
+    private static ushort PathnamePoint(ReadOnlySpan<char> text, FzfPatternResult match)
     {
         if (!match.ValidOffsetFound)
             return ushort.MaxValue;

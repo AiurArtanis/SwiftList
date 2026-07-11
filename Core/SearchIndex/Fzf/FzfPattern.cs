@@ -60,23 +60,22 @@ internal sealed class FzfPattern
 
     public static FzfPattern ParseText(string query) => new FzfPattern(null, ParseTermSets(query));
 
-    public bool TryMatch(string text, out FzfPatternResult result, FzfScoringScheme scheme, FzfSlab? slab = null)
+    public bool TryMatch(ReadOnlySpan<char> text, out FzfPatternResult result, FzfScoringScheme scheme, FzfSlab? slab = null)
     {
         if (text.Contains('|'))
         {
-            // ponytail: handle polyphonic aliases by matching each segment independently to prevent incorrect cross-boundary match failure
+            // ponytail: handle polyphonic aliases by matching each segment independently to prevent
+            // incorrect cross-boundary match failure. Slicing (not Substring) keeps this allocation-free.
             var bestResult = default(FzfPatternResult);
             var matchedAny = false;
-            var span = text.AsSpan();
             var start = 0;
-            while (start < span.Length)
+            while (start < text.Length)
             {
-                var len = span.Slice(start).IndexOf('|');
+                var len = text.Slice(start).IndexOf('|');
                 if (len < 0)
-                    len = span.Length - start;
+                    len = text.Length - start;
 
-                var segment = text.Substring(start, len);
-                if (TryMatchSingle(segment, out var segmentResult, scheme, slab))
+                if (TryMatchSingle(text.Slice(start, len), out var segmentResult, scheme, slab))
                 {
                     if (segmentResult.ValidOffsetFound)
                     {
@@ -106,7 +105,9 @@ internal sealed class FzfPattern
         return TryMatchSingle(text, out result, scheme, slab);
     }
 
-    private bool TryMatchSingle(string text, out FzfPatternResult result, FzfScoringScheme scheme, FzfSlab? slab = null)
+    // Text never contains '|' here: the segmented branch above slices it away, and real file names
+    // can't contain it (invalid in Windows paths) -- so no cross-'|' span check is needed.
+    private bool TryMatchSingle(ReadOnlySpan<char> text, out FzfPatternResult result, FzfScoringScheme scheme, FzfSlab? slab = null)
     {
         var totalScore = 0;
         var minBegin = int.MaxValue;
@@ -155,16 +156,6 @@ internal sealed class FzfPattern
                 minEnd = Math.Min(minEnd, best.End);
                 maxEnd = Math.Max(maxEnd, best.End);
                 validOffsetFound = true;
-            }
-        }
-
-        // If the match span spans across a '|' character, reject it (prevent matching across joined aliases)
-        if (validOffsetFound && minBegin < maxEnd)
-        {
-            if (text.AsSpan(minBegin, maxEnd - minBegin).Contains('|'))
-            {
-                result = default;
-                return false;
             }
         }
 

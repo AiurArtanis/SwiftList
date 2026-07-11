@@ -2,35 +2,32 @@ using SwiftList.Core.SearchIndex.Fzf;
 
 namespace SwiftList.Core.IndexV2;
 
-// Fuzzy path-mode matching, mirroring PathExtensions.SearchPath's two branches: a query with a
-// directory segment matches the file part per row then verifies the parent path's segments
-// right-to-left (with a per-segment alias fallback, ungated unlike name search's IsAcceptableAliasMatch
-// gate -- matches the old engine's TryMatchSegmentWithAlias exactly); a bare query with no directory
-// segment falls back to a full-tree fuzzy filename scan. Scans rows directly rather than unique-first:
-// each row's directory context differs even for rows sharing a name, so per-row is unavoidable here
-// (matches the old engine's own approach).
+// Fuzzy path-mode matching as a thin layer over the shared name-mode pipeline: the file part runs
+// through the SAME phase A as name search (SearchMatcherPath -- mask prefilter, byte path, pooled
+// workers, parallel chunks), and path mode's only specialized piece is the per-row directory gate
+// (PathGate, memoized per parent) bolted onto the fanout plus the sort-key surgery (depth|nameLen in
+// bits 32-47). The filename-only branch (a path query with no directory part) is literally name mode
+// fanned out per row. Delta rows (small, live-updated) keep their per-record string matching.
 internal static class PathSearchFuzzy
 {
     public static void SearchStreaming(Snapshot snapshot, DeltaOverlay delta, string pathQuery, int limit,
         Action<SearchResult> onResult, CancellationToken token, string? directoryFilterLower)
     {
         var keep = Math.Max(limit * 8, 64);
-        var matches = new FzfTopN(keep);
-        var slab = new FzfSlab();
-        var aliasScratch = new List<(string Alias, byte ProviderId)>();
+        var topN = new FzfTopN(keep);
 
         var lastSep = pathQuery.LastIndexOf(Path.DirectorySeparatorChar);
-        var dirQuery = lastSep >= 0 ? pathQuery.Substring(0, lastSep) : string.Empty;
-        var fileQuery = lastSep >= 0 ? pathQuery.Substring(lastSep + 1) : pathQuery;
+        var dirQuery = lastSep >= 0 ? pathQuery[..lastSep] : string.Empty;
+        var fileQuery = lastSep >= 0 ? pathQuery[(lastSep + 1)..] : pathQuery;
 
         if (!string.IsNullOrEmpty(dirQuery))
-            SearchWithDirectory(snapshot, delta, dirQuery, fileQuery, matches, slab, aliasScratch, token, directoryFilterLower);
+            SearchWithDirectory(snapshot, delta, dirQuery, fileQuery, topN, keep, token, directoryFilterLower);
         else
-            SearchFilenameOnly(snapshot, delta, pathQuery, matches, slab, aliasScratch, token, directoryFilterLower);
+            SearchFilenameOnly(snapshot, delta, pathQuery, topN, token, directoryFilterLower);
 
         var seen = new HashSet<int>();
         var emitted = 0;
-        foreach (var rank in matches.Finish(keep))
+        foreach (var rank in topN.Finish(keep))
         {
             token.ThrowIfCancellationRequested();
             if (!seen.Add(rank.EntryIndex))
@@ -42,71 +39,100 @@ internal static class PathSearchFuzzy
     }
 
     private static void SearchWithDirectory(Snapshot snapshot, DeltaOverlay delta, string dirQuery, string fileQuery,
-        FzfTopN matches, FzfSlab slab, List<(string Alias, byte ProviderId)> aliasScratch, CancellationToken token, string? directoryFilterLower)
+        FzfTopN topN, int keep, CancellationToken token, string? directoryFilterLower)
     {
         var filePattern = !string.IsNullOrEmpty(fileQuery) ? FzfPattern.ParseText(fileQuery) : null;
-        var fileQueryLen = filePattern?.GetTotalTermLength() ?? 0;
-        var querySegments = dirQuery.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+        var gate = new PathGate(snapshot, delta, dirQuery);
+        var matches = SearchMatcherPath.MatchUniquesForPath(snapshot, filePattern);
 
-        for (var row = 0; row < snapshot.Count; row++)
+        // Bounded per-worker top-N sets keep the parallel fanout's memory flat even when a broad
+        // dir-only query admits most of the drive; a caller asking for an enormous keep (no real UI
+        // does) falls back to the single-threaded fanout rather than multiplying that capacity.
+        if (matches.Count > 1024 && keep <= 65536)
         {
-            token.ThrowIfCancellationRequested();
-            if (snapshot.IsDeleted(row) || delta.IsSuperseded(row))
-                continue;
-
-            FzfPatternResult fileMatch = default;
-            string name;
-            if (filePattern != null)
-            {
-                if (!SearchMatcher.MatchRow(snapshot, row, filePattern, fileQueryLen, slab, aliasScratch, out name, out fileMatch))
-                    continue;
-            }
-            else
-            {
-                name = snapshot.GetName(row);
-            }
-
-            var parentIndex = snapshot.ParentIndexes[row];
-            if (parentIndex < 0)
-                continue;
-
-            var parentPath = delta.GetFullPath(parentIndex);
-            var dirScore = VerifyPathSegmentsMatch(parentPath, querySegments, slab);
-            if (dirScore <= 0)
-                continue;
-
-            fileMatch = fileMatch with { Score = fileMatch.Score + dirScore };
-            var path = delta.GetFullPath(row);
-            if (directoryFilterLower != null && !path.StartsWith(directoryFilterLower, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            var rank = FzfResultRank.ForDefaultScheme(row, name, fileMatch);
-            var relativeDepth = GetRelativeDepth(path, parentPath);
-            var point3 = (ushort)((Math.Min(relativeDepth, 255) << 8) | (Math.Min(name.Length, 255) & 0xFF));
-            var sortKey = rank.SortKey;
-            sortKey &= ~(0xFFFFUL << 32);
-            sortKey |= (ulong)point3 << 32;
-            matches.Add(rank with { SortKey = sortKey });
+            var mergeLock = new object();
+            const int FanoutChunk = 1024;
+            var chunkCount = (matches.Count + FanoutChunk - 1) / FanoutChunk;
+            Parallel.For(
+                0,
+                chunkCount,
+                () => (Worker: SearchMatcher.RentWorker(), TopN: new FzfTopN(keep)),
+                (chunk, _, state) =>
+                {
+                    var start = chunk * FanoutChunk;
+                    FanoutRange(snapshot, delta, matches, start, Math.Min(start + FanoutChunk, matches.Count), gate, state.Worker, state.TopN, token, directoryFilterLower);
+                    return state;
+                },
+                state =>
+                {
+                    lock (mergeLock)
+                    {
+                        state.TopN.DrainInto(topN);
+                    }
+                    SearchMatcher.ReturnWorker(state.Worker);
+                });
+        }
+        else
+        {
+            var worker = SearchMatcher.RentWorker();
+            FanoutRange(snapshot, delta, matches, 0, matches.Count, gate, worker, topN, token, directoryFilterLower);
+            SearchMatcher.ReturnWorker(worker);
         }
 
-        MatchDeltaRowsWithDirectory(snapshot, delta, querySegments, filePattern, fileQueryLen, matches, slab, directoryFilterLower);
+        MatchDeltaRowsWithDirectory(snapshot, delta, gate, filePattern, topN, directoryFilterLower);
     }
 
-    // Delta churn is small, so it gets a plain per-row equivalent without the base-only row-index
-    // shortcuts above -- correctness over throughput for a handful of live-updated rows.
-    private static void MatchDeltaRowsWithDirectory(Snapshot snapshot, DeltaOverlay delta, string[] querySegments,
-        FzfPattern? filePattern, int fileQueryLen, FzfTopN matches, FzfSlab slab, string? directoryFilterLower)
+    private static void FanoutRange(Snapshot snapshot, DeltaOverlay delta, List<PathUniqueMatch> matches, int from, int to,
+        PathGate gate, SearchMatcher.Worker worker, FzfTopN topN, CancellationToken token, string? directoryFilterLower)
     {
+        var parentIndexes = snapshot.ParentIndexes;
+        for (var i = from; i < to; i++)
+        {
+            token.ThrowIfCancellationRequested();
+            var m = matches[i];
+            var nameLenPoint = Math.Min(m.NameLen, 255) & 0xFF;
+            foreach (var row in snapshot.RowsForUid(m.Uid))
+            {
+                if (snapshot.IsDeleted(row) || delta.IsSuperseded(row))
+                    continue;
+                var parentIndex = parentIndexes[row];
+                if (parentIndex < 0)
+                    continue;
+
+                var (dirScore, depth) = gate.Verify(parentIndex, worker);
+                if (dirScore <= 0)
+                    continue;
+
+                if (directoryFilterLower != null && !delta.GetFullPath(row).StartsWith(directoryFilterLower, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var totalScore = m.Match.Score + dirScore;
+                var point2 = (ushort)(ushort.MaxValue - (uint)Math.Clamp(totalScore, 0, ushort.MaxValue));
+                var point3 = (ushort)((Math.Min((int)depth, 255) << 8) | nameLenPoint);
+                var sortKey = m.RankLow32 | ((ulong)point3 << 32) | ((ulong)point2 << 48);
+                topN.Add(new FzfRank(row, totalScore, sortKey));
+            }
+        }
+    }
+
+    // Delta churn is small, so it keeps a plain per-record string path -- correctness over throughput
+    // for a handful of live-updated rows.
+    private static void MatchDeltaRowsWithDirectory(Snapshot snapshot, DeltaOverlay delta, PathGate gate,
+        FzfPattern? filePattern, FzfTopN topN, string? directoryFilterLower)
+    {
+        var slab = new FzfSlab();
+        var worker = SearchMatcher.RentWorker();
+        var fileQueryLen = filePattern?.GetTotalTermLength() ?? 0;
         foreach (var record in delta.RowsToMatch())
         {
             if (record.Name.Length == 0)
                 continue;
             FzfPatternResult fileMatch = default;
-            if (filePattern != null && !SearchMatcher.TryMatchNameOrAliases(filePattern, record.Name, record.Aliases, record.ProviderIds, fileQueryLen, slab, out fileMatch))
+            if (filePattern != null && !SearchMatcherRow.TryMatchNameOrAliases(filePattern, record.Name, record.Aliases, record.ProviderIds, fileQueryLen, slab, out fileMatch))
                 continue;
 
             var parentPath = delta.GetParentPath(record);
-            var dirScore = VerifyPathSegmentsMatch(parentPath, querySegments, slab);
+            var dirScore = gate.VerifyPath(parentPath, worker);
             if (dirScore <= 0)
                 continue;
             var path = delta.GetFullPath(record);
@@ -114,8 +140,7 @@ internal static class PathSearchFuzzy
                 continue;
 
             fileMatch = fileMatch with { Score = fileMatch.Score + dirScore };
-            var isOverride = delta.BaseOverrides.ContainsValue(record);
-            var entryIndex = isOverride ? FindOverrideRow(delta, record) : snapshot.Count + delta.Added.IndexOf(record);
+            var entryIndex = EntryIndexOf(snapshot, delta, record);
             if (entryIndex < 0)
                 continue;
 
@@ -125,109 +150,60 @@ internal static class PathSearchFuzzy
             var sortKey = rank.SortKey;
             sortKey &= ~(0xFFFFUL << 32);
             sortKey |= (ulong)point3 << 32;
-            matches.Add(rank with { SortKey = sortKey });
+            topN.Add(rank with { SortKey = sortKey });
         }
+        SearchMatcher.ReturnWorker(worker);
     }
 
-    private static int FindOverrideRow(DeltaOverlay delta, DeltaOverlay.DeltaRecord record)
-    {
-        foreach (var (row, r) in delta.BaseOverrides)
-            if (ReferenceEquals(r, record))
-                return row;
-        return -1;
-    }
-
-    private static void SearchFilenameOnly(Snapshot snapshot, DeltaOverlay delta, string pathQuery, FzfTopN matches,
-        FzfSlab slab, List<(string Alias, byte ProviderId)> aliasScratch, CancellationToken token, string? directoryFilterLower)
+    private static void SearchFilenameOnly(Snapshot snapshot, DeltaOverlay delta, string pathQuery, FzfTopN topN,
+        CancellationToken token, string? directoryFilterLower)
     {
         var pattern = FzfPattern.ParseText(pathQuery);
-        var queryLen = pattern.GetTotalTermLength();
 
-        for (var row = 0; row < snapshot.Count; row++)
+        var hits = SearchMatcher.RentHitList();
+        SearchMatcher.MatchUniques(snapshot, pattern, hits);
+        foreach (var m in hits)
         {
             token.ThrowIfCancellationRequested();
-            if (snapshot.IsDeleted(row) || delta.IsSuperseded(row))
-                continue;
-            if (!SearchMatcher.MatchRow(snapshot, row, pattern, queryLen, slab, aliasScratch, out var name, out var match))
-                continue;
-            var path = delta.GetFullPath(row);
-            if (directoryFilterLower != null && !path.StartsWith(directoryFilterLower, StringComparison.OrdinalIgnoreCase))
-                continue;
-            matches.Add(FzfResultRank.ForDefaultScheme(row, name, match));
+            foreach (var row in snapshot.RowsForUid(m.Uid))
+            {
+                if (snapshot.IsDeleted(row) || delta.IsSuperseded(row))
+                    continue;
+                if (directoryFilterLower != null && !delta.GetFullPath(row).StartsWith(directoryFilterLower, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                topN.Add(new FzfRank(row, m.Match.Score, m.SortKey));
+            }
         }
+        SearchMatcher.ReturnHitList(hits);
 
+        var slab = new FzfSlab();
+        var queryLen = pattern.GetTotalTermLength();
         foreach (var record in delta.RowsToMatch())
         {
             if (record.Name.Length == 0)
                 continue;
-            if (!SearchMatcher.TryMatchNameOrAliases(pattern, record.Name, record.Aliases, record.ProviderIds, queryLen, slab, out var match))
+            if (!SearchMatcherRow.TryMatchNameOrAliases(pattern, record.Name, record.Aliases, record.ProviderIds, queryLen, slab, out var match))
                 continue;
-            var path = delta.GetFullPath(record);
-            if (directoryFilterLower != null && !path.StartsWith(directoryFilterLower, StringComparison.OrdinalIgnoreCase))
+            if (directoryFilterLower != null && !delta.GetFullPath(record).StartsWith(directoryFilterLower, StringComparison.OrdinalIgnoreCase))
                 continue;
-            var isOverride = delta.BaseOverrides.ContainsValue(record);
-            var entryIndex = isOverride ? FindOverrideRow(delta, record) : snapshot.Count + delta.Added.IndexOf(record);
+            var entryIndex = EntryIndexOf(snapshot, delta, record);
             if (entryIndex < 0)
                 continue;
-            matches.Add(FzfResultRank.ForDefaultScheme(entryIndex, record.Name, match));
+            topN.Add(FzfResultRank.ForDefaultScheme(entryIndex, record.Name, match));
         }
     }
 
-    // Mirrors PathExtensions.VerifyPathSegmentsMatch: matches query segments against the path's own
-    // segments right-to-left, requiring every query segment to find a match somewhere along the path.
-    private static int VerifyPathSegmentsMatch(string path, string[] querySegments, FzfSlab slab)
+    private static int EntryIndexOf(Snapshot snapshot, DeltaOverlay delta, DeltaOverlay.DeltaRecord record)
     {
-        var pathSegments = path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
-        var qIdx = querySegments.Length - 1;
-        var pIdx = pathSegments.Length - 1;
-        var totalScore = 0;
-
-        while (qIdx >= 0 && pIdx >= 0)
+        if (delta.BaseOverrides.ContainsValue(record))
         {
-            var pattern = FzfPattern.ParseText(querySegments[qIdx]);
-            if (TryMatchSegmentWithAlias(pathSegments[pIdx], pattern, slab, out var score))
-            {
-                totalScore += score;
-                qIdx--;
-            }
-            pIdx--;
+            foreach (var (row, r) in delta.BaseOverrides)
+                if (ReferenceEquals(r, record))
+                    return row;
+            return -1;
         }
-        return qIdx < 0 ? totalScore : 0;
-    }
-
-    // Ungated alias fallback (no IsAcceptableAliasMatch check) -- mirrors
-    // PathExtensions.TryMatchSegmentWithAlias exactly; directory segments are short enough that a weak
-    // coincidental alias hit isn't the risk name matching guards against.
-    private static bool TryMatchSegmentWithAlias(string segment, FzfPattern pattern, FzfSlab slab, out int score)
-    {
-        score = 0;
-        if (pattern.TryMatch(segment, out var match, FzfScoringScheme.Default, slab))
-        {
-            score = match.Score;
-            return true;
-        }
-        if (!AliasProviderRegistry.HasNonAscii(segment))
-            return false;
-        foreach (var provider in AliasProviderRegistry.GetActiveProviders())
-        {
-            try
-            {
-                if (!provider.CanHandle(segment))
-                    continue;
-                foreach (var alias in provider.GetAliases(segment))
-                {
-                    if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, slab))
-                    {
-                        score = aliasMatch.Score;
-                        return true;
-                    }
-                }
-            }
-            catch
-            {
-            }
-        }
-        return false;
+        var added = delta.Added.IndexOf(record);
+        return added < 0 ? -1 : snapshot.Count + added;
     }
 
     private static int GetRelativeDepth(string path, string basePath)

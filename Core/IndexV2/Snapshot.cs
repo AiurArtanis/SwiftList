@@ -95,6 +95,14 @@ public sealed unsafe class Snapshot : IDisposable
 
     public string GetUniqueName(int uid) => SnapshotFormat.NameEncoding.GetString(UniqueNameUtf8(uid));
 
+    // Baked at write time: true = the unique name is pure ASCII, so UniqueNameUtf8's bytes ARE its
+    // chars (same values, same offsets) and matching can skip UTF-16 decoding entirely.
+    public bool IsUniqueAscii(int uid)
+    {
+        var bits = new ReadOnlySpan<ulong>(Section(SnapshotSection.UniqueAsciiBits), (UniqueCount + 63) / 64);
+        return (bits[uid >> 6] & (1UL << (uid & 63))) != 0;
+    }
+
     public string GetName(int row) => GetUniqueName((int)NameIds[row]);
 
     public bool IsDeleted(int row) => (Flags[row] & (ushort)FileRecordFlags.Deleted) != 0;

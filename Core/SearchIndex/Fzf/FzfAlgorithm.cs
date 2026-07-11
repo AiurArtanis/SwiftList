@@ -39,7 +39,7 @@ internal static class FzfAlgorithm
 
     public static FzfMatchResult Match(
         FzfTermKind kind,
-        string text,
+        ReadOnlySpan<char> text,
         string pattern,
         bool caseSensitive,
         FzfScoringScheme scheme,
@@ -54,20 +54,11 @@ internal static class FzfAlgorithm
             _ => FzfMatchResult.NoMatch
         };
 
-    public static FzfMatchResult FuzzyMatchV1(string text, string pattern, bool caseSensitive, FzfScoringScheme scheme) => FzfFuzzyMatcher.FuzzyMatchV1(text, pattern, caseSensitive, scheme);
+    public static FzfMatchResult FuzzyMatchV1(ReadOnlySpan<char> text, string pattern, bool caseSensitive, FzfScoringScheme scheme) => FzfFuzzyMatcher.FuzzyMatchV1(text, pattern, caseSensitive, scheme);
 
-    public static bool CharsEqual(char text, char pattern, bool caseSensitive) => caseSensitive
-            ? text == pattern
-            : char.ToLowerInvariant(text) == pattern;
+    public static bool CharsEqual(char text, char pattern, bool caseSensitive) => FzfCharTables.CharsEqual(text, pattern, caseSensitive);
 
-    public static char NormalizeChar(char c, bool caseSensitive) => caseSensitive ? c : char.ToLowerInvariant(c);
-
-    public static int BonusAt(string text, int index, FzfScoringScheme scheme)
-    {
-        if (index == 0)
-            return BonusFor(InitialClass(scheme), GetClass(text[index]), scheme);
-        return BonusFor(GetClass(text[index - 1]), GetClass(text[index]), scheme);
-    }
+    public static char NormalizeChar(char c, bool caseSensitive) => caseSensitive ? c : FzfCharTables.ToLower(c);
 
     public static int BonusFor(CharClass previous, CharClass current, FzfScoringScheme scheme)
     {
@@ -136,7 +127,7 @@ internal static class FzfAlgorithm
 
     public static ulong GetCharMask(string text) => GetCharMask(text.AsSpan());
 
-    public static int LeadingWhitespaces(string text)
+    public static int LeadingWhitespaces(ReadOnlySpan<char> text)
     {
         var i = 0;
         while (i < text.Length && char.IsWhiteSpace(text[i]))
@@ -144,7 +135,7 @@ internal static class FzfAlgorithm
         return i;
     }
 
-    public static int TrailingWhitespaces(string text)
+    public static int TrailingWhitespaces(ReadOnlySpan<char> text)
     {
         var count = 0;
         for (var i = text.Length - 1; i >= 0 && char.IsWhiteSpace(text[i]); i--)

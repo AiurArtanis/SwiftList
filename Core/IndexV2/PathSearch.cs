@@ -49,7 +49,7 @@ internal static class PathSearch
                 matches.Add(FzfResultRank.ForDefaultScheme(child, snapshot.GetName(child), new FzfPatternResult(0, 0, 0, 0, false)));
                 continue;
             }
-            if (!SearchMatcher.MatchRow(snapshot, child, pattern, queryLen, slab, aliasScratch, out var name, out var match))
+            if (!SearchMatcherRow.MatchRow(snapshot, child, pattern, queryLen, slab, aliasScratch, out var name, out var match))
                 continue;
             matches.Add(FzfResultRank.ForDefaultScheme(child, name, match));
         }
@@ -59,7 +59,7 @@ internal static class PathSearch
         {
             if (record.ParentBaseRow != current || record.Name.Length == 0)
                 continue;
-            if (pattern != null && !SearchMatcher.TryMatchNameOrAliases(pattern, record.Name, record.Aliases, record.ProviderIds, queryLen, slab, out var match))
+            if (pattern != null && !SearchMatcherRow.TryMatchNameOrAliases(pattern, record.Name, record.Aliases, record.ProviderIds, queryLen, slab, out var match))
                 continue;
             matches.Add(FzfResultRank.ForDefaultScheme(row, record.Name, new FzfPatternResult(0, 0, 0, 0, false)));
         }
@@ -69,7 +69,7 @@ internal static class PathSearch
             var record = delta.Added[i];
             if (record.Removed || record.ParentFrn != currentFrn || record.Name.Length == 0)
                 continue;
-            if (pattern != null && !SearchMatcher.TryMatchNameOrAliases(pattern, record.Name, record.Aliases, record.ProviderIds, queryLen, slab, out _))
+            if (pattern != null && !SearchMatcherRow.TryMatchNameOrAliases(pattern, record.Name, record.Aliases, record.ProviderIds, queryLen, slab, out _))
                 continue;
             matches.Add(FzfResultRank.ForDefaultScheme(snapshot.Count + i, record.Name, new FzfPatternResult(0, 0, 0, 0, false)));
         }

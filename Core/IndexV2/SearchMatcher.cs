@@ -1,88 +1,175 @@
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using SwiftList.Core.SearchIndex.Fzf;
 
 namespace SwiftList.Core.IndexV2;
 
-internal readonly record struct UniqueMatch(int Uid, string Name, FzfPatternResult Match);
+internal readonly record struct UniqueMatch(int Uid, FzfPatternResult Match, ulong SortKey);
 
-// Phase A of name search: match every UNIQUE name in the snapshot against the pattern -- charmask
-// prefilter, then for plain fuzzy terms a zero-allocation UTF-8->char subsequence rejection (fzf's
-// fuzzy IsMatch is exactly "case-folded subsequence"; V1/V2 differ only in scoring, so this never
-// changes the result set), then the exact FzfPattern.TryMatch with the per-unique alias fallback
-// honoring SearchContext.DisabledAliasIds. Delta rows (renamed/added, not yet folded into a unique
-// name table) are matched separately -- see NameSearch.MatchDeltaRows.
+// Phase A of name search: match every UNIQUE name in the snapshot against the pattern. Pure-ASCII
+// names (baked bit, Snapshot.IsUniqueAscii) match on their raw UTF-8 bytes with zero decode
+// (FzfBytePattern); the rest decode once into the worker's reusable scratch and match as spans -- no
+// string is materialized per candidate, and the rank sort key is computed per-unique from the hot
+// span (fanned out per row by NameSearch, since EntryIndex isn't packed into the key). The charmask
+// prefilter covers multi-term OR sets (per-set "any term's mask covered") and its scan is
+// AVX2-vectorized. Workers (slab + scratches + hit list) pool across searches. Delta rows (renamed/
+// added, not in the unique table) are matched separately -- see SearchMatcherRow / NameSearch.
 internal static class SearchMatcher
 {
-    private sealed class Worker
+    internal const int ChunkSize = 8192;
+
+    internal sealed class Worker
     {
         public readonly FzfSlab Slab = new();
+        public readonly FzfByteBuffers ByteBuffers = new();
         public readonly List<UniqueMatch> Hits = new();
-        public readonly List<(string Alias, byte ProviderId)> Aliases = new();
         public char[] Scratch = new char[256];
+        public char[] AliasScratch = new char[256];
     }
 
-    internal static List<UniqueMatch> MatchUniques(Snapshot snapshot, FzfPattern pattern)
+    internal sealed class QueryContext
     {
-        var queryMask = pattern.GetQueryMask(out var canFilter);
-        var hasSimpleTerm = pattern.TryGetSimpleFuzzyTerm(out var simpleTerm);
-        var queryLen = pattern.GetTotalTermLength();
-        var merged = new List<UniqueMatch>();
+        public required FzfPattern Pattern;
+        public required FzfBytePattern BytePattern;
+        public required ulong RequiredMask;   // union of single-term sets' masks: candidate must contain all
+        public required ulong[][] OrSetMasks; // per multi-term set: candidate must cover at least one term
+        public required bool CanFilter;
+        public required int QueryLen;
+    }
+
+    private static readonly ConcurrentBag<Worker> WorkerPool = new();
+
+    internal static Worker RentWorker() => WorkerPool.TryTake(out var pooled) ? pooled : new Worker();
+
+    internal static void ReturnWorker(Worker worker)
+    {
+        worker.Hits.Clear();
+        WorkerPool.Add(worker);
+    }
+
+    internal static QueryContext BuildContext(FzfPattern pattern)
+    {
+        ulong requiredMask = 0;
+        List<ulong[]>? orSets = null;
+        foreach (var set in pattern.TermSets)
+        {
+            // Any inverse term makes its whole set unfilterable (absence can't be mask-tested).
+            var filterable = true;
+            foreach (var term in set.Terms)
+                filterable &= !term.Inverse;
+            if (!filterable)
+                continue;
+
+            if (set.Terms.Length == 1)
+            {
+                requiredMask |= FzfAlgorithm.GetCharMask(set.Terms[0].Text);
+            }
+            else
+            {
+                var masks = new ulong[set.Terms.Length];
+                for (var t = 0; t < set.Terms.Length; t++)
+                    masks[t] = FzfAlgorithm.GetCharMask(set.Terms[t].Text);
+                (orSets ??= new List<ulong[]>()).Add(masks);
+            }
+        }
+
+        return new QueryContext
+        {
+            Pattern = pattern,
+            BytePattern = FzfBytePattern.From(pattern),
+            RequiredMask = requiredMask,
+            OrSetMasks = orSets?.ToArray() ?? Array.Empty<ulong[]>(),
+            CanFilter = requiredMask != 0 || orSets != null,
+            QueryLen = pattern.GetTotalTermLength(),
+        };
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool PassesOrSets(ulong candidateMask, ulong[][] orSets)
+    {
+        foreach (var masks in orSets)
+        {
+            var any = false;
+            foreach (var m in masks)
+            {
+                if ((candidateMask & m) == m)
+                {
+                    any = true;
+                    break;
+                }
+            }
+            if (!any)
+                return false;
+        }
+        return true;
+    }
+
+    // Pooled result lists: a broad single-char query's hit list reaches hundreds of thousands of
+    // entries on a large drive, so reallocating it per keystroke was the last per-search allocation
+    // of any size. Callers rent, consume, and return.
+    private static readonly ConcurrentBag<List<UniqueMatch>> HitListPool = new();
+
+    internal static List<UniqueMatch> RentHitList() => HitListPool.TryTake(out var pooled) ? pooled : new List<UniqueMatch>();
+
+    internal static void ReturnHitList(List<UniqueMatch> list)
+    {
+        list.Clear();
+        HitListPool.Add(list);
+    }
+
+    internal static void MatchUniques(Snapshot snapshot, FzfPattern pattern, List<UniqueMatch> merged)
+    {
+        var ctx = BuildContext(pattern);
+        merged.Clear();
         var mergeLock = new object();
-        const int ChunkSize = 65536;
         var chunkCount = (snapshot.UniqueCount + ChunkSize - 1) / ChunkSize;
 
         Parallel.For(
             0,
             Math.Max(chunkCount, 1),
-            () => new Worker(),
+            RentWorker,
             (chunk, _, worker) =>
             {
                 var start = chunk * ChunkSize;
                 var end = Math.Min(start + ChunkSize, snapshot.UniqueCount);
                 var masks = snapshot.UniqueMasks;
-                for (var uid = start; uid < end; uid++)
+
+                if (ctx.CanFilter && ctx.RequiredMask != 0 && Avx2.IsSupported && end - start >= 8)
                 {
-                    if (canFilter && (masks[uid] & queryMask) != queryMask)
-                        continue;
-
-                    var utf8 = snapshot.UniqueNameUtf8(uid);
-                    if (utf8.Length == 0)
-                        continue;
-
-                    var hasAliases = snapshot.HasAliases(uid);
-                    if (hasSimpleTerm && !hasAliases)
+                    // Vectorized prefilter: 4 masks per iteration; only lanes whose mask covers the
+                    // whole required set fall through to the scalar per-candidate work.
+                    ref var m0 = ref MemoryMarshal.GetReference(masks);
+                    var required = Vector256.Create(ctx.RequiredMask);
+                    var i = start;
+                    for (; i + 4 <= end; i += 4)
                     {
-                        if (worker.Scratch.Length < utf8.Length)
-                            worker.Scratch = new char[Math.Max(utf8.Length, worker.Scratch.Length * 2)];
-                        var written = Encoding.UTF8.GetChars(utf8, worker.Scratch);
-                        if (!IsSubsequence(worker.Scratch.AsSpan(0, written), simpleTerm.Text, simpleTerm.CaseSensitive))
+                        var v = Vector256.LoadUnsafe(ref Unsafe.Add(ref m0, i));
+                        var bits = Vector256.Equals(Vector256.BitwiseAnd(v, required), required).ExtractMostSignificantBits();
+                        if (bits == 0)
                             continue;
-                    }
-
-                    var name = snapshot.GetUniqueName(uid);
-                    if (pattern.TryMatch(name, out var match, FzfScoringScheme.Default, worker.Slab))
-                    {
-                        worker.Hits.Add(new UniqueMatch(uid, name, match));
-                    }
-                    else if (hasAliases && snapshot.GetAliases(uid, worker.Aliases) > 0)
-                    {
-                        var disabledIds = SearchContext.DisabledAliasIds;
-                        var matched = false;
-                        FzfPatternResult best = default;
-                        foreach (var (alias, providerId) in worker.Aliases)
+                        for (var lane = 0; lane < 4; lane++)
                         {
-                            if (disabledIds != null && disabledIds.Contains(providerId))
-                                continue;
-                            if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, worker.Slab)
-                                && pattern.IsAcceptableAliasMatch(aliasMatch, queryLen)
-                                && (!matched || aliasMatch.Score > best.Score))
-                            {
-                                matched = true;
-                                best = aliasMatch;
-                            }
+                            if ((bits & (1u << lane)) != 0 && PassesOrSets(masks[i + lane], ctx.OrSetMasks))
+                                MatchOne(snapshot, ctx, i + lane, worker);
                         }
-                        if (matched)
-                            worker.Hits.Add(new UniqueMatch(uid, name, best));
+                    }
+                    for (; i < end; i++)
+                    {
+                        if ((masks[i] & ctx.RequiredMask) == ctx.RequiredMask && PassesOrSets(masks[i], ctx.OrSetMasks))
+                            MatchOne(snapshot, ctx, i, worker);
+                    }
+                }
+                else
+                {
+                    for (var uid = start; uid < end; uid++)
+                    {
+                        if (ctx.CanFilter && ((masks[uid] & ctx.RequiredMask) != ctx.RequiredMask || !PassesOrSets(masks[uid], ctx.OrSetMasks)))
+                            continue;
+                        MatchOne(snapshot, ctx, uid, worker);
                     }
                 }
                 return worker;
@@ -93,78 +180,83 @@ internal static class SearchMatcher
                 {
                     merged.AddRange(worker.Hits);
                 }
+                ReturnWorker(worker);
             });
-
-        return merged;
     }
 
-    // Per-ROW match against a single base snapshot row's own name+aliases (mirrors
-    // StreamingSearchExtensions.MatchCandidate) -- used by path-mode search, which scans candidate
-    // rows individually rather than unique-first (directory context is per-row, not per-name).
-    // aliasScratch is caller-owned so a full-table scan doesn't allocate a list per row.
-    internal static bool MatchRow(Snapshot snapshot, int row, FzfPattern pattern, int queryLen, FzfSlab slab,
-        List<(string Alias, byte ProviderId)> aliasScratch, out string name, out FzfPatternResult match)
+    private static void MatchOne(Snapshot snapshot, QueryContext ctx, int uid, Worker worker)
     {
-        name = snapshot.GetName(row);
-        match = default;
-        if (name.Length == 0)
-            return false;
-        if (pattern.TryMatch(name, out match, FzfScoringScheme.Default, slab))
-            return true;
+        var utf8 = snapshot.UniqueNameUtf8(uid);
+        if (utf8.Length == 0)
+            return;
 
-        var uid = (int)snapshot.NameIds[row];
-        if (!snapshot.HasAliases(uid) || snapshot.GetAliases(uid, aliasScratch) == 0)
-            return false;
-
-        var disabledIds = SearchContext.DisabledAliasIds;
-        var matched = false;
-        foreach (var (alias, providerId) in aliasScratch)
+        // Pure-ASCII name: bytes ARE the chars (same values, same offsets) -- match with zero decode.
+        if (snapshot.IsUniqueAscii(uid))
         {
-            if (disabledIds != null && disabledIds.Contains(providerId))
+            if (ctx.BytePattern.TryMatch(utf8, out var byteMatch, FzfScoringScheme.Default, worker.Slab, worker.ByteBuffers))
+            {
+                worker.Hits.Add(new UniqueMatch(uid, byteMatch, FzfBytePattern.ForDefaultScheme(uid, utf8, byteMatch).SortKey));
+                return;
+            }
+            if (snapshot.HasAliases(uid) && TryMatchAliases(snapshot, ctx, uid, worker, out var aliasBest))
+                worker.Hits.Add(new UniqueMatch(uid, aliasBest, FzfBytePattern.ForDefaultScheme(uid, utf8, aliasBest).SortKey));
+            return;
+        }
+
+        if (worker.Scratch.Length < utf8.Length)
+            worker.Scratch = new char[Math.Max(utf8.Length, worker.Scratch.Length * 2)];
+        var written = Encoding.UTF8.GetChars(utf8, worker.Scratch);
+        var name = worker.Scratch.AsSpan(0, written);
+
+        if (ctx.Pattern.TryMatch(name, out var match, FzfScoringScheme.Default, worker.Slab))
+        {
+            worker.Hits.Add(new UniqueMatch(uid, match, FzfResultRank.ForDefaultScheme(uid, name, match).SortKey));
+        }
+        else if (snapshot.HasAliases(uid) && TryMatchAliases(snapshot, ctx, uid, worker, out var best))
+        {
+            worker.Hits.Add(new UniqueMatch(uid, best, FzfResultRank.ForDefaultScheme(uid, name, best).SortKey));
+        }
+    }
+
+    // Zero-copy alias fallback: each baked alias is matched from its raw UTF-8 (byte path for ASCII
+    // aliases -- the common case, pinyin -- else decoded into the alias scratch), honoring
+    // SearchContext.DisabledAliasIds and the IsAcceptableAliasMatch quality gate.
+    internal static bool TryMatchAliases(Snapshot snapshot, QueryContext ctx, int uid, Worker worker, out FzfPatternResult best)
+    {
+        best = default;
+        var matched = false;
+        var disabledIds = SearchContext.DisabledAliasIds;
+        var (start, end) = snapshot.AliasEntryRange(uid);
+        for (var e = start; e < end; e++)
+        {
+            if (disabledIds != null && disabledIds.Contains(snapshot.AliasProviderId(e)))
                 continue;
-            if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, slab)
-                && pattern.IsAcceptableAliasMatch(aliasMatch, queryLen)
-                && (!matched || aliasMatch.Score > match.Score))
+
+            var aliasUtf8 = snapshot.AliasUtf8(e);
+            if (aliasUtf8.Length == 0)
+                continue;
+
+            FzfPatternResult aliasMatch;
+            bool hit;
+            if (Ascii.IsValid(aliasUtf8))
+            {
+                hit = ctx.BytePattern.TryMatchSegmented(aliasUtf8, out aliasMatch, FzfScoringScheme.Default, worker.Slab, worker.ByteBuffers);
+            }
+            else
+            {
+                if (worker.AliasScratch.Length < aliasUtf8.Length)
+                    worker.AliasScratch = new char[Math.Max(aliasUtf8.Length, worker.AliasScratch.Length * 2)];
+                var written = Encoding.UTF8.GetChars(aliasUtf8, worker.AliasScratch);
+                hit = ctx.Pattern.TryMatch(worker.AliasScratch.AsSpan(0, written), out aliasMatch, FzfScoringScheme.Default, worker.Slab);
+            }
+
+            if (hit && ctx.Pattern.IsAcceptableAliasMatch(aliasMatch, ctx.QueryLen)
+                && (!matched || aliasMatch.Score > best.Score))
             {
                 matched = true;
-                match = aliasMatch;
+                best = aliasMatch;
             }
         }
         return matched;
-    }
-
-    // Mirrors the old MatchCandidate's alias fallback, honoring SearchContext.DisabledAliasIds --
-    // used for delta rows (renamed/added), which carry their own precomputed alias array.
-    internal static bool TryMatchNameOrAliases(FzfPattern pattern, string name, string[]? aliases, byte[]? providerIds, int queryLen, FzfSlab slab, out FzfPatternResult result)
-    {
-        if (pattern.TryMatch(name, out result, FzfScoringScheme.Default, slab))
-            return true;
-        if (aliases == null)
-            return false;
-
-        var disabledIds = SearchContext.DisabledAliasIds;
-        var matched = false;
-        for (var j = 0; j < aliases.Length; j++)
-        {
-            if (disabledIds != null && providerIds != null && j < providerIds.Length && disabledIds.Contains(providerIds[j]))
-                continue;
-            if (pattern.TryMatch(aliases[j], out var aliasMatch, FzfScoringScheme.Default, slab)
-                && pattern.IsAcceptableAliasMatch(aliasMatch, queryLen)
-                && (!matched || aliasMatch.Score > result.Score))
-            {
-                matched = true;
-                result = aliasMatch;
-            }
-        }
-        return matched;
-    }
-
-    private static bool IsSubsequence(ReadOnlySpan<char> text, string patternText, bool caseSensitive)
-    {
-        var p = 0;
-        for (var i = 0; i < text.Length && p < patternText.Length; i++)
-            if (FzfAlgorithm.CharsEqual(text[i], patternText[p], caseSensitive))
-                p++;
-        return p == patternText.Length;
     }
 }
