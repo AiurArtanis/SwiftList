@@ -29,10 +29,48 @@ public class ClassicFileDialogAdapter : IFileDialogAdapter
         return hasFileNameEdit && FindComboBox(hwnd) != IntPtr.Zero;
     }
 
-    public string? GetCurrentPath(IntPtr hwnd) =>
-        // Getting current path from classic dialog's ComboBox is unreliable across OS versions.
-        // Returning null falls back to showing quick navigation unconditionally, which is safe and works.
-        null;
+    public string? GetCurrentPath(IntPtr hwnd)
+    {
+        // CDM_GETFOLDERPATH is the documented message for this, but SendMessage does NOT marshal an
+        // lParam buffer pointer across process boundaries except for a small hardcoded set of system
+        // messages (WM_GETTEXT, WM_SETTEXT, ...) -- CDM_GETFOLDERPATH is an app-private WM_USER+N
+        // message, not on that list. Passing a pointer that's only valid in *our* address space
+        // crashed the dialog's process outright. The buffer has to actually live in the target
+        // process: allocate it there with VirtualAllocEx, let the dialog write into it, then copy
+        // it back out with ReadProcessMemory -- the same cross-process shape NavigateTo already
+        // uses (write-only) and QuickNavigationTriggerGate.IsPointOnDesktopIcon uses (round-trip).
+        const int maxChars = 1024;
+        var hProcess = IntPtr.Zero;
+        var remoteBuffer = IntPtr.Zero;
+        try
+        {
+            GetWindowThreadProcessId(hwnd, out var pid);
+            if (pid == 0) return null;
+
+            hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE, false, (int)pid);
+            if (hProcess == IntPtr.Zero) return null;
+
+            var bufferBytes = (uint)(maxChars * sizeof(char));
+            remoteBuffer = VirtualAllocEx(hProcess, IntPtr.Zero, bufferBytes, MEM_COMMIT, PAGE_READWRITE);
+            if (remoteBuffer == IntPtr.Zero) return null;
+
+            var copiedChars = SendMessage(hwnd, CDM_GETFOLDERPATH, (IntPtr)maxChars, remoteBuffer).ToInt64();
+            if (copiedChars <= 0) return null;
+
+            var localBuffer = new byte[bufferBytes];
+            if (!ReadProcessMemory(hProcess, remoteBuffer, localBuffer, bufferBytes, out _))
+                return null;
+
+            var path = Encoding.Unicode.GetString(localBuffer).TrimEnd('\0');
+            return !string.IsNullOrEmpty(path) && Directory.Exists(path) ? path : null;
+        }
+        catch { return null; }
+        finally
+        {
+            if (remoteBuffer != IntPtr.Zero) VirtualFreeEx(hProcess, remoteBuffer, 0, MEM_RELEASE);
+            if (hProcess != IntPtr.Zero) CloseHandle(hProcess);
+        }
+    }
 
     public bool NavigateTo(IntPtr hwnd, string targetPath)
     {
@@ -183,6 +221,24 @@ public class ClassicFileDialogAdapter : IFileDialogAdapter
     private static extern IntPtr SetFocus(IntPtr hWnd);
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(uint processAccess, bool bInheritHandle, int processId);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool VirtualFreeEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize, uint dwFreeType);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, uint nSize, out IntPtr lpNumberOfBytesRead);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CloseHandle(IntPtr hObject);
+
+    private const uint PROCESS_VM_OPERATION = 0x0008;
+    private const uint PROCESS_VM_READ = 0x0010;
+    private const uint PROCESS_VM_WRITE = 0x0020;
+    private const uint MEM_COMMIT = 0x1000;
+    private const uint MEM_RELEASE = 0x8000;
+    private const uint PAGE_READWRITE = 0x04;
+    private const uint CDM_GETFOLDERPATH = 0x0400 + 100 + 2;
 
     private const uint WM_SETTEXT = 0x000C;
     private const uint WM_COMMAND = 0x0111;
