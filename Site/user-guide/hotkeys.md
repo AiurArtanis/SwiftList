@@ -62,4 +62,9 @@ and can be rebound the same way as built-in hotkeys.
 If SwiftList's global hotkeys interfere with another application (a game capturing raw keyboard
 input, for example), add that process to the **Process Blacklist** — see
 [Settings → Hotkeys page](./settings/hotkeys-page#process-blacklist). While a blacklisted process is
-in the foreground, SwiftList's global hotkeys are let through untouched.
+in the foreground, SwiftList's global hotkeys, keystroke interception, and the quick navigation
+mouse triggers above are all let through untouched.
+
+Any foreground app that's genuinely full-screen gets this same treatment automatically — no
+blacklist entry needed. Either way, an active file dialog is always exempt, so quick navigation
+still works there.

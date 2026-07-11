@@ -26,8 +26,8 @@ SwiftList runs as three separate processes, deliberately isolated by privilege l
 - The search engine (`Core/SearchIndex/Fzf/*`) — a fuzzy-matching implementation modeled on the
   `fzf` command-line tool's algorithm, plus a query parser (`SearchQueryParser`) for drive-letter
   targeting and path-mode search.
-- The runtime index (`Core/SearchIndex/RecordIndex/*`, `RecordSearch/*`) — in-memory structures
-  built from USN/MFT reads, updated incrementally as changes come in.
+- The runtime index (`Core/IndexV2/*`) — a memory-mapped, columnar snapshot format built from
+  USN/MFT reads, with an in-memory delta overlay for changes since the last snapshot.
 - IPC contracts (`SearchRequestMessage`, `SearchResponseBinarySerializer`, ...) shared verbatim by
   both processes, so the App and Service always agree on the wire format.
 - `Logger` — writes to per-process log files (`service.log`, `app.log`, `hook.log`), all readable

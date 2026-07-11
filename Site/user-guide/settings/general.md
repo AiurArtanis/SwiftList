@@ -11,6 +11,10 @@ Four tabs: **System**, **Search Bar Layout**, **Preview**, and **Search Window**
 - **Auto check for updates on startup** — checkbox.
 - **Auto silent update when a new version is detected** — checkbox, only enabled while the check
   above is on; downloads and installs updates in the background without prompting.
+- **Enable hardware acceleration** — checkbox, on by default. Turning it off forces the quick
+  search window to render in software instead of using Direct3D — this works around NVIDIA
+  Advanced Optimus refusing to hot-switch GPUs while SwiftList is running (only the quick window is
+  affected, not the whole app). Requires restarting SwiftList to take effect.
 - **Log level** — dropdown: Error / Warn / Info (default) / Debug. Controls verbosity across the
   App, Service, and Hook logs (see [Service Status](./service-status)).
 - **Interface language** — dropdown, populated from every installed translation provider (built-in

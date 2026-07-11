@@ -11,6 +11,10 @@
 3. Check the **[Process Blacklist](./settings/hotkeys-page#process-blacklist)** — if the
    foreground app's executable name was added there (intentionally or by accident), SwiftList's
    global hotkeys are deliberately let through untouched while it's focused.
+4. If the foreground app is genuinely full-screen (fills the entire monitor), SwiftList
+   automatically lets its hotkeys through too — by design, so it doesn't fight with fullscreen
+   games — and there's no setting to turn this off. Alt-tabbing out, or running the game in
+   borderless/windowed mode instead of exclusive full-screen, avoids it.
 
 ## Search results seem out of date
 

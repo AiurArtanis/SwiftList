@@ -41,10 +41,12 @@ change it.
 ## Process Blacklist {#process-blacklist}
 
 Add executable names (e.g. `game.exe`) whose foreground focus should suppress SwiftList's global
-hotkeys and keystroke interception entirely. Case-insensitive, `.exe` suffix optional. Supports the
-same add-one / bulk-edit pattern as the exclusion rules under **Index**: a single-entry textbox
-plus **Add Process**, a list of existing entries, and a bulk textbox with **Generate Text** /
-**Apply Text**.
+hotkeys, keystroke interception, and the quick navigation double-click/middle-click mouse triggers
+entirely. Case-insensitive, `.exe` suffix optional. Supports the same add-one / bulk-edit pattern as
+the exclusion rules under **Index**: a single-entry textbox plus **Add Process**, a list of
+existing entries, and a bulk textbox with **Generate Text** / **Apply Text**.
 
 This is the fix for hotkey conflicts with fullscreen games or other apps that grab raw keyboard
-input — see [Troubleshooting](../troubleshooting#the-global-hotkey-doesn-t-respond).
+input — see [Troubleshooting](../troubleshooting#the-global-hotkey-doesn-t-respond). Any foreground
+app that's genuinely full-screen gets the same treatment automatically, with no entry needed here.
+Either way, an active file dialog is always exempt, so quick navigation still works there.

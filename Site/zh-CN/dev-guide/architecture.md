@@ -22,8 +22,8 @@ SwiftList 运行为三个独立进程，按权限级别和生命周期有意拆�
 
 - 搜索引擎(`Core/SearchIndex/Fzf/*`)—— 一套仿照 `fzf` 命令行工具算法实现的模糊匹配引擎，配合
   一个查询解析器(`SearchQueryParser`)处理盘符定向和路径模式搜索。
-- 运行时索引(`Core/SearchIndex/RecordIndex/*`、`RecordSearch/*`)—— 由 USN/MFT 读取结果构建的
-  内存结构，随变更增量更新。
+- 运行时索引(`Core/IndexV2/*`)—— 由 USN/MFT 读取结果构建的内存映射列式快照格式，配合一个内存中
+  的增量覆盖层记录快照之后的变更。
 - IPC 契约(`SearchRequestMessage`、`SearchResponseBinarySerializer` 等)—— App 和 Service 两边
   完全共用同一份定义，保证双方对线路格式的理解始终一致。
 - `Logger` —— 写入各进程独立的日志文件(`service.log`、`app.log`、`hook.log`)，都可以在 App 的
