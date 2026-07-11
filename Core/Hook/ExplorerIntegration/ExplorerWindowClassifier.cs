@@ -211,9 +211,10 @@ internal sealed class ExplorerWindowClassifier
         var activePath = _tracker.ActiveAdapter?.GetCurrentPath(mainDialog);
         if (string.IsNullOrEmpty(activePath))
         {
-            activePath = !string.IsNullOrEmpty(_dialogTracker.LastActiveExplorerPath)
-                ? _dialogTracker.LastActiveExplorerPath
-                : (!string.IsNullOrEmpty(_tracker.LastPath) ? _tracker.LastPath : string.Empty);
+            // The adapter couldn't determine a path (e.g. FolderBrowserDialogAdapter always returns
+            // null -- SHBrowseForFolder has no safe way to query the current selection externally).
+            // Keep showing whatever was last known instead of resetting the search scope to nothing.
+            activePath = _tracker.LastPath ?? string.Empty;
         }
         _tracker.LastPath = activePath;
 
