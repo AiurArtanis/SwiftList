@@ -40,6 +40,15 @@ internal sealed class TreeDiffBaseline
             if (baseline._indexById[record.Id] != i)
                 continue;
 
+            // The root record is self-parented (ParentId == its own Id -- there is no real parent, see
+            // NetworkIndex.Build). Without this check it satisfies ParentId == rootId just like a genuine
+            // top-level child does, so TryGetUnchangedChildren(rootId) would yield the root's own baseline
+            // row alongside its real children -- duplicating the root into every resumed store's records.
+            // SnapshotWriter.cs already guards the equivalent case (`record.ParentId != record.Id`) when
+            // building a Snapshot's own child index; this mirrors that.
+            if (record.Id == record.ParentId)
+                continue;
+
             if (!baseline._childIndicesByParent.TryGetValue(record.ParentId, out var siblings))
                 baseline._childIndicesByParent[record.ParentId] = siblings = new List<int>();
             siblings.Add(i);
