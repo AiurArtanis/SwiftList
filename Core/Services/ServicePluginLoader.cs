@@ -29,7 +29,13 @@ public static class ServicePluginLoader
             var translationProviders = new List<ITranslationProvider>();
             var aliasProviders = new List<IAliasProvider>();
 
-            var dllFiles = Directory.GetFiles(pluginsDir, "*.dll");
+            // Sorted, not raw enumeration order: Directory.GetFiles doesn't guarantee an order, and
+            // AliasProviderRegistry assigns each provider's numeric id by registration order -- an
+            // unstable order here would reassign different ids to the same providers across restarts,
+            // which would misattribute already-baked alias data tagged with the OLD ids (see
+            // AliasProviderRegistry.ComputeProvidersFingerprint's own recompaction trigger, which
+            // catches a genuine provider-set change but not pure reordering of an unchanged set).
+            var dllFiles = Directory.GetFiles(pluginsDir, "*.dll").OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToArray();
             foreach (var dllFile in dllFiles)
             {
                 try

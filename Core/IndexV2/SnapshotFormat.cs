@@ -18,7 +18,7 @@ internal enum SnapshotSection
 internal static class SnapshotFormat
 {
     public const ulong Magic = 0x0000005844494C53; // "SLIDX\0\0\0" little-endian
-    public const int Version = 1;
+    public const int Version = 2;
     public const int SectionAlignment = 16;
 
     internal sealed class Meta
@@ -48,6 +48,12 @@ internal static class SnapshotFormat
         // resumable-scan diffing (TreeDiffBaseline) and exclusion-rule-change detection.
         public bool IsComplete;
         public string ExclusionRulesFingerprint = string.Empty;
+        // AliasProviderRegistry.ComputeProvidersFingerprint() as of the write that produced this
+        // snapshot's alias data. Compared against the CURRENT set of installed alias providers on load
+        // (see UsnIndexerCacheExtensions/NetworkDriveCacheLocator) -- a mismatch means a provider was
+        // installed/removed or bumped its own Version since, so every unique name's aliases need
+        // regenerating via a forced recompaction.
+        public string AliasProvidersFingerprint = string.Empty;
         // Wall-clock time this snapshot's data was last current -- FileRecordStore.LastUpdated's V2
         // equivalent, surfaced to the UI (e.g. "last refreshed" for a network drive).
         public DateTime LastUpdated;
@@ -79,6 +85,7 @@ internal static class SnapshotFormat
         writer.Write(meta.FileSystemType);
         writer.Write(meta.IsComplete);
         writer.Write(meta.ExclusionRulesFingerprint);
+        writer.Write(meta.AliasProvidersFingerprint);
         writer.Write(meta.LastUpdated.ToUniversalTime().Ticks);
         // SectionsOffset is derived, not stored: the reader recomputes it from its own stream position
         // after the variable-length strings, then aligns -- see FinishHeader/ReadHeader staying in sync.
@@ -124,6 +131,7 @@ internal static class SnapshotFormat
         meta.FileSystemType = reader.ReadString();
         meta.IsComplete = reader.ReadBoolean();
         meta.ExclusionRulesFingerprint = reader.ReadString();
+        meta.AliasProvidersFingerprint = reader.ReadString();
         meta.LastUpdated = new DateTime(reader.ReadInt64(), DateTimeKind.Utc).ToLocalTime();
         meta.SectionsOffset = Align(reader.BaseStream.Position);
         return meta;

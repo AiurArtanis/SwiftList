@@ -29,6 +29,7 @@ public sealed unsafe class Snapshot : IDisposable
     public long NextUsn => Meta.NextUsn;
     public bool IsComplete => Meta.IsComplete;
     public string ExclusionRulesFingerprint => Meta.ExclusionRulesFingerprint;
+    public string AliasProvidersFingerprint => Meta.AliasProvidersFingerprint;
     public DateTime LastUpdated => Meta.LastUpdated;
 
     public static Snapshot Open(string path) => new(path);

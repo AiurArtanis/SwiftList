@@ -148,7 +148,9 @@ public static class UsnIndexerCacheExtensions
             snapshot.Dispose();
             return null;
         }
-        return (new LiveIndex(snapshot), metadata);
+        var live = new LiveIndex(snapshot);
+        AliasProvidersReconciler.ReconcileIfStale(live, v2Path, drive);
+        return (live, metadata);
     }
 
     private static bool IsCurrentVolumeCache(string drive, UsnIndexer.DriveRuntimeMetadata metadata)

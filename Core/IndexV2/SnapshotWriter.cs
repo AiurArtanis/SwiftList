@@ -151,6 +151,10 @@ public static class SnapshotWriter
             TotalDirs = totalDirs,
             IsComplete = store.IsComplete,
             ExclusionRulesFingerprint = store.ExclusionRulesFingerprint,
+            // Stamped fresh on every write (not carried over from `store`) -- this is exactly the
+            // moment every unique name's aliases just got (re)generated above, via whatever alias
+            // providers are installed right now.
+            AliasProvidersFingerprint = AliasProviderRegistry.ComputeProvidersFingerprint(),
             LastUpdated = store.LastUpdated,
         };
 

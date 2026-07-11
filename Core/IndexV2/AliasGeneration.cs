@@ -5,6 +5,12 @@ namespace SwiftList.Core.IndexV2;
 // receiver. Aliases derive from the name alone, so they bake per unique name at build time and are
 // filtered per provider id at QUERY time (SearchContext.DisabledAliasIds) -- toggling a provider in
 // settings never requires a rebuild.
+//
+// Uses GetAllProviders() (every INSTALLED provider), not GetActiveProviders() (only ENABLED ones):
+// generation must not depend on the enabled/disabled toggle, or re-enabling a provider the user
+// disabled earlier would surface no aliases until the next rebuild. Baking in a disabled provider's
+// aliases anyway costs a little extra CPU/storage at generation time, but makes every enable/disable
+// toggle a free, instant, purely query-time flip in both directions.
 internal static class AliasGeneration
 {
     public static string[]? Generate(string name, out byte[] providerIds)
@@ -15,7 +21,7 @@ internal static class AliasGeneration
 
         List<string>? aliases = null;
         List<byte>? ids = null;
-        foreach (var provider in AliasProviderRegistry.GetActiveProviders())
+        foreach (var provider in AliasProviderRegistry.GetAllProviders())
         {
             try
             {

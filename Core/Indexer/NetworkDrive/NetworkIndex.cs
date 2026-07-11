@@ -77,14 +77,16 @@ internal sealed class NetworkIndex : IDisposable
     internal static NetworkIndex FromSnapshotFile(string drive, string path)
     {
         var snapshot = Snapshot.Open(path);
+        var live = new LiveIndex(snapshot);
         var index = new NetworkIndex(drive)
         {
             RootId = snapshot.RootId,
             LastUpdated = snapshot.LastUpdated,
             IsComplete = snapshot.IsComplete,
             ExclusionRulesFingerprint = snapshot.ExclusionRulesFingerprint,
-            _live = new LiveIndex(snapshot),
+            _live = live,
         };
+        AliasProvidersReconciler.ReconcileIfStale(live, path, drive);
         return index;
     }
 
