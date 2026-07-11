@@ -1,3 +1,4 @@
+using SwiftList.Core.IndexV2;
 using SwiftList.Core.Indexer.Usn;
 
 namespace SwiftList.Core;
@@ -237,17 +238,27 @@ internal sealed class SearchEngineDriveMaintenance
                     continue;
                 }
 
-                var summary = LocalDriveCacheLocator.TryLoadSummary(IndexCacheDir, drive.Drive);
-                if (summary == null)
+                SnapshotFormat.Meta? meta;
+                try
+                {
+                    meta = SnapshotFormat.TryReadHeaderFromFile(drive.CachePath);
+                }
+                catch (IOException)
+                {
+                    // Busy right now (e.g. a checkpoint mid-write) -- not evidence of corruption, try
+                    // again next refresh instead of reporting stale/zeroed counts.
+                    continue;
+                }
+                if (meta == null)
                     continue;
 
-                var liveItems = Math.Max(0, summary.Value.LiveRecordCount - 1);
                 if (drive.State != "indexing")
                 {
-                    drive.Files = liveItems;
-                    drive.Dirs = 0;
+                    drive.Files = meta.TotalFiles;
+                    drive.Dirs = meta.TotalDirs;
                 }
-                totalFiles += liveItems;
+                totalFiles += meta.TotalFiles;
+                totalDirs += meta.TotalDirs;
             }
 
             _indexer.Status.TotalFiles = totalFiles;

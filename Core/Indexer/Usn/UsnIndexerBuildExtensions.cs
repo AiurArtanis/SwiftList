@@ -91,7 +91,7 @@ public static class UsnIndexerBuildExtensions
     {
         indexer.DropDriveFromRuntime(drive);
 
-        var path = LocalDriveCacheLocator.GetV2Path(cacheDir, drive);
+        var path = LocalDriveCacheLocator.GetCachePath(cacheDir, drive);
         SnapshotWriter.Write(store, path);
         var metadata = UsnIndexer.CreateMetadata(store);
         store.Records.Clear();

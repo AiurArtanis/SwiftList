@@ -42,8 +42,8 @@ internal sealed class NetworkIndex : IDisposable
         }
     }
 
-    // Writes `store` as this drive's V2 cache and opens it -- the shared tail of every construction
-    // path (initial build, checkpoint, legacy-cache migration) that starts from a fresh FileRecordStore.
+    // Writes `store` as this drive's cache and opens it -- the shared tail of every construction path
+    // (initial build, checkpoint) that starts from a fresh FileRecordStore.
     public static NetworkIndex FromStore(FileRecordStore store)
     {
         var index = new NetworkIndex(store.SourceKey)
@@ -53,7 +53,7 @@ internal sealed class NetworkIndex : IDisposable
             IsComplete = store.IsComplete,
             ExclusionRulesFingerprint = store.ExclusionRulesFingerprint,
         };
-        var path = NetworkDriveCacheLocator.GetV2Path(store.SourceKey);
+        var path = NetworkDriveCacheLocator.GetCachePath(store.SourceKey);
         SnapshotWriter.Write(store, path);
         index._live = new LiveIndex(Snapshot.Open(path));
         return index;

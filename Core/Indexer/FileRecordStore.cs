@@ -152,16 +152,3 @@ public sealed class FileRecordStore
     public string ExclusionRulesFingerprint { get; set; } = string.Empty;
     public List<FileRecord> Records { get; } = new();
 }
-
-public readonly record struct FileRecordStoreSummary(
-    string SourceKey,
-    FileRecordSourceKind SourceKind,
-    FileRecordIdKind IdKind,
-    string FileSystemType,
-    uint VolumeSerialNumber,
-    UInt128 RootId,
-    ulong JournalId,
-    long NextUsn,
-    int RecordCount,
-    int LiveRecordCount,
-    DateTime LastUpdated);

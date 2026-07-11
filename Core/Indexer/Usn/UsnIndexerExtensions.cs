@@ -189,6 +189,6 @@ public static class UsnIndexerExtensions
             return;
 
         var cacheDir = Path.Combine(Logger.UserDataDir, "indexes");
-        live.Compact(LocalDriveCacheLocator.GetV2Path(cacheDir, drive), new CompactionStamp(metadata.JournalId, metadata.NextUsn), force: true);
+        live.Compact(LocalDriveCacheLocator.GetCachePath(cacheDir, drive), new CompactionStamp(metadata.JournalId, metadata.NextUsn), force: true);
     }
 }

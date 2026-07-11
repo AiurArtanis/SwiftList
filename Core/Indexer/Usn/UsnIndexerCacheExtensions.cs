@@ -118,7 +118,7 @@ public static class UsnIndexerCacheExtensions
     // since the cache was written (IsCurrentVolumeCache).
     private static (LiveIndex Live, UsnIndexer.DriveRuntimeMetadata Metadata)? TryOpenV2(string cacheDir, string drive)
     {
-        var v2Path = LocalDriveCacheLocator.GetV2Path(cacheDir, drive);
+        var v2Path = LocalDriveCacheLocator.GetCachePath(cacheDir, drive);
         if (!File.Exists(v2Path))
             return null;
 

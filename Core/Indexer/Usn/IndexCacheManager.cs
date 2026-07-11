@@ -80,7 +80,7 @@ internal static class IndexCacheManager
             {
                 metadata.JournalId = meta.JournalId;
                 metadata.NextUsn = meta.NextUsn;
-                live.Compact(LocalDriveCacheLocator.GetV2Path(cacheDir, meta.Drive), new CompactionStamp(meta.JournalId, meta.NextUsn), force: true);
+                live.Compact(LocalDriveCacheLocator.GetCachePath(cacheDir, meta.Drive), new CompactionStamp(meta.JournalId, meta.NextUsn), force: true);
             }
         }
     }

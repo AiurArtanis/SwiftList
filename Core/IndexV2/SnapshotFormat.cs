@@ -172,8 +172,7 @@ internal static class SnapshotFormat
     }
 
     // Reads just the small fixed+variable header (no mmap) -- for cache-discovery scans that need a
-    // summary of every drive's snapshot without paying for a full mapping of each one. Mirrors
-    // FileRecordStoreSummaryLoader's "just read the .meta" shape for the legacy format.
+    // summary of every drive's snapshot without paying for a full mapping of each one.
     public static Meta? TryReadHeaderFromFile(string path)
     {
         try
