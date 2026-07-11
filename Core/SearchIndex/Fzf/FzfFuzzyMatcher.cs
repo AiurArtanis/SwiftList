@@ -213,8 +213,15 @@ internal static class FzfFuzzyMatcher
                 i--;
             }
 
+            // Only consult the next row's cell if THIS match actually wrote it (each row is only
+            // written from its own first[]-guard onward; the slab is reused, not zeroed). The old
+            // guard was a raw array-length bound, so this read stale cells from whatever match used
+            // the slab before -- making the chosen match START (a tie-break, never the score) depend
+            // on which candidate happened to be matched previously on the same worker. An unwritten
+            // cell semantically means "no match possible here," i.e. consecutive == 0.
             preferMatch = consecutive[row + rel] > 1 ||
-                          (row + width + rel + 1 < consecutive.Length && consecutive[row + width + rel + 1] > 0);
+                          (i < patternLength - 1 && rel + 1 < width && rel + 1 >= first[i + 1] - f0 - 1
+                           && consecutive[row + width + rel + 1] > 0);
             j--;
         }
 
