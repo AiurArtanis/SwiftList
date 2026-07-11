@@ -14,9 +14,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PluginSdk\PluginSdk.csproj" />
-    <InternalsVisibleTo Include="TestSearch" />
-    <InternalsVisibleTo Include="IndexMemBench" />
-    <InternalsVisibleTo Include="ProdIndexBench" />
   </ItemGroup>
 
 </Project>
