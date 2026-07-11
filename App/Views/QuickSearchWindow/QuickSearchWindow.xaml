@@ -12,6 +12,7 @@
         ShowInTaskbar="False"
         Topmost="True"
         WindowStartupLocation="Manual"
+        SourceInitialized="Window_SourceInitialized"
         Loaded="Window_Loaded"
         Deactivated="Window_Deactivated"
         PreviewKeyDown="Window_PreviewKeyDown">
