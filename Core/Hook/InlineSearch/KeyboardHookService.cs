@@ -60,10 +60,6 @@ public class KeyboardHookService : IDisposable
     }
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (FullscreenHelper.IsForegroundWindowFullScreen())
-        {
-            return KeyboardNativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
-        }
         if (nCode >= 0 && (wParam == (IntPtr)KeyboardNativeMethods.WM_KEYUP || wParam == (IntPtr)KeyboardNativeMethods.WM_SYSKEYUP))
         {
             var hookStruct = Marshal.PtrToStructure<KeyboardNativeMethods.KBDLLHOOKSTRUCT>(lParam);
@@ -76,7 +72,11 @@ public class KeyboardHookService : IDisposable
             var time = hookStruct.time;
 
             // 1. Detect Toggle Window Hotkey
-            var shouldDisableAllHooks = (IsHotkeysDisabledTemporarily || KeyboardUtils.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses))
+            // Fullscreen apps share the same gate as the process blacklist: it only suppresses the
+            // quick-window toggle, Quick Switch, and inline-search invocation below, and still yields
+            // to an active file dialog (IsActiveWindowDialog) same as the blacklist does. Key-up
+            // tracking and Explorer-tracker bookkeeping run unconditionally either way.
+            var shouldDisableAllHooks = (IsHotkeysDisabledTemporarily || KeyboardUtils.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses) || FullscreenHelper.IsForegroundWindowFullScreen())
                                          && !_explorerTracker.IsActiveWindowDialog;
 
             if (!shouldDisableAllHooks && _hotkeyDetector.CheckToggleWindowHotkey(vkCode, time, out var consumeToggleKey, OnDoubleCtrl))

@@ -164,11 +164,13 @@ public sealed class HookProcess : IDisposable
             _mouseHook.OnMouseClick += (x, y) => _ipcServer.SendMessage(new IpcMessage { Id = IpcMessageId.MouseClick, MouseX = x, MouseY = y });
             _mouseHook.OnMouseDoubleClick += (x, y) =>
             {
+                if (ShouldSuppressQuickNavTrigger()) return;
                 Logger.Log($"[HookProcess] OnMouseDoubleClick at ({x}, {y}). ActiveHwnd={_explorerTracker?.ActiveHwnd}, IsExplorerOrDesktopActive={_explorerTracker?.IsExplorerOrDesktopActive}", LogLevel.Debug);
                 _ipcServer.SendMessage(new IpcMessage { Id = IpcMessageId.MouseDoubleClick, MouseX = x, MouseY = y });
             };
             _mouseHook.OnMouseMiddleClick += (x, y) =>
             {
+                if (ShouldSuppressQuickNavTrigger()) return;
                 Logger.Log($"[HookProcess] OnMouseMiddleClick at ({x}, {y}). ActiveHwnd={_explorerTracker?.ActiveHwnd}, IsExplorerOrDesktopActive={_explorerTracker?.IsExplorerOrDesktopActive}", LogLevel.Debug);
                 _ipcServer.SendMessage(new IpcMessage { Id = IpcMessageId.MouseMiddleClick, MouseX = x, MouseY = y });
             };
@@ -189,6 +191,14 @@ public sealed class HookProcess : IDisposable
             CleanupHooks();
         }
     }
+
+    // Same gate as KeyboardHookService's shouldDisableAllHooks: a temporarily-disabled, blacklisted, or
+    // fullscreen foreground app suppresses the quick-nav mouse triggers too, but still yields to an
+    // active file dialog so FileDialogQuickNavGate's middle-click-in-dialogs support keeps working.
+    private bool ShouldSuppressQuickNavTrigger() => (_isHotkeysDisabledTemporarily
+                || KeyboardUtils.IsForegroundProcessBlacklisted(UserSettings.Load().BlacklistedProcesses)
+                || FullscreenHelper.IsForegroundWindowFullScreen())
+               && !(_explorerTracker?.IsActiveWindowDialog ?? false);
 
     private void CleanupHooks()
     {
