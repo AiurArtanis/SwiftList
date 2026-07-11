@@ -14,6 +14,14 @@ public class GeneralSettingsViewModel : ViewModelBase
     private IReadOnlyList<LanguageOption>? _languageOptions;
     private IReadOnlyList<ThemeOption>? _themeOptions;
 
+    // Staged edits -- everything below except SelectedTheme/PreferredLanguage (which apply live for
+    // instant preview) only commits to _userSettings when Apply() runs (Settings window's Apply/OK).
+    private bool _startWithWindows;
+    private bool _autoElevateIfAdmin;
+    private bool _autoCheckUpdates;
+    private bool _autoSilentUpdate;
+    private bool _enableHardwareAcceleration;
+
     // Tab navigation for the System/Layout/Preview Window split of this page.
     private string _selectedTab = "System";
     public string SelectedTab
@@ -31,6 +39,12 @@ public class GeneralSettingsViewModel : ViewModelBase
         Layout = new SearchBarLayoutSettingsViewModel(userSettings);
         PreviewWindow = new PreviewWindowSettingsViewModel(userSettings);
         MainWindow = new MainWindowSettingsViewModel(userSettings);
+
+        _startWithWindows = userSettings.StartWithWindows;
+        _autoElevateIfAdmin = userSettings.AutoElevateIfAdmin;
+        _autoCheckUpdates = userSettings.AutoCheckUpdates;
+        _autoSilentUpdate = userSettings.AutoSilentUpdate;
+        _enableHardwareAcceleration = userSettings.EnableHardwareAcceleration;
 
         _selectedLogLevel = LogLevelOptions.FirstOrDefault(o => o.Value == SettingsOptionGenerator.NormalizeLogLevel(_userSettings.LogLevel))
                             ?? LogLevelOptions[2]; // Default to Info
@@ -67,6 +81,8 @@ public class GeneralSettingsViewModel : ViewModelBase
         };
     }
 
+    // Persistence and the side effects (Logger.MinimumLevel, hook-process notification) are staged
+    // until Apply() -- see the class-level comment.
     public LogLevelOption? SelectedLogLevel
     {
         get => _selectedLogLevel;
@@ -75,16 +91,7 @@ public class GeneralSettingsViewModel : ViewModelBase
             if (value == null) return;
             if (_selectedLogLevel != value)
             {
-                var isLogLevelChanged = _userSettings.LogLevel != value.Value;
                 _selectedLogLevel = value;
-                _userSettings.LogLevel = value.Value;
-                _userSettings.Save();
-                if (isLogLevelChanged)
-                {
-                    Logger.MinimumLevel = SettingsOptionGenerator.ParseLogLevel(value.Value);
-                    // Propagate to hook process so hook.log also respects the new level
-                    App.HookClient?.SendMessage(new IpcMessage { Id = IpcMessageId.ReloadSettings });
-                }
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(LogLevel));
             }
@@ -153,20 +160,20 @@ public class GeneralSettingsViewModel : ViewModelBase
 
     public bool StartWithWindows
     {
-        get => _userSettings.StartWithWindows;
-        set { if (_userSettings.StartWithWindows != value) { _userSettings.StartWithWindows = value; _userSettings.Save(); OnPropertyChanged(); } }
+        get => _startWithWindows;
+        set => SetProperty(ref _startWithWindows, value);
     }
 
     public bool AutoElevateIfAdmin
     {
-        get => _userSettings.AutoElevateIfAdmin;
-        set { if (_userSettings.AutoElevateIfAdmin != value) { _userSettings.AutoElevateIfAdmin = value; _userSettings.Save(); OnPropertyChanged(); } }
+        get => _autoElevateIfAdmin;
+        set => SetProperty(ref _autoElevateIfAdmin, value);
     }
 
     public bool AutoCheckUpdates
     {
-        get => _userSettings.AutoCheckUpdates;
-        set { if (_userSettings.AutoCheckUpdates != value) { _userSettings.AutoCheckUpdates = value; _userSettings.Save(); OnPropertyChanged(); OnPropertyChanged(nameof(IsAutoSilentUpdateEnabled)); } }
+        get => _autoCheckUpdates;
+        set { if (SetProperty(ref _autoCheckUpdates, value)) OnPropertyChanged(nameof(IsAutoSilentUpdateEnabled)); }
     }
 
     public bool IsUserAdmin => UpdateService.Instance.IsUserAdmin();
@@ -175,11 +182,17 @@ public class GeneralSettingsViewModel : ViewModelBase
 
     public bool AutoSilentUpdate
     {
-        get => IsUserAdmin && _userSettings.AutoSilentUpdate;
-        set { if (!IsUserAdmin) return; if (_userSettings.AutoSilentUpdate != value) { _userSettings.AutoSilentUpdate = value; _userSettings.Save(); OnPropertyChanged(); } }
+        get => IsUserAdmin && _autoSilentUpdate;
+        set { if (!IsUserAdmin) return; SetProperty(ref _autoSilentUpdate, value); }
     }
 
-    public string LogLevel => SettingsOptionGenerator.NormalizeLogLevel(_userSettings.LogLevel);
+    public bool EnableHardwareAcceleration
+    {
+        get => _enableHardwareAcceleration;
+        set => SetProperty(ref _enableHardwareAcceleration, value);
+    }
+
+    public string LogLevel => SettingsOptionGenerator.NormalizeLogLevel(_selectedLogLevel?.Value ?? _userSettings.LogLevel);
 
     public string PreferredLanguage
     {
@@ -203,8 +216,28 @@ public class GeneralSettingsViewModel : ViewModelBase
 
     public void Apply()
     {
+        var logLevelChanged = _userSettings.LogLevel != LogLevel;
+
+        _userSettings.StartWithWindows = _startWithWindows;
+        _userSettings.AutoElevateIfAdmin = _autoElevateIfAdmin;
+        _userSettings.AutoCheckUpdates = _autoCheckUpdates;
+        if (IsUserAdmin)
+            _userSettings.AutoSilentUpdate = _autoSilentUpdate;
+        _userSettings.EnableHardwareAcceleration = _enableHardwareAcceleration;
+        _userSettings.LogLevel = LogLevel;
+
         StartupManager.SetEnabled(StartWithWindows);
         Logger.MinimumLevel = SettingsOptionGenerator.ParseLogLevel(LogLevel);
+        if (logLevelChanged)
+        {
+            // Propagate to hook process so hook.log also respects the new level
+            App.HookClient?.SendMessage(new IpcMessage { Id = IpcMessageId.ReloadSettings });
+        }
+
+        Layout.Save();
+        PreviewWindow.Save();
+        MainWindow.Save();
+
         _userSettings.Save();
     }
 

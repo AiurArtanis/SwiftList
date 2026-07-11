@@ -6,16 +6,25 @@ using SwiftList.Core;
 namespace SwiftList.App.ViewModels.Settings;
 
 // Settings for the full/main SearchWindow's default size -- distinct from SearchWindowSettings,
-// which configures the quick window's search bar layout.
+// which configures the quick window's search bar layout. Edits stage locally and only commit to
+// _userSettings/UiMetrics when Save() runs (called from GeneralSettingsViewModel.Apply(), i.e. the
+// Settings window's Apply/OK button) -- see GeneralSettingsViewModel's class-level comment.
 public class MainWindowSettingsViewModel : ViewModelBase
 {
     private readonly UserSettings _userSettings;
+    private double _width;
+    private double _height;
 
-    public MainWindowSettingsViewModel(UserSettings userSettings) => _userSettings = userSettings;
+    public MainWindowSettingsViewModel(UserSettings userSettings)
+    {
+        _userSettings = userSettings;
+        _width = userSettings.MainWindow.Width;
+        _height = userSettings.MainWindow.Height;
+    }
 
     public double Width
     {
-        get => _userSettings.MainWindow.Width;
+        get => _width;
         set
         {
             if (value < UiMetrics.MinMainWindowWidth || value > UiMetrics.MaxMainWindowWidth)
@@ -23,19 +32,13 @@ public class MainWindowSettingsViewModel : ViewModelBase
                 throw new ArgumentOutOfRangeException(nameof(value),
                     $"Width must be between {UiMetrics.MinMainWindowWidth} and {UiMetrics.MaxMainWindowWidth}.");
             }
-            if (_userSettings.MainWindow.Width != value)
-            {
-                _userSettings.MainWindow.Width = value;
-                _userSettings.Save();
-                UiMetrics.MainWindowWidth = value;
-                OnPropertyChanged();
-            }
+            SetProperty(ref _width, value);
         }
     }
 
     public double Height
     {
-        get => _userSettings.MainWindow.Height;
+        get => _height;
         set
         {
             if (value < UiMetrics.MinMainWindowHeight || value > UiMetrics.MaxMainWindowHeight)
@@ -43,13 +46,7 @@ public class MainWindowSettingsViewModel : ViewModelBase
                 throw new ArgumentOutOfRangeException(nameof(value),
                     $"Height must be between {UiMetrics.MinMainWindowHeight} and {UiMetrics.MaxMainWindowHeight}.");
             }
-            if (_userSettings.MainWindow.Height != value)
-            {
-                _userSettings.MainWindow.Height = value;
-                _userSettings.Save();
-                UiMetrics.MainWindowHeight = value;
-                OnPropertyChanged();
-            }
+            SetProperty(ref _height, value);
         }
     }
 
@@ -57,12 +54,14 @@ public class MainWindowSettingsViewModel : ViewModelBase
 
     private void Reset()
     {
-        _userSettings.MainWindow.Width = UiMetrics.DefaultMainWindowWidth;
-        _userSettings.MainWindow.Height = UiMetrics.DefaultMainWindowHeight;
-        _userSettings.Save();
-        UiMetrics.ApplyScaleFromSettings();
+        Width = UiMetrics.DefaultMainWindowWidth;
+        Height = UiMetrics.DefaultMainWindowHeight;
+    }
 
-        OnPropertyChanged(nameof(Width));
-        OnPropertyChanged(nameof(Height));
+    public void Save()
+    {
+        _userSettings.MainWindow.Width = _width;
+        _userSettings.MainWindow.Height = _height;
+        UiMetrics.ApplyScaleFromSettings();
     }
 }

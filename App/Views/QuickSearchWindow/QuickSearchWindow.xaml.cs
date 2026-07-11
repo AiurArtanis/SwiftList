@@ -158,6 +158,17 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
                     _trayService?.HandleTaskbarCreated();
                 return IntPtr.Zero;
             });
+
+            // This window is created once at startup and only ever Hidden, never Closed -- its
+            // DirectX composition surface stays alive for the whole process lifetime, which NVIDIA
+            // Advanced Optimus treats as "GPU in use" and refuses to hot-switch around (GitHub #82).
+            // Forcing software rendering on just this one window's HwndTarget avoids that, without
+            // touching SettingsWindow/SearchWindow/etc. (which are properly closed and don't trigger
+            // this). Opt-out setting since it costs this window its hardware acceleration.
+            if (!UserSettings.Load().EnableHardwareAcceleration && hwndSource.CompositionTarget is System.Windows.Interop.HwndTarget hwndTarget)
+            {
+                hwndTarget.RenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
+            }
         }
 
         if (ThemeManager.Instance.ActiveTheme != null)

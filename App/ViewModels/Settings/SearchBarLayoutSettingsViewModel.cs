@@ -5,69 +5,70 @@ using SwiftList.Core;
 
 namespace SwiftList.App.ViewModels.Settings;
 
+// Edits stage locally and only commit to _userSettings/UiMetrics when Save() runs (called from
+// GeneralSettingsViewModel.Apply()) -- see GeneralSettingsViewModel's class-level comment.
 public class SearchBarLayoutSettingsViewModel : ViewModelBase
 {
     private readonly UserSettings _userSettings;
+    private double _searchBarWidth;
+    private double _searchBarHeight;
+    private double _cornerRadius;
+    private double _resultIconSize;
+    // Reset() clears the quick window's remembered screen position -- there's no bound field for it
+    // (the window itself owns Left/Top), so this just stages the intent for Save() to commit.
+    private bool _resetPosition;
 
-    public SearchBarLayoutSettingsViewModel(UserSettings userSettings) => _userSettings = userSettings;
+    public SearchBarLayoutSettingsViewModel(UserSettings userSettings)
+    {
+        _userSettings = userSettings;
+        _searchBarWidth = userSettings.SearchWindow.SearchBarWidth;
+        _searchBarHeight = userSettings.SearchWindow.SearchBarHeight;
+        _cornerRadius = userSettings.SearchWindow.CornerRadius;
+        _resultIconSize = userSettings.SearchWindow.ResultIconSize;
+    }
 
     public double SearchBarWidth
     {
-        get => _userSettings.SearchWindow.SearchBarWidth;
+        get => _searchBarWidth;
         set
         {
             if (value < 300.0 || value > 1200.0)
             {
                 throw new ArgumentOutOfRangeException(nameof(value), "Width must be between 300 and 1200.");
             }
-            if (_userSettings.SearchWindow.SearchBarWidth != value)
-            {
-                _userSettings.SearchWindow.SearchBarWidth = value;
-                _userSettings.Save();
-                OnPropertyChanged();
-            }
+            SetProperty(ref _searchBarWidth, value);
         }
     }
 
     public double SearchBarHeight
     {
-        get => _userSettings.SearchWindow.SearchBarHeight;
+        get => _searchBarHeight;
         set
         {
             if (value < 45.0 || value > 120.0)
             {
                 throw new ArgumentOutOfRangeException(nameof(value), "Height must be between 45 and 120.");
             }
-            if (_userSettings.SearchWindow.SearchBarHeight != value)
-            {
-                _userSettings.SearchWindow.SearchBarHeight = value;
-                _userSettings.Save();
-                OnPropertyChanged();
-            }
+            SetProperty(ref _searchBarHeight, value);
         }
     }
 
     public double CornerRadius
     {
-        get => _userSettings.SearchWindow.CornerRadius;
+        get => _cornerRadius;
         set
         {
             if (value < 0.0 || value > 50.0)
             {
                 throw new ArgumentOutOfRangeException(nameof(value), "Corner radius must be between 0 and 50.");
             }
-            if (_userSettings.SearchWindow.CornerRadius != value)
-            {
-                _userSettings.SearchWindow.CornerRadius = value;
-                _userSettings.Save();
-                OnPropertyChanged();
-            }
+            SetProperty(ref _cornerRadius, value);
         }
     }
 
     public double ResultIconSize
     {
-        get => _userSettings.SearchWindow.ResultIconSize;
+        get => _resultIconSize;
         set
         {
             if (value < UiMetrics.MinQuickResultIconSize || value > UiMetrics.MaxQuickResultIconSize)
@@ -75,13 +76,7 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
                 throw new ArgumentOutOfRangeException(nameof(value),
                     $"Icon size must be between {UiMetrics.MinQuickResultIconSize} and {UiMetrics.MaxQuickResultIconSize}.");
             }
-            if (_userSettings.SearchWindow.ResultIconSize != value)
-            {
-                _userSettings.SearchWindow.ResultIconSize = value;
-                _userSettings.Save();
-                UiMetrics.QuickResultIconSize = value;
-                OnPropertyChanged();
-            }
+            SetProperty(ref _resultIconSize, value);
         }
     }
 
@@ -89,18 +84,25 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
 
     private void Reset()
     {
-        _userSettings.SearchWindow.SearchBarWidth = 632;
-        _userSettings.SearchWindow.SearchBarHeight = 70;
-        _userSettings.SearchWindow.CornerRadius = 12;
-        _userSettings.SearchWindow.ResultIconSize = 42;
-        _userSettings.SearchWindow.Left = null;
-        _userSettings.SearchWindow.Top = null;
-        _userSettings.Save();
-        UiMetrics.ApplyScaleFromSettings();
+        SearchBarWidth = 632;
+        SearchBarHeight = 70;
+        CornerRadius = 12;
+        ResultIconSize = 42;
+        _resetPosition = true;
+    }
 
-        OnPropertyChanged(nameof(SearchBarWidth));
-        OnPropertyChanged(nameof(SearchBarHeight));
-        OnPropertyChanged(nameof(CornerRadius));
-        OnPropertyChanged(nameof(ResultIconSize));
+    public void Save()
+    {
+        _userSettings.SearchWindow.SearchBarWidth = _searchBarWidth;
+        _userSettings.SearchWindow.SearchBarHeight = _searchBarHeight;
+        _userSettings.SearchWindow.CornerRadius = _cornerRadius;
+        _userSettings.SearchWindow.ResultIconSize = _resultIconSize;
+        if (_resetPosition)
+        {
+            _userSettings.SearchWindow.Left = null;
+            _userSettings.SearchWindow.Top = null;
+            _resetPosition = false;
+        }
+        UiMetrics.ApplyScaleFromSettings();
     }
 }

@@ -32,6 +32,11 @@ public class UserSettings
     public bool AutoElevateIfAdmin { get; set; }
     public bool AutoCheckUpdates { get; set; } = true;
     public bool AutoSilentUpdate { get; set; } = false;
+    // Applied only to QuickSearchWindow (Window_Loaded), not process-wide -- see GitHub issue #82
+    // (NVIDIA Advanced Optimus GPU hot-switch blocked by this window's persistent DirectX composition
+    // surface, since it's created once at startup and only ever hidden, never closed). Requires a
+    // restart to take effect, since the window's HwndTarget.RenderMode is only set once at load.
+    public bool EnableHardwareAcceleration { get; set; } = true;
     public string LogLevel { get; set; } = "Info";
     public string PreferredLanguage { get; set; } = GetDefaultSystemLanguage();
     public string Theme { get; set; } = "Light";
