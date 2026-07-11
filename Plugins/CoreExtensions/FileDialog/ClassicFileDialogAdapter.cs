@@ -19,8 +19,14 @@ public class ClassicFileDialogAdapter : IFileDialogAdapter
         if (FindBreadcrumbParent(hwnd) != IntPtr.Zero)
             return false;
 
-        // Classic file dialog must have the standard file name control (ID 1152 / 0x480 or ID 1148 / 0x47C)
-        return GetDlgItem(hwnd, 1152) != IntPtr.Zero || GetDlgItem(hwnd, 1148) != IntPtr.Zero;
+        // Classic file dialog must have the standard file name control (ID 1152 / 0x480 or ID 1148 / 0x47C).
+        // Dialog control IDs are only unique within their own template, not across all of Windows --
+        // an unrelated #32770 dialog (e.g. Registry Editor's Find dialog) can coincidentally reuse one
+        // of these IDs for something else entirely. Also require a combo box, since every classic
+        // GetOpenFileName/GetSaveFileName dialog has at least a "Files of type" combo and a plain
+        // Find/search dialog never does -- two coincidences lining up at once is implausible.
+        var hasFileNameEdit = GetDlgItem(hwnd, 1152) != IntPtr.Zero || GetDlgItem(hwnd, 1148) != IntPtr.Zero;
+        return hasFileNameEdit && FindComboBox(hwnd) != IntPtr.Zero;
     }
 
     public string? GetCurrentPath(IntPtr hwnd) =>
@@ -218,6 +224,23 @@ public class ClassicFileDialogAdapter : IFileDialogAdapter
         {
             var subTree = FindTreeView(child);
             if (subTree != IntPtr.Zero) return subTree;
+            child = FindWindowEx(parent, child, null, null);
+        }
+        return IntPtr.Zero;
+    }
+
+    private static IntPtr FindComboBox(IntPtr parent)
+    {
+        var combo = FindWindowEx(parent, IntPtr.Zero, "ComboBox", null);
+        if (combo != IntPtr.Zero) return combo;
+        combo = FindWindowEx(parent, IntPtr.Zero, "ComboBoxEx32", null);
+        if (combo != IntPtr.Zero) return combo;
+
+        var child = FindWindowEx(parent, IntPtr.Zero, null, null);
+        while (child != IntPtr.Zero)
+        {
+            var subCombo = FindComboBox(child);
+            if (subCombo != IntPtr.Zero) return subCombo;
             child = FindWindowEx(parent, child, null, null);
         }
         return IntPtr.Zero;
