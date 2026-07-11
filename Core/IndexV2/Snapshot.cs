@@ -136,6 +136,25 @@ public sealed unsafe class Snapshot : IDisposable
         return into.Count;
     }
 
+    // Zero-decode alias access -- the span counterpart of GetAliases, for matching an alias's raw
+    // UTF-8 bytes via a caller-owned scratch buffer without materializing a string per alias.
+    // AliasEntryRange gives the [start, end) entry indices for a uid; AliasUtf8/AliasProviderId
+    // address one entry.
+    internal (int Start, int End) AliasEntryRange(int uid)
+    {
+        var starts = new ReadOnlySpan<int>(Section(SnapshotSection.AliasStarts), UniqueCount + 1);
+        return (starts[uid], starts[uid + 1]);
+    }
+
+    internal ReadOnlySpan<byte> AliasUtf8(int entry)
+    {
+        var entryOffsets = new ReadOnlySpan<uint>(Section(SnapshotSection.AliasEntryOffsets), Meta.AliasEntryCount + 1);
+        return new ReadOnlySpan<byte>(Section(SnapshotSection.AliasBlob) + entryOffsets[entry], (int)(entryOffsets[entry + 1] - entryOffsets[entry]));
+    }
+
+    internal byte AliasProviderId(int entry)
+        => new ReadOnlySpan<byte>(Section(SnapshotSection.AliasProviderIds), Meta.AliasEntryCount)[entry];
+
     // First (lowest) row holding this id, or -1; hard-link duplicates sit adjacent.
     public int FirstRowForId(UInt128 id)
     {
