@@ -4,14 +4,6 @@ internal readonly record struct FzfRank(int EntryIndex, int Score, ulong SortKey
 
 internal static class FzfResultRank
 {
-    public static FzfRank ForPathScheme(int entryIndex, ReadOnlySpan<char> text, FzfPatternResult match)
-    {
-        var point0 = ScorePoint(match.Score);
-        var point1 = PathnamePoint(text, match);
-        var point2 = LengthPoint(text);
-        return new FzfRank(entryIndex, match.Score, Pack(point1, point2, point0, 0));
-    }
-
     public static FzfRank ForDefaultScheme(int entryIndex, ReadOnlySpan<char> text, FzfPatternResult match)
     {
         var point0 = MatchPositionPoint(text, match);
@@ -33,10 +25,6 @@ internal static class FzfResultRank
             return compare;
         return left.EntryIndex.CompareTo(right.EntryIndex);
     }
-
-    public static int CompareKeyOnly(FzfRank left, FzfRank right) => left.SortKey.CompareTo(right.SortKey);
-
-    public static int CompareResults(SearchResult left, SearchResult right) => SearchResultRankComparer.Instance.Compare(left, right);
 
     private static ulong Pack(ushort point0, ushort point1, ushort point2, ushort point3) => point0 |
                ((ulong)point1 << 16) |
@@ -77,26 +65,6 @@ internal static class FzfResultRank
             return true;
 
         return char.IsLower(previous) && (char.IsUpper(current) || char.IsDigit(current));
-    }
-
-    private static ushort PathnamePoint(ReadOnlySpan<char> text, FzfPatternResult match)
-    {
-        if (!match.ValidOffsetFound)
-            return ushort.MaxValue;
-
-        var lastDelim = -1;
-        for (var i = text.Length - 1; i >= 0; i--)
-        {
-            if (text[i] == '/' || text[i] == '\\')
-            {
-                lastDelim = i;
-                break;
-            }
-        }
-
-        return lastDelim <= match.MinBegin
-            ? ClampToUShort(match.MinBegin - lastDelim)
-            : ushort.MaxValue;
     }
 
     private static ushort ClampToUShort(int value)

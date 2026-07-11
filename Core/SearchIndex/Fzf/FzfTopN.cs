@@ -53,12 +53,6 @@ internal sealed class FzfTopN
         _worstIndex = FindWorstIndexSIMD(_sortKeys, _count);
     }
 
-    public void AddRange(IEnumerable<FzfRank> ranks)
-    {
-        foreach (var rank in ranks)
-            Add(rank);
-    }
-
     // Merges this instance's retained entries into another -- lets parallel workers keep private,
     // bounded top-N sets and fold them together at the end instead of contending on one shared set.
     public void DrainInto(FzfTopN other)

@@ -163,41 +163,6 @@ internal sealed class FzfPattern
         return true;
     }
 
-    public bool TryGetSimpleFuzzyTerm(out FzfTerm term)
-    {
-        term = default;
-        if (TermSets.Length != 1)
-            return false;
-
-        var terms = TermSets[0].Terms;
-        if (terms.Length != 1)
-            return false;
-
-        term = terms[0];
-        return !term.Inverse && term.Kind == FzfTermKind.Fuzzy && term.Text.Length > 0;
-    }
-
-    public ulong GetQueryMask(out bool canFilter)
-    {
-        ulong mask = 0;
-        canFilter = true;
-        foreach (var set in TermSets)
-        {
-            if (set.Terms.Length > 1)
-            {
-                canFilter = false;
-                return 0;
-            }
-            foreach (var term in set.Terms)
-            {
-                if (term.Inverse)
-                    continue;
-                mask |= FzfAlgorithm.GetCharMask(term.Text);
-            }
-        }
-        return mask;
-    }
-
     private static FzfTermSet[] ParseTermSets(string query)
     {
         if (string.IsNullOrWhiteSpace(query))

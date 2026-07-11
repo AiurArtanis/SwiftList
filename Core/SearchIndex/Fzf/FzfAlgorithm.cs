@@ -54,12 +54,6 @@ internal static class FzfAlgorithm
             _ => FzfMatchResult.NoMatch
         };
 
-    public static FzfMatchResult FuzzyMatchV1(ReadOnlySpan<char> text, string pattern, bool caseSensitive, FzfScoringScheme scheme) => FzfFuzzyMatcher.FuzzyMatchV1(text, pattern, caseSensitive, scheme);
-
-    public static bool CharsEqual(char text, char pattern, bool caseSensitive) => FzfCharTables.CharsEqual(text, pattern, caseSensitive);
-
-    public static char NormalizeChar(char c, bool caseSensitive) => caseSensitive ? c : FzfCharTables.ToLower(c);
-
     public static int BonusFor(CharClass previous, CharClass current, FzfScoringScheme scheme)
     {
         if (current >= CharClass.NonWord)
