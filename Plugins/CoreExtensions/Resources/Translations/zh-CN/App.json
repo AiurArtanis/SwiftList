@@ -163,7 +163,7 @@
   "General_AutoElevate": "以管理员权限启动热键监听进程 (解决高权限窗口下快捷键失效)",
   "General_AutoCheckUpdates": "启动时自动检查更新",
   "General_AutoSilentUpdate": "自动静默更新 (检测到新版本时)",
-  "General_HardwareAcceleration": "启用快速搜索窗口的硬件加速 (需重启程序)",
+  "General_HardwareAcceleration": "启用硬件加速 (需重启程序)",
   "General_LogLevel": "日志等级",
   "General_LangSelect": "界面语言",
   "General_ThemeSelect": "界面主题",

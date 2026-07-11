@@ -163,7 +163,7 @@
   "General_AutoElevate": "Run the hotkey listener process as Administrator (fixes hotkeys not working under elevated windows)",
   "General_AutoCheckUpdates": "Auto check for updates on startup",
   "General_AutoSilentUpdate": "Auto silent update (when new version is detected)",
-  "General_HardwareAcceleration": "Enable hardware acceleration for the quick search window (requires restart)",
+  "General_HardwareAcceleration": "Enable hardware acceleration (requires restart)",
   "General_LogLevel": "Log Level",
   "General_LangSelect": "Interface Language",
   "General_ThemeSelect": "Interface Theme",
