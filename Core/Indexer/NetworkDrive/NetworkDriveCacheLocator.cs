@@ -11,7 +11,7 @@ internal static class NetworkDriveCacheLocator
 
     // IndexV2's single-file snapshot, keyed by the same UNC/fallback identity as the legacy trio.
     public static string GetV2Path(string drive)
-        => FileRecordStoreSerializer.GetBasePath(Path.Combine(Logger.UserDataDir, "indexes"), GetStorageKeyOrFallback(drive)) + ".idx2";
+        => FileRecordStoreSerializer.GetBasePath(Path.Combine(Logger.UserDataDir, "indexes"), GetStorageKeyOrFallback(drive)) + ".idx";
 
     public static bool HasCache(string drive)
     {
@@ -19,7 +19,7 @@ internal static class NetworkDriveCacheLocator
         if (key == null)
             return false;
         var cacheDir = Path.Combine(Logger.UserDataDir, "indexes");
-        return File.Exists(FileRecordStoreSerializer.GetBasePath(cacheDir, key) + ".idx2") || FileRecordStoreSerializer.Exists(cacheDir, key);
+        return File.Exists(FileRecordStoreSerializer.GetBasePath(cacheDir, key) + ".idx") || FileRecordStoreSerializer.Exists(cacheDir, key);
     }
 
     public static IReadOnlyList<string> GetCachedDrives()
@@ -52,7 +52,7 @@ internal static class NetworkDriveCacheLocator
         if (storageKey == null)
             return;
         var cacheDir = Path.Combine(Logger.UserDataDir, "indexes");
-        TryDelete(FileRecordStoreSerializer.GetBasePath(cacheDir, storageKey) + ".idx2");
+        TryDelete(FileRecordStoreSerializer.GetBasePath(cacheDir, storageKey) + ".idx");
         FileRecordStoreSerializer.Delete(cacheDir, storageKey);
     }
 
@@ -64,7 +64,7 @@ internal static class NetworkDriveCacheLocator
             return false;
 
         var cacheDir = Path.Combine(Logger.UserDataDir, "indexes");
-        var v2Path = FileRecordStoreSerializer.GetBasePath(cacheDir, storageKey) + ".idx2";
+        var v2Path = FileRecordStoreSerializer.GetBasePath(cacheDir, storageKey) + ".idx";
         if (!File.Exists(v2Path))
             return false; // no legacy-cache migration -- caller does a full fresh rebuild instead
 
@@ -108,7 +108,7 @@ internal static class NetworkDriveCacheLocator
         // real UNC) and would resolve to a filename nothing was ever saved under, silently orphaning
         // the cache on delete/reload.
         var fallbackKey = BuildFallbackStorageKey(normalizedDrive);
-        if (File.Exists(FileRecordStoreSerializer.GetBasePath(cacheDir, fallbackKey) + ".idx2") || FileRecordStoreSerializer.Exists(cacheDir, fallbackKey))
+        if (File.Exists(FileRecordStoreSerializer.GetBasePath(cacheDir, fallbackKey) + ".idx") || FileRecordStoreSerializer.Exists(cacheDir, fallbackKey))
             return fallbackKey;
 
         // Last resort for a drive/share that WAS connected when saved (so its cache's FileSystemType holds
@@ -119,7 +119,7 @@ internal static class NetworkDriveCacheLocator
         return fallback.SourceKey == null ? null : BuildStorageKey(fallback.FileSystemType);
     }
 
-    // Unifies legacy .meta and IndexV2 .idx2 summaries under one shape for discovery/fallback-key scans
+    // Unifies legacy .meta and IndexV2 .idx summaries under one shape for discovery/fallback-key scans
     // -- both formats carry the same fields, just via different readers.
     private readonly record struct StoreSummary(string SourceKey, string FileSystemType, FileRecordSourceKind SourceKind);
 
@@ -131,7 +131,7 @@ internal static class NetworkDriveCacheLocator
 
         var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var path in Directory.EnumerateFiles(cacheDir, "*.idx2"))
+        foreach (var path in Directory.EnumerateFiles(cacheDir, "*.idx"))
         {
             var storageKey = Path.GetFileNameWithoutExtension(path);
             if (string.IsNullOrWhiteSpace(storageKey) || !seenKeys.Add(storageKey))

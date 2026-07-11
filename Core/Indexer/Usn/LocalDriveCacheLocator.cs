@@ -7,15 +7,9 @@ internal static class LocalDriveCacheLocator
 
     // IndexV2's single-file snapshot, keyed by the same volume identity as the legacy .meta/.records/
     // .names trio (so a drive's cache "moves" from the old format to the new one without changing what
-    // identifies it). ".idx2" avoids any chance of colliding with the legacy Exists() check, which
+    // identifies it). ".idx" avoids any chance of colliding with the legacy Exists() check, which
     // requires all three legacy extensions.
-    public static string GetV2Path(string cacheDir, string drive) => FileRecordStoreSerializer.GetBasePath(cacheDir, GetRequiredCacheKey(drive)) + ".idx2";
-
-    public static bool HasV2Cache(string cacheDir, string drive)
-    {
-        var key = GetCacheKey(drive);
-        return key != null && File.Exists(FileRecordStoreSerializer.GetBasePath(cacheDir, key) + ".idx2");
-    }
+    public static string GetV2Path(string cacheDir, string drive) => FileRecordStoreSerializer.GetBasePath(cacheDir, GetRequiredCacheKey(drive)) + ".idx";
 
     public static bool HasCache(string cacheDir, string drive)
     {

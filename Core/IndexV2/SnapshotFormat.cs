@@ -17,7 +17,7 @@ internal enum SnapshotSection
 // the 16-byte UInt128 id columns) is naturally aligned.
 internal static class SnapshotFormat
 {
-    public const ulong Magic = 0x0032565844494C53; // "SLIDXV2\0" little-endian
+    public const ulong Magic = 0x0000005844494C53; // "SLIDX\0\0\0" little-endian
     public const int Version = 1;
     public const int SectionAlignment = 16;
 

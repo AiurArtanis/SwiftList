@@ -114,7 +114,7 @@ public static class UsnIndexerCacheExtensions
 
     // Opens a drive's V2 cache. No legacy v15 (.meta/.records/.names) migration -- a pre-V2 cache is
     // simply not found here, so the normal "no cache" path in the caller does a full fresh rebuild
-    // instead. Returns null if no .idx2 exists, it fails to open, or the volume identity has changed
+    // instead. Returns null if no .idx exists, it fails to open, or the volume identity has changed
     // since the cache was written (IsCurrentVolumeCache).
     private static (LiveIndex Live, UsnIndexer.DriveRuntimeMetadata Metadata)? TryOpenV2(string cacheDir, string drive)
     {
