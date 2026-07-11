@@ -178,28 +178,28 @@ public static class SnapshotWriter
             SnapshotFormat.FinishHeader(stream, meta);
             var offsets = SnapshotFormat.ComputeSectionOffsets(meta, out var totalLength);
 
-            WriteSection(stream, offsets, SnapshotSection.NameIds, MemoryMarshal.AsBytes<uint>(nameIds));
-            WriteSection(stream, offsets, SnapshotSection.Flags, MemoryMarshal.AsBytes<ushort>(flags));
-            WriteSection(stream, offsets, SnapshotSection.ParentIndexes, MemoryMarshal.AsBytes<int>(parentIndexes));
-            WriteSection(stream, offsets, SnapshotSection.UniqueMasks, MemoryMarshal.AsBytes<ulong>(CollectionsMarshal.AsSpan(masks)));
-            WriteSection(stream, offsets, SnapshotSection.NameOffsets, MemoryMarshal.AsBytes<uint>(CollectionsMarshal.AsSpan(nameOffsets)));
+            WriteSection(stream, offsets, SnapshotSection.NameIds, MemoryMarshal.AsBytes(nameIds));
+            WriteSection(stream, offsets, SnapshotSection.Flags, MemoryMarshal.AsBytes(flags));
+            WriteSection(stream, offsets, SnapshotSection.ParentIndexes, MemoryMarshal.AsBytes(parentIndexes));
+            WriteSection(stream, offsets, SnapshotSection.UniqueMasks, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(masks)));
+            WriteSection(stream, offsets, SnapshotSection.NameOffsets, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(nameOffsets)));
             WriteSection(stream, offsets, SnapshotSection.NameBlob, nameBlob.GetBuffer().AsSpan(0, (int)nameBlob.Length));
-            WriteSection(stream, offsets, SnapshotSection.Ids, MemoryMarshal.AsBytes<UInt128>(ids));
-            WriteSection(stream, offsets, SnapshotSection.Sizes, MemoryMarshal.AsBytes<long>(sizes));
-            WriteSection(stream, offsets, SnapshotSection.CreationTimes, MemoryMarshal.AsBytes<uint>(creation));
-            WriteSection(stream, offsets, SnapshotSection.LastWriteTimes, MemoryMarshal.AsBytes<uint>(lastWrite));
-            WriteSection(stream, offsets, SnapshotSection.LastAccessTimes, MemoryMarshal.AsBytes<uint>(lastAccess));
-            WriteSection(stream, offsets, SnapshotSection.ChildStarts, MemoryMarshal.AsBytes<int>(childStarts));
-            WriteSection(stream, offsets, SnapshotSection.Children, MemoryMarshal.AsBytes<int>(children));
-            WriteSection(stream, offsets, SnapshotSection.UidStarts, MemoryMarshal.AsBytes<int>(uidStarts));
-            WriteSection(stream, offsets, SnapshotSection.UidRows, MemoryMarshal.AsBytes<int>(uidRows));
-            WriteSection(stream, offsets, SnapshotSection.AliasStarts, MemoryMarshal.AsBytes<int>(CollectionsMarshal.AsSpan(aliasStarts)));
-            WriteSection(stream, offsets, SnapshotSection.AliasEntryOffsets, MemoryMarshal.AsBytes<uint>(CollectionsMarshal.AsSpan(aliasEntryOffsets)));
+            WriteSection(stream, offsets, SnapshotSection.Ids, MemoryMarshal.AsBytes(ids));
+            WriteSection(stream, offsets, SnapshotSection.Sizes, MemoryMarshal.AsBytes(sizes));
+            WriteSection(stream, offsets, SnapshotSection.CreationTimes, MemoryMarshal.AsBytes(creation));
+            WriteSection(stream, offsets, SnapshotSection.LastWriteTimes, MemoryMarshal.AsBytes(lastWrite));
+            WriteSection(stream, offsets, SnapshotSection.LastAccessTimes, MemoryMarshal.AsBytes(lastAccess));
+            WriteSection(stream, offsets, SnapshotSection.ChildStarts, MemoryMarshal.AsBytes(childStarts));
+            WriteSection(stream, offsets, SnapshotSection.Children, MemoryMarshal.AsBytes(children));
+            WriteSection(stream, offsets, SnapshotSection.UidStarts, MemoryMarshal.AsBytes(uidStarts));
+            WriteSection(stream, offsets, SnapshotSection.UidRows, MemoryMarshal.AsBytes(uidRows));
+            WriteSection(stream, offsets, SnapshotSection.AliasStarts, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(aliasStarts)));
+            WriteSection(stream, offsets, SnapshotSection.AliasEntryOffsets, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(aliasEntryOffsets)));
             WriteSection(stream, offsets, SnapshotSection.AliasProviderIds, CollectionsMarshal.AsSpan(aliasProviderIds));
             WriteSection(stream, offsets, SnapshotSection.AliasBlob, aliasBlob.GetBuffer().AsSpan(0, (int)aliasBlob.Length));
-            WriteSection(stream, offsets, SnapshotSection.OrphanRows, MemoryMarshal.AsBytes<int>(CollectionsMarshal.AsSpan(orphanRows)));
-            WriteSection(stream, offsets, SnapshotSection.OrphanFrns, MemoryMarshal.AsBytes<UInt128>(CollectionsMarshal.AsSpan(orphanFrns)));
-            WriteSection(stream, offsets, SnapshotSection.UniqueAsciiBits, MemoryMarshal.AsBytes<ulong>(asciiBits));
+            WriteSection(stream, offsets, SnapshotSection.OrphanRows, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(orphanRows)));
+            WriteSection(stream, offsets, SnapshotSection.OrphanFrns, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(orphanFrns)));
+            WriteSection(stream, offsets, SnapshotSection.UniqueAsciiBits, MemoryMarshal.AsBytes(asciiBits));
             stream.SetLength(totalLength);
         }
 

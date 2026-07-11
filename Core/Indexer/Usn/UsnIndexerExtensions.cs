@@ -161,14 +161,11 @@ public static class UsnIndexerExtensions
         var normalizedPath = PathHelpers.NormalizePath(path, Directory.Exists(path));
         var changed = false;
 
-        live.Mutate((snapshot, delta) =>
+        live.Mutate((snapshot, delta) => changed = changeType switch
         {
-            changed = changeType switch
-            {
-                WatcherChangeTypes.Deleted => DeltaPathApplier.ApplyDeleted(delta, normalizedPath),
-                WatcherChangeTypes.Renamed when !string.IsNullOrWhiteSpace(oldPath) => DeltaPathApplier.ApplyRenamed(delta, (UInt128)1, root, oldPath, normalizedPath),
-                _ => DeltaPathApplier.ApplyCreatedOrChanged(delta, (UInt128)1, root, normalizedPath),
-            };
+            WatcherChangeTypes.Deleted => DeltaPathApplier.ApplyDeleted(delta, normalizedPath),
+            WatcherChangeTypes.Renamed when !string.IsNullOrWhiteSpace(oldPath) => DeltaPathApplier.ApplyRenamed(delta, (UInt128)1, root, oldPath, normalizedPath),
+            _ => DeltaPathApplier.ApplyCreatedOrChanged(delta, (UInt128)1, root, normalizedPath),
         });
         if (!changed)
             return;

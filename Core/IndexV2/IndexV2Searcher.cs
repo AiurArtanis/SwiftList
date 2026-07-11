@@ -32,12 +32,9 @@ public static class IndexV2Searcher
         });
     }
 
-    public static void GetRecentFiles(LiveIndex index, string dirLower, uint cutoffUtc, List<SearchResult> candidates)
-    {
-        index.Read<object?>((snapshot, delta) =>
-        {
-            RecentFilesV2.CollectFromDirectory(snapshot, delta, dirLower, snapshot.SourceKey, cutoffUtc, candidates);
-            return null;
-        });
-    }
+    public static void GetRecentFiles(LiveIndex index, string dirLower, uint cutoffUtc, List<SearchResult> candidates) => index.Read<object?>((snapshot, delta) =>
+                                                                                                                               {
+                                                                                                                                   RecentFilesV2.CollectFromDirectory(snapshot, delta, dirLower, snapshot.SourceKey, cutoffUtc, candidates);
+                                                                                                                                   return null;
+                                                                                                                               });
 }

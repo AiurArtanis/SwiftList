@@ -25,7 +25,7 @@ internal sealed class FzfBytePattern
             for (var t = 0; t < terms.Length; t++)
             {
                 var text = terms[t].Text;
-                byte[]? bytes = Ascii.IsValid(text) ? Encoding.ASCII.GetBytes(text) : null;
+                var bytes = Ascii.IsValid(text) ? Encoding.ASCII.GetBytes(text) : null;
                 byteTerms[t] = new ByteTerm(terms[t].Kind, terms[t].Inverse, bytes, terms[t].CaseSensitive);
             }
             sets[s] = new ByteTermSet(byteTerms);
