@@ -24,7 +24,10 @@ internal static class PluginLoader
             if (!Directory.Exists(pluginsDir))
                 Directory.CreateDirectory(pluginsDir);
 
-            foreach (var dllFile in Directory.GetFiles(pluginsDir, "*.dll"))
+            // Recursive: a plugin with its own dependency DLLs can sit in its own subdirectory (they
+            // colocate with Assembly.LoadFrom's own implicit same-directory probing for dependency
+            // resolution) instead of every DLL needing to live flat in Plugins/ directly.
+            foreach (var dllFile in Directory.GetFiles(pluginsDir, "*.dll", SearchOption.AllDirectories))
             {
                 TryLoadAssembly(dllFile, registry);
             }

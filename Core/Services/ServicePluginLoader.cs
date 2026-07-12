@@ -35,7 +35,10 @@ public static class ServicePluginLoader
             // which would misattribute already-baked alias data tagged with the OLD ids (see
             // AliasProviderRegistry.ComputeProvidersFingerprint's own recompaction trigger, which
             // catches a genuine provider-set change but not pure reordering of an unchanged set).
-            var dllFiles = Directory.GetFiles(pluginsDir, "*.dll").OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToArray();
+            // Recursive: a plugin with its own dependency DLLs can sit in its own subdirectory (they
+            // colocate with Assembly.LoadFrom's own implicit same-directory probing for dependency
+            // resolution) instead of every DLL needing to live flat in Plugins/ directly.
+            var dllFiles = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.AllDirectories).OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToArray();
             foreach (var dllFile in dllFiles)
             {
                 try
