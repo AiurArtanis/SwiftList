@@ -92,19 +92,34 @@ internal sealed class SearchDispatchController
     private void RunEngineSearch(
         Action<string, string?, bool, int, int, Func<List<SearchResult>?, string?, List<AppSearchResult>>, Action<bool>, Action<List<AppSearchResult>, string, bool>, Action?, Func<bool>?> engineCall,
         string originalValue,
-        string cleanQuery) =>
+        string cleanQuery)
+    {
+        // A query token (e.g. "::bzsc") filters/reorders whatever candidate set it's handed in
+        // ComposeAndApplyAsync, AFTER this search already ran -- the usual 51/51 quick-window budget
+        // (and BuildQuickResults' own ~50-item display cap) exists to keep every ordinary keystroke
+        // cheap, but it means the token only ever sees a small, plain-filename-weighted slice of
+        // candidates. A common substring query (e.g. "1080") can fill that entire slice with matches
+        // that have nothing to do with the token's directory filter, so the real matches never even
+        // reach the token filter -- reported as "quick window returns nothing, main window finds 84".
+        // Widening the budget to match the main SearchWindow's own (already-proven-viable) limit, and
+        // skipping BuildQuickResults' display cap, only costs anything on the less-common token path.
+        var hasTokens = _queryTokens.Count > 0;
+        var fileLimit = hasTokens ? SearchViewModel.FullSearchFileLimit : 51;
+        var appLimit = hasTokens ? SearchViewModel.FullSearchAppLimit : 51;
+
         engineCall(
             cleanQuery,
             _getSearchScope(),
             _getIsInlineSearchContext(),
-            51,
-            51,
-            (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, cleanQuery, _getIsInlineSearchContext() ? null : _getSearchScope(), contextDir, _getIsInlineSearchContext(), originalValue),
+            fileLimit,
+            appLimit,
+            (resp, contextDir) => SearchResultMapper.BuildQuickResults(resp, cleanQuery, _getIsInlineSearchContext() ? null : _getSearchScope(), contextDir, _getIsInlineSearchContext(), originalValue, skipDisplayCap: hasTokens),
             state => _setIsSearching(state),
             (results, status, final) => ApplySearchResults(originalValue, results, status, final),
             HandleLocalServiceUnavailable,
             () => _getResultsCount() == 0
         );
+    }
 
     public void PerformSearch(string query)
     {

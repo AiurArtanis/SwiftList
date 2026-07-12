@@ -5,7 +5,13 @@ namespace SwiftList.App.ViewModels.Search;
 
 public static class SearchResultMapper
 {
-    public static List<AppSearchResult> BuildQuickResults(List<SearchResult>? fileResults, string query, string? scope, string? contextDirectory, bool isInlineWindow, string? rawQuery = null)
+    // skipDisplayCap: token mode (SearchDispatchController.ComposeAndApplyAsync) still applies its own
+    // final ~9-item cap AFTER filtering by the token, but needs the FULL ranked candidate set to filter
+    // over first -- capping to the usual ~50 here, before a "::xxx"/directory-segment token ever runs,
+    // silently drops the token's real matches whenever they don't also happen to be in the top ~50 by
+    // plain filename weight (e.g. a common substring like "1080" already fills that cap with unrelated
+    // files before the directory filter gets a chance to run at all).
+    public static List<AppSearchResult> BuildQuickResults(List<SearchResult>? fileResults, string query, string? scope, string? contextDirectory, bool isInlineWindow, string? rawQuery = null, bool skipDisplayCap = false)
     {
         var uiResults = new List<AppSearchResult>();
         // Instant-result plugins get the untouched raw text (keyword + any " :xxx" token suffix) rather
@@ -131,7 +137,7 @@ public static class SearchResultMapper
         // grouping anyway (see its own composition logic). Same two-tier shape as before (show
         // everything under 10 total, else pad to ~8 then allow up to 50 with a "N more" marker) --
         // just applied to the now-unified candidate list instead of only file results.
-        if (uiResults.Count + ranked.Count < 10)
+        if (skipDisplayCap || uiResults.Count + ranked.Count < 10)
         {
             foreach (var result in ranked)
             {
