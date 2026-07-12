@@ -21,7 +21,19 @@ public class FolderIndexSettingsItem : ViewModelBase, INetworkRowItem
     public ICommand RowActionCommand { get; set; } = null!;
     public bool AppliedEnabled { get; set; }
 
-    public string DisplayName => System.IO.Path.GetFileName(Path.TrimEnd('\\'));
+    // GetFileName returns "" for a bare UNC share root ("\\server\share") once any trailing separator
+    // is stripped down to nothing left to split on -- falling back to the full path (mirrors
+    // HistorySettingsViewModel.MapSearchEntry) means the row always shows something instead of a blank
+    // name a user can't tell apart from a rendering bug.
+    public string DisplayName
+    {
+        get
+        {
+            var trimmed = Path.TrimEnd('\\', '/');
+            var name = System.IO.Path.GetFileName(trimmed);
+            return string.IsNullOrEmpty(name) ? trimmed : name;
+        }
+    }
 
     public string State { get => _state; set => SetProperty(ref _state, value); }
     public string ItemCount { get => _itemCount; set => SetProperty(ref _itemCount, value); }

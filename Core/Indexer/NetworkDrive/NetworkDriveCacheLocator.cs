@@ -175,5 +175,7 @@ internal static class NetworkDriveCacheLocator
     private static string NormalizeUnc(string? unc)
         => string.IsNullOrWhiteSpace(unc)
             ? string.Empty
-            : unc.Trim().TrimEnd('\\').Replace('/', '\\');
+            // Replace before trim -- a '/'-terminated path (e.g. "\\server\share/") would otherwise
+            // survive TrimEnd('\\') untouched, since that only strips backslashes.
+            : unc.Trim().Replace('/', '\\').TrimEnd('\\');
 }
