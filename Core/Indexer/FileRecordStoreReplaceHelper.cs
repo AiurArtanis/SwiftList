@@ -2,24 +2,23 @@ namespace SwiftList.Core;
 
 internal static class FileRecordStoreReplaceHelper
 {
-    // No backup path -- File.Replace(..., destinationBackupFileName: null, ...) skips creating one
-    // entirely. The old snapshot was never actually meant to survive as a real backup (nothing ever
-    // reads one back), it was only ever a byproduct of File.Replace's own API shape, immediately
-    // deleted right after -- and that delete could fail if the old snapshot was still memory-mapped by
-    // an active Snapshot reader at that exact moment, leaving a stale "<name>.idx.bak" nothing would
-    // ever clean up (see SearchEngineInitializer.CleanupStaleBackupsIn, which sweeps up any left behind
-    // by an older build of this method). Passing null sidesteps the whole problem at the source.
-    public static void ReplaceWithRetry(string tempPath, string finalPath)
+    public static void ReplaceWithRetry(string tempPath, string finalPath, Action<string> tryDelete)
     {
         const int maxAttempts = 5;
+        var backupPath = finalPath + ".bak";
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             try
             {
                 if (File.Exists(finalPath))
-                    File.Replace(tempPath, finalPath, null, ignoreMetadataErrors: true);
+                {
+                    File.Replace(tempPath, finalPath, backupPath, ignoreMetadataErrors: true);
+                    tryDelete(backupPath);
+                }
                 else
+                {
                     File.Move(tempPath, finalPath, overwrite: true);
+                }
                 return;
             }
             catch (IOException) when (attempt < maxAttempts)
@@ -28,9 +27,25 @@ internal static class FileRecordStoreReplaceHelper
             }
         }
 
-        if (File.Exists(finalPath))
-            File.Replace(tempPath, finalPath, null, ignoreMetadataErrors: true);
-        else
-            File.Move(tempPath, finalPath, overwrite: true);
+        try
+        {
+            if (File.Exists(finalPath))
+            {
+                File.Replace(tempPath, finalPath, backupPath, ignoreMetadataErrors: true);
+                tryDelete(backupPath);
+            }
+            else
+            {
+                File.Move(tempPath, finalPath, overwrite: true);
+            }
+        }
+        catch
+        {
+            // Every attempt failed -- the caller already logs this (see
+            // NetworkIndexerPublisher.PublishCheckpoint's catch), so this only prevents tempPath from
+            // being orphaned forever once nothing else is ever going to retry it.
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+            throw;
+        }
     }
 }
