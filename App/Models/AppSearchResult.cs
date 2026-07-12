@@ -35,7 +35,7 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     // A row must be at least as tall as its own icon plus the row border's own vertical margin (see
     // UiMetrics.ResultRowVerticalMargin) -- otherwise the icon can exceed the row and either get clipped
     // or force it to overflow past its allotted layout space.
-    public double ItemHeight => IsSearchSectionHeader ? UiMetrics.SearchSectionHeaderHeight : (IsListItem ? UiMetrics.ListItemHeight : Math.Max(UiMetrics.SearchResultItemHeight, UiMetrics.ResultIconSize + UiMetrics.ResultRowVerticalMargin));
+    public double ItemHeight => IsSearchSectionHeader ? UiMetrics.SearchSectionHeaderHeight : (IsListItem ? UiMetrics.ListItemHeight : Math.Max(UiMetrics.SearchResultItemHeight, UiMetrics.ResultIconSize + UiMetrics.ResultRowVerticalMargin + UiMetrics.IconRowBreathingRoom));
 
     // Base visual metrics (inline/full windows use these — no scaling). A row with no path subtitle
     // gives its whole line-height budget to the name instead of splitting it with an empty second line.
@@ -45,7 +45,7 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
 
     // Scaled variants — bound only in the quick window, so it alone grows/shrinks with the
     // configured search box height.
-    public double ScaledItemHeight => IsSearchSectionHeader ? UiMetrics.ScaledSearchSectionHeaderHeight : (IsListItem ? UiMetrics.ScaledListItemHeight : Math.Max(UiMetrics.ScaledSearchResultItemHeight, UiMetrics.ScaledResultIconSize + UiMetrics.ResultRowVerticalMargin));
+    public double ScaledItemHeight => IsSearchSectionHeader ? UiMetrics.ScaledSearchSectionHeaderHeight : (IsListItem ? UiMetrics.ScaledListItemHeight : Math.Max(UiMetrics.ScaledSearchResultItemHeight, UiMetrics.ScaledResultIconSize + UiMetrics.ResultRowVerticalMargin + UiMetrics.IconRowBreathingRoom));
     public double ScaledNameFontSize => HasPathSubtitle ? UiMetrics.ScaledResultNameFontSize : UiMetrics.ScaledResultNameFontSizeSingleLine;
     public double ScaledPathFontSize => UiMetrics.ScaledResultPathFontSize;
     public double ScaledResultIconSize => UiMetrics.ScaledResultIconSize;

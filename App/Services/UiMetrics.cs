@@ -19,6 +19,16 @@ public static class UiMetrics
     // icon drives it past the base height still comes out a few pixels short of what actually renders.
     public const double ResultRowVerticalMargin = 4;
 
+    // Extra breathing room around the icon once it's what drives the row's height (icon larger than
+    // BaseSearchResultItemHeight - ResultRowVerticalMargin) -- at the DEFAULT icon size the row already
+    // has this much slack "for free" (51 - 42 = 9 = ResultRowVerticalMargin + this), but that slack was
+    // only ever a byproduct of the base height being a fixed constant, so it silently vanished to zero
+    // the moment a configured icon grew past the point where Math.Max's icon branch started winning --
+    // a bigger icon then had only the bare structural margin around it, reading as visibly cramped (#91
+    // follow-up). Baking the same slack in explicitly keeps it constant across every icon size instead
+    // of only at the default.
+    public const double IconRowBreathingRoom = 5;
+
     // Base font/icon metrics used by the search result item template. Name:Path is weighted 8:5 (~60:40)
     // when both lines show, tilting more toward the name than an even split while keeping the path line
     // (the smaller of the two) comfortably legible.
