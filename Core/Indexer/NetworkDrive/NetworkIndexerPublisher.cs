@@ -56,11 +56,29 @@ internal sealed class NetworkIndexerPublisher
     public void OnRefreshFinished(string drive, NetworkIndex index)
     {
         NetworkIndex? old;
+        bool stillTracked;
         lock (_gate)
         {
-            _indexes.TryGetValue(drive, out old);
-            _indexes[drive] = index;
-            _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "ready", index.Count, index, null);
+            // Mirrors SetStatus's guard: a scan already in flight when its drive got removed from config
+            // (Configure() deletes _statuses[drive] synchronously) must not resurrect it here, and must not
+            // re-attach a watcher below -- that watcher is what used to keep a disabled drive refreshing
+            // itself forever via file-system-change events, long after Configure() tore everything else down.
+            stillTracked = _statuses.ContainsKey(drive);
+            if (stillTracked)
+            {
+                _indexes.TryGetValue(drive, out old);
+                _indexes[drive] = index;
+                _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "ready", index.Count, index, null);
+            }
+            else
+            {
+                old = null;
+            }
+        }
+        if (!stillTracked)
+        {
+            index.Dispose();
+            return;
         }
         // Dispose OUTSIDE the lock: LiveIndex.Dispose() takes its own write lock and can briefly block
         // on an in-flight search holding its read lock -- doing that while holding _gate would stall
@@ -114,8 +132,11 @@ internal sealed class NetworkIndexerPublisher
                     // Cancel() is synchronous and its visibility to IsCancellationRequested is immediate, so
                     // if CancelDrive's revert has already run by the time this write would happen, this is
                     // guaranteed to observe it and back off instead of clobbering "cached" back to
-                    // "indexing" a moment after the user stopped it.
-                    if (token.IsCancellationRequested)
+                    // "indexing" a moment after the user stopped it. Also backs off if the drive was removed
+                    // from config entirely (mirrors OnRefreshFinished's guard) -- Configure() deletes
+                    // _statuses[drive] synchronously, and this checkpoint's own cancellation token may not
+                    // have tripped yet.
+                    if (token.IsCancellationRequested || !_statuses.ContainsKey(drive))
                         return;
                     _indexes.TryGetValue(drive, out var current);
                     _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "indexing", index.Count, current, null);
@@ -127,7 +148,7 @@ internal sealed class NetworkIndexerPublisher
                 NetworkIndex? old = null;
                 lock (_gate)
                 {
-                    if (token.IsCancellationRequested)
+                    if (token.IsCancellationRequested || !_statuses.ContainsKey(drive))
                         return;
                     _indexes.TryGetValue(drive, out old);
                     _indexes[drive] = index;

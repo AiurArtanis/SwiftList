@@ -54,6 +54,44 @@ public static class NetworkIndexerRecentFilesExtensions
             return index != null;
         }
 
+        // Folder-index entries (a local subfolder or a UNC share/subfolder) are keyed by their own full,
+        // uncollapsed path rather than a drive letter -- Path.GetPathRoot returns a UNC root like
+        // "\\server\share\" (root[0] is '\\', never a letter), which the drive-letter lookup below can
+        // never resolve, and even a letter-rooted local folder-index target ("C:\Users\Foo\Projects")
+        // isn't keyed by its bare drive letter either. Find the longest configured key `dir` actually
+        // falls under first, matching whole path segments only so "C:\Users\Foo" can't wrongly match
+        // "C:\Users\FooBar". Falls back to the bare-drive-letter lookup below for a whole mapped network
+        // drive, which is what NormalizeDrive collapses a real drive identity down to.
+        var trimmedDir = dir.TrimEnd('\\', '/');
+        NetworkIndex? bestMatch = null;
+        var bestKeyLength = -1;
+        lock (indexer.Gate)
+        {
+            foreach (var kvp in indexer._indexes)
+            {
+                var key = kvp.Key;
+                if (key.Length <= 2)
+                    continue;
+                var trimmedKey = key.TrimEnd('\\', '/');
+                if (!trimmedDir.StartsWith(trimmedKey, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (trimmedDir.Length > trimmedKey.Length
+                    && trimmedDir[trimmedKey.Length] != '\\' && trimmedDir[trimmedKey.Length] != '/')
+                    continue;
+                if (trimmedKey.Length > bestKeyLength)
+                {
+                    bestKeyLength = trimmedKey.Length;
+                    bestMatch = kvp.Value;
+                }
+            }
+        }
+        if (bestMatch != null)
+        {
+            index = bestMatch;
+            canonicalDirLower = trimmedDir.ToLowerInvariant();
+            return true;
+        }
+
         var root = Path.GetPathRoot(dir);
         if (string.IsNullOrEmpty(root) || !char.IsLetter(root[0]))
         {
