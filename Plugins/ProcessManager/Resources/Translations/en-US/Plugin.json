@@ -4,5 +4,7 @@
   "ProcessManager_Description": "Process Manager (ps)",
   "ProcessManager_Path": "Path",
   "ProcessManager_Window": "Window",
-  "ProcessManager_AccessDenied": "[Access Denied]"
+  "ProcessManager_AccessDenied": "[Access Denied]",
+  "ProcessManager_Config_TriggerKeywordLabel": "Trigger Keyword",
+  "ProcessManager_Config_TriggerKeywordDesc": "Type this keyword (optionally followed by a space and a search term) to trigger process search, e.g. the default \"ps\"."
 }

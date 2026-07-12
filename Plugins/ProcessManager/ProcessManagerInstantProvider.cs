@@ -8,6 +8,15 @@ public class ProcessManagerInstantProvider : IInstantResultProvider
 {
     public string Name => TranslationService.Get("ProcessManager_Name");
 
+    // Falls back to the default even if an empty string was already persisted before RequireNonEmpty
+    // started enforcing this at save time -- an empty keyword should never silently make this
+    // unreachable.
+    private static string GetTriggerKeyword()
+    {
+        var value = PluginSettingsService.GetSetting("SwiftList.Plugins.ProcessManager", "TriggerKeyword", "ps");
+        return string.IsNullOrWhiteSpace(value) ? "ps" : value;
+    }
+
     private static string GetProcessPath(Process proc)
     {
         try
@@ -25,17 +34,21 @@ public class ProcessManagerInstantProvider : IInstantResultProvider
         if (string.IsNullOrWhiteSpace(query))
             yield break;
 
+        var keyword = GetTriggerKeyword();
+        if (string.IsNullOrWhiteSpace(keyword))
+            yield break;
+
         var trimmed = query.Trim();
-        var isPsQuery = string.Equals(trimmed, "ps", StringComparison.OrdinalIgnoreCase) ||
-                        trimmed.StartsWith("ps ", StringComparison.OrdinalIgnoreCase);
+        var isPsQuery = string.Equals(trimmed, keyword, StringComparison.OrdinalIgnoreCase) ||
+                        trimmed.StartsWith(keyword + " ", StringComparison.OrdinalIgnoreCase);
 
         if (!isPsQuery)
             yield break;
 
         var searchTerm = "";
-        if (trimmed.StartsWith("ps ", StringComparison.OrdinalIgnoreCase))
+        if (trimmed.StartsWith(keyword + " ", StringComparison.OrdinalIgnoreCase))
         {
-            searchTerm = trimmed.Substring(3).Trim();
+            searchTerm = trimmed.Substring(keyword.Length + 1).Trim();
         }
 
         Process[] processes;
@@ -119,7 +132,7 @@ public class ProcessManagerInstantProvider : IInstantResultProvider
                 IconColor = hasRealIcon ? null : "AccentRed",
                 ActionType = "Execute",
                 ActionArgument = $"kill:{pid}",
-                TabCompletion = $"ps {processName}"
+                TabCompletion = $"{keyword} {processName}"
             };
         }
     }
@@ -127,11 +140,13 @@ public class ProcessManagerInstantProvider : IInstantResultProvider
     public bool[]? GetHighlightMask(string text, string query)
     {
         if (string.IsNullOrEmpty(query)) return null;
+        var keyword = GetTriggerKeyword();
+        if (string.IsNullOrWhiteSpace(keyword)) return null;
         var trimmed = query.Trim();
         var mask = new bool[text.Length];
-        if (!trimmed.StartsWith("ps ", StringComparison.OrdinalIgnoreCase)) return mask;
+        if (!trimmed.StartsWith(keyword + " ", StringComparison.OrdinalIgnoreCase)) return mask;
 
-        var searchTerm = trimmed.Substring(3).Trim();
+        var searchTerm = trimmed.Substring(keyword.Length + 1).Trim();
         if (string.IsNullOrEmpty(searchTerm)) return mask;
 
         var textLower = text.ToLowerInvariant();

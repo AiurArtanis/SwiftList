@@ -1,7 +1,9 @@
 {
   "Translation_ProviderName": "Bing 智能翻译",
   "Translation_PluginName": "Bing 智能翻译插件",
-  "Translation_PlaceholderTitle": "tr <待翻译文本>",
+  "Translation_PlaceholderTitle": "{0} <待翻译文本>",
   "Translation_PlaceholderDesc": "输入文本即可通过 Bing 翻译（自动识别源语言 ➔ 自动翻译为当前应用语言）",
-  "Translation_ResultDesc": "翻译自: {0} - 回车或单击复制结果"
+  "Translation_ResultDesc": "翻译自: {0} - 回车或单击复制结果",
+  "Translation_Config_TriggerKeywordLabel": "触发词",
+  "Translation_Config_TriggerKeywordDesc": "输入此关键字（后跟一个空格加待翻译文本）来触发翻译，例如默认的 \"tr\"。"
 }
