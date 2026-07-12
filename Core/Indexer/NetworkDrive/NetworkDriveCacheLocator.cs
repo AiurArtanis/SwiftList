@@ -77,12 +77,30 @@ internal static class NetworkDriveCacheLocator
 
     public static void Save(NetworkIndex index) => index.SaveToCache(GetCachePath(index.Drive));
 
+    // Memoizes the last successfully-resolved key per drive letter. GetCachePath is called fresh for
+    // EVERY write during a walk (each periodic checkpoint, plus the final save -- see
+    // NetworkIndex.FromStore), and GetUncPath is a live WNetGetConnection syscall that returns empty on
+    // any transient failure (disconnect, ERROR_NOT_CONNECTED, ...). Recomputing the key from scratch on
+    // every call meant a connection blip mid-walk flipped the destination between SHA256(unc) and
+    // SHA256(letter) -- two totally different hashes -- so different checkpoints of the SAME walk wrote
+    // to DIFFERENT files, and whichever one a later write abandoned was never revisited or cleaned up
+    // (see FileRecordStoreReplaceHelper). Only a SUCCESSFUL resolution updates the cache, so a real
+    // reconnect-to-a-different-share still gets picked up eventually; a transient blip just reuses
+    // whatever last resolved instead of computing a different fallback.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _resolvedKeyCache = new(StringComparer.OrdinalIgnoreCase);
+
     private static string GetStorageKeyOrFallback(string drive)
     {
         var unc = NetworkDriveResolver.GetUncPath(drive);
-        return !string.IsNullOrWhiteSpace(unc)
-            ? BuildStorageKey(unc)
-            : BuildFallbackStorageKey(IndexerHelper.NormalizeDrive(drive));
+        if (!string.IsNullOrWhiteSpace(unc))
+            return _resolvedKeyCache[drive] = BuildStorageKey(unc);
+
+        if (_resolvedKeyCache.TryGetValue(drive, out var cached))
+            return cached;
+
+        var fallback = BuildFallbackStorageKey(IndexerHelper.NormalizeDrive(drive));
+        _resolvedKeyCache[drive] = fallback;
+        return fallback;
     }
 
     private static string? TryResolveStorageKey(string drive)
