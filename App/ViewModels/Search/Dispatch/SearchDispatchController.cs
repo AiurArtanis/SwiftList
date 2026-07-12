@@ -22,6 +22,7 @@ internal sealed class SearchDispatchController
     private readonly Func<int> _getResultsCount;
 
     private IReadOnlyList<string> _queryTokens = Array.Empty<string>();
+    private bool _bypassExclusions;
 
     public SearchDispatchController(
         SearchExecutionEngine engine,
@@ -51,8 +52,10 @@ internal sealed class SearchDispatchController
 
     public void DispatchSearch(string value)
     {
-        var cleanQuery = SearchQuerySortParser.Strip(value, out var tokens);
+        var strippedTrailing = SearchQuerySortParser.Strip(value, out var tokens);
         _queryTokens = tokens;
+        var cleanQuery = SearchQuerySortParser.StripExclusionBypass(strippedTrailing, out var bypassExclusions);
+        _bypassExclusions = bypassExclusions;
 
         if (string.IsNullOrWhiteSpace(cleanQuery))
         {
@@ -90,7 +93,7 @@ internal sealed class SearchDispatchController
     // DispatchSearch (debounced) and PerformSearch (blocking) both resolve to the same set of
     // search parameters -- only which SearchExecutionEngine method runs them differs.
     private void RunEngineSearch(
-        Action<string, string?, bool, int, int, Func<List<SearchResult>?, string?, List<AppSearchResult>>, Action<bool>, Action<List<AppSearchResult>, string, bool>, Action?, Func<bool>?> engineCall,
+        Action<string, string?, bool, int, int, Func<List<SearchResult>?, string?, List<AppSearchResult>>, Action<bool>, Action<List<AppSearchResult>, string, bool>, Action?, Func<bool>?, bool> engineCall,
         string originalValue,
         string cleanQuery)
     {
@@ -117,7 +120,8 @@ internal sealed class SearchDispatchController
             state => _setIsSearching(state),
             (results, status, final) => ApplySearchResults(originalValue, results, status, final),
             HandleLocalServiceUnavailable,
-            () => _getResultsCount() == 0
+            () => _getResultsCount() == 0,
+            _bypassExclusions
         );
     }
 
@@ -157,8 +161,10 @@ internal sealed class SearchDispatchController
             return;
         }
 
-        var cleanQuery = SearchQuerySortParser.Strip(query, out var tokens);
+        var strippedTrailing = SearchQuerySortParser.Strip(query, out var tokens);
         _queryTokens = tokens;
+        var cleanQuery = SearchQuerySortParser.StripExclusionBypass(strippedTrailing, out var bypassExclusions);
+        _bypassExclusions = bypassExclusions;
 
         if (string.IsNullOrWhiteSpace(cleanQuery))
         {

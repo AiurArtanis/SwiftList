@@ -24,4 +24,15 @@ public static class SearchQuerySortParser
         tokens = parts;
         return lastSpaceIndex >= 0 ? trimmed[..lastSpaceIndex] : string.Empty;
     }
+
+    // Strips a leading "*" -- the marker that opts one search out of the user's own exclusion rules
+    // (see SearchService.SearchStreamingAsync's bypassExclusions parameter). Callers must run this
+    // BEFORE the query is used for anything else (the actual search call, AND whatever gets stored as
+    // an AppSearchResult's SearchQuery for highlighting) -- the character itself is never part of the
+    // match/highlight text, only a query-string-level signal.
+    public static string StripExclusionBypass(string query, out bool bypassExclusions)
+    {
+        bypassExclusions = query.Length > 0 && query[0] == '*';
+        return bypassExclusions ? query[1..] : query;
+    }
 }

@@ -22,7 +22,8 @@ internal sealed class SearchExecutionEngine : IDisposable
         Action<bool> onSearchStateChanged,
         Action<List<AppSearchResult>, string, bool> onResultsUpdated,
         Action? onLocalServiceUnavailable = null,
-        Func<bool>? shouldEmitInstantResults = null)
+        Func<bool>? shouldEmitInstantResults = null,
+        bool bypassExclusions = false)
     {
         _debounceCts?.Cancel();
         _debounceCts?.Dispose();
@@ -32,7 +33,7 @@ internal sealed class SearchExecutionEngine : IDisposable
         var delay = string.IsNullOrEmpty(query) || query.Length <= 1 ? 0 : (fileLimit > 100 ? 150 : 30);
         if (delay == 0)
         {
-            PerformSearch(query, searchScope, isInlineSearchContext, fileLimit, appLimit, resultMapper, onSearchStateChanged, onResultsUpdated, onLocalServiceUnavailable, shouldEmitInstantResults);
+            PerformSearch(query, searchScope, isInlineSearchContext, fileLimit, appLimit, resultMapper, onSearchStateChanged, onResultsUpdated, onLocalServiceUnavailable, shouldEmitInstantResults, bypassExclusions);
         }
         else
         {
@@ -40,7 +41,7 @@ internal sealed class SearchExecutionEngine : IDisposable
             {
                 if (t.IsCanceled) return;
                 _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                    PerformSearch(query, searchScope, isInlineSearchContext, fileLimit, appLimit, resultMapper, onSearchStateChanged, onResultsUpdated, onLocalServiceUnavailable, shouldEmitInstantResults)));
+                    PerformSearch(query, searchScope, isInlineSearchContext, fileLimit, appLimit, resultMapper, onSearchStateChanged, onResultsUpdated, onLocalServiceUnavailable, shouldEmitInstantResults, bypassExclusions)));
             }, cts.Token);
         }
     }
@@ -55,7 +56,8 @@ internal sealed class SearchExecutionEngine : IDisposable
         Action<bool> onSearchStateChanged,
         Action<List<AppSearchResult>, string, bool> onResultsUpdated,
         Action? onLocalServiceUnavailable = null,
-        Func<bool>? shouldEmitInstantResults = null)
+        Func<bool>? shouldEmitInstantResults = null,
+        bool bypassExclusions = false)
     {
         Logger.Log($"[SearchExecutionEngine] Performing search: '{query}', scope: '{searchScope}'", LogLevel.Debug);
         CancelPendingSearch();
@@ -110,9 +112,9 @@ internal sealed class SearchExecutionEngine : IDisposable
                         if (!string.IsNullOrEmpty(contextDirectory))
                         {
                             localSearchTask = ExplorerSearchHelper.SearchLocalMatchesAsync(
-                                _searchService, query, fileLimit, appLimit, contextDirectory, localMatches, token);
+                                _searchService, query, fileLimit, appLimit, contextDirectory, localMatches, token, bypassExclusions);
                         }
-                        await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, fileLimit, appLimit, resultMapper, searchVersion, onResultsUpdated, token, localMatches, localSearchTask, onLocalServiceUnavailable);
+                        await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, fileLimit, appLimit, resultMapper, searchVersion, onResultsUpdated, token, localMatches, localSearchTask, onLocalServiceUnavailable, bypassExclusions);
                         return;
                     }
                     else
@@ -127,7 +129,7 @@ internal sealed class SearchExecutionEngine : IDisposable
                 }
                 var streamingScope = tracker.IsActiveWindowExplorer ? searchScope : null;
                 var streamingContextDirectory = isInlineSearchContext ? (!string.IsNullOrWhiteSpace(searchScope) ? searchScope : tracker.ActivePath ?? tracker.LastActiveExplorerPath) : tracker.LastActiveExplorerPath;
-                await PerformStreamingSearchAsync(query, streamingScope, streamingContextDirectory, isInlineSearchContext, fileLimit, appLimit, resultMapper, searchVersion, onResultsUpdated, token, null, null, onLocalServiceUnavailable);
+                await PerformStreamingSearchAsync(query, streamingScope, streamingContextDirectory, isInlineSearchContext, fileLimit, appLimit, resultMapper, searchVersion, onResultsUpdated, token, null, null, onLocalServiceUnavailable, bypassExclusions);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -163,7 +165,8 @@ internal sealed class SearchExecutionEngine : IDisposable
         CancellationToken token,
         List<AppSearchResult>? localMatches = null,
         Task? localSearchTask = null,
-        Action? onLocalServiceUnavailable = null)
+        Action? onLocalServiceUnavailable = null,
+        bool bypassExclusions = false)
     {
         var streamedResponse = new List<SearchResult>();
         object responseLock = new();
@@ -257,7 +260,7 @@ internal sealed class SearchExecutionEngine : IDisposable
             {
                 onLocalServiceUnavailable?.Invoke();
             }
-        })));
+        })), bypassExclusions);
 
         token.ThrowIfCancellationRequested();
         if (localSearchTask != null)

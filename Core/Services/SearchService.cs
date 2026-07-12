@@ -37,19 +37,16 @@ public class SearchService : IDisposable
         if (resp.Kind == PipeResponseKind.Error) Logger.Log($"[SearchService] CLEAR_PATH_CACHES failed: {resp.Message}", LogLevel.Error);
     }
 
-    public async Task<bool> SearchStreamingAsync(string query, int maxResults, int maxAppResults, string? directoryFilter, Action<SearchResult> onResult, CancellationToken token = default, Action? onLocalSearchFailed = null)
+    // bypassExclusions: opts this one search out of ExcludedPaths/IgnoredPathGlobs/IgnoredPathRegexes
+    // filtering. The caller is responsible for stripping whatever query-string marker triggers this
+    // (see SearchQuerySortParser.StripExclusionBypass) BEFORE calling here -- `query` itself is always
+    // matched/highlighted verbatim, so a caller must never pass the marker through as part of it. Only
+    // covers results that are already indexed (local NTFS/ReFS drives, plus whatever network/WSL data
+    // already made it into the index) -- content under an excluded network/WSL root was never indexed
+    // in the first place (WalkFilter skips it at build time), so this can't recover that without a live
+    // filesystem walk, which is deliberately out of scope here.
+    public async Task<bool> SearchStreamingAsync(string query, int maxResults, int maxAppResults, string? directoryFilter, Action<SearchResult> onResult, CancellationToken token = default, Action? onLocalSearchFailed = null, bool bypassExclusions = false)
     {
-        // A leading "*" opts a single search out of ExcludedPaths/IgnoredPathGlobs/IgnoredPathRegexes
-        // filtering -- stripped here, before it ever reaches the fzf pattern or highlight computation, so
-        // it's never treated as a literal match character. Only covers results that are already indexed
-        // (local NTFS/ReFS drives, plus whatever network/WSL data already made it into the index) --
-        // content under an excluded network/WSL root was never indexed in the first place (WalkFilter
-        // skips it at build time), so this can't recover that without a live filesystem walk, which is
-        // deliberately out of scope here.
-        var bypassExclusions = query.Length > 0 && query[0] == '*';
-        if (bypassExclusions)
-            query = query[1..];
-
         var exclusionRules = ExclusionRuleSet.From(UserSettings.Load());
         var fileCandidateLimit = Math.Clamp(maxResults * 4, maxResults, 2000);
 

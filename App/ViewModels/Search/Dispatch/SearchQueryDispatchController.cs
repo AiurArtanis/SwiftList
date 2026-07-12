@@ -42,8 +42,9 @@ internal sealed class SearchQueryDispatchController
 
     public void OnAdvancedQueryChanged(string query)
     {
-        var cleanQuery = SearchQuerySortParser.Strip(query, out var tokens);
+        var strippedTrailing = SearchQuerySortParser.Strip(query, out var tokens);
         _queryTokens = tokens;
+        var cleanQuery = SearchQuerySortParser.StripExclusionBypass(strippedTrailing, out var bypassExclusions);
 
         if (string.IsNullOrWhiteSpace(cleanQuery))
         {
@@ -103,7 +104,8 @@ internal sealed class SearchQueryDispatchController
                 if (final)
                     _setIsSearching(false);
             },
-            () => _serviceStatus.CheckServiceStatusOnStartup()
+            () => _serviceStatus.CheckServiceStatusOnStartup(),
+            bypassExclusions: bypassExclusions
         );
     }
 

@@ -12,7 +12,8 @@ public static class ExplorerSearchHelper
         int appLimit,
         string contextDirectory,
         List<AppSearchResult> localMatches,
-        CancellationToken token) => Task.Run(async () =>
+        CancellationToken token,
+        bool bypassExclusions = false) => Task.Run(async () =>
     {
         Logger.Log($"[ExplorerSearchHelper] Starting local search for query: '{query}' in scope: '{contextDirectory}'", LogLevel.Debug);
         var matchCount = 0;
@@ -25,7 +26,7 @@ public static class ExplorerSearchHelper
                     localMatches.Add(SearchResultMapper.CreateUiResult(result, query, localMatches.Count, isApplication: false, contextDirectory));
                     matchCount++;
                 }
-            }, token);
+            }, token, bypassExclusions: bypassExclusions);
             Logger.Log($"[ExplorerSearchHelper] Local search completed. Matches count: {matchCount}", LogLevel.Debug);
         }
         catch (OperationCanceledException)
