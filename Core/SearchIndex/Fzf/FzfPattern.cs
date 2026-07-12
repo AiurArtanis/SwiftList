@@ -40,6 +40,30 @@ internal sealed class FzfPattern
         return span <= Math.Max(queryLen * 3, 20) && aliasMatch.Score >= queryLen * 5;
     }
 
+    // Ranking-only refinement for choosing among several ACCEPTED alias candidates for the same name
+    // (never rejects -- IsAcceptableAliasMatch already gated that): fzf's raw score rewards total
+    // matched-character volume regardless of how loosely those characters are spread out, which
+    // structurally favors a longer query that happens to scatter across a wide span over a shorter
+    // query that lands as a clean, contiguous, zero-gap hit (e.g. a pinyin-initials query like "jtb"
+    // against its own dedicated initials alias, versus a coincidentally-matching longer subsequence of
+    // a different, longer alias for the same name -- see issue #89). Deliberately keyed off
+    // queryLen/span (span = MaxEnd-MinBegin, the same quantity IsAcceptableAliasMatch already uses)
+    // rather than queryLen/alias-length, so trailing alias content the query never reached (e.g. a name
+    // with more syllables than the user typed) is never penalized -- only genuine internal gaps between
+    // the query's own matched characters are. Pure arithmetic on already-computed fields, so unlike
+    // HighlightMask.ComputeWeight/FzfResultRank.ApplyWeight this is cheap enough to apply inline in the
+    // hot per-candidate scan rather than deferred to a bounded top-N refinement pass.
+    public FzfPatternResult WeightAliasMatch(FzfPatternResult aliasMatch, int queryLen)
+    {
+        if (!aliasMatch.ValidOffsetFound)
+            return aliasMatch;
+        var span = aliasMatch.MaxEnd - aliasMatch.MinBegin;
+        if (span <= queryLen)
+            return aliasMatch;
+        var weight = (double)queryLen / span;
+        return aliasMatch with { Score = (int)Math.Round(aliasMatch.Score * weight) };
+    }
+
     public static FzfPattern Parse(string query)
     {
         string? targetDrive = null;

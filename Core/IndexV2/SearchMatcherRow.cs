@@ -33,11 +33,14 @@ internal static class SearchMatcherRow
             if (disabledIds != null && disabledIds.Contains(providerId))
                 continue;
             if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, slab)
-                && pattern.IsAcceptableAliasMatch(aliasMatch, queryLen)
-                && (!matched || aliasMatch.Score > match.Score))
+                && pattern.IsAcceptableAliasMatch(aliasMatch, queryLen))
             {
-                matched = true;
-                match = aliasMatch;
+                var weighted = pattern.WeightAliasMatch(aliasMatch, queryLen);
+                if (!matched || weighted.Score > match.Score)
+                {
+                    matched = true;
+                    match = weighted;
+                }
             }
         }
         return matched;
@@ -58,11 +61,14 @@ internal static class SearchMatcherRow
             if (disabledIds != null && providerIds != null && j < providerIds.Length && disabledIds.Contains(providerIds[j]))
                 continue;
             if (pattern.TryMatch(aliases[j], out var aliasMatch, FzfScoringScheme.Default, slab)
-                && pattern.IsAcceptableAliasMatch(aliasMatch, queryLen)
-                && (!matched || aliasMatch.Score > result.Score))
+                && pattern.IsAcceptableAliasMatch(aliasMatch, queryLen))
             {
-                matched = true;
-                result = aliasMatch;
+                var weighted = pattern.WeightAliasMatch(aliasMatch, queryLen);
+                if (!matched || weighted.Score > result.Score)
+                {
+                    matched = true;
+                    result = weighted;
+                }
             }
         }
         return matched;

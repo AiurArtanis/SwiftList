@@ -256,11 +256,14 @@ internal static class SearchMatcher
                 hit = ctx.Pattern.TryMatch(worker.AliasScratch.AsSpan(0, written), out aliasMatch, FzfScoringScheme.Default, worker.Slab);
             }
 
-            if (hit && ctx.Pattern.IsAcceptableAliasMatch(aliasMatch, ctx.QueryLen)
-                && (!matched || aliasMatch.Score > best.Score))
+            if (hit && ctx.Pattern.IsAcceptableAliasMatch(aliasMatch, ctx.QueryLen))
             {
-                matched = true;
-                best = aliasMatch;
+                var weighted = ctx.Pattern.WeightAliasMatch(aliasMatch, ctx.QueryLen);
+                if (!matched || weighted.Score > best.Score)
+                {
+                    matched = true;
+                    best = weighted;
+                }
             }
         }
         return matched;
