@@ -39,6 +39,7 @@
                         </Trigger>
                         <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="Transparent"/>
+                            <Setter TargetName="AccentBar" Property="Fill" Value="Transparent"/>
                             <Setter Property="IsHitTestVisible" Value="False"/>
                             <Setter Property="Focusable" Value="False"/>
                         </DataTrigger>
@@ -48,6 +49,7 @@
                         <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="Transparent"/>
                             <Setter TargetName="ItemBorder" Property="Cursor" Value="Arrow"/>
+                            <Setter TargetName="AccentBar" Property="Fill" Value="Transparent"/>
                             <Setter Property="IsHitTestVisible" Value="False"/>
                             <Setter Property="Focusable" Value="False"/>
                         </DataTrigger>
@@ -99,11 +101,13 @@
                         </Trigger>
                         <DataTrigger Binding="{Binding IsSectionHeader}" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="Transparent"/>
+                            <Setter TargetName="AccentBar" Property="Fill" Value="Transparent"/>
                             <Setter Property="IsHitTestVisible" Value="False"/>
                             <Setter Property="Focusable" Value="False"/>
                         </DataTrigger>
                         <DataTrigger Binding="{Binding IsSeparator}" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="Transparent"/>
+                            <Setter TargetName="AccentBar" Property="Fill" Value="Transparent"/>
                             <Setter Property="IsHitTestVisible" Value="False"/>
                             <Setter Property="Focusable" Value="False"/>
                         </DataTrigger>
