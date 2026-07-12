@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace SwiftList.Plugins.OneCommander.Automation;
 
 /// <summary>
