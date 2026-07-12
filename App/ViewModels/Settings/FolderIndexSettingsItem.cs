@@ -21,17 +21,25 @@ public class FolderIndexSettingsItem : ViewModelBase, INetworkRowItem
     public ICommand RowActionCommand { get; set; } = null!;
     public bool AppliedEnabled { get; set; }
 
-    // GetFileName returns "" for a bare UNC share root ("\\server\share") once any trailing separator
-    // is stripped down to nothing left to split on -- falling back to the full path (mirrors
-    // HistorySettingsViewModel.MapSearchEntry) means the row always shows something instead of a blank
-    // name a user can't tell apart from a rendering bug.
+    // GetFileName returns "" for a bare UNC share root ("\\server\share") -- .NET's GetPathRoot treats
+    // the share itself as its own root (root.Length == path.Length), leaving nothing for GetFileName to
+    // peel off, unlike a real subfolder ("\\server\share\Sub" -> "Sub"). Manually take the last path
+    // segment in that case, so a share-root entry shows just "share" like any other row instead of the
+    // whole UNC string; only falls back to the full path (mirrors HistorySettingsViewModel.MapSearchEntry)
+    // if there's truly no segment to extract, so the row always shows something instead of going blank.
     public string DisplayName
     {
         get
         {
             var trimmed = Path.TrimEnd('\\', '/');
             var name = System.IO.Path.GetFileName(trimmed);
-            return string.IsNullOrEmpty(name) ? trimmed : name;
+            if (!string.IsNullOrEmpty(name))
+                return name;
+
+            var withoutLeadingSeparators = trimmed.TrimStart('\\', '/');
+            var sepIndex = withoutLeadingSeparators.LastIndexOfAny(new[] { '\\', '/' });
+            var lastSegment = sepIndex >= 0 ? withoutLeadingSeparators.Substring(sepIndex + 1) : withoutLeadingSeparators;
+            return string.IsNullOrEmpty(lastSegment) ? trimmed : lastSegment;
         }
     }
 
