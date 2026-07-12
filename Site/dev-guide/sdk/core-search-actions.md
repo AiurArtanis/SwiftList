@@ -55,8 +55,29 @@ interface IAliasProvider
     string Name { get; }
     bool CanHandle(string text);
     IEnumerable<string> GetAliases(string text);
+
+    int Version { get; } // default 1
+    int[]? MapAliasToSourceIndices(string text, string alias); // default null
+    void GetAliasesUtf8(string text, AliasByteSink dest); // default: adapts GetAliases
 }
 ```
+
+`Version`, `MapAliasToSourceIndices`, and `GetAliasesUtf8` are all default-implemented — most
+providers never need to touch them:
+
+- **`Version`**: bump it when this provider's output could change for the same input (an algorithm
+  fix, a new rule, an updated data table). The index uses it to detect that previously-generated
+  aliases from this provider are stale and need regenerating.
+- **`MapAliasToSourceIndices`**: lets a match found against an alias (e.g. which pinyin letters
+  matched) be translated back onto the original text for highlighting, instead of highlighting
+  nothing because the query never appears verbatim in the untransliterated text. Return `null`
+  (the default) if this alias wasn't produced by this provider for this text, or mapping isn't
+  supported — the host treats that as "can't highlight via this provider," not an error.
+- **`GetAliasesUtf8`**: byte-native variant used on the host's bulk indexing path, where aliases are
+  ultimately stored as UTF-8 bytes. The default implementation adapts `GetAliases`, so existing
+  providers work unchanged; only override it to skip string materialization entirely when your
+  provider generates a very high volume of aliases and that allocation cost actually shows up in
+  practice.
 
 ### `IQueryTokenProvider`
 

@@ -67,6 +67,35 @@ D:\Projects\SwiftList
 
 A trailing separator (`D:\Projects\`) searches the *contents* of that exact folder.
 
+## Filtering by folder name
+
+Add a trailing `::<text>` to a query to additionally require that the result's own name or one of
+its ancestor folders matches `<text>` (fuzzy, same matching — including pinyin — as everywhere
+else):
+
+```
+1080 ::wallpapers
+```
+
+finds files with `1080` in the name that live somewhere under a folder matching `wallpapers`,
+without needing to know or type the exact path. Combine multiple filters with a comma:
+`report ::2024,:final`.
+
+## Bypassing exclusion rules for one search
+
+Start a query with `*` to search past your own [exclusion rules](./settings/index-drives#exclusion-rules) —
+`ExcludedPaths`, ignored globs, and ignored regexes — just for that search, without changing your
+settings:
+
+```
+*node_modules
+```
+
+The `*` itself is stripped before matching, so it's never treated as part of the search text. This
+only reveals results that are already indexed; a folder that was *never* indexed in the first place
+(an excluded folder on a network or WSL drive) still won't appear. Hidden/system files stay filtered
+either way — this only affects your own exclusion-rule configuration.
+
 ## Chinese filenames: pinyin aliasing
 
 Filenames containing Chinese characters are automatically searchable by pinyin, with no setup

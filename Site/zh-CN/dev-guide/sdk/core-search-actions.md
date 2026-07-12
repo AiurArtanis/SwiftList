@@ -55,8 +55,25 @@ interface IAliasProvider
     string Name { get; }
     bool CanHandle(string text);
     IEnumerable<string> GetAliases(string text);
+
+    int Version { get; } // 默认 1
+    int[]? MapAliasToSourceIndices(string text, string alias); // 默认 null
+    void GetAliasesUtf8(string text, AliasByteSink dest); // 默认:内部转调 GetAliases
 }
 ```
+
+`Version`、`MapAliasToSourceIndices`、`GetAliasesUtf8` 都有默认实现——绝大多数 provider 都不需要
+碰它们:
+
+- **`Version`**:当这个 provider 对同一个输入的输出可能发生变化时(算法修复、新增规则、更新了数
+  据表)就把它加一。索引靠这个值判断这个 provider 之前生成的别名已经过期，需要重新生成。
+- **`MapAliasToSourceIndices`**:把命中别名的位置(比如命中了哪几个拼音字母)映射回原始文本上用
+  于高亮，否则因为查询词从没在未转写的原文里逐字出现过，就会完全高亮不出来。返回 `null`(默认
+  值)表示这个别名不是这个 provider 针对这段文本生成的，或者不支持映射——宿主会把这种情况当成
+  "这个 provider 高亮不了"，而不是错误。
+- **`GetAliasesUtf8`**:宿主批量建索引时用的字节原生版本，别名最终是按 UTF-8 字节存储的。默认实
+  现就是内部转调 `GetAliases`，所以现有的 provider 不用改也能正常工作；只有当你的 provider 生成
+  的别名量特别大、字符串分配开销确实成为实际瓶颈时，才需要重写它来完全跳过字符串具现化。
 
 ### `IQueryTokenProvider`
 
