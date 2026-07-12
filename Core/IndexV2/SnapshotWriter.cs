@@ -231,7 +231,7 @@ public static class SnapshotWriter
             stream.SetLength(totalLength);
         }
 
-        FileRecordStoreReplaceHelper.ReplaceWithRetry(temp, path, TryDelete);
+        FileRecordStoreReplaceHelper.ReplaceWithRetry(temp, path);
     }
 
     // First (lowest) row holding this id, or -1 -- hard-link duplicates sit adjacent after the sort.
@@ -259,17 +259,5 @@ public static class SnapshotWriter
     {
         stream.Position = offsets[(int)section];
         stream.Write(bytes);
-    }
-
-    private static void TryDelete(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch
-        {
-        }
     }
 }

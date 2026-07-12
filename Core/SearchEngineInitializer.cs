@@ -36,35 +36,10 @@ internal class SearchEngineInitializer
         _indexer.SetDriveStatuses(statuses);
     }
 
-    // FileRecordStoreReplaceHelper's atomic File.Replace briefly parks the old snapshot at
-    // "<name>.idx.bak" and deletes it right after -- best-effort, since the old snapshot can still be
-    // memory-mapped by an active Snapshot reader at that exact moment (see Snapshot.cs), so the delete
-    // can fail. Nothing else ever retries it, so a failed delete would otherwise sit there forever;
-    // sweeping at the start of every Run() (a fresh boot, or a later manual rebuild) catches whatever a
-    // prior generation's cleanup left behind.
-    private void CleanupStaleBackups()
-    {
-        try
-        {
-            if (!Directory.Exists(_indexCacheDir))
-                return;
-            foreach (var bak in Directory.EnumerateFiles(_indexCacheDir, "*.bak"))
-            {
-                try { File.Delete(bak); }
-                catch (Exception ex) { Logger.Log($"[SearchEngineInitializer] Failed to delete stale backup '{bak}': {ex.Message}", LogLevel.Debug); }
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[SearchEngineInitializer] Backup cleanup scan failed: {ex.Message}", LogLevel.Debug);
-        }
-    }
-
     public void Run(bool forceRebuild, CancellationTokenSource cts, Action<bool> onComplete)
     {
         try
         {
-            CleanupStaleBackups();
             var machineSettings = MachineSettings.Load();
             var detectedDrives = VolumeHelper.DetectIndexableLocalDrives();
             var enabledIds = new HashSet<string>(machineSettings.LocalDrives, StringComparer.OrdinalIgnoreCase);
