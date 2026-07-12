@@ -166,7 +166,20 @@ public class PluginConfigFieldViewModel : ViewModelBase
                 foreach (var item in en) { var s = item?.ToString()?.Trim(); if (!string.IsNullOrEmpty(s)) cleaned.Add(s); }
                 Settings.SetPluginSetting(PluginId, SchemaField.Key, cleaned);
             }
-            else Settings.SetPluginSetting(PluginId, SchemaField.Key, LocalValueStore);
+            else
+            {
+                // A RequireNonEmpty field (e.g. a trigger keyword) left blank in the UI would otherwise
+                // persist as "", silently making whatever depends on it unreachable rather than falling
+                // back to a sane default -- force the schema's own DefaultValue back in at save time.
+                var toSave = LocalValueStore;
+                if (SchemaField.RequireNonEmpty && (toSave == null || (toSave is string s && string.IsNullOrWhiteSpace(s))))
+                {
+                    toSave = SchemaField.DefaultValue;
+                    _localValueStore = toSave;
+                    OnPropertyChanged(nameof(Value));
+                }
+                Settings.SetPluginSetting(PluginId, SchemaField.Key, toSave);
+            }
         }
     }
 

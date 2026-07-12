@@ -27,6 +27,10 @@ public class PluginConfigField
     public List<PluginConfigField>? SubFields { get; set; }
     /// <summary>For Hotkey fields: when true, single keys without modifier keys (Ctrl/Alt/Shift/Win) are rejected.</summary>
     public bool RequireModifier { get; set; }
+    /// <summary>When true, saving this field with an empty/whitespace value falls back to <see cref="DefaultValue"/>
+    /// instead of persisting the empty value -- for a field like a trigger keyword, where an empty value would
+    /// silently make the depending feature unreachable rather than just "no value set".</summary>
+    public bool RequireNonEmpty { get; set; }
 }
 
 public class PluginConfigSchema
