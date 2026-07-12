@@ -24,18 +24,12 @@ public static class UiMetrics
     // (the smaller of the two) comfortably legible.
     public const double BaseResultNameFontSize = 16;
     public const double BaseResultPathFontSize = 10;
-    // A row with no path subtitle (applications, blank ParentDir) gives the whole name/path line-height
-    // budget to the name alone instead of splitting it with an empty second line. Matches
-    // BaseResultNameFontSize exactly rather than being bigger -- the size jump between single- and
-    // dual-line rows read as inconsistent (#65).
-    public const double BaseResultNameFontSizeSingleLine = 16;
     public const double BaseResultIconSize = 42; // fixed size for the main window
 
-    // Floors for the quick window's icon-relative font scaling (see ScaledResultNameFontSize etc.) --
+    // Floor for the quick window's icon-relative font scaling (see ScaledResultNameFontSize etc.) --
     // at the smallest configurable icon size, the raw ratio would shrink text well past legible.
-    public const double MinScaledResultNameFontSize = 12;
+    public const double MinScaledResultNameFontSize = 14;
     public const double MinScaledResultPathFontSize = 9;
-    public const double MinScaledResultNameFontSizeSingleLine = 14;
 
     // Fixed icon size for the inline window's own (more compact) row template
     // (App/Resources/DataTemplates/InlineSearchResult.xaml binds its Image to this, so the two never
@@ -153,8 +147,12 @@ public static class UiMetrics
     public static double SearchSectionHeaderHeight => BaseSearchSectionHeaderHeight;
     public static double MenuItemHeight => ListItemHeight * 0.8;
 
+    // A row with no path subtitle (applications, blank ParentDir) gives the whole name/path line-
+    // height budget to the name alone instead of splitting it with an empty second line -- shares
+    // BaseResultNameFontSize's value structurally (not just numerically) so a single-line row and a
+    // dual-line row's name can never drift apart again the way they did across #65 and #91.
     public static double ResultNameFontSize => BaseResultNameFontSize;
-    public static double ResultNameFontSizeSingleLine => BaseResultNameFontSizeSingleLine;
+    public static double ResultNameFontSizeSingleLine => BaseResultNameFontSize;
     public static double ResultPathFontSize => BaseResultPathFontSize;
     public static double ResultIconSize => BaseResultIconSize;
     public static double InlineResultIconSize => BaseInlineResultIconSize;
@@ -178,6 +176,6 @@ public static class UiMetrics
     private static double IconRelativeFontScale => ScaledResultIconSize / BaseResultIconSize;
 
     public static double ScaledResultNameFontSize => Math.Max(MinScaledResultNameFontSize, Math.Round(BaseResultNameFontSize * IconRelativeFontScale));
-    public static double ScaledResultNameFontSizeSingleLine => Math.Max(MinScaledResultNameFontSizeSingleLine, Math.Round(BaseResultNameFontSizeSingleLine * IconRelativeFontScale));
+    public static double ScaledResultNameFontSizeSingleLine => ScaledResultNameFontSize;
     public static double ScaledResultPathFontSize => Math.Max(MinScaledResultPathFontSize, Math.Round(BaseResultPathFontSize * IconRelativeFontScale));
 }
