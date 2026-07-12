@@ -28,7 +28,7 @@ public class UserSettings
     public List<string> BlacklistedProcesses { get; set; } = new();
     public bool EnableHistory { get; set; } = true;
     public bool EnableKeywordHistory { get; set; } = true;
-    public bool StartWithWindows { get; set; }
+    public bool StartWithWindows { get; set; } = true;
     public bool AutoElevateIfAdmin { get; set; }
     public bool AutoCheckUpdates { get; set; } = true;
     public bool AutoSilentUpdate { get; set; } = false;

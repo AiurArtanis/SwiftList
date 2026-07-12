@@ -190,6 +190,14 @@ public static class SnapshotWriter
             LastUpdated = store.LastUpdated,
         };
 
+        // FileStream(..., FileMode.Create) never creates missing parent directories itself -- on a truly
+        // fresh machine (no prior run has ever written here), %ProgramData%\SwiftList\indexes doesn't
+        // exist yet (only Logger.cs creates its own log directory, a separate sibling path), so the very
+        // first snapshot write of the session would otherwise fail with DirectoryNotFoundException.
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
+
         var temp = path + ".tmp";
         using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20))
         {
