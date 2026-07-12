@@ -59,6 +59,14 @@ public static class PluginLoaderHelper
             var configFields = new List<PluginConfigFieldViewModel>();
             TryLoadConfigFields(assembly, dllName, pluginInstance, userSettings, configFields);
 
+            // Skip assemblies that registered nothing at all -- a plugin's own bundled dependency DLL
+            // (e.g. Microsoft.Data.Sqlite.dll, SQLitePCLRaw.core.dll) now sits alongside it in its own
+            // Plugins/ subdirectory and gets loaded like any other .NET assembly there, but it never
+            // implements IPlugin/IConfigurable or registers any provider, so it has nothing to show or
+            // toggle here. Showing an empty card per dependency would just be noise.
+            if (components.Count == 0 && configFields.Count == 0)
+                continue;
+
             result.Add(new PluginInfoViewModel(pluginName, pluginVersion, dllName, sdkVersion, components, configFields));
         }
 
