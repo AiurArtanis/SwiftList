@@ -12,7 +12,9 @@
     <SolidColorBrush x:Key="TextPrimary" Color="#5C2D3A"/>
     <SolidColorBrush x:Key="TextSecondary" Color="#8C5866"/>
     <SolidColorBrush x:Key="AccentBlue" Color="#FF8DA1"/>
-    <SolidColorBrush x:Key="HoverBackground" Color="#FFF5F6"/>
+    <!-- #FFF5F6 duplicated ContentBg exactly (zero contrast on hover); using the theme's own
+         SidebarBg tone instead so a hovered row is actually visible. -->
+    <SolidColorBrush x:Key="HoverBackground" Color="#FFE4E8"/>
     <SolidColorBrush x:Key="SelectedBackground" Color="#FFC0CB"/>
     <SolidColorBrush x:Key="SeparatorBrush" Color="#FFE4E8"/>
     <SolidColorBrush x:Key="FolderIconColor" Color="#E58B88"/>
@@ -46,8 +48,11 @@
     <SolidColorBrush x:Key="SidebarAccent" Color="#D84C70"/>
     <SolidColorBrush x:Key="ContentBg" Color="#FFF5F6"/>
     <SolidColorBrush x:Key="HeaderBg" Color="#FFE4E8"/>
-    <SolidColorBrush x:Key="ItemHover" Color="#FFF5F6"/>
+    <SolidColorBrush x:Key="ItemHover" Color="#FFE4E8"/>
     <SolidColorBrush x:Key="ItemSelected" Color="#FFC0CB"/>
+    <!-- Dedicated accent-bar color: this theme's row-selection tint (#FFC0CB) is nearly identical to
+         its hover fill (#FFF5F6), so a thin bar in that color washes out. Reuses SidebarAccent instead. -->
+    <SolidColorBrush x:Key="AccentBarColor" Color="#D84C70"/>
     <SolidColorBrush x:Key="BorderColor" Color="#FFE4E8"/>
     <SolidColorBrush x:Key="AccentColor" Color="#FF8DA1"/>
     <SolidColorBrush x:Key="TextPrimary2" Color="#5C2D3A"/>

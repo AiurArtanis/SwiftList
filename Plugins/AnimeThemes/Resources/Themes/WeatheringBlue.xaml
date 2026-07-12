@@ -119,6 +119,9 @@
     <SolidColorBrush x:Key="AccentBlue" Color="#FF00A3E0"/> <!-- Sunshine Sky Blue -->
     <SolidColorBrush x:Key="HoverBackground" Color="#FFD5E7F3"/>
     <SolidColorBrush x:Key="SelectedBackground" Color="#FFBAD7EC"/>
+    <!-- Dedicated accent-bar color: this theme's row-selection tint (#BAD7EC) is nearly identical to
+         its hover fill (#D5E7F3), so a thin bar in that color washes out. Reuses SidebarAccent instead. -->
+    <SolidColorBrush x:Key="AccentBarColor" Color="#FF00A3E0"/>
     <SolidColorBrush x:Key="SeparatorBrush" Color="#FFBAD7EC"/>
     <SolidColorBrush x:Key="FolderIconColor" Color="#FFFAD02C"/> <!-- Sunlight Yellow -->
     <SolidColorBrush x:Key="FileIconColor" Color="#FF5C82A6"/>

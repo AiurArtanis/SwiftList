@@ -147,6 +147,9 @@
     <SolidColorBrush x:Key="AccentBlue" Color="#FF6B8B"/>
     <SolidColorBrush x:Key="HoverBackground" Color="#FFE5EC"/>
     <SolidColorBrush x:Key="SelectedBackground" Color="#FFC2D1"/>
+    <!-- Dedicated accent-bar color: this theme's row-selection tint (#FFC2D1) is nearly identical to
+         its hover fill (#FFE5EC), so a thin bar in that color washes out. Reuses SidebarAccent instead. -->
+    <SolidColorBrush x:Key="AccentBarColor" Color="#FF6B8B"/>
     <SolidColorBrush x:Key="SeparatorBrush" Color="#FFD6E0"/>
     <SolidColorBrush x:Key="FolderIconColor" Color="#FF6B8B"/>
     <SolidColorBrush x:Key="FileIconColor" Color="#8C536B"/>

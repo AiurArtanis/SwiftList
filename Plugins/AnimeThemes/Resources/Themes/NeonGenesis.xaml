@@ -93,8 +93,13 @@
     <SolidColorBrush x:Key="TextPrimary" Color="#FF39FF14"/> <!-- Neon Green -->
     <SolidColorBrush x:Key="TextSecondary" Color="#FFB688FF"/> <!-- Neon Light Violet -->
     <SolidColorBrush x:Key="AccentBlue" Color="#FF39FF14"/>
-    <SolidColorBrush x:Key="HoverBackground" Color="#FF311966"/>
+    <!-- Translucent (not opaque) to match this theme's glass/neon aesthetic: a fully opaque hover
+         fill reads as a flat slab against the glowing grid/scanline backdrop everywhere else. -->
+    <SolidColorBrush x:Key="HoverBackground" Color="#AA311966"/>
     <SolidColorBrush x:Key="SelectedBackground" Color="#FF6725C0"/>
+    <!-- Dedicated accent-bar color: this theme's row-selection tint is already high-contrast against
+         its hover fill, so the bar reuses it as-is. -->
+    <SolidColorBrush x:Key="AccentBarColor" Color="#FF6725C0"/>
     <SolidColorBrush x:Key="SeparatorBrush" Color="#FF4A2A80"/>
     <SolidColorBrush x:Key="FolderIconColor" Color="#FFFF5500"/> <!-- Neon Orange -->
     <SolidColorBrush x:Key="FileIconColor" Color="#FF00FFFF"/> <!-- Cyan -->
@@ -135,12 +140,12 @@
     <SolidColorBrush x:Key="HeaderColumnText" Color="#FFB688FF"/>
     <SolidColorBrush x:Key="WindowBorderBrush" Color="#FF39FF14"/>
     
-    <SolidColorBrush x:Key="SidebarHover" Color="#FF311966"/>
+    <SolidColorBrush x:Key="SidebarHover" Color="#AA311966"/>
     <SolidColorBrush x:Key="SidebarSelected" Color="#FF6725C0"/>
     <SolidColorBrush x:Key="SidebarText" Color="#FFB688FF"/>
     <SolidColorBrush x:Key="SidebarTextActive" Color="#FF39FF14"/>
     <SolidColorBrush x:Key="SidebarAccent" Color="#FF39FF14"/>
-    <SolidColorBrush x:Key="ItemHover" Color="#FF311966"/>
+    <SolidColorBrush x:Key="ItemHover" Color="#AA311966"/>
     <SolidColorBrush x:Key="ItemSelected" Color="#FF6725C0"/>
     <SolidColorBrush x:Key="BorderColor" Color="#FF4A2A80"/>
     <SolidColorBrush x:Key="AccentColor" Color="#FF39FF14"/>

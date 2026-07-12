@@ -48,6 +48,9 @@
     <SolidColorBrush x:Key="HeaderBg" Color="#150F28"/>
     <SolidColorBrush x:Key="ItemHover" Color="#1D123A"/>
     <SolidColorBrush x:Key="ItemSelected" Color="#FF007F"/>
+    <!-- Dedicated accent-bar color: this theme's row-selection tint is already high-contrast against
+         its hover fill, so the bar reuses it as-is. -->
+    <SolidColorBrush x:Key="AccentBarColor" Color="#FF007F"/>
     <SolidColorBrush x:Key="BorderColor" Color="#2A1B4E"/>
     <SolidColorBrush x:Key="AccentColor" Color="#00FFFF"/>
     <SolidColorBrush x:Key="TextPrimary2" Color="#00FFFF"/>
