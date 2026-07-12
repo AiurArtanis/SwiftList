@@ -3,22 +3,56 @@ using SwiftList.Core.SearchIndex.Fzf;
 namespace SwiftList.Core.SearchIndex;
 
 // The single "final highlight result" computation, shared by App's display highlighting
-// (TextHighlighter, via FuzzyMatcher.ComputeHighlightMask) and Core's ranking weight (below) --
-// same 3-tier fallback per term: literal substring, then alias-provider mapped positions (handles a
-// CJK name matched purely through pinyin, with zero literal character overlap with the query), then
-// FuzzyHighlightMatcher's DP fallback. Moved out of App/Converters/HighlightConverter.cs so ranking
-// can compute the exact same mask a user would see highlighted, rather than a cheaper independent
-// approximation that could disagree with it (e.g. score a pinyin-only match as 0% covered).
+// (TextHighlighter, via FuzzyMatcher.ComputeHighlightMask) and Core's ranking weight (below) -- same
+// per-term fallback: literal substring (every occurrence, for display) first, then the real
+// FuzzyMatchV2 backtrace run directly against the text itself (covers a plain scattered/non-contiguous
+// match with zero alias involvement, e.g. "chwx" against "China_White_X" -- previously the single
+// biggest cost here, since it used to fall all the way to a DP re-derivation for this very common
+// case), then a cheap greedy subsequence search against each alias-provider alias, mapped back onto the
+// source text (covers a CJK name matched purely through pinyin -- kept as a plain scan rather than the
+// real backtrace because a polyphonic name can expand to dozens of alias candidates and a synthetic
+// pinyin string has no word-boundary structure worth the real algorithm's bonus scoring; measured
+// slower overall to pay its DP cost that many times per candidate for no real accuracy gain).
 internal static class HighlightMask
 {
+    // One reusable DP scratch buffer per thread (mirrors SearchMatcher's per-worker Slab) -- a fresh
+    // FzfSlab starts with zero-length backing arrays, so allocating a new one per Compute/ComputeWeight
+    // call would re-grow every array on its very first use and gain nothing; caching it per thread lets
+    // repeated calls across many candidates (NameSearch's bounded refinement loop, PathGate's per-
+    // segment weight, ...) reuse the same already-grown buffers instead of re-allocating every time.
+    [ThreadStatic]
+    private static FzfSlab? _threadSlab;
+
+    private static FzfSlab RentSlab() => _threadSlab ??= new FzfSlab();
+
     public static bool[] Compute(string fullText, FzfPattern pattern)
     {
         var highlights = new bool[fullText.Length];
         if (fullText.Length == 0)
             return highlights;
 
-        var fullTextLower = fullText.ToLowerInvariant();
+        var materialized = fullText;
+        Mark(fullText, pattern, highlights, ref materialized, RentSlab());
+        return highlights;
+    }
 
+    // Ranking-facing: same computation, but works directly off a char span -- the (common) literal and
+    // direct-fuzzy tiers never materialize a string at all; a string is only built if some term needs
+    // the alias-provider tier, which requires the AliasProviderRegistry/IAliasProvider string APIs.
+    public static double ComputeWeight(ReadOnlySpan<char> fullText, FzfPattern pattern)
+    {
+        if (fullText.Length == 0)
+            return 0;
+
+        Span<bool> marks = fullText.Length <= 512 ? stackalloc bool[fullText.Length] : new bool[fullText.Length];
+        marks.Clear();
+        string? materialized = null;
+        Mark(fullText, pattern, marks, ref materialized, RentSlab());
+        return ComputeWeightFromMarks(marks);
+    }
+
+    private static void Mark(ReadOnlySpan<char> fullText, FzfPattern pattern, Span<bool> highlights, ref string? materialized, FzfSlab slab)
+    {
         foreach (var set in pattern.TermSets)
         {
             // First non-inverse term in the set that actually matches -- mirrors FzfPattern's own
@@ -28,65 +62,23 @@ internal static class HighlightMask
                 if (term.Inverse)
                     continue;
 
-                MarkTerm(fullText, fullTextLower, term.Text, term.CaseSensitive, highlights);
+                MarkTerm(fullText, term.Text, term.CaseSensitive, highlights, ref materialized, slab);
                 break;
             }
         }
-
-        return highlights;
     }
 
-    // Ranking-facing: same 3-tier computation, but works directly off a char span with no per-
-    // candidate string allocation in the common case -- tier 1 (literal substring) runs entirely on
-    // spans, and a lowercased string is only materialized if some term needs the alias/DP fallback
-    // tiers (which require the AliasProviderRegistry/FuzzyHighlightMatcher string-based APIs).
-    public static double ComputeWeight(ReadOnlySpan<char> fullText, FzfPattern pattern)
+    private static void MarkTerm(ReadOnlySpan<char> fullText, string term, bool caseSensitive, Span<bool> highlights, ref string? materialized, FzfSlab slab)
     {
-        if (fullText.Length == 0)
-            return 0;
+        var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        if (MarkLiteralSpan(fullText, term, comparison, highlights))
+            return;
 
-        Span<bool> marks = fullText.Length <= 512 ? stackalloc bool[fullText.Length] : new bool[fullText.Length];
-        marks.Clear();
-        string? fullTextLower = null;
+        if (FzfFuzzyMatcher.FuzzyMatchV2WithPositions(fullText, term, caseSensitive, FzfScoringScheme.Default, highlights, slab).IsMatch)
+            return;
 
-        foreach (var set in pattern.TermSets)
-        {
-            foreach (var term in set.Terms)
-            {
-                if (term.Inverse)
-                    continue;
-
-                var comparison = term.CaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-                var foundAny = MarkLiteralSpan(fullText, term.Text, comparison, marks);
-
-                if (!foundAny)
-                {
-                    fullTextLower ??= fullText.ToString().ToLowerInvariant();
-                    var termLower = term.CaseSensitive ? term.Text.ToLowerInvariant() : term.Text;
-                    if (!TryHighlightViaAliasProviders(fullTextLower, termLower, marks))
-                        FuzzyHighlightMatcher.MarkFuzzyMatch(fullTextLower, termLower, marks);
-                }
-
-                break;
-            }
-        }
-
-        return ComputeWeightFromMarks(marks);
-    }
-
-    private static void MarkTerm(string fullText, string fullTextLower, string term, bool caseSensitive, Span<bool> highlights)
-    {
-        var haystack = caseSensitive ? fullText : fullTextLower;
-        var foundAny = MarkLiteralSpan(haystack, term, StringComparison.Ordinal, highlights);
-
-        if (!foundAny)
-        {
-            var termLower = caseSensitive ? term.ToLowerInvariant() : term;
-            if (!TryHighlightViaAliasProviders(fullText, termLower, highlights))
-            {
-                FuzzyHighlightMatcher.MarkFuzzyMatch(fullTextLower, termLower, highlights);
-            }
-        }
+        materialized ??= fullText.ToString();
+        MarkViaAliasProviders(materialized, term, caseSensitive, highlights);
     }
 
     private static bool MarkLiteralSpan(ReadOnlySpan<char> haystack, ReadOnlySpan<char> needle, StringComparison comparison, Span<bool> highlights)
@@ -150,10 +142,20 @@ internal static class HighlightMask
         return percentage * consecutiveness;
     }
 
-    // Mirrors the per-term text->alias->source-index mapping the real name/alias match used, so a
-    // CJK name matched only through an alias (e.g. pinyin) still highlights (and scores) correctly.
-    private static bool TryHighlightViaAliasProviders(string text, string termLower, Span<bool> highlights)
+    // Mirrors FuzzyMatcher.IsMatch's own alias fallback (same provider iteration, same alias/'|'
+    // segment structure), mapping the matched positions back onto `text` via
+    // MapAliasToSourceIndices -- so a CJK name matched only through pinyin still highlights (and
+    // scores) even though the query never appears verbatim in the original text. Uses a plain greedy
+    // earliest-position subsequence search per alias rather than the real FuzzyMatchV2 backtrace:
+    // a polyphonic CJK name can expand to dozens of alias candidates here (PinyinAliasProvider allows
+    // up to 32 combinations), and unlike a real file/folder name a synthetic pinyin string has no
+    // camelCase/word-boundary structure for the real algorithm's bonus scoring to add value from -- so
+    // paying its full DP cost per candidate measured slower overall than this simpler scan, for a mask
+    // that (per real name/text) comes out effectively identical either way.
+    private static void MarkViaAliasProviders(string text, string term, bool caseSensitive, Span<bool> highlights)
     {
+        var termLower = caseSensitive ? term : term.ToLowerInvariant();
+
         foreach (var provider in AliasProviderRegistry.GetActiveProviders())
         {
             var matchedAny = false;
@@ -172,7 +174,7 @@ internal static class HighlightMask
                         if (string.IsNullOrEmpty(alias))
                             continue;
 
-                        var aliasLower = alias.ToLowerInvariant();
+                        var aliasLower = caseSensitive ? alias : alias.ToLowerInvariant();
                         var positions = FindSubsequencePositions(aliasLower, termLower);
                         if (positions == null)
                             continue;
@@ -196,21 +198,19 @@ internal static class HighlightMask
             }
             catch
             {
-                // Best-effort; fall through to the next provider (or the FuzzyHighlightMatcher
-                // fallback) rather than let one plugin's failure block highlighting entirely.
+                // Best-effort; fall through to the next provider rather than let one plugin's failure
+                // block highlighting entirely.
             }
 
             if (matchedAny)
-                return true;
+                return;
         }
-
-        return false;
     }
 
-    // Finds ANY valid subsequence alignment of `term` within `text` (both already lowercased),
-    // returning the matched positions in `text` in order, or null if no such subsequence exists.
-    // Greedy (always takes the earliest possible next position), which is enough for a highlight --
-    // this doesn't need the optimal/highest-scoring alignment, just a real one.
+    // Finds ANY valid subsequence alignment of `term` within `text`, returning the matched positions in
+    // `text` in order, or null if no such subsequence exists. Greedy (always takes the earliest possible
+    // next position), which is enough for a highlight/weight mask -- this doesn't need the optimal/
+    // highest-scoring alignment, just a real one.
     private static int[]? FindSubsequencePositions(string text, string term)
     {
         if (term.Length == 0)

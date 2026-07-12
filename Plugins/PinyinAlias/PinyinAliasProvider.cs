@@ -60,7 +60,7 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
 
         if (text.Length == 1)
         {
-            // Single character fallback (needed for FuzzyHighlightMatcher and single-character queries)
+            // Single character fallback (needed for single-character queries)
             if (PinyinEngine.TryGetPinyins(text[0], out var pinyins))
             {
                 foreach (var p in pinyins)
