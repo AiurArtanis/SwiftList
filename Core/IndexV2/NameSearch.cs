@@ -35,7 +35,7 @@ internal static class NameSearch
         var keep = Math.Max(limit * 8, 64);
         var scanKeep = matchAll || pattern.IsEmpty ? keep : Math.Min(keep * RefinementHeadroomFactor, RefinementScanCap);
         var topN = new FzfTopN(scanKeep);
-        CollectRanks(snapshot, delta, pattern, matchAll, directoryContext, rank => topN.Add(rank));
+        CollectRanks(snapshot, delta, pattern, matchAll, directoryContext, rank => topN.Add(rank), token);
 
         var ranks = topN.Finish(scanKeep);
         if (!matchAll && !pattern.IsEmpty)
@@ -127,7 +127,7 @@ internal static class NameSearch
         return path.StartsWith(ctx.FilterLower, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void CollectRanks(Snapshot snapshot, DeltaOverlay delta, FzfPattern pattern, bool matchAll, DirectoryContext ctx, Action<FzfRank> add)
+    private static void CollectRanks(Snapshot snapshot, DeltaOverlay delta, FzfPattern pattern, bool matchAll, DirectoryContext ctx, Action<FzfRank> add, CancellationToken token)
     {
         var membership = ctx.FilterLower != null ? new Dictionary<int, bool>() : null;
 
@@ -139,6 +139,8 @@ internal static class NameSearch
             var worker = SearchMatcher.RentWorker();
             for (var uid = 0; uid < snapshot.UniqueCount; uid++)
             {
+                if ((uid & 0xFFF) == 0)
+                    token.ThrowIfCancellationRequested();
                 var utf8 = snapshot.UniqueNameUtf8(uid);
                 if (utf8.Length == 0)
                     continue;
@@ -157,7 +159,7 @@ internal static class NameSearch
         else
         {
             var hits = SearchMatcher.RentHitList();
-            SearchMatcher.MatchUniques(snapshot, pattern, hits);
+            SearchMatcher.MatchUniques(snapshot, pattern, hits, token);
             foreach (var m in hits)
             {
                 foreach (var row in snapshot.RowsForUid(m.Uid))

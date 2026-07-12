@@ -121,16 +121,22 @@ internal static class SearchMatcher
         HitListPool.Add(list);
     }
 
-    internal static void MatchUniques(Snapshot snapshot, FzfPattern pattern, List<UniqueMatch> merged)
+    internal static void MatchUniques(Snapshot snapshot, FzfPattern pattern, List<UniqueMatch> merged, CancellationToken token = default)
     {
         var ctx = BuildContext(pattern);
         merged.Clear();
         var mergeLock = new object();
         var chunkCount = (snapshot.UniqueCount + ChunkSize - 1) / ChunkSize;
 
+        // A broad/low-selectivity query (e.g. a single character) can touch a large fraction of the
+        // whole unique-name table before this returns -- during normal rapid typing, every keystroke's
+        // scan used to run to completion regardless of whether a newer keystroke had already superseded
+        // it, piling up CPU contention across several abandoned scans at once. The CancellationToken
+        // here lets a superseded scan abort between chunks instead of always running to the end.
         Parallel.For(
             0,
             Math.Max(chunkCount, 1),
+            new ParallelOptions { CancellationToken = token },
             RentWorker,
             (chunk, _, worker) =>
             {

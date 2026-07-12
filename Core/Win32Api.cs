@@ -238,6 +238,15 @@ public static class Win32Api
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern bool SetProcessWorkingSetSize(IntPtr hProcess, IntPtr dwMinimumWorkingSetSize, IntPtr dwMaximumWorkingSetSize);
 
+    // Non-consuming pipe status check -- unlike PipeStream.IsConnected (a managed flag only updated by
+    // an actual Read/Write/Connect call), this queries the OS directly without touching the data stream,
+    // so a background watchdog can detect a broken/disconnected pipe while no read or write is in
+    // flight (e.g. while a long-running search scan holds the pipe idle on the server side).
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool PeekNamedPipe(SafeHandle hNamedPipe, IntPtr lpBuffer, int nBufferSize, IntPtr lpBytesRead, out int lpTotalBytesAvail, IntPtr lpBytesLeftThisMessage);
+
+    public const int ERROR_BROKEN_PIPE = 109;
+
     public static void TrimWorkingSet()
     {
         try
