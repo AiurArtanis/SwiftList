@@ -14,4 +14,5 @@
   <Project Path="Plugins/CustomCommands/CustomCommands.csproj" />
   <Project Path="Plugins/FileFilters/FileFilters.csproj" />
   <Project Path="Plugins/CustomActions/CustomActions.csproj" />
+  <Project Path="Plugins/BrowserData/BrowserData.csproj" />
 </Solution>
