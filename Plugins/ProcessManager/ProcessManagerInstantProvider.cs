@@ -149,17 +149,6 @@ public class ProcessManagerInstantProvider : IInstantResultProvider
         var searchTerm = trimmed.Substring(keyword.Length + 1).Trim();
         if (string.IsNullOrEmpty(searchTerm)) return mask;
 
-        var textLower = text.ToLowerInvariant();
-        var searchTermLower = searchTerm.ToLowerInvariant();
-
-        var idx = textLower.IndexOf(searchTermLower, StringComparison.Ordinal);
-        if (idx >= 0)
-        {
-            for (var i = idx; i < idx + searchTermLower.Length && i < mask.Length; i++)
-            {
-                mask[i] = true;
-            }
-        }
-        return mask;
+        return FuzzyMatchService.GetHighlightMask(text, searchTerm) ?? mask;
     }
 }

@@ -78,14 +78,10 @@ public class BrowserDataInstantProvider : IInstantResultProvider
         if (string.IsNullOrEmpty(query) || !TryStripKeyword(query, out var searchTerm) || searchTerm.Length == 0)
             return null;
 
-        var mask = new bool[text.Length];
-        var idx = text.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase);
-        if (idx >= 0)
-        {
-            for (var i = idx; i < idx + searchTerm.Length && i < mask.Length; i++)
-                mask[i] = true;
-        }
-        return mask;
+        // Same literal/fuzzy/alias tiers (including CJK pinyin) the host's own results highlight with --
+        // a plain literal IndexOf here would leave a title matched only through CollectMatches' fuzzy
+        // fallback (e.g. a Chinese title matched via pinyin initials) completely unhighlighted.
+        return FuzzyMatchService.GetHighlightMask(text, searchTerm) ?? new bool[text.Length];
     }
 
     // Cheap literal substring check first (no fzf-pattern parsing) covers the common case of typing a

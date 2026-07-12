@@ -60,16 +60,6 @@ public class CommandInstantProvider : IInstantResultProvider
         var mask = new bool[text.Length];
         if (string.IsNullOrEmpty(target)) return mask;
 
-        var textLower = text.ToLowerInvariant();
-        var targetLower = target.ToLowerInvariant();
-        var idx = textLower.IndexOf(targetLower, StringComparison.Ordinal);
-        if (idx >= 0)
-        {
-            for (var i = idx; i < idx + targetLower.Length && i < mask.Length; i++)
-            {
-                mask[i] = true;
-            }
-        }
-        return mask;
+        return FuzzyMatchService.GetHighlightMask(text, target) ?? mask;
     }
 }

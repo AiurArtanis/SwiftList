@@ -193,6 +193,10 @@ public class CustomCommandsInstantProvider : IInstantResultProvider
 
     public bool[]? GetHighlightMask(string text, string query)
     {
+        // Keyword and Title are independent user-authored fields (a command's Title can be any
+        // free-form description unrelated to its own Keyword's spelling) -- same situation as
+        // Translation's input/output mismatch, so this only highlights a literal keyword occurrence
+        // rather than risking a spurious pinyin/alias match against unrelated title text.
         if (string.IsNullOrEmpty(query)) return null;
         var parts = query.Split(new[] { ' ' }, 2);
         var keyword = parts[0];

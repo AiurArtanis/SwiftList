@@ -74,6 +74,11 @@ public class PluginManager : PluginRegistry
         // fallback) instead of reimplementing a fuzzy matcher of their own
         PluginSdk.Services.FuzzyMatchService.IsMatchFunc = FuzzyMatcher.IsMatch;
 
+        // Wire up the highlight-mask delegate so plugins share the exact same literal/fuzzy/alias
+        // highlighting tiers (including CJK pinyin) as the host's own results, instead of each
+        // reimplementing a literal-substring-only highlighter that misses fuzzy/alias matches
+        PluginSdk.Services.FuzzyMatchService.GetHighlightMaskFunc = FuzzyMatcher.ComputeHighlightMask;
+
         // Wire up the directory search delegate for plugins using CoreDirectoryIndexManager
         PluginSdk.Services.DirectoryIndexerService.SearchPluginDirectoriesFunc = async (pluginId, query, token) =>
         {

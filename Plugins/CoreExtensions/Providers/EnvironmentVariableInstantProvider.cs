@@ -205,18 +205,7 @@ public class EnvironmentVariableInstantProvider : IInstantResultProvider
 
             if (string.IsNullOrEmpty(searchTerm)) return mask;
 
-            var textLower = text.ToLowerInvariant();
-            var searchLower = searchTerm.ToLowerInvariant();
-
-            var idx = textLower.IndexOf(searchLower, StringComparison.Ordinal);
-            if (idx >= 0)
-            {
-                for (var i = idx; i < idx + searchLower.Length && i < mask.Length; i++)
-                {
-                    mask[i] = true;
-                }
-            }
-            return mask;
+            return FuzzyMatchService.GetHighlightMask(text, searchTerm) ?? mask;
         }
         else
         {

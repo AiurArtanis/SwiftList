@@ -178,16 +178,6 @@ public class WebSearchInstantProvider : IInstantResultProvider
         var searchTerm = query.Substring(prefix.Length).Trim();
         if (string.IsNullOrEmpty(searchTerm)) return mask;
 
-        var textLower = text.ToLowerInvariant();
-        var termLower = searchTerm.ToLowerInvariant();
-        var idx = textLower.IndexOf(termLower, StringComparison.Ordinal);
-        if (idx >= 0)
-        {
-            for (var i = idx; i < idx + termLower.Length && i < mask.Length; i++)
-            {
-                mask[i] = true;
-            }
-        }
-        return mask;
+        return FuzzyMatchService.GetHighlightMask(text, searchTerm) ?? mask;
     }
 }
