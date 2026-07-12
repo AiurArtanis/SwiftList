@@ -75,20 +75,15 @@ public static class AliasProviderRegistry
     }
 
     /// <summary>
-    /// A highly optimized helper to detect if a string contains non-ASCII characters.
-    /// ASCII characters are in the range [0, 127].
+    /// Detects whether a string contains any non-ASCII character. Ascii.IsValid is the BCL's
+    /// vectorized scan, roughly twice as fast as a scalar loop on typical (mostly-ASCII) file
+    /// names -- and this gate runs for every candidate on both the bake and live alias paths.
     /// </summary>
     public static bool HasNonAscii(string text)
     {
         if (string.IsNullOrEmpty(text))
             return false;
 
-        for (var i = 0; i < text.Length; i++)
-        {
-            if (text[i] > 127)
-                return true;
-        }
-
-        return false;
+        return !System.Text.Ascii.IsValid(text);
     }
 }

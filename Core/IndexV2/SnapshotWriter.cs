@@ -35,6 +35,7 @@ public static class SnapshotWriter
         var lastAccess = new uint[count];
 
         var uidByName = new Dictionary<string, int>(StringComparer.Ordinal);
+        var uniqueNames = new List<string>();
         var nameBlob = new MemoryStream();
         var nameOffsets = new List<uint> { 0 };
         var masks = new List<ulong>();
@@ -52,25 +53,9 @@ public static class SnapshotWriter
             {
                 uid = uidByName.Count;
                 uidByName[record.Name] = uid;
+                uniqueNames.Add(record.Name);
                 nameBlob.Write(SnapshotFormat.NameEncoding.GetBytes(record.Name));
                 nameOffsets.Add(checked((uint)nameBlob.Length));
-
-                aliasStarts.Add(aliasProviderIds.Count);
-                var mask = FzfAlgorithm.GetCharMask(record.Name);
-                var aliases = AliasGeneration.Generate(record.Name, out var providerIds);
-                if (aliases != null)
-                {
-                    // Union of name + alias chars: over-admits, never rejects a real match -- the
-                    // structural equivalent of the old engine bucketing rows under alias chars.
-                    for (var a = 0; a < aliases.Length; a++)
-                    {
-                        aliasBlob.Write(SnapshotFormat.NameEncoding.GetBytes(aliases[a]));
-                        aliasEntryOffsets.Add(checked((uint)aliasBlob.Length));
-                        aliasProviderIds.Add(providerIds[a]);
-                        mask |= FzfAlgorithm.GetCharMask(aliases[a]);
-                    }
-                }
-                masks.Add(mask);
             }
 
             nameIds[n] = (uint)uid;
@@ -84,6 +69,41 @@ public static class SnapshotWriter
                 totalDirs++;
             else
                 totalFiles++;
+        }
+
+        // Alias generation is per-name-independent and dominates full-rebuild CPU on CJK-heavy
+        // volumes, so it runs as a parallel pre-pass (byte-native via GetAliasesUtf8, no alias
+        // strings materialized); the blob writes below stay strictly serial in uid order, so the
+        // resulting snapshot bytes are identical to what the old inline serial loop produced.
+        var uniqueCount = uniqueNames.Count;
+        var uniqueMasks = new ulong[uniqueCount];
+        var aliasResults = new AliasGenerationUtf8.Result?[uniqueCount];
+        Parallel.For(0, uniqueCount, uid =>
+        {
+            // Union of name + alias chars: over-admits, never rejects a real match -- the
+            // structural equivalent of the old engine bucketing rows under alias chars.
+            var mask = FzfAlgorithm.GetCharMask(uniqueNames[uid]);
+            aliasResults[uid] = AliasGenerationUtf8.Generate(uniqueNames[uid], ref mask);
+            uniqueMasks[uid] = mask;
+        });
+
+        for (var uid = 0; uid < uniqueCount; uid++)
+        {
+            aliasStarts.Add(aliasProviderIds.Count);
+            var result = aliasResults[uid];
+            if (result != null)
+            {
+                var res = result.Value;
+                var offset = 0;
+                for (var s = 0; s < res.SegmentLengths.Length; s++)
+                {
+                    aliasBlob.Write(res.Bytes, offset, res.SegmentLengths[s]);
+                    offset += res.SegmentLengths[s];
+                    aliasEntryOffsets.Add(checked((uint)aliasBlob.Length));
+                    aliasProviderIds.Add(res.ProviderIds[s]);
+                }
+            }
+            masks.Add(uniqueMasks[uid]);
         }
         aliasStarts.Add(aliasProviderIds.Count);
 

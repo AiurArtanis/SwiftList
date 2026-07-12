@@ -3943,6 +3943,22 @@ public static class PinyinEngine
     private static readonly int MultiTableOffset;
     private static readonly int CharTableOffset;
 
+    // Pre-built one-element result arrays per syllable id: the (dominant) single-pronunciation
+    // lookup used to allocate a fresh string[1] on EVERY call, which at snapshot-bake volume is
+    // millions of allocations per rebuild for identical contents. A few hundred tiny arrays built
+    // once cover it. Callers must treat returned arrays as read-only (they are shared).
+    private static readonly string[][] SingleSyllableArrays;
+    // Same idea for polyphonic entries, keyed by the multi-table offset, built lazily on first
+    // lookup. Concurrent first lookups may build the same array twice; the reference store is
+    // atomic and both copies are identical, so last-write-wins is benign.
+    private static readonly string[]?[] MultiSyllableArrays;
+
+    // Byte-native mirrors for GetAliasesUtf8: syllables pre-encoded as (pure-ASCII) UTF-8, and
+    // id-array lookups so aliases can be assembled without touching syllable strings at all.
+    private static readonly byte[][] SyllableUtf8;
+    private static readonly ushort[][] SingleIdArrays;
+    private static readonly ushort[]?[] MultiIdArrays;
+
     static PinyinEngine()
     {
         var numSyllables = ReadUInt16(0);
@@ -3957,6 +3973,21 @@ public static class PinyinEngine
             Syllables[i] = System.Text.Encoding.UTF8.GetString(RawData, offset, len);
             offset += len;
         }
+
+        SingleSyllableArrays = new string[numSyllables][];
+        SyllableUtf8 = new byte[numSyllables][];
+        SingleIdArrays = new ushort[numSyllables][];
+        for (var i = 0; i < numSyllables; i++)
+        {
+            SingleSyllableArrays[i] = new[] { Syllables[i] };
+            SyllableUtf8[i] = System.Text.Encoding.ASCII.GetBytes(Syllables[i]);
+            SingleIdArrays[i] = new[] { (ushort)i };
+        }
+
+        // Multi-table entries live between MultiTableOffset and CharTableOffset; offsets into the
+        // table are in 16-bit units, so half the byte span bounds the distinct key space.
+        MultiSyllableArrays = new string[]?[(CharTableOffset - MultiTableOffset) / 2];
+        MultiIdArrays = new ushort[]?[(CharTableOffset - MultiTableOffset) / 2];
     }
 
     private static ushort ReadUInt16(int offset) => (ushort)(RawData[offset] | (RawData[offset + 1] << 8));
@@ -3996,19 +4027,84 @@ public static class PinyinEngine
 
         if (val < 0x8000)
         {
-            pinyins = new string[] { Syllables[val] };
+            pinyins = SingleSyllableArrays[val];
             return true;
         }
 
         var offset = val - 0x8000;
+        var cached = MultiSyllableArrays[offset];
+        if (cached != null)
+        {
+            pinyins = cached;
+            return true;
+        }
+
         var byteOffset = MultiTableOffset + offset * 2;
         int len = ReadUInt16(byteOffset);
-        pinyins = new string[len];
+        var built = new string[len];
         for (var i = 0; i < len; i++)
         {
             var syllableIdx = ReadUInt16(byteOffset + 2 + i * 2);
-            pinyins[i] = Syllables[syllableIdx];
+            built[i] = Syllables[syllableIdx];
         }
+        MultiSyllableArrays[offset] = built;
+        pinyins = built;
         return true;
     }
+
+    /// <summary>
+    /// Id-array counterpart of <see cref="TryGetPinyins"/> for byte-native alias assembly: returns
+    /// the syllable ids for <paramref name="c"/>, resolvable to UTF-8 via <see cref="GetSyllableUtf8"/>.
+    /// Returned arrays are shared and must be treated as read-only.
+    /// </summary>
+    public static bool TryGetPinyinIds(char c, out ushort[] ids)
+    {
+        var index = c - 12295;
+        if (index < 0 || index >= 28647)
+        {
+            ids = Array.Empty<ushort>();
+            return false;
+        }
+
+        var val = ReadUInt16(CharTableOffset + index * 2);
+        if (val == 0xFFFF)
+        {
+            ids = Array.Empty<ushort>();
+            return false;
+        }
+
+        if (val < 0x8000)
+        {
+            ids = SingleIdArrays[val];
+            return true;
+        }
+
+        var offset = val - 0x8000;
+        var cached = MultiIdArrays[offset];
+        if (cached != null)
+        {
+            ids = cached;
+            return true;
+        }
+
+        var byteOffset = MultiTableOffset + offset * 2;
+        int len = ReadUInt16(byteOffset);
+        var built = new ushort[len];
+        for (var i = 0; i < len; i++)
+            built[i] = ReadUInt16(byteOffset + 2 + i * 2);
+        MultiIdArrays[offset] = built;
+        ids = built;
+        return true;
+    }
+
+    /// <summary>The (pure-ASCII) UTF-8 bytes of syllable <paramref name="id"/>. Shared; read-only.</summary>
+    public static byte[] GetSyllableUtf8(int id) => SyllableUtf8[id];
+
+    /// <summary>
+    /// Vectorized pre-gate: the char table covers exactly [12295, 12295+28647), so a string with no
+    /// char in that range can be rejected by the SIMD-backed BCL range scan without per-char table
+    /// lookups. A true result still needs the precise <see cref="IsChinese"/> check per char.
+    /// </summary>
+    public static bool MayContainChinese(ReadOnlySpan<char> text)
+        => text.ContainsAnyInRange((char)12295, (char)(12295 + 28647 - 1));
 }

@@ -40,4 +40,32 @@ public interface IAliasProvider
     /// supported -- callers should treat that as "can't highlight via this provider", not an error.
     /// </summary>
     int[]? MapAliasToSourceIndices(string text, string alias) => null;
+
+    /// <summary>
+    /// Byte-native variant of <see cref="GetAliases"/> used on the host's bulk indexing path, where
+    /// aliases are ultimately stored as UTF-8 bytes: emits each alias as a UTF-8 segment into
+    /// <paramref name="dest"/>. Segments must be lowercase and must decode to exactly the strings
+    /// <see cref="GetAliases"/> would yield (minus empty/whitespace-only entries).
+    /// The default implementation adapts the string API, so existing providers work unchanged;
+    /// override it to skip string materialization entirely when generation volume matters.
+    /// </summary>
+    void GetAliasesUtf8(string text, AliasByteSink dest)
+    {
+        foreach (var alias in GetAliases(text))
+        {
+            if (string.IsNullOrWhiteSpace(alias))
+                continue;
+            dest.AddString(NeedsLower(alias) ? alias.ToLowerInvariant() : alias);
+        }
+    }
+
+    private static bool NeedsLower(string s)
+    {
+        foreach (var c in s)
+        {
+            if (char.ToLowerInvariant(c) != c)
+                return true;
+        }
+        return false;
+    }
 }

@@ -106,20 +106,44 @@ internal static class FzfAlgorithm
         ulong mask = 0;
         for (var i = 0; i < span.Length; i++)
         {
-            var c = span[i];
-            var lower = char.ToLowerInvariant(c);
-            var bit = lower switch
-            {
-                >= 'a' and <= 'z' => lower - 'a',
-                >= '0' and <= '9' => 26 + (lower - '0'),
-                _ => 36 + (lower % 28)
-            };
-            mask |= (1UL << bit);
+            mask |= 1UL << MaskBit(char.ToLowerInvariant(span[i]));
         }
         return mask;
     }
 
     public static ulong GetCharMask(string text) => GetCharMask(text.AsSpan());
+
+    // UTF-8 twin of GetCharMask for byte-emitted aliases (see AliasGenerationUtf8): alias segments
+    // are overwhelmingly pure ASCII (pinyin syllables), where byte == char and lowering is the plain
+    // A-Z shift -- the rare non-ASCII segment decodes and defers to the char version, so both
+    // overloads provably bucket every input identically.
+    public static ulong GetCharMaskUtf8(ReadOnlySpan<byte> utf8)
+    {
+        if (System.Text.Ascii.IsValid(utf8))
+        {
+            ulong mask = 0;
+            for (var i = 0; i < utf8.Length; i++)
+            {
+                var c = (char)utf8[i];
+                if (c >= 'A' && c <= 'Z')
+                    c = (char)(c + 32);
+                mask |= 1UL << MaskBit(c);
+            }
+            return mask;
+        }
+
+        var charCount = System.Text.Encoding.UTF8.GetCharCount(utf8);
+        Span<char> tmp = charCount <= 512 ? stackalloc char[512] : new char[charCount];
+        var written = System.Text.Encoding.UTF8.GetChars(utf8, tmp);
+        return GetCharMask(tmp[..written]);
+    }
+
+    private static int MaskBit(char lower) => lower switch
+    {
+        >= 'a' and <= 'z' => lower - 'a',
+        >= '0' and <= '9' => 26 + (lower - '0'),
+        _ => 36 + (lower % 28)
+    };
 
     public static int LeadingWhitespaces(ReadOnlySpan<char> text)
     {

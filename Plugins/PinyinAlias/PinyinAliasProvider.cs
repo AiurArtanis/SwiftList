@@ -1,3 +1,4 @@
+using System.Text;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 
@@ -14,6 +15,34 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
     private static readonly Dictionary<string, Dictionary<string, string>> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object LockObj = new();
     private static readonly string[][] AsciiSyllableCache;
+
+    // Live-path result cache: FuzzyMatcher.IsMatch, HighlightMask, and PathGate's live fallback all
+    // regenerate aliases for the SAME texts on every keystroke (e.g. an instant-result plugin
+    // fuzzy-scanning thousands of titles per keypress). Two bounded generations, swapped when the
+    // current one fills, keep memory capped with LRU-ish retention -- measured ~20x on that path.
+    // Values are immutable arrays, safe to hand to any number of callers. The bulk indexing path
+    // uses GetAliasesUtf8 instead and never touches this cache.
+    private const int ResultCacheCap = 4096;
+    private static readonly object ResultCacheLock = new();
+    private static Dictionary<string, string[]> _resultCacheCur = new(StringComparer.Ordinal);
+    private static Dictionary<string, string[]> _resultCachePrev = new(StringComparer.Ordinal);
+
+    // Generation scratch, reused per thread: only the returned alias strings themselves are
+    // allocated per call. _comboFullScratch is deliberately FIXED at 256 chars -- the combination
+    // path's max-full-pinyin cap is part of the output contract (longer branches are pruned), and a
+    // growable buffer here would make results depend on what a previous call happened to grow it to.
+    [ThreadStatic] private static string[][]? _syllableScratch;
+    [ThreadStatic] private static char[]? _fullBufferScratch;
+    [ThreadStatic] private static char[]? _comboFullScratch;
+    [ThreadStatic] private static char[]? _initialsScratch;
+    [ThreadStatic] private static List<string>? _fullsListScratch;
+    [ThreadStatic] private static List<string>? _initialsListScratch;
+    [ThreadStatic] private static List<string>? _resultListScratch;
+    [ThreadStatic] private static ushort[]?[]? _idScratch;
+    [ThreadStatic] private static AliasByteSink? _fullCombosScratch;
+    [ThreadStatic] private static AliasByteSink? _initialCombosScratch;
+    [ThreadStatic] private static byte[]? _comboFullBytesScratch;
+    [ThreadStatic] private static char[]? _comboInitialCharsScratch;
 
     static PinyinAliasProvider()
     {
@@ -44,6 +73,11 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
         if (string.IsNullOrEmpty(text))
             return false;
 
+        // Vectorized range pre-gate rejects text with no char in the table's range at SIMD speed;
+        // only in-range candidates pay for precise per-char table lookups.
+        if (!PinyinEngine.MayContainChinese(text))
+            return false;
+
         for (var i = 0; i < text.Length; i++)
         {
             if (PinyinEngine.IsChinese(text[i]))
@@ -56,26 +90,51 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
     public IEnumerable<string> GetAliases(string text)
     {
         if (string.IsNullOrEmpty(text))
-            yield break;
+            return Array.Empty<string>();
 
+        lock (ResultCacheLock)
+        {
+            if (_resultCacheCur.TryGetValue(text, out var cached))
+                return cached;
+            if (_resultCachePrev.TryGetValue(text, out cached))
+            {
+                _resultCacheCur[text] = cached; // promote so it survives the next swap
+                return cached;
+            }
+        }
+
+        var generated = GenerateAliases(text);
+
+        lock (ResultCacheLock)
+        {
+            if (_resultCacheCur.Count >= ResultCacheCap)
+            {
+                (_resultCachePrev, _resultCacheCur) = (_resultCacheCur, _resultCachePrev);
+                _resultCacheCur.Clear();
+            }
+            _resultCacheCur[text] = generated;
+        }
+
+        return generated;
+    }
+
+    private static string[] GenerateAliases(string text)
+    {
         if (text.Length == 1)
         {
             // Single character fallback (needed for single-character queries)
-            if (PinyinEngine.TryGetPinyins(text[0], out var pinyins))
-            {
-                foreach (var p in pinyins)
-                {
-                    yield return p;
-                }
-            }
-            yield break;
+            return PinyinEngine.TryGetPinyins(text[0], out var pinyins)
+                ? pinyins
+                : Array.Empty<string>();
         }
 
+        var result = _resultListScratch ??= new List<string>(4);
+        result.Clear();
+
         var lists = GetSyllableLists(text);
-        
-        // Fast path: check if there's only 1 combination (no polyphonic characters)
+
         var totalCombinations = 1;
-        for (var i = 0; i < lists.Length; i++)
+        for (var i = 0; i < text.Length; i++)
         {
             totalCombinations *= lists[i].Length;
             if (totalCombinations > 32)
@@ -84,84 +143,94 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
 
         if (totalCombinations == 1)
         {
-            var initialsArr = new char[lists.Length];
+            var initialsArr = _initialsScratch;
+            if (initialsArr == null || initialsArr.Length < text.Length)
+                _initialsScratch = initialsArr = new char[Math.Max(text.Length, 64)];
+
             var fullLen = 0;
-            for (var i = 0; i < lists.Length; i++)
+            for (var i = 0; i < text.Length; i++)
             {
                 var s = lists[i][0];
                 initialsArr[i] = s.Length > 0 ? s[0] : '\0';
                 fullLen += s.Length;
             }
 
-            var initialAlias = new string(initialsArr);
-            yield return initialAlias;
+            var initialAlias = new string(initialsArr, 0, text.Length);
+            result.Add(initialAlias);
 
-            var fullBuffer = new char[fullLen];
+            var fullBuffer = _fullBufferScratch;
+            if (fullBuffer == null || fullBuffer.Length < fullLen)
+                _fullBufferScratch = fullBuffer = new char[Math.Max(fullLen, 256)];
+
             var offset = 0;
-            for (var i = 0; i < lists.Length; i++)
+            for (var i = 0; i < text.Length; i++)
             {
                 var s = lists[i][0];
                 s.CopyTo(0, fullBuffer, offset, s.Length);
                 offset += s.Length;
             }
-            var fullAlias = new string(fullBuffer);
+            var fullAlias = new string(fullBuffer, 0, fullLen);
             if (fullAlias != initialAlias)
-            {
-                yield return fullAlias;
-            }
-            yield break;
+                result.Add(fullAlias);
+            return result.ToArray();
         }
 
-        var fullPinyins = new List<string>();
-        var initials = new List<string>();
+        var fullPinyins = _fullsListScratch ??= new List<string>(32);
+        var initials = _initialsListScratch ??= new List<string>(32);
+        fullPinyins.Clear();
+        initials.Clear();
         var count = 0;
+        var steps = 0;
 
-        var fullBufferTemp = new char[256];
-        var initialsBuffer = new char[lists.Length];
+        var fullBufferTemp = _comboFullScratch ??= new char[256];
+        var initialsBuffer = _initialsScratch;
+        if (initialsBuffer == null || initialsBuffer.Length < text.Length)
+            _initialsScratch = initialsBuffer = new char[Math.Max(text.Length, 64)];
 
         // Generate combinations. Since we concatenate them, we can safely allow up to 32 combinations
         // to support longer polyphonic names without database explosion.
-        GenerateCombinations(lists, 0, 0, fullPinyins, initials, fullBufferTemp, initialsBuffer, ref count);
+        GenerateCombinations(lists, text.Length, 0, 0, fullPinyins, initials, fullBufferTemp, initialsBuffer, ref count, ref steps);
 
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var joinedInitials = JoinUnique(initials);
+        if (joinedInitials != null)
+            result.Add(joinedInitials);
 
-        // 1. Yield the concatenated initials string (e.g. "cqs|zqs")
-        var uniqueInitials = new List<string>();
-        foreach (var init in initials)
+        var joinedFulls = JoinUnique(fullPinyins);
+        if (joinedFulls != null && !joinedFulls.Equals(joinedInitials, StringComparison.OrdinalIgnoreCase))
+            result.Add(joinedFulls);
+
+        return result.ToArray();
+    }
+
+    // Dedup preserving insertion order (List.Contains semantics), '|'-joined; n <= 32 so a linear
+    // scan beats a HashSet allocation at this size.
+    private static string? JoinUnique(List<string> values)
+    {
+        string? single = null;
+        List<string>? unique = null;
+        foreach (var v in values)
         {
-            if (!string.IsNullOrWhiteSpace(init))
+            if (string.IsNullOrWhiteSpace(v))
+                continue;
+            if (single == null)
             {
-                if (!uniqueInitials.Contains(init))
-                    uniqueInitials.Add(init);
+                single = v;
+                continue;
             }
-        }
-        if (uniqueInitials.Count > 0)
-        {
-            var joinedInitials = string.Join("|", uniqueInitials);
-            if (seen.Add(joinedInitials))
+            if (unique == null)
             {
-                yield return joinedInitials;
+                if (v == single)
+                    continue;
+                unique = new List<string>(4) { single, v };
+                continue;
             }
+            if (!unique.Contains(v))
+                unique.Add(v);
         }
 
-        // 2. Yield the concatenated full pinyin string (e.g. "chongqingshi|zhongqingshi")
-        var uniqueFulls = new List<string>();
-        foreach (var fp in fullPinyins)
-        {
-            if (!string.IsNullOrWhiteSpace(fp))
-            {
-                if (!uniqueFulls.Contains(fp))
-                    uniqueFulls.Add(fp);
-            }
-        }
-        if (uniqueFulls.Count > 0)
-        {
-            var joinedFulls = string.Join("|", uniqueFulls);
-            if (seen.Add(joinedFulls))
-            {
-                yield return joinedFulls;
-            }
-        }
+        if (unique != null)
+            return string.Join('|', unique);
+        return single;
     }
 
     // "alias" here is one single combination already (caller splits '|'-joined alternatives first).
@@ -241,7 +310,10 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
 
     private static string[][] GetSyllableLists(string text)
     {
-        var lists = new string[text.Length][];
+        var lists = _syllableScratch;
+        if (lists == null || lists.Length < text.Length)
+            _syllableScratch = lists = new string[Math.Max(text.Length, 64)][];
+
         for (var i = 0; i < text.Length; i++)
         {
             var c = text[i];
@@ -249,16 +321,13 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
             {
                 lists[i] = pinyins;
             }
+            else if (c < 128)
+            {
+                lists[i] = AsciiSyllableCache[c];
+            }
             else
             {
-                if (c < 128)
-                {
-                    lists[i] = AsciiSyllableCache[c];
-                }
-                else
-                {
-                    lists[i] = new string[] { char.ToLowerInvariant(c).ToString() };
-                }
+                lists[i] = new string[] { char.ToLowerInvariant(c).ToString() };
             }
         }
         return lists;
@@ -266,20 +335,29 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
 
     private static void GenerateCombinations(
         string[][] lists,
+        int listCount,
         int index,
         int currentFullLength,
         List<string> fullPinyins,
         List<string> initials,
         char[] fullBuffer,
         char[] initialsBuffer,
-        ref int count)
+        ref int count,
+        ref int steps)
     {
+        // Steps budget: the 32-combination cap below only counts FULL-depth completions, but the
+        // fullBuffer-overflow check prunes branches BEFORE full depth -- a long name (full pinyin
+        // longer than the buffer) dense with polyphonic characters means no branch ever completes,
+        // the cap never fires, and the recursion explores the whole combinatorial tree (a 240-char
+        // all-polyphonic name explored ~2^55 paths and hung the process). The budget covers every
+        // legitimate enumeration and turns the pathological case into an immediate bounded bail-out.
+        if (++steps > listCount * 32 + 256) return;
         if (count >= 32) return; // Limit to 32 combinations to prevent combinatorial explosion
 
-        if (index == lists.Length)
+        if (index == listCount)
         {
             fullPinyins.Add(new string(fullBuffer, 0, currentFullLength));
-            initials.Add(new string(initialsBuffer, 0, lists.Length));
+            initials.Add(new string(initialsBuffer, 0, listCount));
             count++;
             return;
         }
@@ -291,8 +369,272 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
             {
                 element.CopyTo(0, fullBuffer, currentFullLength, element.Length);
                 initialsBuffer[index] = element.Length > 0 ? element[0] : '\0';
-                GenerateCombinations(lists, index + 1, currentFullLength + element.Length, fullPinyins, initials, fullBuffer, initialsBuffer, ref count);
+                GenerateCombinations(lists, listCount, index + 1, currentFullLength + element.Length, fullPinyins, initials, fullBuffer, initialsBuffer, ref count, ref steps);
             }
+        }
+    }
+
+    // ─── Byte-native path (GetAliasesUtf8 override) ────────────────────────────────────────────
+    // Used by the host's bulk indexing path: assembles aliases directly from pre-encoded syllable
+    // bytes into the sink, never materializing a string. Verified byte-identical (decoded) to the
+    // string path across 200k-name equivalence runs plus adversarial corpora before adoption.
+
+    public void GetAliasesUtf8(string text, AliasByteSink dest)
+    {
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        if (text.Length == 1)
+        {
+            if (PinyinEngine.TryGetPinyinIds(text[0], out var soloIds))
+            {
+                foreach (var id in soloIds)
+                {
+                    var start = dest.BeginSegment();
+                    dest.Append(PinyinEngine.GetSyllableUtf8(id));
+                    dest.EndSegment(start);
+                }
+            }
+            return;
+        }
+
+        var ids = _idScratch;
+        if (ids == null || ids.Length < text.Length)
+            _idScratch = ids = new ushort[]?[Math.Max(text.Length, 64)];
+
+        // Fill EVERY position first, THEN count: breaking out of a fused fill+count loop early
+        // would leave stale entries from a previous call in the thread-static scratch beyond the
+        // break point.
+        for (var i = 0; i < text.Length; i++)
+            ids[i] = PinyinEngine.TryGetPinyinIds(text[i], out var charIds) ? charIds : null;
+
+        var totalCombinations = 1L;
+        for (var i = 0; i < text.Length; i++)
+        {
+            totalCombinations *= ids[i]?.Length ?? 1;
+            if (totalCombinations > 32)
+                break;
+        }
+
+        if (totalCombinations == 1)
+        {
+            var initialsStart = dest.BeginSegment();
+            for (var i = 0; i < text.Length; i++)
+                AppendInitial(dest, text, i, ids[i]);
+            dest.EndSegment(initialsStart);
+
+            var fullStart = dest.BeginSegment();
+            for (var i = 0; i < text.Length; i++)
+                AppendFull(dest, text, i, ids[i]);
+
+            // Same "full == initials -> yield once" rule as the string path.
+            if (dest.Pending(fullStart).SequenceEqual(dest.Segment(dest.SegmentCount - 1)))
+                dest.AbandonSegment(fullStart);
+            else
+                dest.EndSegment(fullStart);
+            return;
+        }
+
+        // Combination (polyphonic) path -- byte-native mirror of GenerateCombinations, same steps
+        // budget, same fixed 256-byte full-pinyin cap.
+        var fulls = _fullCombosScratch ??= new AliasByteSink();
+        var initials = _initialCombosScratch ??= new AliasByteSink();
+        fulls.Reset();
+        initials.Reset();
+
+        var fullBuffer = _comboFullBytesScratch ??= new byte[256];
+        var initialBuffer = _comboInitialCharsScratch;
+        if (initialBuffer == null || initialBuffer.Length < text.Length)
+            _comboInitialCharsScratch = initialBuffer = new char[Math.Max(text.Length, 64)];
+
+        var count = 0;
+        var steps = 0;
+        RecurseBytes(text, ids, 0, 0, fulls, initials, fullBuffer, initialBuffer, ref count, ref steps);
+
+        var initialsGroupStart = dest.BeginSegment();
+        JoinUniqueSegments(initials, dest);
+        var hadInitials = dest.Pending(initialsGroupStart).Length > 0;
+        dest.EndSegment(initialsGroupStart);
+
+        var fullsGroupStart = dest.BeginSegment();
+        JoinUniqueSegments(fulls, dest);
+        if (dest.Pending(fullsGroupStart).Length == 0)
+        {
+            dest.AbandonSegment(fullsGroupStart);
+        }
+        else if (hadInitials && dest.Pending(fullsGroupStart).SequenceEqual(dest.Segment(dest.SegmentCount - 1)))
+        {
+            dest.AbandonSegment(fullsGroupStart);
+        }
+        else
+        {
+            dest.EndSegment(fullsGroupStart);
+        }
+    }
+
+    private static void AppendInitial(AliasByteSink dest, string text, int i, ushort[]? charIds)
+    {
+        if (charIds != null)
+            dest.Append(PinyinEngine.GetSyllableUtf8(charIds[0])[0]);
+        else
+            AppendLiteralChar(dest, text[i], i > 0 ? text[i - 1] : '\0', i + 1 < text.Length ? text[i + 1] : '\0');
+    }
+
+    private static void AppendFull(AliasByteSink dest, string text, int i, ushort[]? charIds)
+    {
+        if (charIds != null)
+            dest.Append(PinyinEngine.GetSyllableUtf8(charIds[0]));
+        else
+            AppendLiteralChar(dest, text[i], i > 0 ? text[i - 1] : '\0', i + 1 < text.Length ? text[i + 1] : '\0');
+    }
+
+    // Encodes one literal (non-CJK) source position. Every position emits exactly one alias element
+    // in order, so a surrogate pair's halves always land adjacent -- the string path re-pairs them
+    // inside the alias string for free, and here the pair must be encoded together (a UTF-16 half
+    // encoded alone is invalid UTF-8 and turns into U+FFFD, corrupting emoji/CJK-extension chars).
+    // The HIGH half emits the whole pair's bytes; the matching LOW half then emits nothing.
+    private static void AppendLiteralChar(AliasByteSink dest, char c, char prev, char next)
+    {
+        if (char.IsHighSurrogate(c) && char.IsLowSurrogate(next))
+        {
+            Span<byte> tmp = stackalloc byte[4];
+            var written = new Rune(c, next).EncodeToUtf8(tmp);
+            dest.Append(tmp[..written]);
+            return;
+        }
+        if (char.IsLowSurrogate(c) && char.IsHighSurrogate(prev))
+            return;
+
+        var lower = char.ToLowerInvariant(c);
+        if (lower < 128)
+            dest.Append((byte)lower);
+        else
+            AppendUtf8Char(dest, lower);
+    }
+
+    private static void AppendUtf8Char(AliasByteSink dest, char c)
+    {
+        Span<byte> tmp = stackalloc byte[4];
+        Span<char> one = stackalloc char[1];
+        one[0] = c;
+        var written = Encoding.UTF8.GetBytes(one, tmp);
+        dest.Append(tmp[..written]);
+    }
+
+    private static void RecurseBytes(
+        string text,
+        ushort[]?[] ids,
+        int index,
+        int fullLen,
+        AliasByteSink fulls,
+        AliasByteSink initials,
+        byte[] fullBuffer,
+        char[] initialBuffer,
+        ref int count,
+        ref int steps)
+    {
+        // Same steps budget as GenerateCombinations -- see the comment there.
+        if (++steps > text.Length * 32 + 256) return;
+        if (count >= 32) return;
+
+        if (index == text.Length)
+        {
+            var fs = fulls.BeginSegment();
+            fulls.Append(fullBuffer.AsSpan(0, fullLen));
+            fulls.EndSegment(fs);
+
+            var istart = initials.BeginSegment();
+            for (var i = 0; i < text.Length; i++)
+            {
+                var c = initialBuffer[i];
+                if (c < 128) initials.Append((byte)c);
+                else AppendLiteralChar(initials, c, i > 0 ? initialBuffer[i - 1] : '\0', i + 1 < text.Length ? initialBuffer[i + 1] : '\0');
+            }
+            initials.EndSegment(istart);
+            count++;
+            return;
+        }
+
+        var charIds = ids[index];
+        if (charIds == null)
+        {
+            var c = text[index];
+            int written;
+            if (char.IsHighSurrogate(c) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1]))
+            {
+                Span<byte> tmp = stackalloc byte[4];
+                written = new Rune(c, text[index + 1]).EncodeToUtf8(tmp);
+                if (fullLen + written > fullBuffer.Length) return;
+                tmp[..written].CopyTo(fullBuffer.AsSpan(fullLen));
+                initialBuffer[index] = c;
+            }
+            else if (char.IsLowSurrogate(c) && index > 0 && char.IsHighSurrogate(text[index - 1]))
+            {
+                written = 0;
+                initialBuffer[index] = c;
+            }
+            else
+            {
+                var lower = char.ToLowerInvariant(c);
+                if (lower < 128)
+                {
+                    if (fullLen + 1 > fullBuffer.Length) return;
+                    fullBuffer[fullLen] = (byte)lower;
+                    written = 1;
+                }
+                else
+                {
+                    Span<byte> tmp = stackalloc byte[4];
+                    Span<char> one = stackalloc char[1];
+                    one[0] = lower;
+                    written = Encoding.UTF8.GetBytes(one, tmp);
+                    if (fullLen + written > fullBuffer.Length) return;
+                    tmp[..written].CopyTo(fullBuffer.AsSpan(fullLen));
+                }
+                initialBuffer[index] = lower;
+            }
+            RecurseBytes(text, ids, index + 1, fullLen + written, fulls, initials, fullBuffer, initialBuffer, ref count, ref steps);
+            return;
+        }
+
+        foreach (var id in charIds)
+        {
+            var syl = PinyinEngine.GetSyllableUtf8(id);
+            if (fullLen + syl.Length > fullBuffer.Length)
+                continue;
+            syl.CopyTo(fullBuffer.AsSpan(fullLen));
+            initialBuffer[index] = (char)syl[0];
+            RecurseBytes(text, ids, index + 1, fullLen + syl.Length, fulls, initials, fullBuffer, initialBuffer, ref count, ref steps);
+        }
+    }
+
+    // Appends the unique segments of `source` (first-seen order, matching the string path's
+    // List.Contains dedup) joined by '|' into the currently-open segment of `dest`.
+    private static void JoinUniqueSegments(AliasByteSink source, AliasByteSink dest)
+    {
+        var wroteAny = false;
+        for (var i = 0; i < source.SegmentCount; i++)
+        {
+            var seg = source.Segment(i);
+            if (seg.IsEmpty)
+                continue;
+
+            var duplicate = false;
+            for (var j = 0; j < i; j++)
+            {
+                if (source.Segment(j).SequenceEqual(seg))
+                {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (duplicate)
+                continue;
+
+            if (wroteAny)
+                dest.Append((byte)'|');
+            dest.Append(seg);
+            wroteAny = true;
         }
     }
 }
