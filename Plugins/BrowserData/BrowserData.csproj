@@ -20,7 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\PluginSdk\PluginSdk.csproj" />
+    <ProjectReference Include="..\..\PluginSdk\PluginSdk.csproj" Private="false" />
   </ItemGroup>
 
   <ItemGroup>
