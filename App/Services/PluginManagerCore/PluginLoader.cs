@@ -166,6 +166,13 @@ internal static class PluginLoader
                 }
             }
         }
+        catch (BadImageFormatException)
+        {
+            // Not a .NET assembly at all -- expected for a plugin's own bundled native dependency
+            // (e.g. a SQLite provider's e_sqlite3.dll) now that the scan is recursive into each
+            // plugin's own subdirectory. Not a failure, so not worth an Error-level log line.
+            Logger.Log($"[PluginManager] Skipped non-.NET file: {fileName}", LogLevel.Debug);
+        }
         catch (Exception ex)
         {
             Logger.Log($"[PluginManager] Failed to load assembly {fileName}: {ex.Message}", LogLevel.Error);

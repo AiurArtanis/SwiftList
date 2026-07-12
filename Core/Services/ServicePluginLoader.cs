@@ -89,6 +89,14 @@ public static class ServicePluginLoader
                         }
                     }
                 }
+                catch (BadImageFormatException)
+                {
+                    // Not a .NET assembly at all -- expected for a plugin's own bundled native
+                    // dependency (e.g. a SQLite provider's e_sqlite3.dll) now that the scan is
+                    // recursive into each plugin's own subdirectory. Not a failure, so not worth an
+                    // Error-level log line.
+                    Logger.Log($"[ServicePluginLoader] Skipped non-.NET file: {Path.GetFileName(dllFile)}", LogLevel.Debug);
+                }
                 catch (Exception ex)
                 {
                     Logger.Log($"[ServicePluginLoader] Failed to load plugin assembly {Path.GetFileName(dllFile)}: {ex.Message}", LogLevel.Error);
