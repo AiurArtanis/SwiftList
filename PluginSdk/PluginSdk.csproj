@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>SwiftList.PluginSdk</AssemblyName>
+    <RootNamespace>SwiftList.PluginSdk</RootNamespace>
     <Version>1.2.7</Version>
     <GenerateDependencyFile>false</GenerateDependencyFile>
   </PropertyGroup>

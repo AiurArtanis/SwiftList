@@ -37,8 +37,8 @@
   <!-- Outputs to its own Plugins/SwiftList.Plugins.BrowserData/ subdirectory instead of the flat
        shared Plugins/ folder, so its bundled Microsoft.Data.Sqlite/SQLitePCLRaw/e_sqlite3.dll files
        don't spill into every other plugin's load directory. PluginLoader scans Plugins/ recursively
-       (see its own subdirectory support). PluginSdk.dll is excluded: the App already loads its own
-       copy of it directly.
+       (see its own subdirectory support). SwiftList.PluginSdk.dll is excluded: the App already loads
+       its own copy of it directly.
 
        Two destinations, because $(TargetDir) means different things depending on how this gets built:
        - A normal `dotnet build` of SwiftList.slnx/SwiftList.Plugins.slnx gives this project its own

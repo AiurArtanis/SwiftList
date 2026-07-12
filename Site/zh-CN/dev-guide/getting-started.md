@@ -14,7 +14,7 @@
     <Version>1.0.0</Version>
   </PropertyGroup>
   <ItemGroup>
-    <!-- 引用你 SwiftList 安装目录下的 PluginSdk.dll;如果是在 SwiftList 仓库内部构建，
+    <!-- 引用你 SwiftList 安装目录下的 SwiftList.PluginSdk.dll;如果是在 SwiftList 仓库内部构建，
          也可以直接引用 PluginSdk.csproj。 -->
     <ProjectReference Include="..\..\PluginSdk\PluginSdk.csproj" />
   </ItemGroup>

@@ -15,7 +15,7 @@ A plugin is a plain .NET class library targeting the same target framework as th
     <Version>1.0.0</Version>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Reference PluginSdk.dll from your SwiftList install directory, or PluginSdk.csproj
+    <!-- Reference SwiftList.PluginSdk.dll from your SwiftList install directory, or PluginSdk.csproj
          directly if you're building inside the SwiftList repo itself. -->
     <ProjectReference Include="..\..\PluginSdk\PluginSdk.csproj" />
   </ItemGroup>

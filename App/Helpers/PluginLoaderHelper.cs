@@ -32,7 +32,7 @@ public static class PluginLoaderHelper
         foreach (var assembly in loadedAssemblies)
         {
             var dllName = Path.GetFileName(assembly.Location);
-            if (dllName.Equals("PluginSdk.dll", StringComparison.OrdinalIgnoreCase))
+            if (dllName.Equals("SwiftList.PluginSdk.dll", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             var sdkVersion = "1.0.0";
