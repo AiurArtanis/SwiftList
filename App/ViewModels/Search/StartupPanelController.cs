@@ -6,7 +6,7 @@ using SwiftList.Core;
 namespace SwiftList.App.ViewModels.Search;
 
 /// <summary>
-/// Owns the "初始面板" (Startup Panel) shown above the quick window's results when the search box is
+/// Owns the Startup Panel shown above the quick window's results when the search box is
 /// empty: the tab strip (built-in "Recent Files" plus whatever IStartupPanelTabProvider plugins are
 /// enabled) and the fetch that populates results through the same Results/ResultsControl pipeline a
 /// normal search uses -- <paramref name="applyResults"/> is <see cref="SearchExecutionViewModel"/>'s

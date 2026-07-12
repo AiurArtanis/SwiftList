@@ -151,7 +151,7 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _resultsSeparatorVisibility, value);
     }
 
-    // "初始面板" (Startup Panel): shown above the results in the quick popup only, see StartupPanelController.
+    // Startup Panel: shown above the results in the quick popup only, see StartupPanelController.
     public ObservableCollection<StartupPanelTabViewModel> StartupPanelTabs => _startupPanel.Tabs;
     public Visibility StartupPanelVisibility => _startupPanel.Visibility;
     public void SelectNextStartupPanelTab() => _startupPanel.SelectNextTab();

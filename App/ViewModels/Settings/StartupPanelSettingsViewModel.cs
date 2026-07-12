@@ -7,7 +7,7 @@ using SwiftList.Core;
 namespace SwiftList.App.ViewModels.Settings;
 
 /// <summary>
-/// Backs the "初始面板" (Startup Panel) settings page: sub-tab navigation plus the "Recent Files"
+/// Backs the Startup Panel settings page: sub-tab navigation plus the "Recent Files"
 /// (target directories + how many entries to show) and "Last Directory" (single enable checkbox)
 /// sub-tabs. RecentFilesEnabled/LastDirectoryEnabled here are the same fields the live panel's own
 /// tab-close (x) buttons flip directly in UserSettings -- this ViewModel just reflects whatever is on

@@ -1,6 +1,6 @@
 namespace SwiftList.Core;
 
-/// <summary>Backs the "初始面板" (Startup Panel) settings page and the tab strip shown above the
+/// <summary>Backs the Startup Panel settings page and the tab strip shown above the
 /// quick window's result list when the search box is empty. Each tab type gets its own Enabled flag
 /// here so the settings checkbox and the tab's in-panel close (x) button stay in sync (both just flip
 /// the same field) -- Recent Files and Last Directory each add their own Enabled flag + config block

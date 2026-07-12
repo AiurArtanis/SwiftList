@@ -30,14 +30,14 @@ public class CommandInstantProvider : IInstantResultProvider
         if (isAdmin)
         {
             actionArg = $"runas:cmd.exe /k {target}";
-            title = $"以管理员权限运行命令: {target}";
-            desc = "打开提升权限的命令提示符窗口并执行该命令";
+            title = TranslationService.Format("Command_AdminTitle", target);
+            desc = TranslationService.Get("Command_AdminDesc");
         }
         else
         {
             actionArg = $"cmd.exe /k {target}";
-            title = $"运行命令: {target}";
-            desc = "打开命令提示符窗口并执行该命令";
+            title = TranslationService.Format("Command_NormalTitle", target);
+            desc = TranslationService.Get("Command_NormalDesc");
         }
 
         yield return new InstantResultItem

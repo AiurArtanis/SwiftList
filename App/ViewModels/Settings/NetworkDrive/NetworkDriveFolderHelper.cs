@@ -20,7 +20,7 @@ internal static class NetworkDriveFolderHelper
         if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FolderName))
             return;
 
-        // A local drive root or WSL distro root belongs on the "网络驱动器"/"本地驱动器"/WSL tabs
+        // A local drive root or WSL distro root belongs on the Network Drives/Local Drives/WSL tabs
         // (whole-volume indexing), not here. A UNC share root ("\\server\share") is let through, though
         // -- unlike a local drive, there's no drive-letter tab that can index an unmapped share at all,
         // so the share root is the finest-grained indexable unit available for it.

@@ -41,7 +41,14 @@ public static class Helper
                                 if (window != null)
                                 {
                                     dynamic w = window;
-                                    if (w.Name == "File Explorer" || w.Name == "资源管理器")
+                                    // w.Name is the shell window's localized app title, which varies per
+                                    // system display language -- checking it directly only recognizes
+                                    // whichever languages happen to be hardcoded here. w.FullName is the
+                                    // path to the hosting executable, unaffected by system language, so it
+                                    // correctly identifies a real Explorer window (as opposed to another
+                                    // Shell.Application window, e.g. Internet Explorer) on any locale.
+                                    string fullName = w.FullName ?? string.Empty;
+                                    if (fullName.EndsWith("explorer.exe", StringComparison.OrdinalIgnoreCase))
                                     {
                                         var doc = w.Document as dynamic;
                                         if (doc != null)
