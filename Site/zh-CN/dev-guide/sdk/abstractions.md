@@ -48,7 +48,12 @@ interface IConfigurable
 `PluginConfigSchema` 是一份扁平的 `Fields: List<PluginConfigField>`。每个 `PluginConfigField`
 有一个 `Key`，可选的 `GroupKey`/`LabelKey`/`DescriptionKey`(翻译 key，如果你有自己的
 `ITranslationProvider` 就通过它解析)，一个 `FieldType`，一个 `DefaultValue`，以及——取决于类型
-——`Choices` 或嵌套的 `SubFields`。
+——`Choices`、嵌套的 `SubFields`，或者 `RequireModifier`(仅 `Hotkey` 字段,拒绝没有修饰键的
+单个按键)。
+
+给字段(通常是触发关键词这类 `Text` 字段)设置 `RequireNonEmpty`，保存时如果值为空/纯空白就会
+回退到 `DefaultValue`，而不是把空值持久化下去——否则用户把关键词字段清空后，依赖它的功能会悄无
+声息地变得不可触发，而不是回退到一个正常的默认值。
 
 `ConfigFieldType` 涵盖:`Boolean`、`Text`、`Integer`、`Choice`、`Array`、`Object`、`Group`、
 `StringList`、`Hotkey`、`FilePath`、`FolderPath`。参见

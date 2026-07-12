@@ -49,7 +49,13 @@ interface IConfigurable
 `PluginConfigSchema` is a flat `Fields: List<PluginConfigField>`. Each `PluginConfigField` has a
 `Key`, optional `GroupKey`/`LabelKey`/`DescriptionKey` (translation keys, resolved through your own
 `ITranslationProvider` if you have one), a `FieldType`, a `DefaultValue`, and — depending on the
-type — `Choices` or nested `SubFields`.
+type — `Choices`, nested `SubFields`, or `RequireModifier` (`Hotkey` fields only, rejects an
+unmodified single key).
+
+Set `RequireNonEmpty` on a field (typically a `Text` trigger keyword) to fall back to
+`DefaultValue` instead of persisting an empty/whitespace value on save — otherwise a user clearing
+a keyword field would silently make whatever depends on it unreachable rather than reverting to a
+sane default.
 
 `ConfigFieldType` covers: `Boolean`, `Text`, `Integer`, `Choice`, `Array`, `Object`, `Group`,
 `StringList`, `Hotkey`, `FilePath`, `FolderPath`. See

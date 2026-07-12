@@ -6,6 +6,20 @@ App 启动时会扫描自己的 `Plugins/` 文件夹(与 `SwiftList.App.exe` 同
 现了 `IPlugin` 的类型。没有单独的清单文件——程序集本身，加上它的类型实现了哪些 SDK 接口，就是完
 整的契约。
 
+## 携带插件自己的依赖库
+
+如果你的插件需要自己的托管或原生依赖 DLL(比如数据库驱动、原生互操作库……)，把它们放进 App 的
+`Plugins/` 文件夹下你插件自己的一个子目录里——比如 `Plugins/YourPlugin/YourPlugin.dll` 连同它的依
+赖都放在同一层——而不是平铺在 `Plugins/` 根目录下。加载器会递归扫描 `Plugins/`，之后
+`Assembly.LoadFrom` 自带的同目录依赖探测就会自动解析你的依赖，不会把它们混进其他插件的加载目录里。
+
+扫描过程中遇到的非 .NET 文件(比如原生 DLL `e_sqlite3.dll`)是预期之内的，会以 `Debug` 级别记录，
+而不是 `Error`——只有真正加载失败的托管程序集才会记 `Error`。
+
+完整的真实例子可以看 `BrowserData` 插件的 `.csproj`:它就是这样打包 `Microsoft.Data.Sqlite` 及其
+原生依赖 `SQLitePCLRaw`/`e_sqlite3.dll` 的，还带了 PostBuild/PostPublish 目标，不管是哪种构建方
+式生成的，都会把它们归拢进自己的子文件夹。
+
 ## 开发时自动化复制
 
 SwiftList 自带的插件(`CoreExtensions`、`PinyinAlias`)都在各自的 `.csproj` 里用一个 PostBuild 目

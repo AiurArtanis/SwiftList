@@ -41,6 +41,9 @@ one subtree without pulling in everything else on that volume.
 - One row per added folder: enable checkbox, path, status, item count, and the same **Refresh
   Mode** dropdown (Manual / Every 15 minutes / Every hour / Daily) as network drives — folders are
   scanned on a schedule rather than tracked continuously, the same way network shares are.
+- The folder picker also accepts a **UNC network share path** (e.g. `\\server\share`, or a
+  subfolder inside it) browsed to via *Network* in the picker — useful for indexing a single share
+  or subtree without adding the whole server as a mapped network drive.
 
 ## Exclusion Rules
 

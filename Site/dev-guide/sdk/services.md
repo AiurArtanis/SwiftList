@@ -6,6 +6,7 @@ same way regardless of what's running underneath.
 
 | Service | Purpose |
 |---|---|
+| `FuzzyMatchService` | `IsMatch(pattern, text)` — whether `text` (or one of its aliases) matches an fzf-syntax `pattern`, using the exact same matching the host's own search uses; `GetHighlightMask(text, query)` — the per-character highlight mask for that pair, using the same literal/fuzzy/alias fallback tiers (including CJK pinyin) the host's own results highlight with, so a plugin's results highlight consistently instead of only handling a literal substring match. |
 | `TranslationService` | `Get(key)` / `Format(key, args)` for runtime lookups against the active language; `LoadEmbeddedTranslations(assembly, cultureKey, typeName)` to load a plugin's own embedded JSON translations; `GetSupportedCultures(assembly)`. |
 | `IconService` | `GetIcon(path, isDir)` and `GetThumbnail(path, size)` — cached shell icon/thumbnail extraction, so a plugin never has to shell out to the Windows icon APIs itself. |
 | `FavoritesService` | `GetFavorites()` — read-only access to the user's [Favorites](../../user-guide/settings/favorites) list (`FavoriteItem`: Name, Path). |

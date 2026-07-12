@@ -13,6 +13,9 @@ This manual covers everything a day-to-day user needs:
 - **[Hotkeys](./hotkeys)** — every configurable shortcut and hardcoded key, with default bindings.
 - **[Actions Menu & Preview](./actions-and-preview)** — the right-click-style actions list and the
   QuickLook preview pane.
+- **[Instant Answers & Keyword Shortcuts](./instant-answers)** — the calculator, environment
+  variables, run-command shortcuts, and keyword-triggered plugins like Process Manager,
+  Translation, Browser Data, and Web Search.
 - **[Settings Reference](./settings/)** — every settings page, tab, and option, itemized.
 - **[Troubleshooting](./troubleshooting)** — common problems and how to fix them.
 - **[Donate](./donate)** — if SwiftList has been useful to you.

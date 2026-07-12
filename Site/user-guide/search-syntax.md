@@ -84,4 +84,6 @@ it's enabled.
 
 SwiftList does not have a general-purpose "define your own alias/macro" system. The closest
 equivalent is [Favorites](./settings/favorites): pin a folder, file, or URL under a custom display
-name, and it becomes searchable by that name (shown with a ★ marker in results).
+name, and it becomes searchable by that name (shown with a ★ marker in results). If what you
+actually want is a custom keyword that launches a program, see
+[Custom Commands](./instant-answers#custom-commands) instead.

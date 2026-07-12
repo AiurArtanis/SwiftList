@@ -6,6 +6,24 @@ The App loads every `.dll` it finds in its own `Plugins/` folder (next to `Swift
 startup, looking for types implementing `IPlugin`. There's no separate manifest file — the
 assembly itself, plus whichever SDK interfaces its types implement, is the full contract.
 
+## Shipping your own dependencies
+
+If your plugin needs managed or native dependency DLLs of its own (a database driver, a native
+interop library, ...), put them in their own subdirectory under the App's `Plugins/` folder —
+e.g. `Plugins/YourPlugin/YourPlugin.dll` plus its dependencies right alongside it — instead of
+flat in `Plugins/` itself. The loader scans `Plugins/` recursively, and `Assembly.LoadFrom`'s own
+same-directory dependency probing then resolves your dependencies automatically, without spilling
+them into every other plugin's load directory.
+
+A non-.NET file the scanner encounters along the way (a native DLL like `e_sqlite3.dll`) is
+expected and logged at `Debug`, not `Error` — only a real managed assembly that genuinely fails to
+load logs at `Error`.
+
+See the `BrowserData` plugin's `.csproj` for a complete, real example: it bundles
+`Microsoft.Data.Sqlite` and its native `SQLitePCLRaw`/`e_sqlite3.dll` dependencies this way, with
+post-build/post-publish targets that nest them into its own subfolder regardless of which build
+mechanism produced them.
+
 ## Automating the copy during development
 
 The plugins shipped with SwiftList itself (`CoreExtensions`, `PinyinAlias`) automate deployment

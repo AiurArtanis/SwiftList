@@ -22,3 +22,6 @@ A banner at the bottom of the page reminds you that some component toggles only 
 restarting SwiftList.
 
 If no plugins are installed, the page shows an empty-state message instead.
+
+For a concrete example of what a plugin's own **Configure** dialog looks like in practice (e.g.
+changing a trigger keyword), see [Instant Answers & Keyword Shortcuts](../instant-answers).

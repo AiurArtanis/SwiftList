@@ -19,8 +19,9 @@ Four tabs: **System**, **Search Bar Layout**, **Preview**, and **Search Window**
   App, Service, and Hook logs (see [Service Status](./service-status)).
 - **Interface language** — dropdown, populated from every installed translation provider (built-in
   languages plus any a plugin adds).
-- **Interface theme** — dropdown: Light, Dark, Nord, Sakura, Cyberpunk (more can be added by theme
-  plugins).
+- **Interface theme** — dropdown: Light, Dark, Nord, Sakura, Cyberpunk from the built-in
+  CoreExtensions plugin, plus Neon Genesis, Sakura Bloom, and Weathering Blue from the bundled
+  AnimeThemes plugin if it's installed and enabled (any other theme plugin can add more).
 
 ## Search Bar Layout
 
