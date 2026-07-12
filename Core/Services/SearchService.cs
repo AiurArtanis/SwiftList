@@ -39,6 +39,17 @@ public class SearchService : IDisposable
 
     public async Task<bool> SearchStreamingAsync(string query, int maxResults, int maxAppResults, string? directoryFilter, Action<SearchResult> onResult, CancellationToken token = default, Action? onLocalSearchFailed = null)
     {
+        // A leading "*" opts a single search out of ExcludedPaths/IgnoredPathGlobs/IgnoredPathRegexes
+        // filtering -- stripped here, before it ever reaches the fzf pattern or highlight computation, so
+        // it's never treated as a literal match character. Only covers results that are already indexed
+        // (local NTFS/ReFS drives, plus whatever network/WSL data already made it into the index) --
+        // content under an excluded network/WSL root was never indexed in the first place (WalkFilter
+        // skips it at build time), so this can't recover that without a live filesystem walk, which is
+        // deliberately out of scope here.
+        var bypassExclusions = query.Length > 0 && query[0] == '*';
+        if (bypassExclusions)
+            query = query[1..];
+
         var exclusionRules = ExclusionRuleSet.From(UserSettings.Load());
         var fileCandidateLimit = Math.Clamp(maxResults * 4, maxResults, 2000);
 
@@ -79,6 +90,9 @@ public class SearchService : IDisposable
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var uniqueOnResult = new Action<SearchResult>(result =>
         {
+            // Unconditional, even in bypass mode: "*" only opts out of the user's own
+            // ExcludedPaths/Globs/Regexes configuration, not hidden/system attributes -- those are a
+            // separate, always-on filter.
             if (FileSystemItemFilter.IsHiddenOrSystem(result))
                 return;
 
@@ -96,7 +110,7 @@ public class SearchService : IDisposable
             {
                 await SendSearchPipeCommandAsync(msg, result =>
                 {
-                    if (!exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
+                    if (bypassExclusions || !exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
                         uniqueOnResult(result);
                 }, token).ConfigureAwait(false);
                 return true;
@@ -117,7 +131,7 @@ public class SearchService : IDisposable
         {
             try
             {
-                return SearchServiceHelper.SearchNetworkDrives(query, fileCandidateLimit, directoryFilter, exclusionRules, uniqueOnResult, token);
+                return SearchServiceHelper.SearchNetworkDrives(query, fileCandidateLimit, directoryFilter, exclusionRules, bypassExclusions, uniqueOnResult, token);
             }
             catch (OperationCanceledException)
             {

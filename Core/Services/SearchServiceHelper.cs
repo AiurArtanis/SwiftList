@@ -7,6 +7,7 @@ internal static class SearchServiceHelper
         int maxResults,
         string? directoryFilter,
         ExclusionRuleSet exclusionRules,
+        bool bypassExclusions,
         Action<SearchResult> onResult,
         CancellationToken token)
     {
@@ -18,7 +19,7 @@ internal static class SearchServiceHelper
             UserNetworkDriveSearch.SearchStreaming(query, maxResults, result =>
             {
                 token.ThrowIfCancellationRequested();
-                if (!exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
+                if (bypassExclusions || !exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
                 {
                     Interlocked.Increment(ref found);
                     onResult(result);
