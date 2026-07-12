@@ -1,3 +1,4 @@
+using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
 namespace SwiftList.Core.IndexV2;
@@ -12,6 +13,15 @@ internal static class NameSearch
 {
     private static readonly FzfPatternResult EmptyPatternMatch = new(0, int.MaxValue, int.MaxValue, 0, false);
 
+    // The percentage*consecutiveness ranking weight (HighlightMask.ComputeWeight) is too expensive to
+    // compute per-candidate in the hot scan (measured ~10us/candidate for a typical fuzzy multi-term
+    // query -- dominated by the DP fuzzy-highlight fallback for scattered matches) when a broad query
+    // can match tens of thousands of names. Instead, the scan keeps a WIDER unweighted top-N than what
+    // gets displayed, and only that bounded headroom set gets refined with the real weight afterward --
+    // cost becomes a small constant, independent of how many candidates the query actually matched.
+    private const int RefinementHeadroomFactor = 5;
+    private const int RefinementScanCap = 4000;
+
     public static void SearchStreaming(Snapshot snapshot, DeltaOverlay delta, FzfPattern pattern, int limit,
         Action<SearchResult> onResult, CancellationToken token, string? directoryFilterLower)
     {
@@ -23,12 +33,17 @@ internal static class NameSearch
             return;
 
         var keep = Math.Max(limit * 8, 64);
-        var topN = new FzfTopN(keep);
+        var scanKeep = matchAll || pattern.IsEmpty ? keep : Math.Min(keep * RefinementHeadroomFactor, RefinementScanCap);
+        var topN = new FzfTopN(scanKeep);
         CollectRanks(snapshot, delta, pattern, matchAll, directoryContext, rank => topN.Add(rank));
+
+        var ranks = topN.Finish(scanKeep);
+        if (!matchAll && !pattern.IsEmpty)
+            RefineWithWeight(snapshot, delta, pattern, ranks);
 
         var seen = new HashSet<int>();
         var emitted = 0;
-        foreach (var rank in topN.Finish(keep))
+        foreach (var rank in ranks)
         {
             token.ThrowIfCancellationRequested();
             if (!seen.Add(rank.EntryIndex))
@@ -38,6 +53,27 @@ internal static class NameSearch
                 break;
         }
     }
+
+    // Bounded refinement: only ever runs over the scanKeep-sized headroom set above, never the full
+    // matched set. Ranking-only (FzfResultRank.ApplyWeight never rejects), so this can't drop a result.
+    private static void RefineWithWeight(Snapshot snapshot, DeltaOverlay delta, FzfPattern pattern, List<FzfRank> ranks)
+    {
+        for (var i = 0; i < ranks.Count; i++)
+        {
+            var rank = ranks[i];
+            var name = GetNameForEntry(snapshot, delta, rank.EntryIndex);
+            if (name.Length == 0)
+                continue;
+            var weight = HighlightMask.ComputeWeight(name, pattern);
+            ranks[i] = FzfResultRank.ApplyWeight(rank, weight);
+        }
+        FzfRankRadixSorter.Sort(ranks);
+    }
+
+    // Mirrors ResultBuilder.ToResult's entryIndex->name resolution (base row, possibly overridden, vs
+    // an Added delta record past Snapshot.Count).
+    private static string GetNameForEntry(Snapshot snapshot, DeltaOverlay delta, int entryIndex)
+        => entryIndex >= snapshot.Count ? delta.Added[entryIndex - snapshot.Count].Name : delta.NameOf(entryIndex);
 
     // Mirrors Searcher's drive gate: a foreign-drive query returns nothing; a bare drive prefix with
     // no terms ("t:") matches everything (TryMatch trivially succeeds on an empty pattern).

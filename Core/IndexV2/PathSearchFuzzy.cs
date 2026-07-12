@@ -1,3 +1,4 @@
+using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
 namespace SwiftList.Core.IndexV2;
@@ -10,24 +11,37 @@ namespace SwiftList.Core.IndexV2;
 // fanned out per row. Delta rows (small, live-updated) keep their per-record string matching.
 internal static class PathSearchFuzzy
 {
+    // See NameSearch's identical constants: the ranking weight is too expensive to compute inline
+    // for every matched candidate, so the scan keeps a wider unweighted top-N and only that bounded
+    // headroom set gets refined (filename weight * directory weight) afterward.
+    private const int RefinementHeadroomFactor = 5;
+    private const int RefinementScanCap = 4000;
+
     public static void SearchStreaming(Snapshot snapshot, DeltaOverlay delta, string pathQuery, int limit,
         Action<SearchResult> onResult, CancellationToken token, string? directoryFilterLower)
     {
         var keep = Math.Max(limit * 8, 64);
-        var topN = new FzfTopN(keep);
+        var scanKeep = Math.Min(keep * RefinementHeadroomFactor, RefinementScanCap);
+        var topN = new FzfTopN(scanKeep);
 
         var lastSep = pathQuery.LastIndexOf(Path.DirectorySeparatorChar);
         var dirQuery = lastSep >= 0 ? pathQuery[..lastSep] : string.Empty;
         var fileQuery = lastSep >= 0 ? pathQuery[(lastSep + 1)..] : pathQuery;
 
+        PathGate? gate = null;
+        FzfPattern? filePattern = null;
         if (!string.IsNullOrEmpty(dirQuery))
-            SearchWithDirectory(snapshot, delta, dirQuery, fileQuery, topN, keep, token, directoryFilterLower);
+            (gate, filePattern) = SearchWithDirectory(snapshot, delta, dirQuery, fileQuery, topN, scanKeep, token, directoryFilterLower);
         else
-            SearchFilenameOnly(snapshot, delta, pathQuery, topN, token, directoryFilterLower);
+            filePattern = SearchFilenameOnly(snapshot, delta, pathQuery, topN, token, directoryFilterLower);
+
+        var ranks = topN.Finish(scanKeep);
+        if (filePattern is { IsEmpty: false } || gate != null)
+            RefineWithWeight(snapshot, delta, gate, filePattern, ranks);
 
         var seen = new HashSet<int>();
         var emitted = 0;
-        foreach (var rank in topN.Finish(keep))
+        foreach (var rank in ranks)
         {
             token.ThrowIfCancellationRequested();
             if (!seen.Add(rank.EntryIndex))
@@ -38,7 +52,49 @@ internal static class PathSearchFuzzy
         }
     }
 
-    private static void SearchWithDirectory(Snapshot snapshot, DeltaOverlay delta, string dirQuery, string fileQuery,
+    // Bounded refinement over the scanKeep-sized headroom set only -- filename weight (against
+    // filePattern, when there's a filename query) times directory weight (against gate, when path
+    // mode has a directory part). Never rejects; FzfResultRank.ApplyWeight only adjusts sort order.
+    private static void RefineWithWeight(Snapshot snapshot, DeltaOverlay delta, PathGate? gate, FzfPattern? filePattern, List<FzfRank> ranks)
+    {
+        var worker = gate != null ? SearchMatcher.RentWorker() : null;
+        for (var i = 0; i < ranks.Count; i++)
+        {
+            var rank = ranks[i];
+            var name = GetNameForEntry(snapshot, delta, rank.EntryIndex);
+            if (name.Length == 0)
+                continue;
+
+            var weight = filePattern is { IsEmpty: false } ? HighlightMask.ComputeWeight(name, filePattern) : 1.0;
+            if (gate != null)
+                weight *= ComputeDirectoryWeight(snapshot, delta, gate, rank.EntryIndex, worker!);
+
+            ranks[i] = FzfResultRank.ApplyWeight(rank, weight);
+        }
+        if (worker != null)
+            SearchMatcher.ReturnWorker(worker);
+        FzfRankRadixSorter.Sort(ranks);
+    }
+
+    // Same entryIndex->parent resolution FanoutRange (base rows, via Snapshot.ParentIndexes) and
+    // MatchDeltaRowsWithDirectory (delta rows, via DeltaOverlay.GetParentPath) used during the scan --
+    // recovered here post-hoc from just the entryIndex, so no side-channel needs to be threaded
+    // through the bounded top-N for the small refinement set.
+    private static double ComputeDirectoryWeight(Snapshot snapshot, DeltaOverlay delta, PathGate gate, int entryIndex, SearchMatcher.Worker worker)
+    {
+        if (entryIndex >= snapshot.Count)
+            return gate.ComputeWeightForPath(delta.GetParentPath(delta.Added[entryIndex - snapshot.Count]), worker);
+        if (delta.BaseOverrides.TryGetValue(entryIndex, out var overrideRecord))
+            return gate.ComputeWeightForPath(delta.GetParentPath(overrideRecord), worker);
+
+        var parentIndex = snapshot.ParentIndexes[entryIndex];
+        return parentIndex < 0 ? 1.0 : gate.ComputeWeight(parentIndex, worker);
+    }
+
+    private static string GetNameForEntry(Snapshot snapshot, DeltaOverlay delta, int entryIndex)
+        => entryIndex >= snapshot.Count ? delta.Added[entryIndex - snapshot.Count].Name : delta.NameOf(entryIndex);
+
+    private static (PathGate Gate, FzfPattern? FilePattern) SearchWithDirectory(Snapshot snapshot, DeltaOverlay delta, string dirQuery, string fileQuery,
         FzfTopN topN, int keep, CancellationToken token, string? directoryFilterLower)
     {
         var filePattern = !string.IsNullOrEmpty(fileQuery) ? FzfPattern.ParseText(fileQuery) : null;
@@ -80,6 +136,7 @@ internal static class PathSearchFuzzy
         }
 
         MatchDeltaRowsWithDirectory(snapshot, delta, gate, filePattern, topN, directoryFilterLower);
+        return (gate, filePattern);
     }
 
     private static void FanoutRange(Snapshot snapshot, DeltaOverlay delta, List<PathUniqueMatch> matches, int from, int to,
@@ -155,7 +212,7 @@ internal static class PathSearchFuzzy
         SearchMatcher.ReturnWorker(worker);
     }
 
-    private static void SearchFilenameOnly(Snapshot snapshot, DeltaOverlay delta, string pathQuery, FzfTopN topN,
+    private static FzfPattern SearchFilenameOnly(Snapshot snapshot, DeltaOverlay delta, string pathQuery, FzfTopN topN,
         CancellationToken token, string? directoryFilterLower)
     {
         var pattern = FzfPattern.ParseText(pathQuery);
@@ -191,6 +248,7 @@ internal static class PathSearchFuzzy
                 continue;
             topN.Add(FzfResultRank.ForDefaultScheme(entryIndex, record.Name, match));
         }
+        return pattern;
     }
 
     private static int EntryIndexOf(Snapshot snapshot, DeltaOverlay delta, DeltaOverlay.DeltaRecord record)

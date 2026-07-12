@@ -164,6 +164,81 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
         }
     }
 
+    // "alias" here is one single combination already (caller splits '|'-joined alternatives first).
+    public int[]? MapAliasToSourceIndices(string text, string alias)
+    {
+        if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(alias))
+            return null;
+
+        var lists = GetSyllableLists(text);
+
+        // Fast path: the "initials" alias contributes exactly one character per source character.
+        // Verify it actually looks like initials (each alias char is the first letter of one of that
+        // source character's own candidate syllables) rather than assuming from length alone --
+        // coincidentally-equal lengths do happen (e.g. every character single-letter-syllable), and a
+        // wrong identity mapping would silently mis-highlight rather than fail loudly.
+        if (alias.Length == text.Length)
+        {
+            var isInitials = true;
+            for (var i = 0; i < text.Length; i++)
+            {
+                var initial = char.ToLowerInvariant(alias[i]);
+                var candidateMatches = false;
+                foreach (var candidate in lists[i])
+                {
+                    if (candidate.Length > 0 && char.ToLowerInvariant(candidate[0]) == initial)
+                    {
+                        candidateMatches = true;
+                        break;
+                    }
+                }
+                if (!candidateMatches)
+                {
+                    isInitials = false;
+                    break;
+                }
+            }
+
+            if (isInitials)
+            {
+                var identity = new int[text.Length];
+                for (var i = 0; i < text.Length; i++)
+                    identity[i] = i;
+                return identity;
+            }
+        }
+
+        // General path: the "full pinyin" alias concatenates each character's whole syllable, which
+        // can be more than one letter -- greedily walk source characters, consuming whichever
+        // candidate syllable the alias actually continues with at the current position. This can
+        // only mis-segment on genuinely ambiguous polyphonic overlaps; bailing out to null (no
+        // highlight via this provider) is safe and no worse than today's total lack of one.
+        var map = new int[alias.Length];
+        var aliasPos = 0;
+        for (var sourceIndex = 0; sourceIndex < text.Length && aliasPos < alias.Length; sourceIndex++)
+        {
+            var matchedLen = -1;
+            foreach (var candidate in lists[sourceIndex])
+            {
+                if (candidate.Length > 0 && aliasPos + candidate.Length <= alias.Length &&
+                    string.Compare(alias, aliasPos, candidate, 0, candidate.Length, StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    matchedLen = candidate.Length;
+                    break;
+                }
+            }
+
+            if (matchedLen < 0)
+                return null;
+
+            for (var j = 0; j < matchedLen; j++)
+                map[aliasPos + j] = sourceIndex;
+            aliasPos += matchedLen;
+        }
+
+        return aliasPos == alias.Length ? map : null;
+    }
+
     private static string[][] GetSyllableLists(string text)
     {
         var lists = new string[text.Length][];

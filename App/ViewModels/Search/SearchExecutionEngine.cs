@@ -74,7 +74,7 @@ internal sealed class SearchExecutionEngine : IDisposable
         // until the whole search finishes). Gated on there being instant results so normal file
         // queries keep their existing behaviour.
         var instantResults = new List<AppSearchResult>();
-        PluginSearchResultMapper.AddInstantResults(instantResults, query, isInlineSearchContext);
+        PluginSearchResultMapper.AddInstantResults(instantResults, query, null, isInlineSearchContext);
         // Emit instant results up-front only when the caller opts in — the quick window allows this
         // only while its list is empty. During continuous typing the list already has rows, and an
         // instant-only snapshot would collapse the existing file rows away and then re-expand them

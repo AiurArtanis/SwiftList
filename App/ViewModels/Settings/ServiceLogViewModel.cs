@@ -164,7 +164,11 @@ public class ServiceLogViewModel : ViewModelBase, IDisposable
         if (LevelFilter != "All")
             filtered = filtered.Where(l => l.Level.ToString() == LevelFilter);
         if (!string.IsNullOrWhiteSpace(SearchText))
-            filtered = filtered.Where(l => l.Text.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+            // FuzzyMatcher.IsMatch splits a multi-word SearchText into independently-required terms
+            // (same as Core's real file search) -- a plain .Contains(SearchText) treated the whole
+            // typed text as one literal string, so e.g. "error timeout" would never match a line
+            // containing both words non-contiguously.
+            filtered = filtered.Where(l => FuzzyMatcher.IsMatch(SearchText, l.Text));
         Lines.ReplaceRange(filtered);
     }
 

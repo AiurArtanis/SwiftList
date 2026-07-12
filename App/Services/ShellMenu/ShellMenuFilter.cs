@@ -9,76 +9,16 @@ public static class ShellMenuFilter
         var filtered = rawItems;
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            // Check if there are active Pinyin or other transliteration providers
-            var activeProviders = AliasProviderRegistry.GetActiveProviders().ToList();
-
+            // The standard match contract (FuzzyMatcher.IsMatch): same FzfPattern.Parse-based
+            // multi-keyword splitting, fuzzy subsequence matching, and pinyin/alias fallback (with
+            // proper quality gating) as every other search surface in the app, instead of a hand-
+            // rolled two-pointer sequence match + raw alias substring check duplicating that logic.
             filtered = rawItems.Where(item =>
             {
                 if (item.IsSectionHeader || item.IsSeparator)
-                {
                     return true;
-                }
 
-                if (string.IsNullOrEmpty(item.Text))
-                {
-                    return false;
-                }
-
-                // Standardize spaces to support multi-keyword matching like FZF
-                var queryKeywords = filter.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (queryKeywords.Length == 0)
-                {
-                    return true;
-                }
-
-                // Check if every keyword matches either the item text or its aliases (via fuzzy matching helper logic)
-                foreach (var keyword in queryKeywords)
-                {
-                    var isKeywordMatch = false;
-
-                    // 1. Direct Fuzzy Match (simplified sequence match)
-                    if (IsFuzzyMatch(item.Text, keyword))
-                    {
-                        isKeywordMatch = true;
-                    }
-                    else
-                    {
-                        // 2. Alias Match (enforce a cleaner substring match on concatenated pinyin aliases to prevent subsequence leaking)
-                        foreach (var provider in activeProviders)
-                        {
-                            try
-                            {
-                                if (provider.CanHandle(item.Text))
-                                {
-                                    foreach (var alias in provider.GetAliases(item.Text))
-                                    {
-                                        if (!string.IsNullOrEmpty(alias) && alias.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            isKeywordMatch = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                            catch
-                            {
-                                // Ignore provider exceptions
-                            }
-
-                            if (isKeywordMatch)
-                            {
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!isKeywordMatch)
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
+                return !string.IsNullOrEmpty(item.Text) && FuzzyMatcher.IsMatch(filter, item.Text);
             }).ToList();
         }
 
@@ -131,28 +71,5 @@ public static class ShellMenuFilter
         }
 
         return cleanItems;
-    }
-
-    private static bool IsFuzzyMatch(string target, string query)
-    {
-        if (string.IsNullOrEmpty(query)) return true;
-        if (string.IsNullOrEmpty(target)) return false;
-
-        var targetIdx = 0;
-        var queryIdx = 0;
-
-        while (targetIdx < target.Length && queryIdx < query.Length)
-        {
-            var targetChar = char.ToLowerInvariant(target[targetIdx]);
-            var queryChar = char.ToLowerInvariant(query[queryIdx]);
-
-            if (targetChar == queryChar)
-            {
-                queryIdx++;
-            }
-            targetIdx++;
-        }
-
-        return queryIdx == query.Length;
     }
 }

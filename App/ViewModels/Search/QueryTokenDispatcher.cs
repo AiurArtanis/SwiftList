@@ -17,6 +17,7 @@ internal static class QueryTokenDispatcher
             return fileResults as List<AppSearchResult> ?? fileResults.ToList();
 
         IReadOnlyList<ISearchResult> current = fileResults;
+        List<string>? extraHighlightTerms = null;
         foreach (var token in tokens)
         {
             var provider = PluginManager.Instance.QueryTokenProviders.FirstOrDefault(p => p.CanHandle(token));
@@ -28,8 +29,24 @@ internal static class QueryTokenDispatcher
                 return new List<AppSearchResult>();
 
             current = await provider.ApplyAsync(token, current);
+
+            var highlightText = provider.GetHighlightText(token);
+            if (!string.IsNullOrWhiteSpace(highlightText))
+                (extraHighlightTerms ??= new List<string>()).Add(highlightText);
         }
 
-        return current.Cast<AppSearchResult>().ToList();
+        var results = current.Cast<AppSearchResult>().ToList();
+
+        // A token that fuzzy-matches a path segment (e.g. "::rena") kept these results for a reason
+        // beyond the main keyword -- fold its pattern into what TextHighlighter lights up too, so that
+        // reason is visible, not just why the primary keyword matched.
+        if (extraHighlightTerms != null)
+        {
+            var suffix = " " + string.Join(" ", extraHighlightTerms);
+            foreach (var result in results)
+                result.SearchQuery += suffix;
+        }
+
+        return results;
     }
 }

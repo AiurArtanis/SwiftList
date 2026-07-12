@@ -28,4 +28,16 @@ public interface IAliasProvider
     /// from this provider are stale and need regenerating.
     /// </summary>
     int Version => 1;
+
+    /// <summary>
+    /// Maps each character position in a single alias string (one of the values <see cref="GetAliases"/>
+    /// would yield for this exact <paramref name="text"/> -- not a '|'-joined group of alternatives,
+    /// split those first) back to the index of the original character in <paramref name="text"/> it
+    /// was derived from. Lets a match found against the alias (e.g. which pinyin letters matched) be
+    /// translated onto the original text for highlighting, instead of highlighting nothing because the
+    /// query never appears verbatim in the original (non-transliterated) text.
+    /// Returns null if this alias wasn't produced by this provider for this text, or mapping isn't
+    /// supported -- callers should treat that as "can't highlight via this provider", not an error.
+    /// </summary>
+    int[]? MapAliasToSourceIndices(string text, string alias) => null;
 }

@@ -62,6 +62,14 @@ internal sealed class SearchQueryDispatchController
                 var results = new List<AppSearchResult>();
                 if (fileResults != null)
                 {
+                    // Local (USN-indexed) and network-drive results stream in from separate,
+                    // independently-timed sources (see Core.Services.SearchService.SearchStreamingAsync's
+                    // localTask/networkTask) and land in fileResults in WHATEVER order they happened to
+                    // arrive -- not relevance order. SearchResultMapper.BuildQuickResults (the quick/inline
+                    // windows) already re-sorts by rank before building rows; this window skipped that
+                    // step, so a fast-arriving low-relevance network match could sit ahead of a slower
+                    // but far more relevant local one.
+                    fileResults.Sort(new SearchResultRankComparer(SearchHistoryStore.Snapshot()));
                     for (var i = 0; i < fileResults.Count; i++)
                     {
                         results.Add(SearchResultMapper.CreateUiResult(fileResults[i], cleanQuery, results.Count, isApplication: false, scope: null));

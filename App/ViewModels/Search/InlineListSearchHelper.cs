@@ -1,7 +1,7 @@
 using System.IO;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.App.Services;
-using SwiftList.App.Converters;
+using SwiftList.Core;
 
 namespace SwiftList.App.ViewModels.Search;
 
@@ -23,7 +23,11 @@ internal static class InlineListSearchHelper
 
         var hasPluginSearchActions = PluginSearchResultMapper.AddPluginSearchActionResults(uiResults, query, contextDirectory, isInlineWindow: true);
 
-        var listResults = new List<AppSearchResult>();
+        // Weight carried alongside each result (rather than sorting AppSearchResult itself) so the
+        // major-category grouping this method and MergeLocalMatches build around (instant results,
+        // then this section) stays exactly where it was -- only the ORDER WITHIN this section changes,
+        // from raw rawItems encounter order to match-quality order.
+        var listResults = new List<(AppSearchResult Result, double Weight)>();
         try
         {
             var index = 0;
@@ -36,20 +40,21 @@ internal static class InlineListSearchHelper
                 if (string.IsNullOrWhiteSpace(item))
                     continue;
 
-                if (!TryBuildMatch(item, query, index, token, out var result))
+                if (!TryBuildMatch(item, query, index, out var result, out var weight))
                     continue;
 
-                listResults.Add(result);
+                listResults.Add((result, weight));
                 index++;
 
                 if (listResults.Count - lastUpdateCount >= 50 || (DateTime.UtcNow - lastUpdateTime).TotalMilliseconds > 100)
                 {
+                    var sortedSoFar = listResults.OrderByDescending(r => r.Weight).ToList();
                     var partialResults = new List<AppSearchResult>(uiResults);
-                    if (hasPluginSearchActions && listResults.Count > 0)
+                    if (hasPluginSearchActions && sortedSoFar.Count > 0)
                     {
                         SearchResultMapper.AddSectionHeader(partialResults, TranslationManager.Instance["Search_SectionHeader"], query);
                     }
-                    foreach (var res in listResults)
+                    foreach (var (res, _) in sortedSoFar)
                     {
                         res.Index = partialResults.Count;
                         partialResults.Add(res);
@@ -79,7 +84,7 @@ internal static class InlineListSearchHelper
             SearchResultMapper.AddSectionHeader(uiResults, TranslationManager.Instance["Search_SectionHeader"], query);
         }
 
-        foreach (var res in listResults)
+        foreach (var (res, _) in listResults.OrderByDescending(r => r.Weight))
         {
             res.Index = uiResults.Count;
             uiResults.Add(res);
@@ -109,7 +114,7 @@ internal static class InlineListSearchHelper
         string? contextDirectory,
         CancellationToken token)
     {
-        var results = new List<AppSearchResult>();
+        var results = new List<(AppSearchResult Result, double Weight)>();
         token.ThrowIfCancellationRequested();
 
         var index = 0;
@@ -119,19 +124,22 @@ internal static class InlineListSearchHelper
             if (string.IsNullOrWhiteSpace(item))
                 continue;
 
-            if (!TryBuildMatch(item, query, index, token, out var result))
+            if (!TryBuildMatch(item, query, index, out var result, out var weight))
                 continue;
 
-            results.Add(result);
+            results.Add((result, weight));
             index++;
         }
-        return results;
+        return results.OrderByDescending(r => r.Weight).Select(r => r.Result).ToList();
     }
 
     // Shared by PerformInlineListProviderSearch and GetLocalMatches: both walk the same raw item
     // list, judging fuzzy-match against the display name and building the same AppSearchResult shape.
-    private static bool TryBuildMatch(string item, string query, int index, CancellationToken token, out AppSearchResult result)
+    // Ranking-only: callers sort their accumulated matches by Weight (descending) before finalizing,
+    // instead of leaving them in raw source-list encounter order.
+    private static bool TryBuildMatch(string item, string query, int index, out AppSearchResult result, out double weight)
     {
+        weight = 0;
         var isFullPath = false;
         try
         {
@@ -151,13 +159,12 @@ internal static class InlineListSearchHelper
         if (string.IsNullOrWhiteSpace(displayName))
             displayName = item;
 
-        var isMatch = displayName.Contains(query, StringComparison.OrdinalIgnoreCase);
-        if (!isMatch)
-        {
-            var highlights = new bool[displayName.Length];
-            FuzzyHighlightMatcher.MarkFuzzyMatch(displayName, query, highlights, token);
-            isMatch = highlights.Any(h => h);
-        }
+        // The standard match+weight contract (FuzzyMatcher.ComputeBestMatch) -- same FzfPattern.Parse
+        // Core's real file search uses, so a multi-word query requires all its words to match
+        // somewhere instead of the old displayName.Contains/MarkFuzzyMatch chain treating the whole
+        // query (spaces included) as one literal/fuzzy string.
+        var (isMatch, weightValue) = FuzzyMatcher.ComputeBestMatch(query, displayName);
+        weight = weightValue;
 
         if (!isMatch)
         {

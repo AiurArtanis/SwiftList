@@ -1,4 +1,5 @@
 using System.Text;
+using SwiftList.Core.SearchIndex;
 
 namespace SwiftList.Core.SearchIndex.Fzf;
 
@@ -155,6 +156,22 @@ internal sealed class FzfBytePattern
         var point2 = (ushort)(ushort.MaxValue - ClampToUShort(match.Score));
         var point3 = ClampToUShort(TrimmedLength(text));
         return new FzfRank(entryIndex, match.Score, point0 | ((ulong)point1 << 16) | ((ulong)point3 << 32) | ((ulong)point2 << 48));
+    }
+
+    // Ranking-only weight, computed as a bounded refinement AFTER the hot scan (see
+    // FzfResultRank.ApplyWeight) rather than inline per-candidate -- see that comment for why. ASCII
+    // bytes widen 1:1 into chars (no decode table needed for values < 128), so HighlightMask's
+    // char-based mask computation applies unchanged. Shared by name mode's refinement stage and path
+    // mode's per-unique filename weight (SearchMatcherPath.PathMatchOne / PathGate).
+    public static double ComputeWeight(ReadOnlySpan<byte> text, FzfPattern pattern)
+    {
+        if (pattern.IsEmpty)
+            return 1.0;
+
+        Span<char> widened = text.Length <= 512 ? stackalloc char[text.Length] : new char[text.Length];
+        for (var i = 0; i < text.Length; i++)
+            widened[i] = (char)text[i];
+        return HighlightMask.ComputeWeight(widened, pattern);
     }
 
     private static int TrimmedLength(ReadOnlySpan<byte> text)

@@ -1,10 +1,13 @@
-using SwiftList.Core;
+namespace SwiftList.Core.SearchIndex;
 
-namespace SwiftList.App.Converters;
-
-internal static class FuzzyHighlightMatcher
+// Moved here (was App/Converters) so Core's ranking pipeline can compute the same match mask it
+// scores against, not just App's display highlighting -- see HighlightMask, which is the shared
+// entry point both now go through. Public since App still calls this directly for its own
+// in-memory searchable lists (favorites, inline list items) that don't go through HighlightMask's
+// FzfPattern-based term splitting.
+public static class FuzzyHighlightMatcher
 {
-    public static void MarkFuzzyMatch(string text, string term, bool[] highlights, CancellationToken token = default)
+    public static void MarkFuzzyMatch(string text, string term, Span<bool> highlights, CancellationToken token = default)
     {
         if (string.IsNullOrEmpty(term) || string.IsNullOrEmpty(text))
             return;
@@ -179,10 +182,25 @@ internal static class FuzzyHighlightMatcher
     private static bool IsDelimiter(char c) => c == '.' || c == '_' || c == '-' || c == ' ' || c == '/' || c == '\\' ||
                c == '(' || c == ')' || c == '[' || c == ']' || c == '|' || c == '│' || c == '\t';
 
+    // One single-element array per ASCII value, built once -- GetPinyinSegments was allocating both
+    // a new string AND a new array for every character of every candidate on every DP fallback call
+    // (a 30-char name costs ~90 allocations per call), which showed up as a measurable chunk of the
+    // ~10us/candidate this fallback costs. ASCII's segment is always just its own lowercase form, so
+    // it never varies and is safe to share.
+    private static readonly string[][] AsciiLowerSegments = BuildAsciiLowerSegments();
+
+    private static string[][] BuildAsciiLowerSegments()
+    {
+        var table = new string[128][];
+        for (var i = 0; i < 128; i++)
+            table[i] = new[] { char.ToLowerInvariant((char)i).ToString() };
+        return table;
+    }
+
     private static string[] GetPinyinSegments(char c)
     {
         if (c <= 127)
-            return new[] { c.ToString().ToLowerInvariant() };
+            return AsciiLowerSegments[c];
 
         var s = c.ToString();
         var list = new List<string>();

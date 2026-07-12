@@ -26,6 +26,11 @@ public class PathExclusionQueryTokenProvider : IQueryTokenProvider
         return Task.FromResult<IReadOnlyList<ISearchResult>>(filtered);
     }
 
+    // The pattern this token actually fuzzy-matches against a path segment -- same text AnySegmentMatches
+    // tests, so the host can highlight it too (e.g. "Rename" lighting up alongside the main keyword for
+    // a "<keyword> ::rena" query, instead of only ever showing why the primary keyword matched).
+    public string? GetHighlightText(string token) => token.Length > 1 ? token[1..] : null;
+
     // Splitting the full path covers every ancestor folder AND the file's own leaf name in one pass --
     // "keep if any path component matches" needs no special-casing between the two.
     private static bool AnySegmentMatches(string fullPath, string pattern)

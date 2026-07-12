@@ -6,10 +6,19 @@ namespace SwiftList.App.ViewModels.Search;
 
 public static class PluginSearchResultMapper
 {
-    public static void AddInstantResults(List<AppSearchResult> uiResults, string query, bool isInlineWindow)
+    public static void AddInstantResults(List<AppSearchResult> uiResults, string query, string? highlightQuery, bool isInlineWindow)
     {
         if (isInlineWindow)
             return;
+
+        // highlightQuery defaults to `query` for callers that already pass the clean (token-stripped)
+        // keyword as `query` itself -- only BuildQuickResults needs the two to differ, since it passes
+        // the untouched raw text (keyword + any " :xxx" token suffix) as `query` so instant-result
+        // plugins (a calculator, unit converter, ...) can see the suffix, but that raw text is NOT
+        // what should drive TextHighlighter -- the "::" token syntax isn't file-search operator syntax
+        // FzfPattern knows how to strip, so it would survive into the highlight mask as literal
+        // garbage and light up nothing (or something misleading).
+        var effectiveHighlightQuery = highlightQuery ?? query;
 
         foreach (var provider in PluginManager.Instance.InstantResultProviders)
         {
@@ -88,7 +97,7 @@ public static class PluginSearchResultMapper
                         Drive = string.Empty,
                         ResultKind = resultKind,
                         Index = uiResults.Count,
-                        SearchQuery = query,
+                        SearchQuery = effectiveHighlightQuery,
                         IconOverride = !string.IsNullOrEmpty(iconPath) ? null : iconOverride,
                         InstantResultActionType = item.ActionType ?? "Copy",
                         InstantResultActionArgument = targetPath,

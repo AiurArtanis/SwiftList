@@ -13,6 +13,21 @@ internal static class FzfResultRank
         return new FzfRank(entryIndex, match.Score, Pack(point0, point1, point3, point2));
     }
 
+    // Ranking-only weight (percentage of the whole name covered * how contiguous that coverage is --
+    // HighlightMask.ComputeWeight, same mask App's TextHighlighter would show), applied AFTER the hot
+    // scan as a bounded refinement over a headroom-sized top-N rather than inline per-candidate --
+    // computing it during the scan measured ~10us/candidate (mostly the DP fuzzy-highlight fallback),
+    // which is fine for a few hundred matches but not for tens of thousands on a broad query. Only
+    // rewrites the score bits (point2); position/span/length are unaffected by weighting.
+    public static FzfRank ApplyWeight(FzfRank rank, double weight)
+    {
+        if (weight >= 1.0)
+            return rank;
+        var newPoint2 = ScorePoint((int)(rank.Score * weight));
+        var sortKey = (rank.SortKey & ~(0xFFFFUL << 48)) | ((ulong)newPoint2 << 48);
+        return rank with { SortKey = sortKey };
+    }
+
     // The name-dependent low 32 bits of the Default-scheme sort key (match-position point | span
     // point << 16) -- path mode reuses these per-unique and rebuilds the upper 32 bits per row.
     public static uint RankLow32(ReadOnlySpan<char> text, FzfPatternResult match)

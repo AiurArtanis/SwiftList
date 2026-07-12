@@ -25,21 +25,13 @@ public static class FavoriteSearchHelper
         return fav.Path;
     }
 
-    public static bool IsFavoriteMatch(FavoriteItemSetting fav, string query)
-    {
-        if (string.IsNullOrWhiteSpace(query)) return false;
-
-        var displayName = GetDisplayName(fav);
-
-        if (displayName.Contains(query, StringComparison.OrdinalIgnoreCase)) return true;
-        if (fav.Path.Contains(query, StringComparison.OrdinalIgnoreCase)) return true;
-
-        var highlights = new bool[displayName.Length];
-        Converters.FuzzyHighlightMatcher.MarkFuzzyMatch(displayName.ToLowerInvariant(), query.ToLowerInvariant(), highlights);
-        if (highlights.Any(h => h)) return true;
-
-        return false;
-    }
+    // The standard match+weight contract (FuzzyMatcher.ComputeBestMatch): display name first, then
+    // the raw path, via the same FzfPattern.Parse Core's real file search uses -- a multi-word query
+    // requires all its words to match somewhere, the same way it would against an indexed file name,
+    // instead of the old displayName.Contains/.Contains(Path)/MarkFuzzyMatch chain treating the whole
+    // query (spaces included) as one literal/fuzzy string.
+    internal static (bool IsMatch, double Weight) ComputeMatch(FavoriteItemSetting fav, string query)
+        => FuzzyMatcher.ComputeBestMatch(query, GetDisplayName(fav), new[] { fav.Path });
 
     public static AppSearchResult CreateFavoriteUiResult(FavoriteItemSetting fav, string query, int index)
     {

@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using SwiftList.Core;
 using Brush = System.Windows.Media.Brush;
 using Color = System.Windows.Media.Color;
 
@@ -74,71 +75,40 @@ public static class TextHighlighter
 
         if (highlights == null)
         {
-            // Split highlight into terms and normalize them (same logic as Search)
-            string? targetDrive = null;
-            var termsList = new List<string>();
+            // Path mode: the whole (drive-normalized) query is one literal-ish term that must NOT
+            // be split on spaces (folder/file names can contain them) -- everything else goes
+            // through Core's real FzfPattern-based term splitting, so display highlighting is
+            // provably the same computation the ranking weight scores against (HighlightMask).
             var normalizedHighlight = NormalizePathSeparators(highlight.Trim()).ToLowerInvariant();
 
             if (ContainsPathSeparator(normalizedHighlight))
             {
-                if (TryNormalizeDrivePath(normalizedHighlight, out _, out var normalizedDrivePath))
-                {
-                    termsList.Add(normalizedDrivePath);
-                }
-                else
-                {
-                    termsList.Add(normalizedHighlight);
-                }
+                var term = TryNormalizeDrivePath(normalizedHighlight, out _, out var normalizedDrivePath)
+                    ? normalizedDrivePath
+                    : normalizedHighlight;
+
+                // Mirrors Core's real path-mode split (PathSearchFuzzy.SearchStreaming): everything
+                // after the LAST separator is the file-part query (its own multi-term match against a
+                // name), everything before is the directory-part query (matched against ancestor
+                // segments). Treating the whole term -- separators and all -- as one literal string
+                // almost never matched anything (e.g. "soft \ rename fz" has no literal "\" inside any
+                // real file/folder name), so a real path-mode match ranked correctly but highlighted
+                // nothing at all. Both parts are tried against whatever text this call is for (Name or
+                // Path column) and unioned -- the file part naturally lights up the Name column, the
+                // directory part the Path column.
+                var lastSep = term.LastIndexOf(Path.DirectorySeparatorChar);
+                var dirPart = lastSep >= 0 ? term[..lastSep].Trim() : string.Empty;
+                var filePart = (lastSep >= 0 ? term[(lastSep + 1)..] : term).Trim();
+
+                highlights = new bool[fullText.Length];
+                if (!string.IsNullOrEmpty(filePart))
+                    OrInto(highlights, Core.FuzzyMatcher.ComputeHighlightMask(fullText, filePart));
+                if (!string.IsNullOrEmpty(dirPart))
+                    OrInto(highlights, Core.FuzzyMatcher.ComputeHighlightMask(fullText, dirPart));
             }
             else
             {
-                var rawTerms = normalizedHighlight.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-                foreach (var rawTerm in rawTerms)
-                {
-                    if (rawTerm.Length >= 2 && char.IsLetter(rawTerm[0]) && rawTerm[1] == Path.VolumeSeparatorChar)
-                    {
-                        targetDrive = rawTerm[0].ToString();
-                    }
-                    else
-                    {
-                        termsList.Add(rawTerm);
-                    }
-                }
-
-                if (targetDrive != null)
-                {
-                    termsList.Add(targetDrive + Path.VolumeSeparatorChar);
-                }
-            }
-
-            var terms = termsList.ToArray();
-
-            // Build a list of highlight ranges
-            highlights = new bool[fullText.Length];
-            var fullTextLower = fullText.ToLowerInvariant();
-
-            foreach (var term in terms)
-            {
-                var termLower = term;
-                var foundAny = false;
-                var startIdx = 0;
-                while (startIdx < fullTextLower.Length)
-                {
-                    var foundIdx = fullTextLower.IndexOf(termLower, startIdx, StringComparison.Ordinal);
-                    if (foundIdx < 0) break;
-
-                    for (var i = foundIdx; i < foundIdx + termLower.Length && i < highlights.Length; i++)
-                        highlights[i] = true;
-
-                    foundAny = true;
-                    startIdx = foundIdx + 1;
-                }
-
-                if (!foundAny)
-                {
-                    FuzzyHighlightMatcher.MarkFuzzyMatch(fullTextLower, termLower, highlights);
-                }
+                highlights = Core.FuzzyMatcher.ComputeHighlightMask(fullText, normalizedHighlight);
             }
         }
 
@@ -161,6 +131,15 @@ public static class TextHighlighter
 
             textBlock.Inlines.Add(run);
             pos = end;
+        }
+    }
+
+    private static void OrInto(bool[] target, bool[] source)
+    {
+        for (var i = 0; i < target.Length && i < source.Length; i++)
+        {
+            if (source[i])
+                target[i] = true;
         }
     }
 

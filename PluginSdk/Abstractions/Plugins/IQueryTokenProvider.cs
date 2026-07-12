@@ -38,4 +38,13 @@ public interface IQueryTokenProvider
     /// empty result means for the rest of the UI, and rendering any "N more"/"no results" indicator.
     /// </summary>
     Task<IReadOnlyList<ISearchResult>> ApplyAsync(string token, IReadOnlyList<ISearchResult> results);
+
+    /// <summary>
+    /// The literal text this token fuzzy-matches against a result's name/path, if any -- the host
+    /// folds this into what gets highlighted in the UI alongside the query's main keyword, so a result
+    /// kept by this token (e.g. because a path segment matched it) visibly shows why. Return null for
+    /// a token whose effect isn't a text match at all (a sort key, an extension filter, ...), which is
+    /// simply not included in highlighting. Defaults to null so existing providers are unaffected.
+    /// </summary>
+    string? GetHighlightText(string token) => null;
 }

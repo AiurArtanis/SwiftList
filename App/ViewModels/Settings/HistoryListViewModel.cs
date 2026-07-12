@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
+using SwiftList.Core;
 
 namespace SwiftList.App.ViewModels.Settings;
 
@@ -82,9 +83,12 @@ public class HistoryListViewModel : ViewModelBase
         FilteredItems.Clear();
         foreach (var item in _allItems)
         {
+            // FuzzyMatcher.ComputeBestMatch (same FzfPattern.Parse Core's file search uses) splits a
+            // multi-word SearchText into independently-required terms -- a plain .Contains(SearchText)
+            // treated the whole typed text (spaces included) as one literal string, so a query like
+            // "foo bar" would never match an entry containing both words non-contiguously.
             if (string.IsNullOrEmpty(SearchText) ||
-                item.Primary.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                item.Secondary.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+                FuzzyMatcher.ComputeBestMatch(SearchText, item.Primary, new[] { item.Secondary }).IsMatch)
             {
                 FilteredItems.Add(item);
             }
