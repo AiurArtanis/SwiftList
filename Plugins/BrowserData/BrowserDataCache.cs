@@ -35,6 +35,11 @@ internal static class BrowserDataCache
         }
     }
 
+    // Called once at plugin load time (see BrowserDataInstantProvider's IWarmupable) so the first real
+    // "bm <query>" of the session doesn't land on a still-empty snapshot -- same reload path GetSnapshot
+    // already uses, just triggered proactively instead of waiting for the first query.
+    public static void Preload() => MaybeTriggerReload();
+
     private static void MaybeTriggerReload()
     {
         var configured = PluginSettingsService.GetSetting<List<BrowserProfileConfig>>("SwiftList.Plugins.BrowserData", "Profiles", null!);
