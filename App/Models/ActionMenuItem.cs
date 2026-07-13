@@ -31,11 +31,20 @@ public class ActionMenuItem
     private const double BaseSectionFontSize = 10;
     private const double BaseShortcutFontSize = 11;
 
-    public double ScaledItemHeight => Math.Round(ItemHeight * Services.UiMetrics.Scale);
-    public double ScaledIconSize => Math.Round(BaseIconSize * Services.UiMetrics.Scale);
-    public double ScaledTextFontSize => Math.Round(BaseTextFontSize * Services.UiMetrics.Scale);
-    public double ScaledSectionFontSize => Math.Round(BaseSectionFontSize * Services.UiMetrics.Scale);
-    public double ScaledShortcutFontSize => Math.Round(BaseShortcutFontSize * Services.UiMetrics.Scale);
+    // Shares AppSearchResult's own row-height formula (UiMetrics.ScaledNormalRowHeight), not ItemHeight
+    // (34, used as-is by the full/inline windows' own unscaled action menu) -- so the quick window's
+    // action rows come out the same pixel size as its result rows (icon-size floor included) instead
+    // of looking cramped next to them.
+    public double ScaledItemHeight => Services.UiMetrics.ScaledNormalRowHeight;
+
+    // Scaled off IconRelativeFontScale (tracks the actual configured icon size), not raw Scale (tracks
+    // only the search-bar height) -- the two only coincide when the configured result icon size equals
+    // UiMetrics.BaseResultIconSize, so using Scale here left action text/icons visibly smaller than
+    // the result row text sitting right next to them once the two diverged.
+    public double ScaledIconSize => Math.Round(BaseIconSize * Services.UiMetrics.IconRelativeFontScale);
+    public double ScaledTextFontSize => Math.Round(BaseTextFontSize * Services.UiMetrics.IconRelativeFontScale);
+    public double ScaledSectionFontSize => Math.Round(BaseSectionFontSize * Services.UiMetrics.IconRelativeFontScale);
+    public double ScaledShortcutFontSize => Math.Round(BaseShortcutFontSize * Services.UiMetrics.IconRelativeFontScale);
 
     public bool IsNormalItem => !IsSeparator && !IsSectionHeader;
 

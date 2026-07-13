@@ -51,14 +51,29 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
             <!-- Page header -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                <TextBlock Style="{StaticResource SettingsSectionTitle}"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_Title]}"
-                           VerticalAlignment="Center"/>
-                <Border CornerRadius="4" Background="{DynamicResource BadgeBackground}" BorderBrush="{DynamicResource BadgeBorderBrush}" BorderThickness="1" Margin="8,0,0,0" Padding="5,1,5,2" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding HostSdkVersion, StringFormat='SDK v{0}'}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BadgeText}" />
-                </Border>
-            </StackPanel>
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource SettingsSectionTitle}"
+                               Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_Title]}"
+                               VerticalAlignment="Center"/>
+                    <Border CornerRadius="4" Background="{DynamicResource BadgeBackground}" BorderBrush="{DynamicResource BadgeBorderBrush}" BorderThickness="1" Margin="8,0,0,0" Padding="5,1,5,2" VerticalAlignment="Center"
+                            Cursor="Hand" MouseLeftButtonUp="SdkBadge_MouseLeftButtonUp"
+                            ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_DevGuideTooltip]}">
+                        <TextBlock Text="{Binding HostSdkVersion, StringFormat='SDK v{0}'}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource BadgeText}" />
+                    </Border>
+                </StackPanel>
+
+                <!-- Expand/collapse-all for every plugin card on this page -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="{Binding ExpandAllToggleLabel}" Command="{Binding ToggleExpandAllCommand}"
+                            Style="{StaticResource LinkButton}" FontSize="12"
+                            Visibility="{Binding IsEmpty, Converter={StaticResource InvertBoolToVis}}"/>
+                </StackPanel>
+            </Grid>
             <TextBlock Style="{StaticResource SettingsHintText}"
                        Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_Hint]}"/>
 

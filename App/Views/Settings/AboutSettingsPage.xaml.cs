@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.ComponentModel;
@@ -74,6 +73,11 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
         }
     }
 
+    // The user manual link's target differs per locale (/zh-CN/ prefix), so it's derived from the
+    // same translated URL string the link displays rather than a single hardcoded Uri like the
+    // (locale-independent) homepage link above it.
+    public Uri? UserGuideUri => Uri.TryCreate(TranslationManager.Instance["About_UserGuideUrl"], UriKind.Absolute, out var uri) ? uri : null;
+
     public AboutSettingsPage()
     {
         InitializeComponent();
@@ -87,6 +91,7 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
             OnPropertyChanged(nameof(AppVersion));
             OnPropertyChanged(nameof(CoreVersion));
             OnPropertyChanged(nameof(ServiceVersion));
+            OnPropertyChanged(nameof(UserGuideUri));
         };
     }
 
@@ -228,35 +233,13 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
     private void BtnGoToPage_Click(object sender, RoutedEventArgs e)
     {
         if (_latestRelease == null) return;
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = _latestRelease.HtmlUrl,
-                UseShellExecute = true
-            });
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[AboutSettingsPage] Failed to open URL: {ex.Message}", LogLevel.Warn);
-        }
+        Helpers.UrlLauncher.Open(_latestRelease.HtmlUrl);
     }
 
     private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
     {
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = e.Uri.AbsoluteUri,
-                UseShellExecute = true
-            });
-            e.Handled = true;
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[AboutSettingsPage] Failed to open URL: {ex.Message}", LogLevel.Warn);
-        }
+        Helpers.UrlLauncher.Open(e.Uri);
+        e.Handled = true;
     }
 
 }

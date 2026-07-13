@@ -45,7 +45,7 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
 
     // Scaled variants — bound only in the quick window, so it alone grows/shrinks with the
     // configured search box height.
-    public double ScaledItemHeight => IsSearchSectionHeader ? UiMetrics.ScaledSearchSectionHeaderHeight : (IsListItem ? UiMetrics.ScaledListItemHeight : Math.Max(UiMetrics.ScaledSearchResultItemHeight, UiMetrics.ScaledResultIconSize + UiMetrics.ResultRowVerticalMargin + UiMetrics.IconRowBreathingRoom));
+    public double ScaledItemHeight => IsSearchSectionHeader ? UiMetrics.ScaledSearchSectionHeaderHeight : (IsListItem ? UiMetrics.ScaledListItemHeight : UiMetrics.ScaledNormalRowHeight);
     public double ScaledNameFontSize => HasPathSubtitle ? UiMetrics.ScaledResultNameFontSize : UiMetrics.ScaledResultNameFontSizeSingleLine;
     public double ScaledPathFontSize => UiMetrics.ScaledResultPathFontSize;
     public double ScaledResultIconSize => UiMetrics.ScaledResultIconSize;

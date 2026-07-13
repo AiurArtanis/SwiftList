@@ -58,6 +58,14 @@
                             </Hyperlink>
                         </TextBlock>
                     </WrapPanel>
+                    <WrapPanel Margin="0,4,0,0">
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_UserGuide]}" Foreground="{DynamicResource TextSecondary2}"/>
+                        <TextBlock>
+                            <Hyperlink NavigateUri="{Binding UserGuideUri}" RequestNavigate="Hyperlink_RequestNavigate">
+                                <Run Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_UserGuideUrl], Mode=OneWay}"/>
+                            </Hyperlink>
+                        </TextBlock>
+                    </WrapPanel>
                 </StackPanel>
             </Border>
 

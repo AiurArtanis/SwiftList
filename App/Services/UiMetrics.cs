@@ -178,12 +178,20 @@ public static class UiMetrics
 
     public static double ScaledResultIconSize => Math.Round(_quickResultIconSize * _scale);
 
+    // The actual rendered height of a normal (icon+text) row once the icon-size-driven floor is
+    // applied -- shared by AppSearchResult (results list) and ActionMenuItem (actions list) so their
+    // rows come out pixel-identical instead of one accounting for icon overflow and the other not.
+    public static double ScaledNormalRowHeight => Math.Max(ScaledSearchResultItemHeight, ScaledResultIconSize + ResultRowVerticalMargin + IconRowBreathingRoom);
+
     // Name/path font size tracks the ACTUAL rendered icon size (not just the search-bar-height scale),
     // so bumping the icon-size setting directly grows the text too, not only bumping the search bar
     // height. At the default icon size (BaseResultIconSize) with no search-bar scaling this ratio is
     // exactly 1, so it's a no-op in the common case; floored so a small configured icon never shrinks
-    // text past legible.
-    private static double IconRelativeFontScale => ScaledResultIconSize / BaseResultIconSize;
+    // text past legible. Public so ActionMenuItem's own font/icon scaling can share it too (see its
+    // ScaledTextFontSize etc.) -- using raw Scale there instead left action text visibly smaller than
+    // result text even after row heights were unified, since Scale and this ratio only coincide when
+    // the configured icon size happens to equal BaseResultIconSize.
+    public static double IconRelativeFontScale => ScaledResultIconSize / BaseResultIconSize;
 
     public static double ScaledResultNameFontSize => Math.Max(MinScaledResultNameFontSize, Math.Round(BaseResultNameFontSize * IconRelativeFontScale));
     public static double ScaledResultNameFontSizeSingleLine => ScaledResultNameFontSize;

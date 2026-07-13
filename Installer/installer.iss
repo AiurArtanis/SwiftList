@@ -97,36 +97,56 @@ var
   InstallerPath: string;
 begin
   Result := '';
-  
-  // 1. Force stop and delete service before installing new files
-  Exec('sc.exe', 'stop ' + '{#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Exec('taskkill.exe', '/F /IM ' + '{#ServiceExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Exec('sc.exe', 'delete ' + '{#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
-  // 2. Check and Download .NET 10.0 Desktop Runtime if missing
-  if not IsDotNet10Installed() then
-  begin
-    DownloadPage.Clear;
-    DownloadPage.Add('https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe', 'windowsdesktop-runtime-10-win-x64.exe', '');
-    DownloadPage.Show;
-    try
-      try
-        DownloadPage.Download;
-      except
-        Result := CustomMessage('DotNetDownloadFailed');
-        Exit;
-      end;
-    finally
-      DownloadPage.Hide;
-    end;
+  // Inno doesn't switch away from the interactive Ready page (whose Install/Back buttons stay
+  // enabled) until this function returns -- without disabling them explicitly, a user can click
+  // Install again (re-entering this function) or Back while the .NET download/silent-install below
+  // is still running, which is exactly what was happening. Cancel is left alone so a stuck download
+  // can still be aborted. try/finally guarantees these get re-enabled on every exit path, including
+  // the early Exit on a failed download.
+  WizardForm.NextButton.Enabled := False;
+  WizardForm.BackButton.Enabled := False;
+  try
+    // 1. Force stop the service before installing new files (deleting it is only done on uninstall,
+    // see CurUninstallStepChanged below)
+    Exec('sc.exe', 'stop ' + '{#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('taskkill.exe', '/F /IM ' + '{#ServiceExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
-    // Install the downloaded runtime
-    WizardForm.StatusLabel.Caption := CustomMessage('DotNetInstalling');
-    InstallerPath := ExpandConstant('{tmp}\windowsdesktop-runtime-10-win-x64.exe');
-    if not Exec(InstallerPath, '/install /quiet /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
+    // 2. Check and Download .NET 10.0 Desktop Runtime if missing
+    if not IsDotNet10Installed() then
     begin
-      Result := FmtMessage(CustomMessage('DotNetInstallFailed'), [IntToStr(ResultCode)]);
+      DownloadPage.Clear;
+      DownloadPage.Add('https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe', 'windowsdesktop-runtime-10-win-x64.exe', '');
+      DownloadPage.Show;
+      try
+        try
+          DownloadPage.Download;
+        except
+          Result := CustomMessage('DotNetDownloadFailed');
+          Exit;
+        end;
+      finally
+        DownloadPage.Hide;
+      end;
+
+      // DownloadPage.Hide switches the wizard back to the Ready page underneath it, and Inno's own
+      // page-switch logic resets that page's Next/Back to their normal (enabled) state as part of
+      // showing it again -- silently undoing the disable above. Re-assert it for the silent runtime
+      // install that follows, which is exactly the phase where the buttons were still clickable.
+      WizardForm.NextButton.Enabled := False;
+      WizardForm.BackButton.Enabled := False;
+
+      // Install the downloaded runtime
+      WizardForm.StatusLabel.Caption := CustomMessage('DotNetInstalling');
+      InstallerPath := ExpandConstant('{tmp}\windowsdesktop-runtime-10-win-x64.exe');
+      if not Exec(InstallerPath, '/install /quiet /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
+      begin
+        Result := FmtMessage(CustomMessage('DotNetInstallFailed'), [IntToStr(ResultCode)]);
+      end;
     end;
+  finally
+    WizardForm.NextButton.Enabled := True;
+    WizardForm.BackButton.Enabled := True;
   end;
 end;
 

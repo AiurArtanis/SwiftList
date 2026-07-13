@@ -19,7 +19,10 @@ public class PluginManagementViewModel : ViewModelBase
     {
         _userSettings = userSettings;
         Plugins = new ObservableCollection<PluginInfoViewModel>(PluginLoaderHelper.BuildPluginList(_userSettings));
+        foreach (var p in Plugins)
+            p.PropertyChanged += OnPluginIsExpandedChanged;
         ToggleExpandCommand = new RelayCommand<PluginInfoViewModel>(p => p?.IsExpanded = !p.IsExpanded);
+        ToggleExpandAllCommand = new RelayCommand(ToggleExpandAll);
         ConfigurePluginCommand = new RelayCommand<PluginInfoViewModel>(p =>
         {
             if (p == null) return;
@@ -44,6 +47,8 @@ public class PluginManagementViewModel : ViewModelBase
         TranslationManager.Instance.PropertyChanged += (s, e) =>
         {
             var expandedStates = Plugins.ToDictionary(p => p.DllFileName, p => p.IsExpanded);
+            foreach (var p in Plugins)
+                p.PropertyChanged -= OnPluginIsExpandedChanged;
             var newList = PluginLoaderHelper.BuildPluginList(_userSettings);
             Plugins.Clear();
             foreach (var p in newList)
@@ -52,20 +57,47 @@ public class PluginManagementViewModel : ViewModelBase
                 {
                     p.IsExpanded = isExpanded;
                 }
+                p.PropertyChanged += OnPluginIsExpandedChanged;
                 Plugins.Add(p);
             }
             OnPropertyChanged(nameof(IsEmpty));
+            OnPropertyChanged(nameof(ExpandAllToggleLabel));
+            OnPropertyChanged(nameof(DevGuideUri));
         };
     }
 
     public ObservableCollection<PluginInfoViewModel> Plugins { get; }
 
     public ICommand ToggleExpandCommand { get; }
+    public ICommand ToggleExpandAllCommand { get; }
     public ICommand ConfigurePluginCommand { get; }
 
     public bool IsEmpty => Plugins.Count == 0;
 
     public string HostSdkVersion { get; } = typeof(IPlugin).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+
+    // Header-level "expand all / collapse all" for every plugin card at once, mirroring each card's
+    // own "select all / deselect all" toggle for its components (PluginInfoViewModel.SelectAllToggleLabel).
+    public bool AreAllExpanded => Plugins.Count > 0 && Plugins.All(p => p.IsExpanded);
+    public string ExpandAllToggleLabel => TranslationManager.Instance[AreAllExpanded ? "Common_CollapseAll" : "Common_ExpandAll"];
+
+    private void OnPluginIsExpandedChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PluginInfoViewModel.IsExpanded))
+            OnPropertyChanged(nameof(ExpandAllToggleLabel));
+    }
+
+    private void ToggleExpandAll()
+    {
+        var expand = !AreAllExpanded;
+        foreach (var p in Plugins)
+            p.IsExpanded = expand;
+    }
+
+    // The dev guide link's target differs per locale (/zh-CN/ prefix), so it's derived from the
+    // same translated URL string the link displays -- see AboutSettingsPage.UserGuideUri for the
+    // same pattern applied to the user manual link.
+    public Uri? DevGuideUri => Uri.TryCreate(TranslationManager.Instance["Plugins_DevGuideUrl"], UriKind.Absolute, out var uri) ? uri : null;
 
     public void Save()
     {
