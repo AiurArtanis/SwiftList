@@ -13,11 +13,33 @@ public partial class App : Application
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
     private static extern bool AllowSetForegroundWindow(int dwProcessId);
+
+    [System.Runtime.InteropServices.DllImport("shell32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
+
     private Mutex? _appMutex;
     public static Core.Hook.HookIpcClient? HookClient { get; private set; }
 
     protected override async void OnStartup(StartupEventArgs e)
     {
+        // SwiftList never set an explicit AppUserModelID, so Windows infers one on its own (commonly
+        // derived from the exe's own path) -- the taskbar's default/resting icon for windows from a
+        // path Windows treats as an "installed app" (Program Files + Start Menu registration) came
+        // from that inferred identity rather than the live window icon ThemedWindowIconHelper sets,
+        // even though title bar/Alt-Tab (which read the live window directly) were already correct.
+        // Owning the identity explicitly is also just standard practice for a real desktop app
+        // (correct taskbar grouping/pinning/jump-list/notification behavior).
+        try
+        {
+            // Derived from the assembly name (App.csproj's <AssemblyName>) rather than a hardcoded
+            // literal, so the two can't drift apart if the assembly is ever renamed. A null Name here
+            // would mean the executing assembly has no name at all, which can't happen in practice;
+            // the surrounding try/catch is the fallback if it somehow did.
+            var appId = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name!;
+            SetCurrentProcessExplicitAppUserModelID(appId);
+        }
+        catch { /* best-effort; taskbar grouping falls back to Windows' own inference */ }
+
         // Only this thread (the Dispatcher), not Process.PriorityClass -- keeps input/rendering responsive
         // under CPU contention without making the whole process compete unfairly against everything else.
         Thread.CurrentThread.Priority = ThreadPriority.Highest;
