@@ -48,8 +48,44 @@ internal sealed class RecentFilesTabSource : ITabSource
 
         var uiResults = new List<AppSearchResult>(recentFiles.Count);
         for (var i = 0; i < recentFiles.Count; i++)
-            uiResults.Add(SearchResultHelper.CreateUiResult(recentFiles[i], string.Empty, i, isApplication: false, scope: null));
+        {
+            var uiResult = SearchResultHelper.CreateUiResult(recentFiles[i], string.Empty, i, isApplication: false, scope: null);
+            var relativeTime = FormatRelativeTime(recentFiles[i].ModifiedUtc);
+            if (!string.IsNullOrEmpty(relativeTime))
+                uiResult.ParentDir = $"{relativeTime} - {uiResult.ParentDir}";
+            uiResults.Add(uiResult);
+        }
         return uiResults;
+    }
+
+    private static string FormatRelativeTime(uint modifiedUtc)
+    {
+        if (modifiedUtc == 0) return string.Empty;
+
+        var modified = FileTimeHelper.FromUnixSeconds(modifiedUtc).ToLocalTime();
+        var totalSeconds = (long)Math.Max(0, (DateTime.Now - modified).TotalSeconds);
+
+        if (totalSeconds < 60)
+            return string.Format(TranslationManager.Instance["StartupPanel_SecondsAgo"], totalSeconds);
+
+        var totalMinutes = totalSeconds / 60;
+        if (totalMinutes < 60)
+            return string.Format(TranslationManager.Instance["StartupPanel_MinutesAgo"], totalMinutes);
+
+        if (totalMinutes < 1440)
+        {
+            var hours = totalMinutes / 60;
+            var minutes = totalMinutes % 60;
+            return minutes == 0
+                ? string.Format(TranslationManager.Instance["StartupPanel_HoursAgo"], hours)
+                : string.Format(TranslationManager.Instance["StartupPanel_HoursMinutesAgo"], hours, minutes);
+        }
+
+        var days = totalMinutes / 1440;
+        var remHours = (totalMinutes % 1440) / 60;
+        return remHours == 0
+            ? string.Format(TranslationManager.Instance["StartupPanel_DaysAgo"], days)
+            : string.Format(TranslationManager.Instance["StartupPanel_DaysHoursAgo"], days, remHours);
     }
 }
 
