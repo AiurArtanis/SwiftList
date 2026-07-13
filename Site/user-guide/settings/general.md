@@ -36,8 +36,7 @@ Customizes the size, corner rounding, and on-screen position of the quick search
   this (with a legibility floor), independent of the search bar height above.
 - **Show clock in search box** — checkbox, off by default. While the search box is empty, replaces
   the usual "Type to search..." placeholder text with the current date, day of week, and time
-  instead — see [issue #101](https://github.com/SwiftList/SwiftList/issues/101). Disappears the
-  moment you start typing, same as the placeholder it replaces.
+  instead. Disappears the moment you start typing, same as the placeholder it replaces.
 - **Reset Layout Settings** button — restores all five values above to their defaults.
 
 Right-clicking the status icon inside the quick window's search box resets just its on-screen
