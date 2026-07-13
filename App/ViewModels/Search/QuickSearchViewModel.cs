@@ -19,9 +19,10 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
         Search = new SearchExecutionViewModel(this, _searchService);
         Monitor = new ServiceMonitorViewModel(this, _searchService);
 
-        // Floating clock above the search bar (opt-in, see #101). No repeating timer -- the quick window
-        // is a transient popup, not a resident taskbar clock, so it's enough to recompute this each time
-        // the window is actually shown (RefreshLayoutSettings, called from ShowWindow).
+        // Clock text that replaces the search box placeholder when empty (opt-in, see #101). No
+        // repeating timer -- the quick window is a transient popup, not a resident taskbar clock, so
+        // it's enough to recompute this each time the window is actually shown (RefreshLayoutSettings,
+        // called from ShowWindow).
         UpdateClockText();
 
         // Forward property changed notifications from sub-ViewModels
@@ -95,7 +96,15 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
     public string SearchQuery
     {
         get => Search.SearchQuery;
-        set => Search.SearchQuery = value;
+        set
+        {
+            Search.SearchQuery = value;
+            // The clock takes over the placeholder slot whenever the box is empty (see ClockText) --
+            // refresh it right as that happens, not just whenever the window itself was last shown, so
+            // clearing a query after the window's been open a while doesn't show stale time.
+            if (string.IsNullOrWhiteSpace(value))
+                UpdateClockText();
+        }
     }
 
     public bool IsIndexReady => Monitor.IsIndexReady;
@@ -163,11 +172,11 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
 
     public Visibility ClockVisibility => UserSettings.Load().SearchWindow.ShowClock ? Visibility.Visible : Visibility.Collapsed;
 
-    // Scales with the same UiMetrics.Scale factor (tied to the configured search bar height) as
-    // everything else in the quick window, instead of sitting at a fixed size while the search box
-    // around it grows/shrinks. Floored so a small configured height never shrinks it past legible.
-    public double ClockFontSize => Math.Max(9, Math.Round(16 * Services.UiMetrics.Scale));
-
+    // Takes over the search box's own placeholder slot instead of a separate element elsewhere (see
+    // SearchBoxControl.xaml's TxtPlaceholder) -- while the box is empty there's nothing to type-hint
+    // about, and once typing starts the placeholder (clock included) disappears anyway, so there's no
+    // real conflict between "show the time" and "show how to search". Inherits the placeholder's own
+    // font size/color, so no separate scaling property is needed here either.
     private string _clockText = string.Empty;
     public string ClockText
     {
@@ -179,8 +188,10 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
     {
         var culture = System.Globalization.CultureInfo.GetCultureInfo(Services.TranslationManager.Instance.CurrentCulture);
         var now = DateTime.Now;
-        var dayName = culture.DateTimeFormat.GetDayName(now.DayOfWeek);
-        ClockText = $"{now.ToString("d", culture)} {dayName} {now:HH:mm}";
+        var dayName = culture.DateTimeFormat.GetAbbreviatedDayName(now.DayOfWeek);
+        // Leading space keeps the text off the caret, which otherwise renders flush against this
+        // TextBlock's left edge (same slot as the search box's own cursor).
+        ClockText = $" {now.ToString("d", culture)} {dayName} {now:HH:mm}";
     }
 
     public void RefreshLayoutSettings()
@@ -191,7 +202,6 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(SearchBarWidth));
         OnPropertyChanged(nameof(SearchBarHeight));
         OnPropertyChanged(nameof(ClockVisibility));
-        OnPropertyChanged(nameof(ClockFontSize));
         UpdateClockText();
     }
 

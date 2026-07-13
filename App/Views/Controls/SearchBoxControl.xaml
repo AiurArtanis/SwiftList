@@ -125,6 +125,16 @@
                             <DataTrigger Binding="{Binding IsInActionsMode, ElementName=root}" Value="True">
                                 <Setter Property="Text" Value="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_ActionsSearchPlaceholder]}"/>
                             </DataTrigger>
+                            <!-- Quick window only, opt-in (General settings > Layout, see issue #101): while
+                                 the box is empty there's nothing useful to type-hint about, so the clock takes
+                                 over the same slot instead of adding a separate element elsewhere. Binds
+                                 straight to the ambient DataContext (QuickSearchViewModel), matching how
+                                 IsSearching elsewhere in this control already does the same; FallbackValue
+                                 keeps this a no-op in SearchWindow/InlineSearchWindow, whose DataContexts
+                                 don't expose ClockVisibility at all. -->
+                            <DataTrigger Binding="{Binding ClockVisibility, FallbackValue=Collapsed}" Value="Visible">
+                                <Setter Property="Text" Value="{Binding ClockText}"/>
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </TextBlock.Style>

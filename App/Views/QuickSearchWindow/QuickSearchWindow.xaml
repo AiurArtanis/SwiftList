@@ -193,23 +193,6 @@
             </Border>
         </Border>
 
-    <!-- Floating date/time/day-of-week clock, opt-in (General settings > Layout), see issue #101 -->
-    <Border x:Name="ClockBadge"
-            Background="{DynamicResource BadgeBackground}"
-            BorderBrush="{DynamicResource BadgeBorderBrush}"
-            BorderThickness="1"
-            CornerRadius="12"
-            Padding="12,5,12,5"
-            Margin="0,20,0,0"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Top"
-            Visibility="{Binding ClockVisibility}">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.15" Color="{DynamicResource ShadowColor}"/>
-        </Border.Effect>
-        <TextBlock Text="{Binding ClockText}" FontSize="{Binding ClockFontSize}" Foreground="{DynamicResource BadgeText}"/>
-    </Border>
-
     <!-- Floating Open full search window button -->
     <Button x:Name="BtnOpenMore"
             Style="{StaticResource FloatingCircleButtonStyle}"
