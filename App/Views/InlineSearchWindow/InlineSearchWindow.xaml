@@ -4,7 +4,7 @@
         xmlns:local="clr-namespace:SwiftList.App"
         xmlns:services="clr-namespace:SwiftList.App.Services"
         Title="SwiftList Inline"
-        Width="437" Height="550" SizeToContent="Manual"
+        Width="465" Height="550" SizeToContent="Manual"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -66,7 +66,7 @@
                 <Border x:Name="SearchBoxBorder" Grid.Row="2" Background="{DynamicResource HeaderBg}" 
                         CornerRadius="0,0,7,7"
                         Padding="12,8,12,8">
-                    <local:SearchBoxControl x:Name="SearchBox" FontSize="14" Padding="0" IsIconOnLeft="False" 
+                    <local:SearchBoxControl x:Name="SearchBox" FontSize="14" Padding="0" IsIconOnLeft="False"
                                             SearchText="{Binding SearchQuery, Mode=TwoWay}" IsServiceRunning="{Binding IsServiceConnected}"/>
                 </Border>
             </Grid>
