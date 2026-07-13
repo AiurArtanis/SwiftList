@@ -29,11 +29,11 @@ public static class UiMetrics
     // of only at the default.
     public const double IconRowBreathingRoom = 5;
 
-    // Base font/icon metrics used by the search result item template. Name:Path is weighted 8:5 (~60:40)
+    // Base font/icon metrics used by the search result item template. Name:Path is weighted 10:8 (~56:44)
     // when both lines show, tilting more toward the name than an even split while keeping the path line
     // (the smaller of the two) comfortably legible.
     public const double BaseResultNameFontSize = 16;
-    public const double BaseResultPathFontSize = 10;
+    public const double BaseResultPathFontSize = 12.8;
     public const double BaseResultIconSize = 42; // fixed size for the main window
 
     // Floor for the quick window's icon-relative font scaling (see ScaledResultNameFontSize etc.) --

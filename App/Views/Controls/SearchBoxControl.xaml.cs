@@ -18,9 +18,9 @@ public partial class SearchBoxControl : UserControl
     static SearchBoxControl()
     {
         PaddingProperty.OverrideMetadata(typeof(SearchBoxControl),
-            new FrameworkPropertyMetadata(new Thickness(21, 19, 21, 19)));
+            new FrameworkPropertyMetadata(new Thickness(21, 4, 21, 4)));
         FontSizeProperty.OverrideMetadata(typeof(SearchBoxControl),
-            new FrameworkPropertyMetadata(24.0));
+            new FrameworkPropertyMetadata(35.0));
     }
 
     public SearchBoxControl()
@@ -37,17 +37,23 @@ public partial class SearchBoxControl : UserControl
         if (double.IsNaN(height) || height <= 0) return;
 
         // Dynamic Sizing:
-        // FontSize = height * 0.34 (e.g. 70px -> 23.8px, 50px -> 17px)
-        FontSize = Math.Clamp(height * 0.34, 12.0, 36.0);
+        // FontSize = height * 0.4 (e.g. 70px -> 28px, 50px -> 20px). Text/cursor previously filled
+        // only ~41% of the box height (0.34 coefficient), leaving a visibly oversized gap above and
+        // below the single line of text -- raising the ratio (and shrinking vertical padding below to
+        // match, so the bigger text still fits) is what actually closes that gap; padding alone can't,
+        // since content is vertically centered and just absorbs whatever padding leaves behind.
+        FontSize = Math.Clamp(height * 0.4, 12.0, 36.0);
 
         // Vertical Padding:
-        // Keep horizontal padding fixed at 21, scale vertical padding dynamically (e.g. 70px -> 18.2px, 50px -> 13px)
-        var verticalPadding = Math.Clamp(height * 0.26, 4.0, 30.0);
+        // Keep horizontal padding fixed at 21, scale vertical padding dynamically (e.g. 70px -> 7px, 50px -> 5px)
+        var verticalPadding = Math.Clamp(height * 0.1, 4.0, 20.0);
         Padding = new Thickness(21, verticalPadding, 21, verticalPadding);
 
-        // Scale Left and Right icon sizes (e.g. Left: 70px -> 18.2px, Right: 70px -> 27.3px)
+        // Scale Left and Right icon sizes (e.g. Left: 70px -> 18.2px, Right: 70px -> 39.9px). Right kept
+        // at the same size-to-FontSize ratio as before (~1.15x) so it grows in step with the bigger text
+        // from the FontSize coefficient bump above, instead of looking undersized next to it.
         LeftIconSize = Math.Clamp(height * 0.26, 10.0, 30.0);
-        RightIconSize = Math.Clamp(height * 0.39, 15.0, 45.0);
+        RightIconSize = Math.Clamp(height * 0.57, 15.0, 45.0);
     }
 
     public TextBox SearchTextBox => TxtSearch;

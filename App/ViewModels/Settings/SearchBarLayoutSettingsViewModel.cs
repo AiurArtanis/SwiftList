@@ -84,10 +84,10 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
 
     private void Reset()
     {
-        SearchBarWidth = 632;
-        SearchBarHeight = 70;
-        CornerRadius = 12;
-        ResultIconSize = 42;
+        SearchBarWidth = 570;
+        SearchBarHeight = 55;
+        CornerRadius = 8;
+        ResultIconSize = 55;
         _resetPosition = true;
     }
 

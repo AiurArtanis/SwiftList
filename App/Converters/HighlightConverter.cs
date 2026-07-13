@@ -126,7 +126,6 @@ public static class TextHighlighter
             if (isHighlighted)
             {
                 run.Foreground = highlightBrush;
-                run.FontWeight = FontWeights.SemiBold;
             }
 
             textBlock.Inlines.Add(run);

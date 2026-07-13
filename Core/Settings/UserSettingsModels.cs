@@ -73,11 +73,11 @@ public class FavoriteItemSetting
 
 public class SearchWindowSettings
 {
-    public double SearchBarWidth { get; set; } = 632;
-    public double SearchBarHeight { get; set; } = 70;
-    public double CornerRadius { get; set; } = 12;
+    public double SearchBarWidth { get; set; } = 570;
+    public double SearchBarHeight { get; set; } = 55;
+    public double CornerRadius { get; set; } = 8;
     // Base result-icon size for the quick window only (see UiMetrics); other windows use a fixed size.
-    public double ResultIconSize { get; set; } = 42;
+    public double ResultIconSize { get; set; } = 55;
     public double? Left { get; set; }
     public double? Top { get; set; }
 }
