@@ -23,11 +23,15 @@ public static class SettingsOptionGenerator
         return options;
     }
 
-    public static IReadOnlyList<ThemeOption> GetThemeOptions()
+    /// <param name="isDark">Null returns every theme; true/false filters to just that theme's own
+    /// declared IsDark flavor -- used by the "follow system" light/dark pickers so a dark-flavored
+    /// theme can't end up selected as the "light" half of the pair.</param>
+    public static IReadOnlyList<ThemeOption> GetThemeOptions(bool? isDark = null)
     {
         var options = new List<ThemeOption>();
         foreach (var t in ThemeManager.Instance.GetAvailableThemes())
         {
+            if (isDark.HasValue && t.IsDark != isDark.Value) continue;
             options.Add(new ThemeOption(t.Id, t.DisplayName));
         }
         return options;

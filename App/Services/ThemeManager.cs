@@ -29,6 +29,39 @@ public class ThemeManager
 
     public void Initialize(string preferredThemeId) => ApplyTheme(preferredThemeId, saveSettings: false);
 
+    /// <summary>Starts watching the OS light/dark setting and re-applies the user's configured
+    /// light/dark theme pair whenever it flips, but only while ThemeFollowSystem is actually on --
+    /// checked fresh off UserSettings each time rather than tracked locally, so toggling the setting
+    /// off doesn't need a matching unsubscribe.</summary>
+    public void InitializeSystemFollow()
+    {
+        SystemThemeWatcher.EnsureWatching();
+        SystemThemeWatcher.SystemThemeChanged += () =>
+        {
+            var settings = UserSettings.Load();
+            if (!settings.ThemeFollowSystem) return;
+            ApplyTheme(ResolveLightDarkThemeId(SystemThemeWatcher.IsSystemLight, settings), saveSettings: false);
+        };
+    }
+
+    /// <summary>Resolves the "follow system" light/dark theme pair's configured Id to one that
+    /// actually exists (and is still the right light/dark flavor) among currently loaded theme
+    /// providers. Themes come entirely from plugins (including the built-ins), so a hardcoded
+    /// "Light"/"Dark" fallback isn't safe -- if the configured Id is unset, its provider got
+    /// uninstalled/disabled, or it no longer matches the requested flavor, fall back to whatever
+    /// theme of that flavor happens to be first in the available list instead.</summary>
+    public string ResolveLightDarkThemeId(bool wantLight, UserSettings? settings = null)
+    {
+        settings ??= UserSettings.Load();
+        var configured = wantLight ? settings.LightThemeId : settings.DarkThemeId;
+        var themes = GetAvailableThemes().Where(t => t.IsDark != wantLight).ToList();
+        if (!string.IsNullOrEmpty(configured) && themes.Any(t => string.Equals(t.Id, configured, StringComparison.OrdinalIgnoreCase)))
+        {
+            return configured;
+        }
+        return themes.FirstOrDefault()?.Id ?? "Light";
+    }
+
     public bool ApplyTheme(string themeId, bool saveSettings = true)
     {
         var themes = GetAvailableThemes().ToList();

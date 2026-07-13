@@ -40,6 +40,11 @@ public class UserSettings
     public string LogLevel { get; set; } = "Info";
     public string PreferredLanguage { get; set; } = GetDefaultSystemLanguage();
     public string Theme { get; set; } = "Light";
+    public bool ThemeFollowSystem { get; set; } = false;
+    // Empty means "unset" -- themes come entirely from plugins, so there's no safe hardcoded default
+    // here; ThemeManager.ResolveLightDarkThemeId falls back to whatever theme is first available.
+    public string LightThemeId { get; set; } = string.Empty;
+    public string DarkThemeId { get; set; } = string.Empty;
     public HotkeyPageSettings Hotkeys { get; set; } = new();
     public SearchWindowSettings SearchWindow { get; set; } = new();
     public PreviewWindowSettings PreviewWindow { get; set; } = new();

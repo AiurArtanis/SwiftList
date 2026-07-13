@@ -185,9 +185,12 @@ public partial class App : Application
             Logger.Log("[App] TranslationManager initialized.");
 
             // Initialize ThemeManager with the saved theme setting
-
-            ThemeManager.Instance.Initialize(settings.Theme);
-            Logger.Log($"[App] ThemeManager initialized with theme: {settings.Theme}");
+            var startupThemeId = settings.ThemeFollowSystem
+                ? ThemeManager.Instance.ResolveLightDarkThemeId(SystemThemeWatcher.IsSystemLight, settings)
+                : settings.Theme;
+            ThemeManager.Instance.Initialize(startupThemeId);
+            ThemeManager.Instance.InitializeSystemFollow();
+            Logger.Log($"[App] ThemeManager initialized with theme: {startupThemeId}");
         }
 
         catch (Exception ex)
