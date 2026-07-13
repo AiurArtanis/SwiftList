@@ -25,16 +25,20 @@ public static class AppWindowManager
                 _settingsWindow.Closed += (_, _) => _settingsWindow = null;
             }
 
+            // Select the target section before the window becomes visible/restored -- doing it after
+            // Show() let the window briefly render whatever section was already selected (the default,
+            // or whatever was left over from a previous open) before flipping to the requested one,
+            // which read as a jarring flash instead of opening straight into the right place.
+            if (!string.IsNullOrEmpty(targetSection))
+            {
+                _settingsWindow.SelectSection(targetSection);
+            }
+
             if (!_settingsWindow.IsVisible)
                 _settingsWindow.Show();
 
             if (_settingsWindow.WindowState == WindowState.Minimized)
                 _settingsWindow.WindowState = WindowState.Normal;
-
-            if (!string.IsNullOrEmpty(targetSection))
-            {
-                _settingsWindow.SelectSection(targetSection);
-            }
 
             _settingsWindow.Activate();
         });

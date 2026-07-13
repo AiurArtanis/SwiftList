@@ -29,6 +29,11 @@ public class StartupPanelController : ViewModelBase
     // when the user starts typing (or the panel is hidden/disabled) knows to discard its result.
     private int _requestId;
 
+    // Remembers which tab the user last picked (by label, since ITabSource instances are rebuilt fresh
+    // on every activation -- see BuildCandidateSources) so re-showing the window after hiding it on,
+    // say, the "History" tab reopens onto History again instead of always resetting to the first tab.
+    private string? _lastSelectedLabel;
+
     public StartupPanelController(SearchService searchService, Action<IEnumerable<AppSearchResult>> applyResults)
     {
         _searchService = searchService;
@@ -82,7 +87,8 @@ public class StartupPanelController : ViewModelBase
         }
 
         Visibility = Visibility.Visible;
-        SelectTab(_activeTabs[0].Source);
+        var toSelect = _activeTabs.FirstOrDefault(t => t.Source.Label == _lastSelectedLabel) ?? _activeTabs[0];
+        SelectTab(toSelect.Source);
         return true;
     }
 
@@ -156,6 +162,7 @@ public class StartupPanelController : ViewModelBase
         foreach (var tab in _activeTabs)
             tab.ViewModel.IsSelected = ReferenceEquals(tab, match);
 
+        _lastSelectedLabel = match.Source.Label;
         _applyResults(match.Items);
     }
 

@@ -29,6 +29,16 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
             }
         };
         Monitor.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
+
+        // The very first startup-panel activation can race a cold service (e.g. RecentFilesTabSource's
+        // IPC round trip) into returning early/incomplete data while it's still spinning up, leaving
+        // stale tabs with an empty results area -- and IsServiceConnected defaults to true (optimistic,
+        // not confirmed), so a normal cold start where the first ping just succeeds never raises a
+        // PropertyChanged for it to react to. ServiceBecameReachable fires unconditionally the moment a
+        // ping first actually succeeds, so re-running the empty-state fetch here (a no-op if the box
+        // isn't empty) settles the panel onto what it should have shown once the service is genuinely
+        // there, instead of staying stuck on whatever the cold-start attempt produced.
+        Monitor.ServiceBecameReachable += () => Search.RefreshEmptyState();
     }
 
     public SearchExecutionViewModel Search { get; }

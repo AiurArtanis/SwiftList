@@ -246,13 +246,13 @@ public class QuickSearchWindowController
         try { KeywordHistoryStore.Record(_window.ViewModel.SearchQuery); } catch { }
         _window.KeywordHistoryController.Reset();
 
+        // SearchQuery's own setter already runs PerformSearch("") when this actually changes the query
+        // (clearing/replacing results the normal way). Explicitly wiping Search.Results here on top of
+        // that used to erase the startup panel's own still-valid results/tabs the moment the box was
+        // already empty (nothing "changes" so the setter is a no-op) -- meaning next time the window
+        // showed, there was nothing left to display while the panel's async refetch ran, which is what
+        // produced the empty/loading flash ShowWindow's RefreshEmptyState() was supposed to avoid.
         _window.ViewModel.SearchQuery = string.Empty;
-        try
-        {
-            _window.ViewModel.Search.Results.Clear();
-            _window.ViewModel.Search.SelectedResult = null;
-        }
-        catch { }
 
         _window.UpdateLayout();
         _window.Hide();

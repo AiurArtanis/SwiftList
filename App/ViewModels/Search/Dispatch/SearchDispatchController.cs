@@ -131,7 +131,6 @@ internal sealed class SearchDispatchController
         {
             _engine.CancelPendingSearch();
             _setIsSearching(false);
-            _replaceResults(Array.Empty<AppSearchResult>());
 
             var suggestion = ExplorerJumpSuggestionHelper.TryBuildSuggestion(_getIsInlineSearchContext(), _getSearchScope());
             if (suggestion != null)
@@ -141,12 +140,31 @@ internal sealed class SearchDispatchController
                 _setResultsPanelVisibility(Visibility.Visible);
                 _setResultsSeparatorVisibility(Visibility.Visible);
             }
-            else
+            else if (_getIsInlineSearchContext())
             {
+                _startupPanel.Deactivate();
+                _replaceResults(Array.Empty<AppSearchResult>());
                 _setResultsPanelVisibility(Visibility.Collapsed);
                 _setResultsSeparatorVisibility(Visibility.Collapsed);
-                if (!_getIsInlineSearchContext())
-                    _ = ActivateStartupPanelAsync();
+            }
+            else
+            {
+                // Only skip the eager clear when the startup panel was ALREADY what's on screen --
+                // there, the old data is still a valid "startup panel" snapshot, and TryActivateAsync
+                // swaps it for fresh data atomically once its fetch resolves (avoiding the empty->filled
+                // flash re-showing the window used to produce). But if a real search's results are what's
+                // currently showing (the box just got cleared), those are NOT valid startup-panel content
+                // -- leaving them up would mean a slow first fetch (e.g. a cold service's IPC round trip)
+                // looks like the search is "stuck" showing old matches instead of clearing, which is worse
+                // than the flash this was meant to avoid. Clear immediately in that case; the fetch still
+                // fills the panel in normally once it resolves.
+                if (_startupPanel.Visibility != Visibility.Visible)
+                {
+                    _replaceResults(Array.Empty<AppSearchResult>());
+                    _setResultsPanelVisibility(Visibility.Collapsed);
+                    _setResultsSeparatorVisibility(Visibility.Collapsed);
+                }
+                _ = ActivateStartupPanelAsync();
             }
 
             if (_mainVm.Monitor.IsIndexReady)
@@ -180,8 +198,18 @@ internal sealed class SearchDispatchController
     private async Task ActivateStartupPanelAsync()
     {
         var shown = await _startupPanel.TryActivateAsync();
-        if (!shown || !string.IsNullOrWhiteSpace(_getSearchQuery()))
+        if (!string.IsNullOrWhiteSpace(_getSearchQuery()))
             return; // a real query started while the fetch was in flight; ApplySearchResults handled visibility
+
+        if (!shown)
+        {
+            // Nothing to show (panel disabled, or every source came back empty) -- PerformSearch no
+            // longer clears eagerly before kicking this off, so it's on us to clear here instead.
+            _replaceResults(Array.Empty<AppSearchResult>());
+            _setResultsPanelVisibility(Visibility.Collapsed);
+            _setResultsSeparatorVisibility(Visibility.Collapsed);
+            return;
+        }
 
         _setResultsPanelVisibility(Visibility.Visible);
         _setResultsSeparatorVisibility(Visibility.Visible);

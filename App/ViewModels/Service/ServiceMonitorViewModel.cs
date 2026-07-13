@@ -50,6 +50,15 @@ public class ServiceMonitorViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _isServiceConnected, value);
     }
 
+    // IsServiceConnected defaults to true (an optimistic assumption, not a confirmed one) so a normal
+    // cold start -- where the very first ping just succeeds without IsServiceConnected ever having been
+    // false in between -- never actually raises a PropertyChanged for it (SetProperty no-ops when the
+    // value doesn't change). Startup-panel sources that depend on the service being genuinely reachable
+    // (e.g. Recent Files' IPC round trip) need to know the moment it's *actually* confirmed, not just
+    // "still assumed fine" -- this fires unconditionally every time a ping first succeeds, independent
+    // of whatever IsServiceConnected's value already was.
+    public event Action? ServiceBecameReachable;
+
     public ServiceMonitorViewModel(QuickSearchViewModel mainVm, SearchService searchService)
     {
         _mainVm = mainVm;
@@ -82,7 +91,11 @@ public class ServiceMonitorViewModel : ViewModelBase, IDisposable
                 StatusText = TranslationManager.Instance["Service_DisconnectedTitle"];
                 Logger.Log("[ServiceMonitor] Degradation Mode active: Service failed to start, local file search disabled.");
             },
-            onServiceReachable: () => IsServiceConnected = true
+            onServiceReachable: () =>
+            {
+                IsServiceConnected = true;
+                ServiceBecameReachable?.Invoke();
+            }
         );
         _statusHandler = new ServiceMonitorStatusHandler(this, _mainVm, _connectionHandler);
         InstallServiceCommand = new RelayCommand(_connectionHandler.ExecuteInstallService);
