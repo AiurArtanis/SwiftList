@@ -21,7 +21,17 @@ Four tabs: **System**, **Search Bar Layout**, **Preview**, and **Search Window**
   languages plus any a plugin adds).
 - **Interface theme** — dropdown: Light, Dark, Nord, Sakura, Cyberpunk from the built-in
   CoreExtensions plugin, plus Neon Genesis, Sakura Bloom, and Weathering Blue from the bundled
-  AnimeThemes plugin if it's installed and enabled (any other theme plugin can add more).
+  AnimeThemes plugin if it's installed and enabled (any other theme plugin can add more). Hidden
+  while "Follow system light/dark setting" (below) is on, since that takes over which theme applies.
+- **Follow system light/dark setting** — checkbox, off by default. When on, SwiftList switches
+  between two themes you pick — one for when Windows is in light mode, one for dark — instead of
+  using a single fixed theme, and updates immediately whenever you toggle Windows' own setting (no
+  restart needed). Reveals two more dropdowns in place of the single theme picker above:
+  - **Light theme** — only lists themes that aren't dark-flavored.
+  - **Dark theme** — only lists themes that are dark-flavored.
+
+  Each defaults to whichever matching-flavor theme happens to be installed first, since which
+  themes exist at all depends entirely on which theme plugins are installed.
 
 ## Search Bar Layout
 
