@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using SwiftList.App.ViewModels.Search;
 using SwiftList.Core;
@@ -70,55 +69,8 @@ public class TrayIconService : IDisposable
         if (_notifyIcon == null) return;
         try
         {
-            Color drawingColor;
-            if (ThemeManager.Instance.ActiveTheme?.IsDark == true)
-            {
-                drawingColor = Color.White;
-            }
-            else
-            {
-                var brush = Application.Current.Resources["AccentBlue"] as System.Windows.Media.SolidColorBrush;
-                var mediaColor = brush?.Color ?? System.Windows.Media.Colors.DodgerBlue;
-                drawingColor = Color.FromArgb(mediaColor.A, mediaColor.R, mediaColor.G, mediaColor.B);
-            }
-
-            var resourceUri = new Uri("pack://application:,,,/SwiftList.App;component/tray.png", UriKind.Absolute);
-            var resourceInfo = Application.GetResourceStream(resourceUri);
-            if (resourceInfo == null) return;
-
-            using var originalStream = resourceInfo.Stream;
-            using var originalBitmap = new Bitmap(originalStream);
-
-            // Get target dimensions based on current DPI scaling
-            var iconWidth = SystemInformation.SmallIconSize.Width;
-            var iconHeight = SystemInformation.SmallIconSize.Height;
-
-            using var coloredBitmap = new Bitmap(iconWidth, iconHeight);
-            using (var g = Graphics.FromImage(coloredBitmap))
-            {
-                g.Clear(Color.Transparent);
-                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-
-                using var attributes = new ImageAttributes();
-                var colorMatrix = new ColorMatrix(new float[][]
-                {
-                    new float[] { 0, 0, 0, 0, 0 },
-                    new float[] { 0, 0, 0, 0, 0 },
-                    new float[] { 0, 0, 0, 0, 0 },
-                    new float[] { 0, 0, 0, drawingColor.A / 255f, 0 },
-                    new float[] { drawingColor.R / 255f, drawingColor.G / 255f, drawingColor.B / 255f, 0, 1 }
-                });
-                attributes.SetColorMatrix(colorMatrix);
-                g.DrawImage(originalBitmap,
-                    new Rectangle(0, 0, iconWidth, iconHeight),
-                    0, 0, originalBitmap.Width, originalBitmap.Height,
-                    GraphicsUnit.Pixel, attributes);
-            }
-
             var oldHIcon = _hIcon;
-            _hIcon = coloredBitmap.GetHicon();
+            _hIcon = ThemedIconRenderer.CreateThemedHIcon(SystemInformation.SmallIconSize);
             _notifyIcon.Icon = Icon.FromHandle(_hIcon);
 
             if (oldHIcon != IntPtr.Zero)
