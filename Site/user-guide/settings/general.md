@@ -27,14 +27,18 @@ Four tabs: **System**, **Search Bar Layout**, **Preview**, and **Search Window**
 
 Customizes the size, corner rounding, and on-screen position of the quick search bar:
 
-- **Search Bar Width (px)**
-- **Search Bar Height (px)** — default 70px. This one number also drives the overall UI scale
-  factor (`height / 70`) for result-row icons and fonts, so a taller search bar scales the whole
-  result list up with it.
-- **Corner Radius (px)**
-- **Result Icon Size (px)** — range 16–64px, default 42px. Result name/path font size scales with
+- **Search Bar Width (px)** — range 300–1200px, default 570px.
+- **Search Bar Height (px)** — range 45–120px, default 55px. This one number also drives the
+  overall UI scale factor (`height / 70`) for result-row icons and fonts, so a taller search bar
+  scales the whole result list up with it.
+- **Corner Radius (px)** — range 0–50px, default 8px.
+- **Result Icon Size (px)** — range 16–64px, default 55px. Result name/path font size scales with
   this (with a legibility floor), independent of the search bar height above.
-- **Reset Layout Settings** button — restores all four values to their defaults.
+- **Show clock in search box** — checkbox, off by default. While the search box is empty, replaces
+  the usual "Type to search..." placeholder text with the current date, day of week, and time
+  instead — see [issue #101](https://github.com/SwiftList/SwiftList/issues/101). Disappears the
+  moment you start typing, same as the placeholder it replaces.
+- **Reset Layout Settings** button — restores all five values above to their defaults.
 
 Right-clicking the status icon inside the quick window's search box resets just its on-screen
 position (not size), re-centering it the same way it centers on first launch.
