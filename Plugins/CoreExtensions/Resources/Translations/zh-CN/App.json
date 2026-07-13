@@ -181,6 +181,7 @@
   "General_LayoutHeight": "搜索栏高度 (像素)",
   "General_LayoutCornerRadius": "圆角半径 (像素)",
   "General_LayoutIconSize": "结果图标大小 (像素)",
+  "General_LayoutShowClock": "在快速窗口顶部显示日期、时间和星期",
   "General_LayoutReset": "重置布局设置",
   "General_PreviewWindowTitle": "预览窗口",
   "General_PreviewWindowHint": "设置 QuickLook 预览窗口的大小。这个尺寸是固定的，不会随当前显示的结果数量变化。",

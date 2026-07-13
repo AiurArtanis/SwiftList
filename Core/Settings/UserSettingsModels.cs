@@ -80,6 +80,8 @@ public class SearchWindowSettings
     public double ResultIconSize { get; set; } = 55;
     public double? Left { get; set; }
     public double? Top { get; set; }
+    // Floating date/time/day-of-week overlay above the quick window's search bar (see #101).
+    public bool ShowClock { get; set; } = false;
 }
 
 public class PreviewWindowSettings

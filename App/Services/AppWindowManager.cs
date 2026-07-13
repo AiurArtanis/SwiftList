@@ -41,6 +41,7 @@ public static class AppWindowManager
                 _settingsWindow.WindowState = WindowState.Normal;
 
             _settingsWindow.Activate();
+            _settingsWindow.FocusSearchBox();
         });
     }
 

@@ -297,6 +297,10 @@
                         <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.Layout.ResultIconSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
                     </Grid>
 
+                    <CheckBox x:Name="RowLayoutShowClock" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutShowClock]}"
+                               IsChecked="{Binding General.Layout.ShowClock, Mode=TwoWay}"
+                               Margin="0,12,0,0"/>
+
                     <Grid x:Name="RowLayoutReset" Margin="0,16,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>

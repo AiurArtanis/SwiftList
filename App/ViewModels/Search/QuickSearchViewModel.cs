@@ -19,6 +19,11 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
         Search = new SearchExecutionViewModel(this, _searchService);
         Monitor = new ServiceMonitorViewModel(this, _searchService);
 
+        // Floating clock above the search bar (opt-in, see #101). No repeating timer -- the quick window
+        // is a transient popup, not a resident taskbar clock, so it's enough to recompute this each time
+        // the window is actually shown (RefreshLayoutSettings, called from ShowWindow).
+        UpdateClockText();
+
         // Forward property changed notifications from sub-ViewModels
         Search.PropertyChanged += (s, e) =>
         {
@@ -156,6 +161,28 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
     public double SearchBarWidth => UserSettings.Load().SearchWindow.SearchBarWidth;
     public double SearchBarHeight => UserSettings.Load().SearchWindow.SearchBarHeight;
 
+    public Visibility ClockVisibility => UserSettings.Load().SearchWindow.ShowClock ? Visibility.Visible : Visibility.Collapsed;
+
+    // Scales with the same UiMetrics.Scale factor (tied to the configured search bar height) as
+    // everything else in the quick window, instead of sitting at a fixed size while the search box
+    // around it grows/shrinks. Floored so a small configured height never shrinks it past legible.
+    public double ClockFontSize => Math.Max(9, Math.Round(16 * Services.UiMetrics.Scale));
+
+    private string _clockText = string.Empty;
+    public string ClockText
+    {
+        get => _clockText;
+        private set => SetProperty(ref _clockText, value);
+    }
+
+    private void UpdateClockText()
+    {
+        var culture = System.Globalization.CultureInfo.GetCultureInfo(Services.TranslationManager.Instance.CurrentCulture);
+        var now = DateTime.Now;
+        var dayName = culture.DateTimeFormat.GetDayName(now.DayOfWeek);
+        ClockText = $"{now.ToString("d", culture)} {dayName} {now:HH:mm}";
+    }
+
     public void RefreshLayoutSettings()
     {
         Services.UiMetrics.ApplyScaleFromSettings();
@@ -163,6 +190,9 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(InnerCornerRadius));
         OnPropertyChanged(nameof(SearchBarWidth));
         OnPropertyChanged(nameof(SearchBarHeight));
+        OnPropertyChanged(nameof(ClockVisibility));
+        OnPropertyChanged(nameof(ClockFontSize));
+        UpdateClockText();
     }
 
     public void Dispose()

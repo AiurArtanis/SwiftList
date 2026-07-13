@@ -181,6 +181,7 @@
   "General_LayoutHeight": "Search Bar Height (px)",
   "General_LayoutCornerRadius": "Corner Radius (px)",
   "General_LayoutIconSize": "Result Icon Size (px)",
+  "General_LayoutShowClock": "Show date, time, and day of week at the top of the quick window",
   "General_LayoutReset": "Reset Layout Settings",
   "General_PreviewWindowTitle": "Preview Window",
   "General_PreviewWindowHint": "Set the QuickLook preview window's size. This size is fixed and does not change with the number of results showing.",

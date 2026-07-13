@@ -21,7 +21,11 @@ public partial class SettingsWindow : Window
         ThemedWindowIconHelper.Apply(TitleBarLogo, this);
         var vm = new SettingsViewModel();
         DataContext = vm;
-        Loaded += (_, _) => { if (LstSections.SelectedItem == null && LstSectionsBottom.SelectedItem == null) LstSections.SelectedIndex = 0; };
+        Loaded += (_, _) =>
+        {
+            if (LstSections.SelectedItem == null && LstSectionsBottom.SelectedItem == null) LstSections.SelectedIndex = 0;
+            FocusSearchBox();
+        };
         Closed += (_, _) =>
         {
             vm.Cleanup();
@@ -35,6 +39,18 @@ public partial class SettingsWindow : Window
         // whatever the user alt-tabbed to.
         Deactivated += (_, _) => this.CloseSearchPopup();
     }
+
+    // Called on first Loaded, and again by AppWindowManager whenever an already-open (cached, just
+    // hidden) window is re-shown -- Loaded only fires once per window lifetime, so that reuse path
+    // wouldn't otherwise get focus back on the search box.
+    public void FocusSearchBox() => Dispatcher.BeginInvoke(new Action(() =>
+    {
+        // Focus doesn't reliably stick if requested before the window has actually finished
+        // activating -- deferring to Background priority (same pattern QuickSearchWindow uses for its
+        // own search box) waits until layout/activation settles first.
+        TxtSettingsSearch.Focus();
+        Keyboard.Focus(TxtSettingsSearch);
+    }), System.Windows.Threading.DispatcherPriority.Background);
 
     private void TxtSettingsSearch_TextChanged(object sender, TextChangedEventArgs e) => this.OnSettingsSearchTextChanged();
 
