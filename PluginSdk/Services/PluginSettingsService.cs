@@ -12,6 +12,17 @@ public static class PluginSettingsService
     public static Func<string, string, object?, object?>? GetSettingFunc { get; set; }
 
     /// <summary>
+    /// Event raised when a plugin setting is updated.
+    /// Parameters: (pluginId, key)
+    /// </summary>
+    public static event Action<string, string>? SettingChanged;
+
+    /// <summary>
+    /// Notifies listeners that a specific plugin setting has changed.
+    /// </summary>
+    public static void NotifySettingChanged(string pluginId, string key) => SettingChanged?.Invoke(pluginId, key);
+
+    /// <summary>
     /// Retrieves a setting value for a specific plugin.
     /// </summary>
     public static T GetSetting<T>(string pluginId, string key, T defaultValue)

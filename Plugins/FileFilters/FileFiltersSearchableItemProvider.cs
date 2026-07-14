@@ -24,6 +24,7 @@ public class FileFiltersSearchableItemProvider : ISearchableItemProvider, IDispo
     public FileFiltersSearchableItemProvider()
     {
         DirectoryIndexerService.DirectoryChanged += OnDirectoryChanged;
+        PluginSettingsService.SettingChanged += OnSettingChanged;
         ReloadFilters();
     }
 
@@ -35,7 +36,15 @@ public class FileFiltersSearchableItemProvider : ISearchableItemProvider, IDispo
         }
     }
 
-    private string _lastConfigSignature = string.Empty;
+    private void OnSettingChanged(string pluginId, string key)
+    {
+        if (string.Equals(pluginId, "SwiftList.Plugins.FileFilters", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(key, "Filters", StringComparison.OrdinalIgnoreCase))
+        {
+            ReloadFilters();
+            ItemsChanged?.Invoke();
+        }
+    }
 
     private void ReloadFilters()
     {
@@ -65,17 +74,6 @@ public class FileFiltersSearchableItemProvider : ISearchableItemProvider, IDispo
     {
         var items = new List<SearchableItem>();
 
-        // Re-read settings config and serialize to check for changes
-        var currentFilters = PluginSettingsService.GetSetting<List<FilterItem>>("SwiftList.Plugins.FileFilters", "Filters", null!);
-        var signature = currentFilters != null
-            ? System.Text.Json.JsonSerializer.Serialize(currentFilters)
-            : string.Empty;
-
-        if (signature != _lastConfigSignature)
-        {
-            _lastConfigSignature = signature;
-            ReloadFilters();
-        }
 
         foreach (var filter in _registeredFilters)
         {
@@ -143,6 +141,7 @@ public class FileFiltersSearchableItemProvider : ISearchableItemProvider, IDispo
     public void Dispose()
     {
         DirectoryIndexerService.DirectoryChanged -= OnDirectoryChanged;
+        PluginSettingsService.SettingChanged -= OnSettingChanged;
         DirectoryIndexerService.UnregisterDirectories("FileFilters");
         GC.SuppressFinalize(this);
     }

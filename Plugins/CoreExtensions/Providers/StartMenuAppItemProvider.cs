@@ -18,6 +18,7 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
     public StartMenuAppItemProvider()
     {
         DirectoryIndexerService.DirectoryChanged += OnDirectoryChanged;
+        PluginSettingsService.SettingChanged += OnSettingChanged;
         try
         {
             foreach (var root in StartMenuShortcutResolver.GetStartMenuRoots())
@@ -43,9 +44,19 @@ public class StartMenuAppItemProvider : ISearchableItemProvider, IDisposable
         }
     }
 
+    private void OnSettingChanged(string pluginId, string key)
+    {
+        if (string.Equals(pluginId, "SwiftList.Plugins.CoreExtensions", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(key, "CustomFolders", StringComparison.OrdinalIgnoreCase))
+        {
+            ItemsChanged?.Invoke();
+        }
+    }
+
     public void Dispose()
     {
         DirectoryIndexerService.DirectoryChanged -= OnDirectoryChanged;
+        PluginSettingsService.SettingChanged -= OnSettingChanged;
         try
         {
             DirectoryIndexerService.UnregisterDirectories("CoreExtensions.StartMenu");

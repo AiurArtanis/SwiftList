@@ -110,6 +110,8 @@ public class UserSettings
         {
             settingsDict[key] = value;
         }
+
+        PluginSdk.Services.PluginSettingsService.NotifySettingChanged(pluginId, key);
     }
 
     public static string SettingsPath => Path.Combine(Logger.UserDataDir, "user-settings.json");

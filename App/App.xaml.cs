@@ -151,40 +151,22 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += (s, args) => { LogException("TaskScheduler UnobservedTaskException", args.Exception); args.SetObserved(); };
 
         // Force load all plugins (actions and alias providers) on startup
-
         _ = PluginManager.Instance;
-        ViewModels.Search.SearchableItemMapper.Preload();
-
-        // Startup — loading every plugin, preloading providers/icons, JIT and WPF init — inflates the
-        // working set with transient allocations that the GC reclaims but doesn't return to the OS.
-        // Once things settle, trim the working set once so the app idles lean instead of sitting at a
-        // few hundred MB. (Search windows already trim on close for the ongoing case.)
         _ = Task.Delay(10000).ContinueWith(_ => Win32Api.TrimWorkingSet());
-
-        // Now that all plugins are loaded, initialize translations.
-
-        // This must happen after PluginManager to avoid a Lazy<T> circular initialization crash.
 
         try
         {
-            // Register TranslationService delegate for decoupled plugins
-
             PluginSdk.Services.TranslationService.LookupFunc = key => TranslationManager.Instance[key];
-
-            // Register IconService delegate for decoupled plugins
             PluginSdk.Services.IconService.GetIconFunc = (path, isDir) => ShellIconHelper.GetIconForPath(path, isDir);
             PluginSdk.Services.IconService.GetThumbnailFunc = (path, size) => ShellImageListInterop.TryGetPreviewThumbnail(path, size);
-
-            // Register FileMetadataService delegate for decoupled plugins
             PluginSdk.Services.FileMetadataService.BatchLookupFunc = FileMetadataBridge.GetMetadataBatchAsync;
-
-            // Register Logger delegate for decoupled plugins
-
             PluginSdk.Logger.LogAction = (msg, lvl) => Logger.Log(msg, (LogLevel)(int)lvl);
             TranslationManager.Instance.ReloadTranslations();
             Logger.Log("[App] TranslationManager initialized.");
 
-            // Initialize ThemeManager with the saved theme setting
+            // Preload app searchable items now that translations are fully loaded and settled
+            ViewModels.Search.SearchableItemMapper.Preload();
+
             var startupThemeId = settings.ThemeFollowSystem
                 ? ThemeManager.Instance.ResolveLightDarkThemeId(SystemThemeWatcher.IsSystemLight, settings)
                 : settings.Theme;
@@ -192,7 +174,6 @@ public partial class App : Application
             ThemeManager.Instance.InitializeSystemFollow();
             Logger.Log($"[App] ThemeManager initialized with theme: {startupThemeId}");
         }
-
         catch (Exception ex)
         {
             Logger.Log($"[App] Failed to initialize TranslationManager or ThemeManager: {ex.Message}", LogLevel.Error);
@@ -299,16 +280,11 @@ public partial class App : Application
     {
         var details = ex != null ? ex.ToString() : "Null exception object";
         Logger.Log($"CRITICAL CRASH ({source}):\n{details}", LogLevel.Error);
-
-        // Show message box to alert user
-
         MessageBox.Show(string.Format(TranslationManager.Instance["Crash_Message"], source, ex?.Message, Logger.LogDir), TranslationManager.Instance["Crash_Title"], MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     public static void ShowSettingsWindow(string? targetSection = null) => AppWindowManager.ShowSettingsWindow(targetSection);
-
     public static void ShowSearchWindow() => AppWindowManager.ShowSearchWindow();
-
     public static void CloseAllManagedWindows() => AppWindowManager.CloseAllManagedWindows();
 
     protected override void OnExit(ExitEventArgs e)

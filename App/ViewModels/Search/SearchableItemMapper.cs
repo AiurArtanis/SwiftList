@@ -22,9 +22,6 @@ public static class SearchableItemMapper
         remove => SearchableItemCache.ProviderLoaded -= value;
     }
 
-    private static string _lastFileFiltersSignature = string.Empty;
-    private static string _lastCustomFoldersSignature = string.Empty;
-
     // Returns candidates (with their ranking weight) instead of appending directly to a results list --
     // the caller (SearchResultMapper.BuildQuickResults) merges these into one globally weight-sorted
     // list alongside favorites/history-matched files/file-search results, rather than always showing
@@ -36,29 +33,6 @@ public static class SearchableItemMapper
 
         var q = query?.Trim() ?? string.Empty;
         if (string.IsNullOrEmpty(q)) return candidates;
-
-        // Perform efficient config signature check to auto-reload settings when user applies plugin config modifications
-        var currentFilters = PluginSettingsService.GetSettingFunc?.Invoke("SwiftList.Plugins.FileFilters", "Filters", null);
-        var signature = currentFilters != null
-            ? System.Text.Json.JsonSerializer.Serialize(currentFilters)
-            : string.Empty;
-
-        if (signature != _lastFileFiltersSignature)
-        {
-            _lastFileFiltersSignature = signature;
-            // Config changed: Evict FileFiltersSearchableItemProvider cache to force settings reload and directory scanning
-            SearchableItemCache.Invalidate("FileFiltersSearchableItemProvider");
-        }
-
-        var currentCustomFolders = PluginSettingsService.GetSettingFunc?.Invoke("SwiftList.Plugins.CoreExtensions", "CustomFolders", null);
-        var customFoldersSig = currentCustomFolders != null
-            ? System.Text.Json.JsonSerializer.Serialize(currentCustomFolders)
-            : string.Empty;
-        if (customFoldersSig != _lastCustomFoldersSignature)
-        {
-            _lastCustomFoldersSignature = customFoldersSig;
-            SearchableItemCache.Invalidate("StartMenuAppItemProvider");
-        }
 
         // Parse prefix keyword (e.g. "tf avsa") -> keyword = "tf", subQuery = "avsa"
         var parts = q.Split(new[] { ' ' }, 2);
