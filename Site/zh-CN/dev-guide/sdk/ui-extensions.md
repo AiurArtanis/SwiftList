@@ -41,10 +41,8 @@ interface IResultColumnProvider
 签都是基于这个接口做的;参见[插件示例](../examples#coreextensions-——-动作与-shell-右键菜单)。
 
 ```csharp
-interface IStartupPanelTabProvider
+interface IStartupPanelTabProvider : IPluginComponent
 {
-    string Id => GetType().Name; // 启用/禁用状态持久化所依赖的稳定 key
-    string Name { get; } // 标签的显示文字
     IEnumerable<ISearchResult> GetItems();
 }
 ```
@@ -52,7 +50,7 @@ interface IStartupPanelTabProvider
 `GetItems()` 在面板每次激活时都会同步调用，预期要快、不做 I/O——每次搜索框被清空都会调它一次，
 不会做缓存。如果没有返回任何项目，这个标签会被整个排除在标签栏之外，而不是显示成空的。用户可以在
 实时面板里用 **×** 按钮单独隐藏一个标签，这和在设置 → 插件里把该组件整个禁用是两回事，故意分开
-处理——所以实现时不应该假设 `Id` 的唯一性除了持久化这一项状态之外还有别的含义。
+处理——宿主程序使用组件的具体类型名称（`GetType().Name`）作为稳定 Key 来持久化隐藏状态。
 
 ## 预览与缩略图
 
@@ -86,10 +84,8 @@ interface IFilePreviewProvider
 覆盖匹配结果显示的图标/缩略图。
 
 ```csharp
-interface IThumbnailProvider
+interface IThumbnailProvider : IPluginComponent
 {
-    string Id { get; }
-    string Name { get; }
     bool CanProvideThumbnail(string path, bool isDir);
     ImageSource? GetThumbnail(string path, int size);
 }

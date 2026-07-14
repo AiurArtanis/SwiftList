@@ -1,13 +1,22 @@
 # 核心检索与动作
 
-## `IPlugin`
+## `IPluginComponent` 与 `IPlugin`
 
-唯一必须实现的接口——每个插件都要实现它，再加上其他按需实现的接口。
+所有插件组件（包括插件入口）都需要继承自 `IPluginComponent`。该接口提供了组件的名称和描述：
 
 ```csharp
-interface IPlugin
+interface IPluginComponent
 {
-    string Name { get; } // 本地化的显示名称
+    string Name => GetType().Name;       // 组件的显示名称，默认返回具体类名
+    string Description => string.Empty;  // 组件的功能描述，宿主会在配置/设置界面中作为 ToolTip 提示气泡展示
+}
+```
+
+每个插件都必须实现 `IPlugin` 接口（继承自 `IPluginComponent`）作为插件的主入口，另外再加上其他按需实现的接口：
+
+```csharp
+interface IPlugin : IPluginComponent
+{
 }
 ```
 
@@ -19,12 +28,10 @@ interface IPlugin
 变化的场景(例如开始菜单快捷方式、书签列表)。
 
 ```csharp
-interface ISearchableItemProvider
+interface ISearchableItemProvider : IPluginComponent
 {
-    string Id { get; }     // 稳定的、与语言无关的标识符
-    string Name { get; }
     bool EnableAlias { get; } // 默认 true
-    event EventHandler? ItemsChanged;
+    event Action? ItemsChanged;
     IEnumerable<SearchableItem> GetSearchableItems();
 }
 ```
@@ -35,10 +42,8 @@ interface ISearchableItemProvider
 容，而不是需要提前建好索引的东西。
 
 ```csharp
-interface IInstantResultProvider
+interface IInstantResultProvider : IPluginComponent
 {
-    string Id { get; }
-    string Name { get; }
     IEnumerable<InstantResultItem> GetInstantResults(string query);
     bool[]? GetHighlightMask(string text, string query); // 可选的匹配高亮
 }
@@ -81,10 +86,8 @@ interface IAliasProvider
 或者在一次普通搜索之上做其他组合处理。
 
 ```csharp
-interface IQueryTokenProvider
+interface IQueryTokenProvider : IPluginComponent
 {
-    string Id { get; }
-    string Name { get; }
     bool CanHandle(string token);
     Task<IReadOnlyList<ISearchResult>> ApplyAsync(string token, IReadOnlyList<ISearchResult> results);
 }
@@ -109,9 +112,8 @@ interface IActionProvider
 一个单独的静态动作(例如"复制路径")，出现在动作菜单或快速窗口的动作热键里:
 
 ```csharp
-interface ISearchResultAction
+interface ISearchResultAction : IPluginComponent
 {
-    string Id { get; }
     string GroupName { get; }
     string DisplayName { get; }
     string? Hotkey { get; }              // 可选的默认热键

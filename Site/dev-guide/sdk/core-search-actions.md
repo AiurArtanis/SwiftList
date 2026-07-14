@@ -1,13 +1,22 @@
 # Core Search & Actions
 
-## `IPlugin`
+## `IPluginComponent` & `IPlugin`
 
-The one required interface — every plugin implements this, plus whichever others it needs.
+All plugin components (including the plugin entry class itself) must inherit from `IPluginComponent`. This interface provides the component's name and description:
 
 ```csharp
-interface IPlugin
+interface IPluginComponent
 {
-    string Name { get; } // Localized display name
+    string Name => GetType().Name;       // Component display name, defaults to type name
+    string Description => string.Empty;  // Component description/tooltip shown in settings UI
+}
+```
+
+Every plugin must implement the `IPlugin` interface (inheriting from `IPluginComponent`) as the main entry point, plus whichever other interfaces it needs:
+
+```csharp
+interface IPlugin : IPluginComponent
+{
 }
 ```
 
@@ -19,12 +28,10 @@ Returns a full, cacheable list of items to fold into the index — for content t
 slow to enumerate but doesn't change every keystroke (e.g. Start Menu shortcuts, a bookmark list).
 
 ```csharp
-interface ISearchableItemProvider
+interface ISearchableItemProvider : IPluginComponent
 {
-    string Id { get; }     // Stable, locale-independent identifier
-    string Name { get; }
     bool EnableAlias { get; } // default true
-    event EventHandler? ItemsChanged;
+    event Action? ItemsChanged;
     IEnumerable<SearchableItem> GetSearchableItems();
 }
 ```
@@ -35,10 +42,8 @@ Runs on every keystroke and returns results directly — for query-shaped conten
 or a URL shortcut, not something you'd want indexed ahead of time.
 
 ```csharp
-interface IInstantResultProvider
+interface IInstantResultProvider : IPluginComponent
 {
-    string Id { get; }
-    string Name { get; }
     IEnumerable<InstantResultItem> GetInstantResults(string query);
     bool[]? GetHighlightMask(string text, string query); // optional match highlighting
 }
@@ -85,10 +90,8 @@ Claims a trailing token from the query (e.g. `report :size`) and transforms the 
 result list — sorting, filtering, or otherwise composing on top of a normal search.
 
 ```csharp
-interface IQueryTokenProvider
+interface IQueryTokenProvider : IPluginComponent
 {
-    string Id { get; }
-    string Name { get; }
     bool CanHandle(string token);
     Task<IReadOnlyList<ISearchResult>> ApplyAsync(string token, IReadOnlyList<ISearchResult> results);
 }
@@ -114,9 +117,8 @@ A single, static action (e.g. "Copy Path") shown in the Actions menu or the quic
 hotkeys:
 
 ```csharp
-interface ISearchResultAction
+interface ISearchResultAction : IPluginComponent
 {
-    string Id { get; }
     string GroupName { get; }
     string DisplayName { get; }
     string? Hotkey { get; }              // optional default hotkey

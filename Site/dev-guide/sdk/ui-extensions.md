@@ -42,10 +42,8 @@ CoreExtensions' History and Favorites tabs are both built on this; see
 [Example Plugins](../examples#coreextensions-actions-and-the-shell-context-menu) for a walkthrough.
 
 ```csharp
-interface IStartupPanelTabProvider
+interface IStartupPanelTabProvider : IPluginComponent
 {
-    string Id => GetType().Name; // stable key the enable/disable state persists against
-    string Name { get; } // the tab's label
     IEnumerable<ISearchResult> GetItems();
 }
 ```
@@ -54,8 +52,8 @@ interface IStartupPanelTabProvider
 it's called each time the search box is cleared, not cached. A tab that returns no items is left out
 of the strip entirely rather than shown empty. The user can hide a tab from the live panel with its
 **×** button independently of disabling the component altogether in Settings → Plugins — the two
-are deliberately separate, so implementations shouldn't assume `Id` uniqueness means anything beyond
-persisting that one piece of state.
+are deliberately separate; the host uses the component's concrete class type name (`GetType().Name`)
+as the stable key to persist the closed state.
 
 ## Preview & thumbnails
 
@@ -90,10 +88,8 @@ Two optional companion interfaces refine preview behavior:
 Overrides the icon/thumbnail shown for matching results.
 
 ```csharp
-interface IThumbnailProvider
+interface IThumbnailProvider : IPluginComponent
 {
-    string Id { get; }
-    string Name { get; }
     bool CanProvideThumbnail(string path, bool isDir);
     ImageSource? GetThumbnail(string path, int size);
 }
