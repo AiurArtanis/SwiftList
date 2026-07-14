@@ -102,10 +102,11 @@ internal sealed class SearchExecutionEngine : IDisposable
                 token.ThrowIfCancellationRequested();
                 var tracker = InlineSearchManager.Instance.ExplorerTracker;
                 var adapter = tracker.ActiveInlineAdapter;
-                if (isInlineSearchContext && adapter != null && tracker.ActiveHwnd != IntPtr.Zero)
+                var dialogAdapter = tracker.ActiveAdapter;
+                if (isInlineSearchContext && tracker.ActiveHwnd != IntPtr.Zero)
                 {
                     var contextDirectory = !string.IsNullOrWhiteSpace(searchScope) ? searchScope : (tracker.ActivePath ?? tracker.LastActiveExplorerPath);
-                    if (tracker.IsActiveWindowExplorer)
+                    if (tracker.IsActiveWindowExplorer || (tracker.IsActiveWindowDialog && dialogAdapter != null))
                     {
                         var localMatches = new List<AppSearchResult>();
                         Task? localSearchTask = null;
@@ -117,7 +118,7 @@ internal sealed class SearchExecutionEngine : IDisposable
                         await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, fileLimit, appLimit, resultMapper, searchVersion, onResultsUpdated, token, localMatches, localSearchTask, onLocalServiceUnavailable, bypassExclusions);
                         return;
                     }
-                    else
+                    else if (adapter != null)
                     {
                         var listItems = adapter.GetListItems(tracker.ActiveHwnd).ToList();
                         if (listItems.Count > 0)

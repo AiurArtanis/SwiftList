@@ -83,7 +83,7 @@ public class StandardFileDialogAdapter : IFileDialogAdapter
 
             Task.Run(async () =>
             {
-                await Task.Delay(150);
+                await Task.Delay(300);
                 var currentActive = GetForegroundWindow();
                 var isAllowed = (currentActive == hwnd);
 

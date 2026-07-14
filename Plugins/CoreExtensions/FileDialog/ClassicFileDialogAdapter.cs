@@ -93,7 +93,7 @@ public class ClassicFileDialogAdapter : IFileDialogAdapter
 
             Task.Run(async () =>
             {
-                await Task.Delay(150);
+                await Task.Delay(300);
                 var currentActive = GetForegroundWindow();
                 var isAllowed = (currentActive == hwnd);
 
@@ -254,20 +254,6 @@ public class ClassicFileDialogAdapter : IFileDialogAdapter
         return IntPtr.Zero;
     }
 
-    private static IntPtr FindTreeView(IntPtr parent)
-    {
-        var tree = FindWindowEx(parent, IntPtr.Zero, "SysTreeView32", null);
-        if (tree != IntPtr.Zero) return tree;
-
-        var child = FindWindowEx(parent, IntPtr.Zero, null, null);
-        while (child != IntPtr.Zero)
-        {
-            var subTree = FindTreeView(child);
-            if (subTree != IntPtr.Zero) return subTree;
-            child = FindWindowEx(parent, child, null, null);
-        }
-        return IntPtr.Zero;
-    }
 
     private static IntPtr FindComboBox(IntPtr parent)
     {
