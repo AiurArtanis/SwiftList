@@ -9,9 +9,17 @@
 
     <SolidColorBrush x:Key="CardBackground" Color="#0F0C1B"/>
     <SolidColorBrush x:Key="CardBorderBrush" Color="#2A1B4E"/>
-    <SolidColorBrush x:Key="TextPrimary" Color="#00FFFF"/>
-    <SolidColorBrush x:Key="TextSecondary" Color="#FF007F"/>
-    <SolidColorBrush x:Key="AccentBlue" Color="#00FFFF"/>
+    <!-- Body/filename text uses the same neutral tones every other theme uses (matching Dark.xaml),
+         not the theme's own neon colors: a vivid cyan/magenta base made every result name compete
+         with the search-highlight color instead of reading calmly, unlike any other theme. The neon
+         identity stays everywhere else (accents, borders, icons, badges). -->
+    <SolidColorBrush x:Key="TextPrimary" Color="#CCCCCC"/>
+    <SolidColorBrush x:Key="TextSecondary" Color="#9D9D9D"/>
+    <!-- Was the same cyan as TextPrimary, which made the search-result match highlight (bound to
+         AccentBlue) invisible against normal result text. Reassigned to this theme's own established
+         "selection" magenta (already used for SelectedBackground/ItemSelected/AccentBarColor below)
+         instead of introducing a new color. -->
+    <SolidColorBrush x:Key="AccentBlue" Color="#FF007F"/>
     <SolidColorBrush x:Key="HoverBackground" Color="#1D123A"/>
     <SolidColorBrush x:Key="SelectedBackground" Color="#FF007F"/>
     <SolidColorBrush x:Key="SeparatorBrush" Color="#2A1B4E"/>
@@ -52,9 +60,9 @@
          its hover fill, so the bar reuses it as-is. -->
     <SolidColorBrush x:Key="AccentBarColor" Color="#FF007F"/>
     <SolidColorBrush x:Key="BorderColor" Color="#2A1B4E"/>
-    <SolidColorBrush x:Key="AccentColor" Color="#00FFFF"/>
-    <SolidColorBrush x:Key="TextPrimary2" Color="#00FFFF"/>
-    <SolidColorBrush x:Key="TextSecondary2" Color="#FF007F"/>
+    <SolidColorBrush x:Key="AccentColor" Color="#FF007F"/>
+    <SolidColorBrush x:Key="TextPrimary2" Color="#CCCCCC"/>
+    <SolidColorBrush x:Key="TextSecondary2" Color="#9D9D9D"/>
     <SolidColorBrush x:Key="StatusBarBg" Color="#150F28"/>
     <SolidColorBrush x:Key="IconMutedBrush" Color="#2A1B4E"/>
     <SolidColorBrush x:Key="SuccessBrush" Color="#39FF14"/>
