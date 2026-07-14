@@ -203,7 +203,7 @@ public static class SearchableItemMapper
                 }
                 catch (Exception ex)
                 {
-                    Core.Logger.Log($"[SearchableItemMapper] Failed to create vector icon: {ex.Message}", Core.LogLevel.Error);
+                    Logger.Log($"[SearchableItemMapper] Failed to create vector icon: {ex.Message}", LogLevel.Error);
                 }
             }
             else

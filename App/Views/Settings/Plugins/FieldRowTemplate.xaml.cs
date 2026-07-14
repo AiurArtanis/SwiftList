@@ -23,9 +23,25 @@ public partial class PluginConfigFieldRowTemplate : ResourceDictionary
     // first-pass height lets the master list's own (unbounded) natural size leak into the row's Auto
     // height, which the detail panel -- if it were Stretch-aligned -- would then adopt too, permanently
     // locking in an inflated value. Doing the sync explicitly after each real layout avoids that.
-    private void ArrayDetailPanel_Loaded(object sender, RoutedEventArgs e) => SyncArrayMasterListHeight(sender);
+    private void ArrayDetailPanel_Loaded(object sender, RoutedEventArgs e)
+    {
+        SyncArrayMasterListHeight(sender);
+        TriggerWindowResizeToFit(sender);
+    }
 
-    private void ArrayDetailPanel_SizeChanged(object sender, SizeChangedEventArgs e) => SyncArrayMasterListHeight(sender);
+    private void ArrayDetailPanel_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        SyncArrayMasterListHeight(sender);
+        TriggerWindowResizeToFit(sender);
+    }
+
+    private static void TriggerWindowResizeToFit(object sender)
+    {
+        if (sender is FrameworkElement element && Window.GetWindow(element) is PluginConfigWindow configWindow)
+        {
+            configWindow.ResizeToFit();
+        }
+    }
 
     private static void SyncArrayMasterListHeight(object sender)
     {

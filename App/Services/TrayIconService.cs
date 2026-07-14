@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using SwiftList.App.ViewModels.Search;
 using SwiftList.Core;

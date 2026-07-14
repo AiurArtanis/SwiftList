@@ -74,7 +74,7 @@ public static class TextHighlighter
             }
             catch (Exception ex)
             {
-                Core.Logger.Log($"[TextHighlighter] Custom highlighting error: {ex.Message}", Core.LogLevel.Error);
+                Logger.Log($"[TextHighlighter] Custom highlighting error: {ex.Message}", LogLevel.Error);
             }
         }
 
@@ -107,13 +107,13 @@ public static class TextHighlighter
 
                 highlights = new bool[fullText.Length];
                 if (!string.IsNullOrEmpty(filePart))
-                    OrInto(highlights, Core.FuzzyMatcher.ComputeHighlightMask(fullText, filePart));
+                    OrInto(highlights, FuzzyMatcher.ComputeHighlightMask(fullText, filePart));
                 if (!string.IsNullOrEmpty(dirPart))
-                    OrInto(highlights, Core.FuzzyMatcher.ComputeHighlightMask(fullText, dirPart));
+                    OrInto(highlights, FuzzyMatcher.ComputeHighlightMask(fullText, dirPart));
             }
             else
             {
-                highlights = Core.FuzzyMatcher.ComputeHighlightMask(fullText, normalizedHighlight);
+                highlights = FuzzyMatcher.ComputeHighlightMask(fullText, normalizedHighlight);
             }
         }
 

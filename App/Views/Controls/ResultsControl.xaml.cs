@@ -2,7 +2,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Collections;
 using System.Collections.Specialized;
-using SwiftList.App.Services;
 
 namespace SwiftList.App;
 

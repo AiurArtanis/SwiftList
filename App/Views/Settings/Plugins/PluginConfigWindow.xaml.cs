@@ -44,6 +44,27 @@ public partial class PluginConfigWindow : Window
             }
         }), System.Windows.Threading.DispatcherPriority.ContextIdle);
 
+    public void ResizeToFit()
+    {
+        if (SizeToContent != SizeToContent.Manual) return;
+
+        // Temporarily reset row height to Auto to avoid the WPF degenerate size-to-content case
+        ContentRow.Height = GridLength.Auto;
+        SizeToContent = SizeToContent.WidthAndHeight;
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            SizeToContent = SizeToContent.Manual;
+            ContentRow.Height = new GridLength(1, GridUnitType.Star);
+
+            if (Owner != null)
+            {
+                Left = Owner.Left + (Owner.ActualWidth - ActualWidth) / 2;
+                Top = Owner.Top + (Owner.ActualHeight - ActualHeight) / 2;
+            }
+        }), System.Windows.Threading.DispatcherPriority.ContextIdle);
+    }
+
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton == MouseButton.Left)

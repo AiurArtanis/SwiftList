@@ -76,7 +76,7 @@ internal static class InlineListSearchHelper
         }
         catch (Exception ex)
         {
-            Core.Logger.Log($"[InlineListSearchHelper] ListProvider search error: {ex.Message}", Core.LogLevel.Error);
+            Logger.Log($"[InlineListSearchHelper] ListProvider search error: {ex.Message}", LogLevel.Error);
         }
 
         if (hasPluginSearchActions && listResults.Count > 0)
