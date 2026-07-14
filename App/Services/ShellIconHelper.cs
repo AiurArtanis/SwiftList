@@ -37,13 +37,15 @@ public static class ShellIconHelper
             ext = "::unknown::";
         }
 
+        var isVirtualItem = path.StartsWith("::") || path.StartsWith("shell:");
         var hasThumbnailProvider = !isDir && Services.PluginManager.Instance.ThumbnailProviders.Any(p => p.CanProvideThumbnail(path, isDir));
         // Determine if it is a unique icon type
         var isUniqueIconType = (!isDir && (
             ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) ||
             ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase) ||
-            ext.Equals(".ico", StringComparison.OrdinalIgnoreCase)
-        )) || isDir || hasThumbnailProvider;
+            ext.Equals(".ico", StringComparison.OrdinalIgnoreCase) ||
+            ext.Equals(".msc", StringComparison.OrdinalIgnoreCase)
+        )) || isDir || isVirtualItem || hasThumbnailProvider;
 
         var cacheKey = isUniqueIconType ? path : ext;
 
@@ -111,17 +113,18 @@ public static class ShellIconHelper
             ext = "::unknown::";
         }
 
-        // EXE, LNK, ICO, etc. have unique icons per file.
+        // EXE, LNK, ICO, MSC, etc. have unique icons per file.
         // We use FullPath as cacheKey for these to avoid caching them under a single generic ".exe" key.
         // Also treat existing directories as unique icon types to extract their customized folder icons.
         var checkPath = path;
-        var isVirtualFolder = isDir && (checkPath.StartsWith("::") || checkPath.StartsWith("shell:"));
+        var isVirtualItem = checkPath.StartsWith("::") || checkPath.StartsWith("shell:");
         var hasThumbnailProvider = !isDir && Services.PluginManager.Instance.ThumbnailProviders.Any(p => p.CanProvideThumbnail(path, isDir));
         var isUniqueIconType = (!isDir && (
             ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) ||
             ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase) ||
-            ext.Equals(".ico", StringComparison.OrdinalIgnoreCase)
-        )) || (isDir && (Directory.Exists(checkPath) || isVirtualFolder)) || hasThumbnailProvider;
+            ext.Equals(".ico", StringComparison.OrdinalIgnoreCase) ||
+            ext.Equals(".msc", StringComparison.OrdinalIgnoreCase)
+        )) || (isDir && Directory.Exists(checkPath)) || isVirtualItem || hasThumbnailProvider;
 
         var cacheKey = isUniqueIconType ? path : ext;
 
@@ -163,7 +166,17 @@ public static class ShellIconHelper
                 }
             }
 
-            if (isUniqueIconType && isDir && (Directory.Exists(checkPath) || isVirtualFolder))
+            if (!isDir && ext.Equals(".msc", StringComparison.OrdinalIgnoreCase) && File.Exists(checkPath))
+            {
+                var mscIcon = ShellIconShortcutResolver.TryGetMscIcon(checkPath);
+                if (mscIcon != null)
+                {
+                    _iconCache[cacheKey] = mscIcon;
+                    return mscIcon;
+                }
+            }
+
+            if (isVirtualItem || (isUniqueIconType && isDir && Directory.Exists(checkPath)))
             {
                 var pidl = IntPtr.Zero;
                 var hr = ShellIconNativeMethods.SHParseDisplayName(checkPath, IntPtr.Zero, out pidl, 0, out var sfgaoOut);

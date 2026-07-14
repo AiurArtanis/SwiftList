@@ -9,7 +9,7 @@ using System.Windows.Media.Imaging;
 
 namespace SwiftList.App;
 
-internal static class ShellIconShortcutResolver
+public static class ShellIconShortcutResolver
 {
     public static ImageSource? TryGetShortcutTargetIcon(string shortcutPath)
     {
@@ -39,6 +39,11 @@ internal static class ShellIconShortcutResolver
             var targetPath = Environment.ExpandEnvironmentVariables(targetPathBuilder.ToString());
             if (!string.IsNullOrWhiteSpace(targetPath) && File.Exists(targetPath))
             {
+                if (targetPath.EndsWith(".msc", StringComparison.OrdinalIgnoreCase))
+                {
+                    var mscIcon = TryGetMscIcon(targetPath);
+                    if (mscIcon != null) return mscIcon;
+                }
                 return ExtractLargeIcon(targetPath, 0) ?? GetShellIconWithoutLinkOverlay(targetPath);
             }
         }
@@ -57,7 +62,7 @@ internal static class ShellIconShortcutResolver
         return null;
     }
 
-    private static ImageSource? ExtractLargeIcon(string iconPath, int iconIndex)
+    internal static ImageSource? ExtractLargeIcon(string iconPath, int iconIndex)
     {
         // Prefer a high-resolution extraction (48/256px) so shortcut icons stay crisp.
         var hiRes = ShellImageListInterop.ExtractHiRes(iconPath, iconIndex);
@@ -115,6 +120,30 @@ internal static class ShellIconShortcutResolver
         finally
         {
             ShellIconNativeMethods.DestroyIcon(shfi.hIcon);
+        }
+    }
+
+    public static ImageSource? TryGetMscIcon(string mscPath)
+    {
+        var hIcon = PluginSdk.Helpers.ShellPathHelper.ExtractMscHIcon(mscPath, 96);
+        if (hIcon == IntPtr.Zero) return null;
+        try
+        {
+            var bitmapSource = Imaging.CreateBitmapSourceFromHIcon(
+                hIcon,
+                Int32Rect.Empty,
+                BitmapSizeOptions.FromEmptyOptions());
+            bitmapSource.Freeze();
+            return bitmapSource;
+        }
+        catch (Exception ex)
+        {
+            Core.Logger.Log($"[ShellIconShortcutResolver] Failed to convert MSC icon from {mscPath}: {ex.Message}", Core.LogLevel.Warn);
+            return null;
+        }
+        finally
+        {
+            ShellIconNativeMethods.DestroyIcon(hIcon);
         }
     }
 }

@@ -49,6 +49,9 @@ public static class ShellPathHelper
     [DllImport("user32.dll")] private static extern bool DrawIconEx(IntPtr hdc, int x, int y, IntPtr hIcon, int cx, int cy, uint step, IntPtr hbr, uint flags);
     [DllImport("user32.dll")] private static extern bool DestroyIcon(IntPtr hIcon);
 
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint ExtractIconEx(string lpszFile, int nIconIndex, IntPtr[]? phiconLarge, IntPtr[]? phiconSmall, uint nIcons);
+
     private const uint SHGFI_DISPLAYNAME = 0x000000200;
     private const uint SHGFI_PIDL = 0x000000008;
     private const uint SHGFI_ICON = 0x000000100;
@@ -88,46 +91,28 @@ public static class ShellPathHelper
     public static string ResolveSpecialFolder(string name)
     {
         if (string.IsNullOrEmpty(name)) return name;
-
         name = name.Trim();
-
         foreach (var folderType in _trackedSpecialFolders)
         {
             try
             {
                 var specialPath = Environment.GetFolderPath(folderType);
-                if (string.IsNullOrEmpty(specialPath)) continue;
-
-                var dirName = Path.GetFileName(specialPath);
-                var localizedName = GetLocalizedFolderName(specialPath);
-
-                if (string.Equals(name, dirName, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(name, localizedName, StringComparison.OrdinalIgnoreCase))
-                {
+                if (!string.IsNullOrEmpty(specialPath) &&
+                    (string.Equals(name, Path.GetFileName(specialPath), StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(name, GetLocalizedFolderName(specialPath), StringComparison.OrdinalIgnoreCase)))
                     return specialPath;
-                }
             }
             catch { }
         }
-
         try
         {
-            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var downloadsPath = Path.Combine(userProfile, "Downloads");
-            if (Directory.Exists(downloadsPath))
-            {
-                var dirName = Path.GetFileName(downloadsPath);
-                var localizedName = GetLocalizedFolderName(downloadsPath);
-
-                if (string.Equals(name, dirName, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(name, localizedName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return downloadsPath;
-                }
-            }
+            var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            if (Directory.Exists(downloadsPath) &&
+                (string.Equals(name, Path.GetFileName(downloadsPath), StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(name, GetLocalizedFolderName(downloadsPath), StringComparison.OrdinalIgnoreCase)))
+                return downloadsPath;
         }
         catch { }
-
         return name;
     }
 
@@ -176,30 +161,49 @@ public static class ShellPathHelper
     public static string GetVirtualFolderDisplayName(string path, string fallback)
     {
         if (string.IsNullOrEmpty(path)) return fallback;
-
         var pidl = IntPtr.Zero;
         try
         {
-            var hr = SHParseDisplayName(path, IntPtr.Zero, out pidl, 0, out _);
-            if (hr == 0 && pidl != IntPtr.Zero)
+            if (SHParseDisplayName(path, IntPtr.Zero, out pidl, 0, out _) == 0 && pidl != IntPtr.Zero)
             {
                 var shfi = new SHFILEINFO();
                 var res = SHGetFileInfoPidl(pidl, 0, ref shfi, (uint)Marshal.SizeOf(shfi), SHGFI_DISPLAYNAME | SHGFI_PIDL);
                 if (res != IntPtr.Zero && !string.IsNullOrEmpty(shfi.szDisplayName))
-                {
                     return shfi.szDisplayName.Trim();
-                }
             }
         }
         catch { }
+        finally { if (pidl != IntPtr.Zero) Marshal.FreeCoTaskMem(pidl); }
+        return fallback;
+    }
+
+    private static IntPtr HIconToHBitmap(IntPtr hIcon, int size)
+    {
+        if (hIcon == IntPtr.Zero) return IntPtr.Zero;
+        var hdc = IntPtr.Zero;
+        var hMemDC = IntPtr.Zero;
+        var hBmp = IntPtr.Zero;
+        try
+        {
+            hdc = GetDC(IntPtr.Zero);
+            hMemDC = CreateCompatibleDC(hdc);
+            hBmp = CreateCompatibleBitmap(hdc, size, size);
+            var hOld = SelectObject(hMemDC, hBmp);
+            DrawIconEx(hMemDC, 0, 0, hIcon, size, size, 0, IntPtr.Zero, 0x0003 /* DI_NORMAL */);
+            SelectObject(hMemDC, hOld);
+            return hBmp;
+        }
+        catch
+        {
+            if (hBmp != IntPtr.Zero) DeleteObject(hBmp);
+            return IntPtr.Zero;
+        }
         finally
         {
-            if (pidl != IntPtr.Zero)
-            {
-                Marshal.FreeCoTaskMem(pidl);
-            }
+            DestroyIcon(hIcon);
+            if (hMemDC != IntPtr.Zero) DeleteDC(hMemDC);
+            if (hdc != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdc);
         }
-        return fallback;
     }
 
     /// <summary>
@@ -213,45 +217,15 @@ public static class ShellPathHelper
     {
         if (comObj == null) return IntPtr.Zero;
         var pidl = IntPtr.Zero;
-        var hIcon = IntPtr.Zero;
-        var hdc = IntPtr.Zero;
-        var hMemDC = IntPtr.Zero;
-        var hBmp = IntPtr.Zero;
         try
         {
             if (SHGetIDListFromObject(comObj, out pidl) != 0 || pidl == IntPtr.Zero) return IntPtr.Zero;
-
-            // Preferred: correctly size-scaled icon (avoids the Jumbo small-icon centering bug).
             var direct = ShellImageListNative.GetShellHBitmapFromPidl(pidl, size);
             if (direct != IntPtr.Zero) return direct;
-
-            // Fallback: system image-list HICON scaled to `size` below.
-            hIcon = ShellImageListNative.GetHiResHIcon(pidl, size);
-            if (hIcon == IntPtr.Zero)
-                return IntPtr.Zero;
-
-            // Convert HICON → HBITMAP.  Use the screen DC for CreateCompatibleBitmap so
-            // we get a colour bitmap (CreateCompatibleDC(NULL) alone gives monochrome).
-            hdc = GetDC(IntPtr.Zero);
-            hMemDC = CreateCompatibleDC(hdc);
-            hBmp = CreateCompatibleBitmap(hdc, size, size);
-            var hOld = SelectObject(hMemDC, hBmp);
-            DrawIconEx(hMemDC, 0, 0, hIcon, size, size, 0, IntPtr.Zero, 0x0003 /* DI_NORMAL */);
-            SelectObject(hMemDC, hOld);
-            return hBmp;
+            return HIconToHBitmap(ShellImageListNative.GetHiResHIcon(pidl, size), size);
         }
-        catch
-        {
-            if (hBmp != IntPtr.Zero) DeleteObject(hBmp);
-            return IntPtr.Zero;
-        }
-        finally
-        {
-            if (hIcon != IntPtr.Zero) DestroyIcon(hIcon);
-            if (pidl != IntPtr.Zero) Marshal.FreeCoTaskMem(pidl);
-            if (hMemDC != IntPtr.Zero) DeleteDC(hMemDC);
-            if (hdc != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdc);
-        }
+        catch { return IntPtr.Zero; }
+        finally { if (pidl != IntPtr.Zero) Marshal.FreeCoTaskMem(pidl); }
     }
 
     /// <summary>
@@ -261,39 +235,61 @@ public static class ShellPathHelper
     public static IntPtr GetIconHBitmapForPath(string path, int size = 96)
     {
         if (string.IsNullOrEmpty(path)) return IntPtr.Zero;
-
-        // Preferred: correctly size-scaled icon (avoids the Jumbo small-icon centering bug).
+        if (path.EndsWith(".msc", StringComparison.OrdinalIgnoreCase) && File.Exists(path))
+        {
+            try
+            {
+                var hIcon = ExtractMscHIcon(path, size);
+                if (hIcon != IntPtr.Zero)
+                    return HIconToHBitmap(hIcon, size);
+            }
+            catch { }
+        }
         var direct = ShellImageListNative.GetShellHBitmap(path, size);
         if (direct != IntPtr.Zero) return direct;
-
-        var hIcon = IntPtr.Zero;
-        var hdc = IntPtr.Zero;
-        var hMemDC = IntPtr.Zero;
-        var hBmp = IntPtr.Zero;
         try
         {
-            hIcon = ShellImageListNative.GetHiResHIcon(path, size);
-            if (hIcon == IntPtr.Zero)
-                return IntPtr.Zero;
+            var hIcon = ShellImageListNative.GetHiResHIcon(path, size);
+            return HIconToHBitmap(hIcon, size);
+        }
+        catch { return IntPtr.Zero; }
+    }
 
-            hdc = GetDC(IntPtr.Zero);
-            hMemDC = CreateCompatibleDC(hdc);
-            hBmp = CreateCompatibleBitmap(hdc, size, size);
-            var hOld = SelectObject(hMemDC, hBmp);
-            DrawIconEx(hMemDC, 0, 0, hIcon, size, size, 0, IntPtr.Zero, 0x0003 /* DI_NORMAL */);
-            SelectObject(hMemDC, hOld);
-            return hBmp;
-        }
-        catch
+    public static IntPtr ExtractMscHIcon(string mscPath, int size)
+    {
+        try
         {
-            if (hBmp != IntPtr.Zero) DeleteObject(hBmp);
-            return IntPtr.Zero;
+            var content = File.ReadAllText(mscPath);
+            var start = content.IndexOf("<Icon ", StringComparison.OrdinalIgnoreCase);
+            if (start < 0) return IntPtr.Zero;
+            var end = content.IndexOf(">", start);
+            if (end < 0) return IntPtr.Zero;
+            var tag = content.Substring(start, end - start);
+            var fileMatch = System.Text.RegularExpressions.Regex.Match(tag, @"File\s*=\s*""([^""]+)""", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var indexMatch = System.Text.RegularExpressions.Regex.Match(tag, @"Index\s*=\s*""([^""]+)""", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (fileMatch.Success)
+            {
+                var iconPath = Environment.ExpandEnvironmentVariables(fileMatch.Groups[1].Value);
+                if (!File.Exists(iconPath))
+                {
+                    var winIdx = iconPath.IndexOf(@"\Windows\", StringComparison.OrdinalIgnoreCase);
+                    if (winIdx >= 0)
+                    {
+                        var sysRoot = Environment.GetEnvironmentVariable("SystemRoot") ?? @"C:\Windows";
+                        var altPath = Path.Combine(sysRoot, iconPath.Substring(winIdx + 9));
+                        if (File.Exists(altPath)) iconPath = altPath;
+                    }
+                }
+                var iconIndex = (indexMatch.Success && int.TryParse(indexMatch.Groups[1].Value, out var parsed)) ? parsed : 0;
+                if (File.Exists(iconPath))
+                {
+                    var largeIcons = new IntPtr[1];
+                    if (ExtractIconEx(iconPath, iconIndex, largeIcons, null, 1) > 0 && largeIcons[0] != IntPtr.Zero)
+                        return largeIcons[0];
+                }
+            }
         }
-        finally
-        {
-            if (hIcon != IntPtr.Zero) DestroyIcon(hIcon);
-            if (hMemDC != IntPtr.Zero) DeleteDC(hMemDC);
-            if (hdc != IntPtr.Zero) ReleaseDC(IntPtr.Zero, hdc);
-        }
+        catch { }
+        return IntPtr.Zero;
     }
 }
