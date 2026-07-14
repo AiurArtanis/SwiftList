@@ -188,7 +188,7 @@ internal static class ShellImageListInterop
                 return null;
             if (list.GetIcon(iIcon, ILD_TRANSPARENT, out var hicon) < 0 || hicon == IntPtr.Zero)
                 return null;
-            try { return FromHIcon(hicon); }
+            try { return TrimCenteredPadding(FromHIcon(hicon)); }
             finally { ShellIconNativeMethods.DestroyIcon(hicon); }
         }
         catch (Exception ex)
@@ -199,6 +199,61 @@ internal static class ShellImageListInterop
         finally
         {
             if (list != null) Marshal.ReleaseComObject(list);
+        }
+    }
+
+    /// <summary>Some icon resources registered for SHIL_JUMBO (256px) only actually ship a smaller
+    /// resolution (e.g. 48px, as with dnSpy's .dll association -- see GitHub issue #102): Windows
+    /// centers that smaller bitmap in the full 256px canvas rather than upscaling it, so once this
+    /// app scales the result down to display size the icon renders as a tiny blob surrounded by
+    /// transparent space. Cropping to the actual opaque content here lets normal image scaling fill
+    /// the display size properly instead. Only trims when the real content is well short of filling
+    /// the canvas (a legitimately full-size icon's anti-aliased edges still reach close to the
+    /// border), so ordinary jumbo icons pass through unchanged.</summary>
+    private static ImageSource TrimCenteredPadding(ImageSource source)
+    {
+        if (source is not BitmapSource bitmap) return source;
+        try
+        {
+            // CreateBitmapSourceFromHIcon (the only caller) typically already yields Bgra32 or
+            // Pbgra32 for an icon's alpha-having bitmap -- alpha lives at the same byte offset in
+            // both regardless of premultiplication, so only convert for some other, unlikely format.
+            var isAlreadyAlphaFormat = bitmap.Format == PixelFormats.Bgra32 || bitmap.Format == PixelFormats.Pbgra32;
+            var converted = isAlreadyAlphaFormat ? bitmap : new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
+            int w = converted.PixelWidth, h = converted.PixelHeight;
+            if (w <= 0 || h <= 0) return source;
+
+            var stride = w * 4;
+            var pixels = new byte[stride * h];
+            converted.CopyPixels(pixels, stride, 0);
+
+            int left = w, right = -1, top = h, bottom = -1;
+            for (var y = 0; y < h; y++)
+            {
+                var rowOffset = y * stride;
+                for (var x = 0; x < w; x++)
+                {
+                    if (pixels[rowOffset + x * 4 + 3] <= 8) continue; // ignore near-invisible anti-aliasing noise
+                    if (x < left) left = x;
+                    if (x > right) right = x;
+                    if (y < top) top = y;
+                    if (y > bottom) bottom = y;
+                }
+            }
+
+            if (right < left || bottom < top) return source; // fully transparent, nothing to trim
+
+            var contentWidth = right - left + 1;
+            var contentHeight = bottom - top + 1;
+            if (contentWidth >= w * 0.85 && contentHeight >= h * 0.85) return source;
+
+            var cropped = new CroppedBitmap(converted, new Int32Rect(left, top, contentWidth, contentHeight));
+            cropped.Freeze();
+            return cropped;
+        }
+        catch
+        {
+            return source;
         }
     }
 
