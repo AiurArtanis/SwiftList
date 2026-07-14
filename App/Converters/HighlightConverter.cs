@@ -24,9 +24,14 @@ public static class TextHighlighter
         DependencyProperty.RegisterAttached("HighlightText", typeof(string), typeof(TextHighlighter),
             new PropertyMetadata(string.Empty, OnTextChanged));
 
+    // OnTextChanged as the callback here too: it re-reads Text/HighlightText/HighlightBrush fresh and
+    // rebuilds the Runs regardless of which of the three actually changed, so a DynamicResource-driven
+    // brush swap (theme change) re-renders existing results with the new color -- without this, a
+    // window whose results are already visible when the theme changes keeps the highlighted matches
+    // frozen at the old color until the next time the query itself changes.
     public static readonly DependencyProperty HighlightBrushProperty =
         DependencyProperty.RegisterAttached("HighlightBrush", typeof(Brush), typeof(TextHighlighter),
-            new PropertyMetadata(new SolidColorBrush(Color.FromRgb(0x33, 0x99, 0xFF))));
+            new PropertyMetadata(new SolidColorBrush(Color.FromRgb(0x33, 0x99, 0xFF)), OnTextChanged));
 
     public static string GetText(DependencyObject obj) => (string)obj.GetValue(TextProperty);
     public static void SetText(DependencyObject obj, string value) => obj.SetValue(TextProperty, value);
