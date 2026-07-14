@@ -27,7 +27,7 @@ public class PluginActionHotkeyItemViewModel : ViewModelBase
     {
         PluginId = pluginId;
         _action = action;
-        ActionId = action.Id;
+        ActionId = action.GetType().Name;
         DefaultHotkey = action.Hotkey;
         _hotkeyValue = currentValue;
     }

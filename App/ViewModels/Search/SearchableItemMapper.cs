@@ -61,7 +61,7 @@ public static class SearchableItemMapper
         {
             SearchableItemCache.EnsureLoaded(provider);
 
-            if (!SearchableItemCache.TryGetEntries(provider.Id, out var entries))
+            if (!SearchableItemCache.TryGetEntries(provider.GetType().Name, out var entries))
                 continue;
 
             foreach (var entry in entries)

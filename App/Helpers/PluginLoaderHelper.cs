@@ -146,7 +146,7 @@ public static class PluginLoaderHelper
 
         foreach (var reg in manager.AllActions.Where(r => r.Plugin == plugin))
         {
-            var id = MakeId(dllName, PluginComponentType.Action, reg.Action.Id);
+            var id = MakeId(dllName, PluginComponentType.Action, reg.Action.GetType().Name);
             components.Add(new PluginComponentViewModel(id, PluginComponentType.Action, reg.Action.DisplayName, !disabledSet.Contains(id), GetDescriptionWithFallback(reg.Action)));
         }
 
@@ -178,12 +178,12 @@ public static class PluginLoaderHelper
         }
         foreach (var prov in manager.AllInstantResultProviders.Where(p => p.GetType().Assembly == assembly))
         {
-            var id = MakeId(dllName, PluginComponentType.InstantProvider, prov.Id);
+            var id = MakeId(dllName, PluginComponentType.InstantProvider, prov.GetType().Name);
             components.Add(new PluginComponentViewModel(id, PluginComponentType.InstantProvider, prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllSearchableItemProviders.Where(p => p.GetType().Assembly == assembly))
         {
-            var id = MakeId(dllName, PluginComponentType.SearchableItemProvider, prov.Id);
+            var id = MakeId(dllName, PluginComponentType.SearchableItemProvider, prov.GetType().Name);
             components.Add(new PluginComponentViewModel(id, PluginComponentType.SearchableItemProvider, prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllDynamicActionProviders.Where(p => p.GetType().Assembly == assembly))
@@ -227,12 +227,12 @@ public static class PluginLoaderHelper
         }
         foreach (var prov in manager.AllQueryTokenProviders.Where(p => p.GetType().Assembly == assembly))
         {
-            var id = MakeId(dllName, PluginComponentType.QueryTokenProvider, prov.Id);
+            var id = MakeId(dllName, PluginComponentType.QueryTokenProvider, prov.GetType().Name);
             components.Add(new PluginComponentViewModel(id, PluginComponentType.QueryTokenProvider, prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllStartupPanelTabProviders.Where(p => p.GetType().Assembly == assembly))
         {
-            var id = MakeId(dllName, PluginComponentType.StartupPanelTabProvider, prov.Id);
+            var id = MakeId(dllName, PluginComponentType.StartupPanelTabProvider, prov.GetType().Name);
             components.Add(new PluginComponentViewModel(id, PluginComponentType.StartupPanelTabProvider, prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllTranslationProviders.Where(p => p.GetType().Assembly == assembly))

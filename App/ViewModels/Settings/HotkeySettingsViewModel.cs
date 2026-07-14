@@ -76,7 +76,7 @@ public class HotkeySettingsViewModel : ViewModelBase
             var items = pluginGroup.Select(reg =>
             {
                 var currentValue = overrides.TryGetValue(pluginId, out var pluginOverrides)
-                    && pluginOverrides.TryGetValue(reg.Action.Id, out var overrideValue)
+                     && pluginOverrides.TryGetValue(reg.Action.GetType().Name, out var overrideValue)
                     ? overrideValue
                     : reg.Action.Hotkey;
                 return new PluginActionHotkeyItemViewModel(pluginId, reg.Action, currentValue);

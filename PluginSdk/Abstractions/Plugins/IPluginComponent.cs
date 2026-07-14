@@ -6,12 +6,6 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 public interface IPluginComponent
 {
     /// <summary>
-    /// A stable, locale-independent identifier for this component.
-    /// Defaults to the concrete type name.
-    /// </summary>
-    string Id => GetType().Name;
-
-    /// <summary>
     /// The display name of this component.
     /// Defaults to the concrete type name.
     /// </summary>

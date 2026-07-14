@@ -50,7 +50,7 @@ internal static class SearchableItemCache
 
     public static void EnsureLoaded(ISearchableItemProvider provider)
     {
-        var id = provider.Id;
+        var id = provider.GetType().Name;
         if (_subscribed.TryAdd(id, true))
         {
             provider.ItemsChanged += () => Invalidate(id);
@@ -128,7 +128,7 @@ internal static class SearchableItemCache
     {
         foreach (var provider in PluginManager.Instance.SearchableItemProviders)
         {
-            if (TryGetEntries(provider.Id, out var entries) &&
+            if (TryGetEntries(provider.GetType().Name, out var entries) &&
                 entries.Any(e => string.Equals(e.Item.ResultKind, targetFileFilterKind, StringComparison.OrdinalIgnoreCase)))
             {
                 return true;

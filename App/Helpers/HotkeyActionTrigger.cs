@@ -50,7 +50,7 @@ public static class HotkeyActionTrigger
             // Matches the plugin ID convention used by PluginSettings: the DLL file name without its extension.
             var pluginId = System.IO.Path.GetFileNameWithoutExtension(ComponentFilter.GetDllName(registration.Plugin));
             if (pluginActionHotkeys.TryGetValue(pluginId, out var overrides)
-                && overrides.TryGetValue(action.Id, out var overrideHotkey))
+                && overrides.TryGetValue(action.GetType().Name, out var overrideHotkey))
             {
                 effectiveHotkey = overrideHotkey;
             }

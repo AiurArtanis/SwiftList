@@ -183,7 +183,7 @@ internal sealed class PluginTabSource : ITabSource
     // Shared with StartupPanelPluginTabViewModel, which reads/writes the same ClosedTabIds entries so
     // the Settings page's "reopen" checkboxes and this tab's x button agree on identity.
     public static string ComponentId(PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider provider)
-        => $"{ComponentFilter.GetDllName(provider)}::{PluginComponentType.StartupPanelTabProvider}::{provider.Id}";
+        => $"{ComponentFilter.GetDllName(provider)}::{PluginComponentType.StartupPanelTabProvider}::{provider.GetType().Name}";
 
     public void Close()
     {

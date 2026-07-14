@@ -418,6 +418,8 @@
   "About_TutorialHint": "通过一步步的交互引导，快速掌握 SwiftList 的核心效率特性",
   "About_TutorialBtn": "开始引导",
   "Search_WelcomeTitle": "开始输入以检索文件",
+  "CoreExtensions_Config_CustomFoldersGroupLabel": "自定义应用搜索文件夹",
+  "CoreExtensions_Config_CustomFoldersLabel": "快捷方式文件夹列表",
   "CoreExtensions_Config_CustomFoldersDesc": "每行一个文件夹路径，其中的快捷方式与应用将加入搜索结果。",
   "Plugins_TypeDesc_ISearchResultAction": "搜索结果动作：对选中的文件或目录执行复制、打开、命令行运行等操作。",
   "Plugins_TypeDesc_IInstantResultProvider": "即时结果提供器：在搜索框中实时计算并呈现计算结果、快捷配置或临时操作。",
