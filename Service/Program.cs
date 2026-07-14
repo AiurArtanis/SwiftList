@@ -9,6 +9,12 @@ namespace SwiftList.Service;
 
 static class Program
 {
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool SetProcessDpiAwarenessContext(IntPtr value);
+
+    // -4 is DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 (winuser.h); only used by RunHookMode below.
+    private static readonly IntPtr DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = new(-4);
+
     [STAThread]
     static void Main(string[] args)
     {
@@ -147,6 +153,15 @@ static class Program
 
     static void RunHookMode()
     {
+        // Without this, this process defaults to DPI-unaware, so GetWindowRect/GetMonitorInfo return
+        // coordinates virtualized down to 96 DPI while DwmGetWindowAttribute returns true physical
+        // pixels -- the two stop matching at any scaling above 100%, which is why FullscreenHelper's
+        // "does the foreground window's rect equal the monitor's rect" check silently failed for
+        // fullscreen video at 150% scaling (reported bug: quick window still summonable during
+        // PotPlayer fullscreen playback). Only this mode calls FullscreenHelper, so this is scoped
+        // here rather than in Main. Best-effort since the API is only available on Windows 10 1703+.
+        try { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2); } catch { /* best-effort */ }
+
         var settings = UserSettings.Load();
 
         // Apply log level from settings
