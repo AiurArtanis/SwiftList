@@ -18,10 +18,18 @@
         PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Resources>
-        <!-- Floating circle button style with hover & press states + premium shadow -->
+        <!-- Floating circle button style with hover & press states + premium shadow. Fill/border use
+             Card* so the button blends with the panel it floats next to instead of reading as its own
+             separate colored dot (tried BadgeBackground first: even the built-in themes' neutral gray
+             badge is noticeably darker than a white Light-theme panel and still stood out). The icon
+             uses TextSecondary rather than IconMutedBrush: IconMutedBrush is deliberately a
+             low-contrast/de-emphasized tone in some themes (e.g. Cyberpunk's is nearly invisible
+             against its own near-black CardBackground), while TextSecondary is guaranteed legible
+             against that theme's own background since it's the same color used for body text
+             everywhere else. Accent color still shows up, just only as the hover-state border. -->
         <Style x:Key="FloatingCircleButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource BadgeBackground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BadgeBorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
@@ -206,7 +214,7 @@
         <Viewbox Width="16" Height="16" Opacity="0.85">
             <Canvas Width="24" Height="24">
                 <Path Data="M7 7h10v10h-2V10.41l-8.29 8.3-1.42-1.42 8.3-8.29H7V7z"
-                      Fill="{DynamicResource BadgeText}"/>
+                      Fill="{DynamicResource TextSecondary}"/>
             </Canvas>
         </Viewbox>
     </Button>
