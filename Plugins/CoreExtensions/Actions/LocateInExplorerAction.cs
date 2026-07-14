@@ -11,6 +11,8 @@ public class LocateInExplorerAction : ISearchResultAction
 
     public string DisplayName => TranslationService.Get("Action_LocateFolder");
 
+    public string Description => TranslationService.Get("Action_LocateFolder_Desc");
+
     // Built-in hotkey; the search windows dispatch it through HotkeyActionTrigger instead of hardcoding.
     public string Hotkey => "Ctrl+Enter";
 

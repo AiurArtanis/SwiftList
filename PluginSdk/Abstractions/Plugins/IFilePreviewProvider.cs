@@ -5,10 +5,8 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 /// <summary>
 /// Interface that allows plugins to provide custom UI previews for files or folders.
 /// </summary>
-public interface IFilePreviewProvider
+public interface IFilePreviewProvider : IPluginComponent
 {
-    /// <summary>Gets the name of this preview provider.</summary>
-    string Name { get; }
 
     /// <summary>Gets the priority of this provider (higher runs first).</summary>
     int Priority => 0;

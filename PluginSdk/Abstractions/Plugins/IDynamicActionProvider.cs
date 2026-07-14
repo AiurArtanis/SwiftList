@@ -4,10 +4,13 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 /// Represents a provider that generates dynamic action items at runtime
 /// (e.g. the dynamic Windows Shell Context Menu).
 /// </summary>
-public interface IDynamicActionProvider
+public interface IDynamicActionProvider : IPluginComponent
 {
     /// <summary>The group name this dynamic action provider belongs to (e.g., "Shortcut Menu").</summary>
     string GroupName { get; }
+
+    /// <summary>The display name of the provider.</summary>
+    string IPluginComponent.Name => GroupName;
 
     /// <summary>Display order in the action menu. Lower values appear first. Default: 0.</summary>
     int Priority => 0;

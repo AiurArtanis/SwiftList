@@ -12,20 +12,23 @@ public enum SearchWindowType
 /// <summary>
 /// Represents an action that can be performed on a search result.
 /// </summary>
-public interface ISearchResultAction
+public interface ISearchResultAction : Plugins.IPluginComponent
 {
     /// <summary>
     /// A stable, locale-independent identifier for this action.
     /// Used to persist the enabled/disabled state across language changes.
     /// Defaults to the concrete type name — override only when you have multiple actions of the same class.
     /// </summary>
-    string Id => GetType().Name;
+    new string Id => GetType().Name;
 
     /// <summary>The group name this action belongs to (for visual categorisation).</summary>
     string GroupName { get; }
 
     /// <summary>The display name shown in the Actions menu.</summary>
     string DisplayName { get; }
+
+    /// <summary>The name of the component.</summary>
+    string Plugins.IPluginComponent.Name => DisplayName;
 
     /// <summary>The keyboard shortcut/hotkey associated with this action (e.g. "Ctrl+Shift+C", "Alt+D").</summary>
     string Hotkey => string.Empty;

@@ -3,12 +3,8 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 /// <summary>
 /// Contract for collecting the active directory/file path from a specific window class.
 /// </summary>
-public interface IActivePathCollector
+public interface IActivePathCollector : IPluginComponent
 {
-    /// <summary>
-    /// Gets the display name of this path collector.
-    /// </summary>
-    string Name { get; }
 
     /// <summary>
     /// Gets the localized name of the target file manager (e.g., "Windows File Explorer", "Directory Opus").

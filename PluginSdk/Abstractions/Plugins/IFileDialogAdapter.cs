@@ -1,11 +1,7 @@
 namespace SwiftList.PluginSdk.Abstractions.Plugins;
 
-public interface IFileDialogAdapter
+public interface IFileDialogAdapter : IPluginComponent
 {
-    /// <summary>
-    /// Name of the adapter (e.g., "Standard Windows File Dialog", "Qt File Dialog")
-    /// </summary>
-    string Name { get; }
 
     /// <summary>
     /// Check if this adapter can handle the given active window.

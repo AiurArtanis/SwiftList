@@ -13,6 +13,8 @@ public class OpenCommandPromptAction : ISearchResultAction
 
     public string DisplayName => TranslationService.Get("Action_OpenCmd");
 
+    public string Description => TranslationService.Get("Action_OpenCmd_Desc");
+
     public IReadOnlyList<string> Keywords => new[] { "cmd" };
 
     public bool IsVisibleInSearch(IReadOnlyList<ISearchResult> results, SearchWindowType windowType) => windowType == SearchWindowType.Inline;
@@ -33,6 +35,8 @@ public class OpenAdminCommandPromptAction : ISearchResultAction
     public string GroupName => TranslationService.Get("Action_GroupName_Cmd");
 
     public string DisplayName => TranslationService.Get("Action_OpenAdminCmd");
+
+    public string Description => TranslationService.Get("Action_OpenAdminCmd_Desc");
 
     public IReadOnlyList<string> Keywords => new[] { "cmda" };
 

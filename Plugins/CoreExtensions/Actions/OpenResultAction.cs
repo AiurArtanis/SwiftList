@@ -9,6 +9,7 @@ public class OpenResultAction : ISearchResultAction
 {
     public string GroupName => TranslationService.Get("Action_BuiltinGroup");
     public string DisplayName => TranslationService.Get("Action_Open");
+    public string Description => TranslationService.Get("Action_Open_Desc");
 
     public ImageSource? Icon => VectorIconHelper.CreateVectorIcon(
 
@@ -38,6 +39,7 @@ public class OpenResultAsAdminAction : ISearchResultAction
 {
     public string GroupName => TranslationService.Get("Action_BuiltinGroup");
     public string DisplayName => TranslationService.Get("Action_OpenAdmin");
+    public string Description => TranslationService.Get("Action_OpenAdmin_Desc");
 
     // Built-in hotkey; the search windows dispatch it through HotkeyActionTrigger instead of hardcoding.
     public string Hotkey => "Ctrl+Shift+Enter";

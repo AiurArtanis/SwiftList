@@ -3,12 +3,8 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 /// <summary>
 /// Defines a provider that generates search aliases/transliterations for non-ASCII text.
 /// </summary>
-public interface IAliasProvider
+public interface IAliasProvider : IPluginComponent
 {
-    /// <summary>
-    /// A display name for the provider.
-    /// </summary>
-    string Name { get; }
 
     /// <summary>
     /// Determines if this provider can handle/transliterate the given text.

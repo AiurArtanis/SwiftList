@@ -12,6 +12,8 @@ public class CopyPathAction : ISearchResultAction
 
     public string DisplayName => TranslationService.Get("Action_CopyPath");
 
+    public string Description => TranslationService.Get("Action_CopyPath_Desc");
+
     // Built-in hotkey; the search windows dispatch it through HotkeyActionTrigger instead of hardcoding.
     public string Hotkey => "Ctrl+Shift+C";
 

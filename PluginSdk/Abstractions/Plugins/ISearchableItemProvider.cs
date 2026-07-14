@@ -4,17 +4,8 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 /// Represents a static or slow-loading content provider that returns a full list
 /// of searchable items. The host indexes and matches these items, handling highlighting.
 /// </summary>
-public interface ISearchableItemProvider
+public interface ISearchableItemProvider : IPluginComponent
 {
-    /// <summary>
-    /// A stable, locale-independent identifier for this provider.
-    /// Used to persist the enabled/disabled state.
-    /// Defaults to the concrete type name.
-    /// </summary>
-    string Id => GetType().Name;
-
-    /// <summary>The name of the provider.</summary>
-    string Name { get; }
 
 
     /// <summary>

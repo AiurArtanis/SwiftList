@@ -12,6 +12,8 @@ public class CopyFileAction : ISearchResultAction
 
     public string DisplayName => TranslationService.Get("Action_Copy");
 
+    public string Description => TranslationService.Get("Action_Copy_Desc");
+
     // Built-in hotkey; the search windows dispatch it through HotkeyActionTrigger instead of hardcoding.
     public string Hotkey => "Ctrl+C";
 

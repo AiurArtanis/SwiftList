@@ -6,17 +6,8 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 /// list (icons, open, actions menu all come for free) -- a provider only needs to say what to show
 /// right now. A tab whose items are empty is hidden automatically; there's nothing else to configure.
 /// </summary>
-public interface IStartupPanelTabProvider
+public interface IStartupPanelTabProvider : IPluginComponent
 {
-    /// <summary>
-    /// A stable, locale-independent identifier for this tab.
-    /// Used to persist the enabled/disabled state.
-    /// Defaults to the concrete type name.
-    /// </summary>
-    string Id => GetType().Name;
-
-    /// <summary>Display label shown on the tab strip and in Settings (already localized by the provider).</summary>
-    string Name { get; }
 
     /// <summary>
     /// Returns the items to show right now. Called synchronously each time the panel is (re)activated --

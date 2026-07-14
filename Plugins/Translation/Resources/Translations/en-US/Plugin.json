@@ -5,5 +5,7 @@
   "Translation_PlaceholderDesc": "Input text to translate using Bing Translator (Auto-detect ➔ App Language)",
   "Translation_ResultDesc": "Translated from: {0} - Enter or click to copy",
   "Translation_Config_TriggerKeywordLabel": "Trigger Keyword",
-  "Translation_Config_TriggerKeywordDesc": "Type this keyword (followed by a space and the text to translate) to trigger translation, e.g. the default \"tr\"."
+  "Translation_Config_TriggerKeywordDesc": "Type this keyword (followed by a space and the text to translate) to trigger translation, e.g. the default \"tr\".",
+  "Plugin_Comp_Desc_TranslationInstantProvider": "Type trigger keywords (e.g. tr <text>) in the search box to get real-time Bing translations.",
+  "Plugin_Comp_Desc_TranslationTranslationProvider": "Provides localized UI translation services for Bing Translation."
 }

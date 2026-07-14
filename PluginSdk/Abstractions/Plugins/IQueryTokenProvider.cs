@@ -7,17 +7,8 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 /// returns true first, and results are chained through providers in token order -- so multiple
 /// providers can each own a different token and compose within one query.
 /// </summary>
-public interface IQueryTokenProvider
+public interface IQueryTokenProvider : IPluginComponent
 {
-    /// <summary>
-    /// A stable, locale-independent identifier for this provider.
-    /// Used to persist the enabled/disabled state across language changes.
-    /// Defaults to the concrete type name.
-    /// </summary>
-    string Id => GetType().Name;
-
-    /// <summary>The name of the provider.</summary>
-    string Name { get; }
 
     /// <summary>
     /// Returns true if this provider understands the given token (e.g. "s", ".txt.doc", or any

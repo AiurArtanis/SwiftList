@@ -85,5 +85,16 @@
   "QuickLook_TextProviderName": "Default Text Preview Provider",
   "QuickLook_PeProviderName": "Default PE Preview Provider",
   "QuickLook_MetadataProviderName": "Default Metadata Preview Provider",
-  "QuickLook_ShellPreviewProviderName": "System Preview Handler"
+  "QuickLook_ShellPreviewProviderName": "System Preview Handler",
+  "Action_Open_Desc": "Opens the selected file or folder using the default associated application.",
+  "Action_OpenAdmin_Desc": "Runs the selected executable with administrative / elevated privileges.",
+  "Action_LocateFolder_Desc": "Opens the parent folder in Windows File Explorer and highlights the selected item.",
+  "Action_CopyPath_Desc": "Copies the full physical path of the selected item to the clipboard.",
+  "Action_Copy_Desc": "Copies the selected file to the system clipboard for pasting in Explorer.",
+  "Action_Cut_Desc": "Cuts the selected file to the system clipboard for pasting in Explorer.",
+  "Action_OpenCmd_Desc": "Opens a Command Prompt window inside the selected folder or file's parent directory.",
+  "Action_OpenAdminCmd_Desc": "Opens an elevated Command Prompt window inside the selected folder.",
+  "Action_Touch_Desc": "Creates a new empty file in the selected directory.",
+  "Action_Mkdir_Desc": "Creates a new folder in the selected directory.",
+  "Plugin_ShellGroup_Desc": "Displays the standard Windows context menu in the right-click menu."
 }

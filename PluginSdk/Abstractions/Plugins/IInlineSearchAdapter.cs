@@ -1,11 +1,7 @@
 namespace SwiftList.PluginSdk.Abstractions.Plugins;
 
-public interface IInlineSearchAdapter
+public interface IInlineSearchAdapter : IPluginComponent
 {
-    /// <summary>
-    /// Name of the inline search adapter (e.g., "Notepad Inline Search Adapter").
-    /// </summary>
-    string Name { get; }
 
     /// <summary>
     /// Check if this adapter can handle the given active window.

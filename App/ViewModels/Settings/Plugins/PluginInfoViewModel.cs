@@ -175,12 +175,13 @@ public class PluginComponentViewModel : ViewModelBase
 {
     private bool _isEnabled;
 
-    public PluginComponentViewModel(string componentId, PluginComponentType componentType, string displayName, bool isEnabled)
+    public PluginComponentViewModel(string componentId, PluginComponentType componentType, string displayName, bool isEnabled, string description = "")
     {
         ComponentId = componentId;
         ComponentType = componentType;
         DisplayName = displayName;
         _isEnabled = isEnabled;
+        Description = description;
     }
 
     /// <summary>The stable unique ID used to persist the disabled state.</summary>
@@ -190,6 +191,8 @@ public class PluginComponentViewModel : ViewModelBase
     public PluginComponentType ComponentType { get; }
 
     public string DisplayName { get; }
+
+    public string Description { get; }
 
     /// <summary>
     /// Whether the user can toggle this component on/off.

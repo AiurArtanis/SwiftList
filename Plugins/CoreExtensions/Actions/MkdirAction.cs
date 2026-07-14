@@ -12,6 +12,8 @@ public class MkdirAction : ISearchResultAction
 
     public string DisplayName => TranslationService.Get("Action_Mkdir");
 
+    public string Description => TranslationService.Get("Action_Mkdir_Desc");
+
     public IReadOnlyList<string> Keywords => new[] { "mkdir" };
 
     public IReadOnlyList<string> Parameters => new[] { "foldername" };

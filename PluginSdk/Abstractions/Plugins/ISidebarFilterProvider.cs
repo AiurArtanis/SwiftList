@@ -3,7 +3,7 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 /// <summary>
 /// Plugin interface to register custom filter categories and items in the Search Window sidebar.
 /// </summary>
-public interface ISidebarFilterProvider
+public interface ISidebarFilterProvider : IPluginComponent
 {
     /// <summary>
     /// Returns the filter groups to be displayed in the sidebar.

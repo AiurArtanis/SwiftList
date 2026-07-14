@@ -3,7 +3,7 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 /// <summary>
 /// Plugin interface to register and provide cell values for custom columns in the results GridView.
 /// </summary>
-public interface IResultColumnProvider
+public interface IResultColumnProvider : IPluginComponent
 {
     /// <summary>
     /// Returns the custom columns defined by this provider.

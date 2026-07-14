@@ -3,10 +3,8 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 /// <summary>
 /// Provides translations for internationalization (i18n).
 /// </summary>
-public interface ITranslationProvider
+public interface ITranslationProvider : IPluginComponent
 {
-    /// <summary>Gets the name of the translation provider.</summary>
-    string Name { get; }
 
     /// <summary>
     /// Gets the list of culture codes this provider supports (e.g. ["zh-CN", "en-US"]).

@@ -85,5 +85,16 @@
   "QuickLook_TextProviderName": "默认文本预览器",
   "QuickLook_PeProviderName": "默认 PE 可执行文件预览器",
   "QuickLook_MetadataProviderName": "默认元数据预览器",
-  "QuickLook_ShellPreviewProviderName": "系统预览器"
+  "QuickLook_ShellPreviewProviderName": "系统预览器",
+  "Action_Open_Desc": "使用默认关联的应用程序打开选中的文件或文件夹。",
+  "Action_OpenAdmin_Desc": "以管理员身份/提升的权限打开选中的可执行文件。",
+  "Action_LocateFolder_Desc": "在 Windows 资源管理器中显示选中文件所在文件夹并高亮该文件。",
+  "Action_CopyPath_Desc": "将选中文件或文件夹的完整物理路径复制到剪贴板。",
+  "Action_Copy_Desc": "将选中文件复制到系统剪贴板（可直接在资源管理器中粘贴）。",
+  "Action_Cut_Desc": "将选中文件剪切到系统剪贴板（可直接在资源管理器中粘贴）。",
+  "Action_OpenCmd_Desc": "在选中文件夹（或文件所在目录）下打开命令提示符窗口。",
+  "Action_OpenAdminCmd_Desc": "以管理员权限在选中文件夹下打开命令提示符窗口。",
+  "Action_Touch_Desc": "在选中目录下创建一个新的空文件。",
+  "Action_Mkdir_Desc": "在选中目录下创建一个新的文件夹。",
+  "Plugin_ShellGroup_Desc": "在右键菜单中显示 Windows 系统的快捷菜单。"
 }

@@ -1,7 +1,7 @@
 namespace SwiftList.PluginSdk.Abstractions.Plugins;
 
-public interface IThemeProvider
+public interface IThemeProvider : IPluginComponent
 {
-    string Name { get; }
+
     IEnumerable<ITheme> GetThemes();
 }

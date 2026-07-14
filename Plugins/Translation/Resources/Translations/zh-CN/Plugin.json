@@ -5,5 +5,7 @@
   "Translation_PlaceholderDesc": "输入文本即可通过 Bing 翻译（自动识别源语言 ➔ 自动翻译为当前应用语言）",
   "Translation_ResultDesc": "翻译自: {0} - 回车或单击复制结果",
   "Translation_Config_TriggerKeywordLabel": "触发词",
-  "Translation_Config_TriggerKeywordDesc": "输入此关键字（后跟一个空格加待翻译文本）来触发翻译，例如默认的 \"tr\"。"
+  "Translation_Config_TriggerKeywordDesc": "输入此关键字（后跟一个空格加待翻译文本）来触发翻译，例如默认的 \"tr\"。",
+  "Plugin_Comp_Desc_TranslationInstantProvider": "在搜索框中输入特定触发词（如 tr 文本）实时调用 Bing 翻译并显示翻译结果。",
+  "Plugin_Comp_Desc_TranslationTranslationProvider": "为 Bing 翻译提供内部界面语言的本地化翻译服务。"
 }

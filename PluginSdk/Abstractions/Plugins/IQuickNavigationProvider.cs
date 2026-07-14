@@ -12,7 +12,7 @@ public enum MouseTriggerType
 /// <see cref="IQuickNavigationTriggerGate"/> (or, for file dialogs, <see cref="IFileDialogAdapter.CanShowQuickNav"/>).
 /// Most plugins only need to implement this interface.
 /// </summary>
-public interface IQuickNavigationProvider
+public interface IQuickNavigationProvider : IPluginComponent
 {
     /// <summary>
     /// Determines whether this provider can supply navigation items for the given search result.

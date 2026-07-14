@@ -12,6 +12,8 @@ public class TouchAction : ISearchResultAction
 
     public string DisplayName => TranslationService.Get("Action_Touch");
 
+    public string Description => TranslationService.Get("Action_Touch_Desc");
+
     public IReadOnlyList<string> Keywords => new[] { "touch" };
 
     public IReadOnlyList<string> Parameters => new[] { "filename" };

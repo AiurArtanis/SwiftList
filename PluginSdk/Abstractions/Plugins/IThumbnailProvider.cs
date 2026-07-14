@@ -5,17 +5,8 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 /// <summary>
 /// Provides custom file thumbnails or icon overrides for search results.
 /// </summary>
-public interface IThumbnailProvider
+public interface IThumbnailProvider : IPluginComponent
 {
-    /// <summary>
-    /// Gets the unique identifier for the provider.
-    /// </summary>
-    string Id { get; }
-
-    /// <summary>
-    /// Gets the display name for the provider.
-    /// </summary>
-    string Name { get; }
 
     /// <summary>
     /// Checks if this provider can generate a thumbnail/icon for the specified file path and directory state.

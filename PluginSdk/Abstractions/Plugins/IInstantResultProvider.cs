@@ -4,17 +4,8 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins;
 /// Represents a provider that can process the search query in real-time
 /// and output instant results directly to the search result list.
 /// </summary>
-public interface IInstantResultProvider
+public interface IInstantResultProvider : IPluginComponent
 {
-    /// <summary>
-    /// A stable, locale-independent identifier for this provider.
-    /// Used to persist the enabled/disabled state across language changes.
-    /// Defaults to the concrete type name.
-    /// </summary>
-    string Id => GetType().Name;
-
-    /// <summary>The name of the provider.</summary>
-    string Name { get; }
 
 
     /// <summary>
