@@ -12,5 +12,7 @@
   "WebSearch_Config_KeywordLabel": "触发关键字",
   "WebSearch_Config_IconLabel": "图标",
   "WebSearch_Config_UrlLabel": "网址 (使用 %s 作为占位符)",
-  "WebSearch_ProviderDesc": "通过设置的关键字，在输入框中快捷触发主流搜索引擎或自定义网页搜索。"
+  "WebSearch_ProviderDesc": "通过设置的关键字，在输入框中快捷触发主流搜索引擎或自定义网页搜索。",
+  "Plugin_Comp_Desc_WebSearchInstantProvider": "在搜索框中键入自定义搜索源关键字（如 bd, gh），即可实时发起对应搜索引擎的网页检索。",
+  "Plugin_Comp_Desc_WebSearchTranslationProvider": "为网页搜索与快捷直达插件本身提供界面菜单和多语言本地化翻译服务。"
 }

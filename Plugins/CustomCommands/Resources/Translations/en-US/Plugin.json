@@ -16,5 +16,7 @@
   "CustomCommands_Config_WorkingDirLabel": "Working Directory",
   "CustomCommands_Config_RunSilentlyLabel": "Run Silently",
   "CustomCommands_Config_RunAsAdminLabel": "Run as Administrator",
-  "CustomCommands_PluginDesc": "Custom commands plugin. Allows users to define shortcuts, aliases, and external command triggers."
+  "CustomCommands_PluginDesc": "Custom commands plugin. Allows users to define shortcuts, aliases, and external command triggers.",
+  "Plugin_Comp_Desc_CustomCommandsInstantProvider": "Executes customized script commands, short aliases, or applications directly by typing them in the search box.",
+  "Plugin_Comp_Desc_CustomCommandsTranslationProvider": "Provides translation maps for Custom Commands and script triggers."
 }

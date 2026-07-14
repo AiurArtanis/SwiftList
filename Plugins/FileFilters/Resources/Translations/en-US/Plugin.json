@@ -11,5 +11,7 @@
   "FileFilters_Config_FoldersDesc": "One path per line. Supports network and local drives.",
   "FileFilters_Config_FilterPatternLabel": "Extensions / Pattern",
   "FileFilters_Config_FilterPatternDesc": "Filter extension or search pattern (e.g. '*.exe;*.lnk' or '*').",
-  "FileFilters_PluginDesc": "File filters extension plugin. Supports advanced filtering of search results by extension, size, or modification time."
+  "FileFilters_PluginDesc": "Custom directories wildcard filtering and indexing plugin. Allows users to configure specific folder and file extension filtering rules for indexing.",
+  "Plugin_Comp_Desc_FileFiltersSearchableItemProvider": "Scans and indexes files in custom directories with specified wildcard patterns (e.g. *.pdf) configured by the user, exposing them to the main search index.",
+  "Plugin_Comp_Desc_FileFiltersTranslationProvider": "Provides translation and language resource mapping for File Filters."
 }
