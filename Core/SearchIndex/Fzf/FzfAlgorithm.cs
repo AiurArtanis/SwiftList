@@ -133,7 +133,7 @@ internal static class FzfAlgorithm
         }
 
         var charCount = System.Text.Encoding.UTF8.GetCharCount(utf8);
-        Span<char> tmp = charCount <= 512 ? stackalloc char[512] : new char[charCount];
+        var tmp = charCount <= 512 ? stackalloc char[512] : new char[charCount];
         var written = System.Text.Encoding.UTF8.GetChars(utf8, tmp);
         return GetCharMask(tmp[..written]);
     }

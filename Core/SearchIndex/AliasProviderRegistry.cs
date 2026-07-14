@@ -84,6 +84,6 @@ public static class AliasProviderRegistry
         if (string.IsNullOrEmpty(text))
             return false;
 
-        return !System.Text.Ascii.IsValid(text);
+        return !Ascii.IsValid(text);
     }
 }

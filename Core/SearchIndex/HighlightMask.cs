@@ -44,7 +44,7 @@ internal static class HighlightMask
         if (fullText.Length == 0)
             return 0;
 
-        Span<bool> marks = fullText.Length <= 512 ? stackalloc bool[fullText.Length] : new bool[fullText.Length];
+        var marks = fullText.Length <= 512 ? stackalloc bool[fullText.Length] : new bool[fullText.Length];
         marks.Clear();
         string? materialized = null;
         Mark(fullText, pattern, marks, ref materialized, RentSlab());

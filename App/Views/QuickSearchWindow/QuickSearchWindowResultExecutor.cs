@@ -42,7 +42,7 @@ public class QuickSearchWindowResultExecutor
             return;
         if (!result.IsPluginSearchAction && !result.IsInstantResult)
         {
-            SearchHistoryStore.Record(result.FullPath);
+            SearchHistoryStore.Record(result.IsApplication ? "app:" + result.FullPath : result.FullPath);
         }
 
         if (result.IsPluginSearchAction)

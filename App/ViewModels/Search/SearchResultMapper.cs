@@ -88,7 +88,14 @@ public static class SearchResultMapper
 
         foreach (var (result, weight) in SearchableItemMapper.CollectSearchableItemResults(query, isInlineWindow))
         {
-            candidates.Add(new RankedCandidate(result, IsCurated: false, int.MaxValue, weight, SearchResultHelper.NormalizePath(result.FullPath)));
+            var lookupPath = result.IsApplication ? "app:" + result.FullPath : SearchResultHelper.NormalizePath(result.FullPath);
+            var hasHistory = historySnapshot.TryGetValue(lookupPath, out var priority);
+            candidates.Add(new RankedCandidate(
+                result,
+                IsCurated: hasHistory,
+                hasHistory ? priority : int.MaxValue,
+                weight,
+                SearchResultHelper.NormalizePath(result.FullPath)));
         }
 
         if (fileResults != null)

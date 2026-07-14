@@ -1,5 +1,4 @@
 using System.Text;
-using SwiftList.Core.SearchIndex;
 
 namespace SwiftList.Core.SearchIndex.Fzf;
 
@@ -168,7 +167,7 @@ internal sealed class FzfBytePattern
         if (pattern.IsEmpty)
             return 1.0;
 
-        Span<char> widened = text.Length <= 512 ? stackalloc char[text.Length] : new char[text.Length];
+        var widened = text.Length <= 512 ? stackalloc char[text.Length] : new char[text.Length];
         for (var i = 0; i < text.Length; i++)
             widened[i] = (char)text[i];
         return HighlightMask.ComputeWeight(widened, pattern);

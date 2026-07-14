@@ -22,8 +22,9 @@ public static class SearchHistoryStore
 
     private static void RecordCore(string path)
     {
-        var normalized = NormalizePath(path);
-        if (!File.Exists(normalized) && !Directory.Exists(normalized))
+        var isApp = path.StartsWith("app:", StringComparison.OrdinalIgnoreCase);
+        var normalized = isApp ? path.Trim() : NormalizePath(path);
+        if (!isApp && !File.Exists(normalized) && !Directory.Exists(normalized))
             return;
 
         lock (Gate)
@@ -60,7 +61,8 @@ public static class SearchHistoryStore
         lock (Gate)
         {
             EnsureCacheNoLock();
-            var normalized = NormalizePath(path);
+            var isApp = path.StartsWith("app:", StringComparison.OrdinalIgnoreCase);
+            var normalized = isApp ? path.Trim() : NormalizePath(path);
             return _priorityCache != null && _priorityCache.TryGetValue(normalized, out var priority)
                 ? priority
                 : int.MaxValue;
@@ -80,8 +82,9 @@ public static class SearchHistoryStore
     {
         lock (Gate)
         {
-            _entriesCache = entries.Select(NormalizePath)
-                .Where(x => File.Exists(x) || Directory.Exists(x))
+            _entriesCache = entries
+                .Select(x => x.StartsWith("app:", StringComparison.OrdinalIgnoreCase) ? x.Trim() : NormalizePath(x))
+                .Where(x => x.StartsWith("app:", StringComparison.OrdinalIgnoreCase) || File.Exists(x) || Directory.Exists(x))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Take(MaxEntries)
                 .ToList();
@@ -130,7 +133,7 @@ public static class SearchHistoryStore
             return File.ReadLines(HistoryPath)
                 .Select(line => line.Trim())
                 .Where(line => !string.IsNullOrWhiteSpace(line))
-                .Select(NormalizePath)
+                .Select(x => x.StartsWith("app:", StringComparison.OrdinalIgnoreCase) ? x : NormalizePath(x))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Take(MaxEntries)
                 .ToList();
