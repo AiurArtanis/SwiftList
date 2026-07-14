@@ -6,5 +6,6 @@
   "ProcessManager_Window": "窗口",
   "ProcessManager_AccessDenied": "[拒绝访问]",
   "ProcessManager_Config_TriggerKeywordLabel": "触发词",
-  "ProcessManager_Config_TriggerKeywordDesc": "输入此关键字（可跟一个空格加搜索词）来触发进程搜索，例如默认的 \"ps\"。"
+  "ProcessManager_Config_TriggerKeywordDesc": "输入此关键字（可跟一个空格加搜索词）来触发进程搜索，例如默认的 \"ps\"。",
+  "ProcessManager_PluginDesc": "进程管理工具插件。支持搜索、查看与终止当前运行中的系统进程。"
 }

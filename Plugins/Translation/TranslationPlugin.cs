@@ -7,6 +7,7 @@ namespace SwiftList.Plugins.Translation;
 public class TranslationPlugin : IPlugin, IConfigurable
 {
     public string Name => TranslationService.Get("Translation_PluginName");
+    public string Description => TranslationService.Get("Translation_PluginDesc");
 
     public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
     {

@@ -2,5 +2,6 @@
   "Plugins_DirectoryOpus_EnableInlineSearch": "Enable Inline Search",
   "Plugins_DirectoryOpus_EnableInlineSearchDesc": "Allow double-clicking or pressing hotkeys in Directory Opus to summon inline search",
   "Plugins_DirectoryOpus_EnableQuickNav": "Enable Quick Navigation Menu",
-  "Plugins_DirectoryOpus_EnableQuickNavDesc": "Allow middle-clicking in Directory Opus's file list to summon the Quick Navigation menu"
+  "Plugins_DirectoryOpus_EnableQuickNavDesc": "Allow middle-clicking in Directory Opus's file list to summon the Quick Navigation menu",
+  "DirectoryOpus_PluginDesc": "Directory Opus integration plugin. Reads active paths and provides quick file location services in Directory Opus."
 }

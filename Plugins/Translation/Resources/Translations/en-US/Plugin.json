@@ -1,6 +1,7 @@
 {
   "Translation_ProviderName": "Bing Translator",
   "Translation_PluginName": "Bing Translator Plugin",
+  "Translation_PluginDesc": "Integrates Bing Translation service. Supports typing trigger keywords (e.g., tr) directly in the search box for quick multi-language translation and one-click copy.",
   "Translation_PlaceholderTitle": "{0} <text>",
   "Translation_PlaceholderDesc": "Input text to translate using Bing Translator (Auto-detect ➔ App Language)",
   "Translation_ResultDesc": "Translated from: {0} - Enter or click to copy",

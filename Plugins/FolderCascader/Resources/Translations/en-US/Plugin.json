@@ -17,5 +17,6 @@
   "FolderCascader_Config_FavoritesDesc": "Quick folders list shown in the cascading menu, one path per line",
   "FolderCascader_Favorites": "Favorites",
   "FolderCascader_NoFavorites": "(No favorites)",
-  "FolderCascader_Group_Content": "Content Settings"
+  "FolderCascader_Group_Content": "Content Settings",
+  "FolderCascader_PluginDesc": "Cascading folder browser plugin. Allows users to quickly browse, open, and favorite local and virtual system folders via hierarchical cascading menus using hotkeys or mouse clicks."
 }

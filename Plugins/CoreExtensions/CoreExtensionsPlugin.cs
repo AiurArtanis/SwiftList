@@ -8,6 +8,7 @@ namespace SwiftList.Plugins.CoreExtensions;
 public class CoreExtensionsPlugin : IPlugin, IActionProvider, IConfigurable
 {
     public string Name => TranslationService.Get("Plugins_CoreActionPluginName");
+    public string Description => TranslationService.Get("CoreExtensions_PluginDesc");
 
     public IEnumerable<ISearchResultAction> GetActions() => new ISearchResultAction[]
         {

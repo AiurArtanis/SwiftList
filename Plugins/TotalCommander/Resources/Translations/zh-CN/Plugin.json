@@ -3,5 +3,6 @@
   "Plugins_TotalCommander_EnableInlineSearchDesc": "允许在 Total Commander 窗口中双击或按快捷键弹出内置搜索栏",
   "Plugins_TotalCommander_EnableQuickNav": "启用快速导航菜单",
   "Plugins_TotalCommander_EnableQuickNavDesc": "允许在 Total Commander 的文件列表中中键点击弹出快速导航菜单",
-  "Plugins_TotalCommander_DirMenu_Empty": "(空)"
+  "Plugins_TotalCommander_DirMenu_Empty": "(空)",
+  "TotalCommander_PluginDesc": "Total Commander 增强集成插件。读取 Total Commander 的活动路径并在其中快捷跳转。"
 }

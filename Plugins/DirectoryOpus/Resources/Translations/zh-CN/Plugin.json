@@ -2,5 +2,6 @@
   "Plugins_DirectoryOpus_EnableInlineSearch": "启用内联搜索",
   "Plugins_DirectoryOpus_EnableInlineSearchDesc": "允许在 Directory Opus 窗口中双击或按快捷键弹出内置搜索栏",
   "Plugins_DirectoryOpus_EnableQuickNav": "启用快速导航菜单",
-  "Plugins_DirectoryOpus_EnableQuickNavDesc": "允许在 Directory Opus 的文件列表中中键点击弹出快速导航菜单"
+  "Plugins_DirectoryOpus_EnableQuickNavDesc": "允许在 Directory Opus 的文件列表中中键点击弹出快速导航菜单",
+  "DirectoryOpus_PluginDesc": "Directory Opus 增强集成插件。读取 Directory Opus 的活动路径及提供快速文件定位服务。"
 }

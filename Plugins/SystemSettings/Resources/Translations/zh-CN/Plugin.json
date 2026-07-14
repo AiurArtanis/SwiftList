@@ -1,5 +1,6 @@
 {
   "SystemSettings_PluginName": "系统设置搜索",
   "SystemSettings_Name": "系统设置搜索",
-  "SystemSettings_Description": "系统设置"
+  "SystemSettings_Description": "系统设置",
+  "SystemSettings_PluginDesc": "系统设置快速直达插件。在搜索结果中直接检索并一键打开 Windows 控制面板和系统设置项。"
 }

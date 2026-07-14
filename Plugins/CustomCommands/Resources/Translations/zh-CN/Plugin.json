@@ -15,5 +15,6 @@
   "CustomCommands_Config_IconLabel": "图标 (SVG Path 数据)",
   "CustomCommands_Config_WorkingDirLabel": "工作目录",
   "CustomCommands_Config_RunSilentlyLabel": "静默执行",
-  "CustomCommands_Config_RunAsAdminLabel": "以管理员身份运行"
+  "CustomCommands_Config_RunAsAdminLabel": "以管理员身份运行",
+  "CustomCommands_PluginDesc": "自定义命令插件。允许用户定义快捷指令、别名与外部命令触发器。"
 }

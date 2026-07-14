@@ -67,7 +67,8 @@ public static class PluginLoaderHelper
             if (components.Count == 0 && configFields.Count == 0)
                 continue;
 
-            result.Add(new PluginInfoViewModel(pluginName, pluginVersion, dllName, sdkVersion, components, configFields));
+            var description = pluginInstance != null ? GetDescriptionWithFallback(pluginInstance) : string.Empty;
+            result.Add(new PluginInfoViewModel(pluginName, pluginVersion, dllName, sdkVersion, components, configFields, description));
         }
 
         return result;

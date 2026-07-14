@@ -421,6 +421,7 @@
   "CoreExtensions_Config_CustomFoldersGroupLabel": "自定义应用搜索文件夹",
   "CoreExtensions_Config_CustomFoldersLabel": "快捷方式文件夹列表",
   "CoreExtensions_Config_CustomFoldersDesc": "每行一个文件夹路径，其中的快捷方式与应用将加入搜索结果。",
+  "CoreExtensions_PluginDesc": "核心功能扩展插件。内置了极其丰富的文件右键操作（如管理员打开、复制路径、创建文件/文件夹、打开 CMD 等）以及系统标准缩略图和常用快捷文件夹检索能力。",
   "Plugins_TypeDesc_ISearchResultAction": "搜索结果动作：对选中的文件或目录执行复制、打开、命令行运行等操作。",
   "Plugins_TypeDesc_IInstantResultProvider": "即时结果提供器：在搜索框中实时计算并呈现计算结果、快捷配置或临时操作。",
   "Plugins_TypeDesc_ISearchableItemProvider": "搜索源提供器：为应用的主搜索索引提供待检索的文件、设置项或程序数据。",

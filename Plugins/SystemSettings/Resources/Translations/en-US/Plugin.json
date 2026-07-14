@@ -1,5 +1,6 @@
 {
   "SystemSettings_PluginName": "System Settings Search",
   "SystemSettings_Name": "System Settings Search",
-  "SystemSettings_Description": "System Settings"
+  "SystemSettings_Description": "System Settings",
+  "SystemSettings_PluginDesc": "System settings shortcut plugin. Search and open Windows Control Panel and system settings items directly from search results."
 }

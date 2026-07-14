@@ -7,6 +7,7 @@ namespace SwiftList.Plugins.CustomCommands;
 public class CustomCommandsPlugin : IPlugin, IConfigurable
 {
     public string Name => TranslationService.Get("CustomCommands_PluginName");
+    public string Description => TranslationService.Get("CustomCommands_PluginDesc");
 
     public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
     {

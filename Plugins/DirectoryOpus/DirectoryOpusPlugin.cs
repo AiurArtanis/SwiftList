@@ -7,6 +7,7 @@ namespace SwiftList.Plugins.DirectoryOpus;
 public class DirectoryOpusPlugin : IPlugin, IConfigurable, ITranslationProvider
 {
     public string Name => "Directory Opus";
+    public string Description => TranslationService.Get("DirectoryOpus_PluginDesc");
 
     public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(System.Reflection.Assembly.GetExecutingAssembly());
 

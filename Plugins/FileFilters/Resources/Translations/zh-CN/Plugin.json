@@ -10,5 +10,6 @@
   "FileFilters_Config_FoldersLabel": "监控文件夹列表",
   "FileFilters_Config_FoldersDesc": "一行一个，支持本地磁盘与网络共享盘。",
   "FileFilters_Config_FilterPatternLabel": "匹配后缀",
-  "FileFilters_Config_FilterPatternDesc": "文件匹配规则或过滤后缀（如 '*.exe;*.lnk'，默认 '*' 匹配所有）。"
+  "FileFilters_Config_FilterPatternDesc": "文件匹配规则或过滤后缀（如 '*.exe;*.lnk'，默认 '*' 匹配所有）。",
+  "FileFilters_PluginDesc": "文件过滤器扩展插件。支持高级过滤条件，例如按后缀、大小或修改时间等过滤搜索结果。"
 }

@@ -7,6 +7,7 @@ namespace SwiftList.Plugins.WebSearch;
 public class WebSearchPlugin : IPlugin, IConfigurable
 {
     public string Name => TranslationService.Get("WebSearch_PluginName");
+    public string Description => TranslationService.Get("WebSearch_PluginDesc");
 
     public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
     {

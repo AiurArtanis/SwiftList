@@ -17,5 +17,6 @@
   "FolderCascader_Config_FavoritesDesc": "在级联菜单中显示的快捷目录，一行一个路径",
   "FolderCascader_Favorites": "收藏夹",
   "FolderCascader_NoFavorites": "(无收藏项)",
-  "FolderCascader_Group_Content": "内容设置"
+  "FolderCascader_Group_Content": "内容设置",
+  "FolderCascader_PluginDesc": "级联文件夹浏览器插件。允许用户通过热键或右键/中键菜单在文件管理器中以树状级联菜单的形式，快速层级化地浏览、打开和收藏本地及虚拟系统文件夹。"
 }

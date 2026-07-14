@@ -7,6 +7,7 @@ namespace SwiftList.Plugins.ProcessManager;
 public class ProcessManagerPlugin : IPlugin, IConfigurable
 {
     public string Name => TranslationService.Get("ProcessManager_PluginName");
+    public string Description => TranslationService.Get("ProcessManager_PluginDesc");
 
     public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
     {

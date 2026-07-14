@@ -421,6 +421,7 @@
   "CoreExtensions_Config_CustomFoldersGroupLabel": "Custom App Search Folders",
   "CoreExtensions_Config_CustomFoldersLabel": "Shortcut Folder List",
   "CoreExtensions_Config_CustomFoldersDesc": "One folder path per line. Shortcuts and apps inside will appear in search results.",
+  "CoreExtensions_PluginDesc": "Core extensions plugin. Provides rich file context actions (like run as admin, copy path, create file/folder, open CMD, etc.) as well as system thumbnail providers and custom shortcut folder indexing.",
   "Plugins_TypeDesc_ISearchResultAction": "Search result action: Performs copy, open, command line execute, etc. on selected files or folders.",
   "Plugins_TypeDesc_IInstantResultProvider": "Instant result provider: Calculates and presents search box results or configurations in real-time.",
   "Plugins_TypeDesc_ISearchableItemProvider": "Searchable item provider: Provides searchable files, settings, or program data for the main search index.",

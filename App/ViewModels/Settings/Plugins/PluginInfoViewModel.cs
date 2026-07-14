@@ -86,7 +86,8 @@ public class PluginInfoViewModel : ViewModelBase
         string dllFileName,
         string sdkVersion,
         List<PluginComponentViewModel> components,
-        List<PluginConfigFieldViewModel> configFields)
+        List<PluginConfigFieldViewModel> configFields,
+        string description = "")
     {
         Name = name;
         Version = version;
@@ -94,6 +95,7 @@ public class PluginInfoViewModel : ViewModelBase
         SdkVersion = sdkVersion;
         RawComponents = components;
         ConfigFields = new ObservableCollection<PluginConfigFieldViewModel>(configFields);
+        Description = description;
         ToggleAllComponentsCommand = new RelayCommand(ToggleAllComponents);
 
         // Group components by type
@@ -112,6 +114,7 @@ public class PluginInfoViewModel : ViewModelBase
     }
 
     public string Name { get; }
+    public string Description { get; }
     public string Version { get; }
     public string DllFileName { get; }
     public string SdkVersion { get; }

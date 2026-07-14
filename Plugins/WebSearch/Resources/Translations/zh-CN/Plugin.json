@@ -1,5 +1,6 @@
 {
   "WebSearch_PluginName": "网页搜索与快捷直达插件",
+  "WebSearch_PluginDesc": "通过在搜索框输入特定的触发词，直接调用自定义或内置的搜索引擎（如百度、谷歌、GitHub等）快速发起网页检索。",
   "WebSearch_ProviderName": "网页搜索",
   "WebSearch_PlaceholderTitle": "使用 {0} 搜索",
   "WebSearch_PlaceholderDesc": "输入关键字并回车进行搜索",

@@ -7,6 +7,7 @@ namespace SwiftList.Plugins.TotalCommander;
 public class TotalCommanderPlugin : IPlugin, IConfigurable, ITranslationProvider
 {
     public string Name => "Total Commander";
+    public string Description => TranslationService.Get("TotalCommander_PluginDesc");
 
     public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(System.Reflection.Assembly.GetExecutingAssembly());
 

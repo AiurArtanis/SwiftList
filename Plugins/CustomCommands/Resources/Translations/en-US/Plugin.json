@@ -15,5 +15,6 @@
   "CustomCommands_Config_IconLabel": "Icon (SVG Path Data)",
   "CustomCommands_Config_WorkingDirLabel": "Working Directory",
   "CustomCommands_Config_RunSilentlyLabel": "Run Silently",
-  "CustomCommands_Config_RunAsAdminLabel": "Run as Administrator"
+  "CustomCommands_Config_RunAsAdminLabel": "Run as Administrator",
+  "CustomCommands_PluginDesc": "Custom commands plugin. Allows users to define shortcuts, aliases, and external command triggers."
 }

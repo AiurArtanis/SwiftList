@@ -7,6 +7,7 @@ namespace SwiftList.Plugins.OneCommander;
 public class OneCommanderPlugin : IPlugin, IConfigurable, ITranslationProvider
 {
     public string Name => "OneCommander";
+    public string Description => TranslationService.Get("OneCommander_PluginDesc");
 
     public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(System.Reflection.Assembly.GetExecutingAssembly());
 

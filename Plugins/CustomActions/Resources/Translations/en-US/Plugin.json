@@ -14,5 +14,6 @@
   "CustomActions_Config_HotkeyLabel": "Hotkey",
   "CustomActions_Config_FolderOnlyLabel": "Folders Only",
   "CustomActions_Config_MultiSelectLabel": "Supports multi-selection (passes all selected paths in one launch)",
-  "CustomActions_Config_ExtensionsLabel": "Extension Filter (e.g. .txt,.log; empty for no limit)"
+  "CustomActions_Config_ExtensionsLabel": "Extension Filter (e.g. .txt,.log; empty for no limit)",
+  "CustomActions_PluginDesc": "Custom actions plugin. Allows users to customize right-click context menu actions."
 }

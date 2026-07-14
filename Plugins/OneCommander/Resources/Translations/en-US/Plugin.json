@@ -2,5 +2,6 @@
   "Plugins_OneCommander_EnableInlineSearch": "Enable Inline Search",
   "Plugins_OneCommander_EnableInlineSearchDesc": "Allow double-clicking or pressing hotkeys in OneCommander to summon inline search",
   "Plugins_OneCommander_EnableQuickNav": "Enable Quick Navigation Menu",
-  "Plugins_OneCommander_EnableQuickNavDesc": "Allow middle-clicking in OneCommander's window to summon the Quick Navigation menu"
+  "Plugins_OneCommander_EnableQuickNavDesc": "Allow middle-clicking in OneCommander's window to summon the Quick Navigation menu",
+  "OneCommander_PluginDesc": "One Commander integration plugin. Reads active paths in One Commander for quick jumping and file location."
 }

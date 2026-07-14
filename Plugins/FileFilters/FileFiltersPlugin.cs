@@ -7,6 +7,7 @@ namespace SwiftList.Plugins.FileFilters;
 public class FileFiltersPlugin : IPlugin, IConfigurable
 {
     public string Name => TranslationService.Get("FileFilters_PluginName");
+    public string Description => TranslationService.Get("FileFilters_PluginDesc");
 
     public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
     {

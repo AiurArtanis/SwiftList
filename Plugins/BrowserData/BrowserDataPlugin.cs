@@ -20,6 +20,7 @@ public class BrowserProfileConfig
 public class BrowserDataPlugin : IPlugin, IConfigurable
 {
     public string Name => TranslationService.Get("BrowserData_PluginName");
+    public string Description => TranslationService.Get("BrowserData_PluginDesc");
 
     public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
     {

@@ -1,5 +1,6 @@
 {
   "WebSearch_PluginName": "Web Search Plugin",
+  "WebSearch_PluginDesc": "Quickly initiate web searches using custom or built-in search engines (like Google, Baidu, GitHub, etc.) by typing specific trigger keywords directly in the search box.",
   "WebSearch_ProviderName": "Web Search",
   "WebSearch_PlaceholderTitle": "Search with {0}",
   "WebSearch_PlaceholderDesc": "Type keywords and press Enter to search",
