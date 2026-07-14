@@ -21,12 +21,35 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
         Views.Controls.ResultsDragDropHelper.Register(LstResults);
         Views.Controls.ResultsDragDropHelper.Register(LstGridResults);
 
+        // List mode only (quick/inline windows): hovering a row selects it, matching how Spotlight/
+        // Alfred-style launchers behave. Rows with IsHitTestVisible="False" (section headers, the
+        // empty-result placeholder -- see ResultItemStyle) never resolve to a ListBoxItem here, so
+        // they're naturally skipped without any extra checks.
+        LstResults.MouseMove += (s, e) =>
+        {
+            var item = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
+            if (item?.Content != null && !ReferenceEquals(LstResults.SelectedItem, item.Content))
+            {
+                LstResults.SelectedItem = item.Content;
+            }
+        };
+
         // Dynamically load custom GridView columns from ResultColumnProviders
         Loaded += (s, e) =>
         {
             UpdateViewModeVisibility();
             LoadDynamicColumns();
         };
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+    {
+        while (child != null)
+        {
+            if (child is T parent) return parent;
+            child = child is FrameworkContentElement fce ? fce.Parent : System.Windows.Media.VisualTreeHelper.GetParent(child);
+        }
+        return null;
     }
 
     public Border LoadingBorder => null!;
@@ -209,76 +232,9 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
     {
         if (_columnsLoaded || LstGridResults == null) return;
         _columnsLoaded = true;
-
-        if (LstGridResults.View is GridView gridView)
-        {
-            foreach (var provider in PluginManager.Instance.ResultColumnProviders)
-            {
-                foreach (var colDef in provider.GetColumns())
-                {
-                    var gvc = new GridViewColumn
-                    {
-                        Header = colDef.HeaderText,
-                        Width = colDef.Width
-                    };
-
-                    var binding = new System.Windows.Data.Binding($"[{colDef.ColumnId}]")
-                    {
-                        Mode = System.Windows.Data.BindingMode.OneWay
-                    };
-                    var textBlockFactory = new FrameworkElementFactory(typeof(TextBlock));
-                    textBlockFactory.SetBinding(TextBlock.TextProperty, binding);
-                    textBlockFactory.SetValue(TextBlock.ForegroundProperty, new DynamicResourceExtension("TextSecondary2"));
-                    textBlockFactory.SetValue(TextBlock.FontSizeProperty, 12.0);
-                    textBlockFactory.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
-                    gvc.CellTemplate = new DataTemplate { VisualTree = textBlockFactory };
-                    gridView.Columns.Add(gvc);
-                }
-            }
-        }
+        Views.Controls.ResultsControlColumns.PopulateDynamicColumns(LstGridResults);
     }
 
-    private void GridViewColumnHeader_Click(object sender, RoutedEventArgs e)
-    {
-        if (e.OriginalSource is GridViewColumnHeader headerClicked)
-        {
-            if (headerClicked.Column != null)
-            {
-                var headerText = headerClicked.Column.Header as string ?? string.Empty;
-                if (!string.IsNullOrEmpty(headerText))
-                {
-                    var cleanHeader = headerText.Replace(" ▲", "").Replace(" ▼", "");
-                    if (DataContext != null)
-                    {
-                        dynamic vm = DataContext;
-                        try
-                        {
-                            vm.SortByColumn(cleanHeader);
-                            bool isAsc = vm.IsSortAscending;
-
-                            if (LstGridResults.View is GridView gridView)
-                            {
-                                foreach (var col in gridView.Columns)
-                                {
-                                    if (col.Header is string colHeaderText)
-                                    {
-                                        var cleanColHeader = colHeaderText.Replace(" ▲", "").Replace(" ▼", "");
-                                        if (cleanColHeader == cleanHeader)
-                                        {
-                                            col.Header = cleanColHeader + (isAsc ? " ▲" : " ▼");
-                                        }
-                                        else
-                                        {
-                                            col.Header = cleanColHeader;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        catch { }
-                    }
-                }
-            }
-        }
-    }
+    private void GridViewColumnHeader_Click(object sender, RoutedEventArgs e) =>
+        Views.Controls.ResultsControlColumns.HandleColumnHeaderClick(sender, DataContext, LstGridResults);
 }

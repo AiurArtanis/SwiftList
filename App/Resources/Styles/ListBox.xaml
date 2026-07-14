@@ -30,9 +30,10 @@
                         </Border>
                     </Grid>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource HoverBackground}"/>
-                        </Trigger>
+                        <!-- No separate IsMouseOver trigger: hovering a row now selects it (see
+                             ResultsControl.xaml.cs's hover-to-select wiring), so IsSelected alone
+                             always covers the hover case too: a standalone hover trigger would be
+                             dead weight that never fires differently from selection. -->
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource HoverBackground}"/>
                             <Setter TargetName="AccentBar" Property="Fill" Value="{DynamicResource AccentBarColor}"/>

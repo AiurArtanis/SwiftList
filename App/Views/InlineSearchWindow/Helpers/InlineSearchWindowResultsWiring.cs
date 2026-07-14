@@ -20,13 +20,6 @@ internal static class InlineSearchWindowResultsWiring
             inputHandler.SyncExplorerSelection();
             inputHandler.UpdatePathPreviewVisibility();
         };
-        lstResults.MouseMove += (s, e) =>
-        {
-            var item = InlineSearchWindowInputHandler.FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
-            var result = item?.Content as AppSearchResult;
-            inputHandler.SetHoveredResult(result);
-        };
-        lstResults.MouseLeave += (s, e) => inputHandler.SetHoveredResult(null);
 
         lstResults.PreviewMouseLeftButtonUp += (s, e) =>
         {

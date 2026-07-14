@@ -179,20 +179,11 @@ public sealed class InlineSearchWindowLayoutManager
     }
     private double GetItemHeight(AppSearchResult item) => item.InlineItemHeight;
 
-    private AppSearchResult? _hoveredResult;
-
-    public void SetHoveredResult(AppSearchResult? result)
-    {
-        if (_hoveredResult != result)
-        {
-            _hoveredResult = result;
-            UpdatePathPreviewVisibility();
-        }
-    }
-
+    // Hovering a result now selects it (see ResultsControl.xaml.cs), so SelectedItem alone is already
+    // the "active" result -- no separate hover-tracking state needed here anymore.
     public void UpdatePathPreviewVisibility() => _window.Dispatcher.BeginInvoke(new Action(() =>
                                                       {
-                                                          var activeResult = _hoveredResult ?? (_window.LstResults.SelectedItem as AppSearchResult);
+                                                          var activeResult = _window.LstResults.SelectedItem as AppSearchResult;
                                                           if (activeResult == null)
                                                           {
                                                               if (_window.PathPreviewBorder != null && _window.PathPreviewBorder.Visibility != Visibility.Collapsed)
