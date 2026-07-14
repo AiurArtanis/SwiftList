@@ -147,7 +147,7 @@ public static class PluginLoaderHelper
         foreach (var reg in manager.AllActions.Where(r => r.Plugin == plugin))
         {
             var id = MakeId(dllName, PluginComponentType.Action, reg.Action.Id);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.Action, reg.Action.DisplayName, !disabledSet.Contains(id), reg.Action.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.Action, reg.Action.DisplayName, !disabledSet.Contains(id), GetDescriptionWithFallback(reg.Action)));
         }
 
         AddAssemblyProviders(components, assembly, dllName, manager, disabledSet);
@@ -159,43 +159,43 @@ public static class PluginLoaderHelper
         foreach (var prov in AliasProviderRegistry.GetAllProviders().Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.AliasProvider, prov.GetType().Name);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.AliasProvider, string.IsNullOrWhiteSpace(prov.Name) ? prov.GetType().Name : prov.Name, !disabledSet.Contains(id), prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.AliasProvider, string.IsNullOrWhiteSpace(prov.Name) ? prov.GetType().Name : prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in ActivePathCollectorRegistry.GetAllCollectors().Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.ActivePathCollector, prov.GetType().Name);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.ActivePathCollector, string.IsNullOrWhiteSpace(prov.Name) ? prov.GetType().Name : prov.Name, !disabledSet.Contains(id), prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.ActivePathCollector, string.IsNullOrWhiteSpace(prov.Name) ? prov.GetType().Name : prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in FileDialogAdapterRegistry.GetAllAdapters().Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.FileDialogAdapter, prov.GetType().Name);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.FileDialogAdapter, string.IsNullOrWhiteSpace(prov.Name) ? prov.GetType().Name : prov.Name, !disabledSet.Contains(id), prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.FileDialogAdapter, string.IsNullOrWhiteSpace(prov.Name) ? prov.GetType().Name : prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in InlineSearchAdapterRegistry.GetAllAdapters().Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.InlineSearchAdapter, prov.GetType().Name);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.InlineSearchAdapter, string.IsNullOrWhiteSpace(prov.Name) ? prov.GetType().Name : prov.Name, !disabledSet.Contains(id), prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.InlineSearchAdapter, string.IsNullOrWhiteSpace(prov.Name) ? prov.GetType().Name : prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllInstantResultProviders.Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.InstantProvider, prov.Id);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.InstantProvider, prov.Name, !disabledSet.Contains(id), prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.InstantProvider, prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllSearchableItemProviders.Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.SearchableItemProvider, prov.Id);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.SearchableItemProvider, prov.Name, !disabledSet.Contains(id), prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.SearchableItemProvider, prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllDynamicActionProviders.Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.DynamicActionProvider, prov.GetType().Name);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.DynamicActionProvider, prov.GroupName, !disabledSet.Contains(id), prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.DynamicActionProvider, prov.GroupName, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllQuickNavigationProviders.Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.QuickNavigationProvider, prov.GetType().Name);
             var displayName = TranslationService.Get("Plugins_Comp_QuickNavigationProvider");
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.QuickNavigationProvider, displayName, !disabledSet.Contains(id), prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.QuickNavigationProvider, displayName, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllSidebarFilterProviders.Where(p => p.GetType().Assembly == assembly))
         {
@@ -203,7 +203,7 @@ public static class PluginLoaderHelper
             foreach (var group in prov.GetFilterGroups())
             {
                 var id = MakeId(dllName, PluginComponentType.FilterProvider, $"{prov.GetType().Name}_{index}");
-                components.Add(new PluginComponentViewModel(id, PluginComponentType.FilterProvider, group.Header, !disabledSet.Contains(id), prov.Description));
+                components.Add(new PluginComponentViewModel(id, PluginComponentType.FilterProvider, group.Header, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
                 index++;
             }
         }
@@ -212,28 +212,28 @@ public static class PluginLoaderHelper
             foreach (var col in prov.GetColumns())
             {
                 var id = MakeId(dllName, PluginComponentType.ColumnProvider, col.ColumnId);
-                components.Add(new PluginComponentViewModel(id, PluginComponentType.ColumnProvider, col.HeaderText, !disabledSet.Contains(id), prov.Description));
+                components.Add(new PluginComponentViewModel(id, PluginComponentType.ColumnProvider, col.HeaderText, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
             }
         }
         foreach (var prov in manager.AllFilePreviewProviders.Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.FilePreviewProvider, prov.GetType().Name);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.FilePreviewProvider, prov.Name, !disabledSet.Contains(id), prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.FilePreviewProvider, prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllThumbnailProviders.Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.ThumbnailProvider, prov.GetType().Name);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.ThumbnailProvider, prov.Name, !disabledSet.Contains(id), prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.ThumbnailProvider, prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllQueryTokenProviders.Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.QueryTokenProvider, prov.Id);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.QueryTokenProvider, prov.Name, !disabledSet.Contains(id), prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.QueryTokenProvider, prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllStartupPanelTabProviders.Where(p => p.GetType().Assembly == assembly))
         {
             var id = MakeId(dllName, PluginComponentType.StartupPanelTabProvider, prov.Id);
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.StartupPanelTabProvider, prov.Name, !disabledSet.Contains(id), prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.StartupPanelTabProvider, prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllTranslationProviders.Where(p => p.GetType().Assembly == assembly))
         {
@@ -241,7 +241,7 @@ public static class PluginLoaderHelper
             var displayName = prov.SupportedCultures.Count > 0
                 ? string.Join(", ", prov.SupportedCultures.Select(LanguageOption.GetLanguageDisplayName))
                 : prov.Name;
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.TranslationProvider, displayName, true, prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.TranslationProvider, displayName, true, GetDescriptionWithFallback(prov)));
         }
         foreach (var prov in manager.AllThemeProviders.Where(p => p.GetType().Assembly == assembly))
         {
@@ -250,9 +250,46 @@ public static class PluginLoaderHelper
             var displayName = themes.Count > 0
                 ? string.Join(", ", themes.Select(t => t.DisplayName))
                 : prov.Name;
-            components.Add(new PluginComponentViewModel(id, PluginComponentType.ThemeProvider, displayName, true, prov.Description));
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.ThemeProvider, displayName, true, GetDescriptionWithFallback(prov)));
         }
     }
 
     private static string MakeId(string dllName, PluginComponentType type, string name) => $"{dllName}::{type}::{name}";
+
+    private static string GetDescriptionWithFallback(IPluginComponent component)
+    {
+        var desc = component.Description;
+        if (!string.IsNullOrWhiteSpace(desc))
+        {
+            return desc;
+        }
+
+        var className = component.GetType().Name;
+        var specificKey = $"Plugin_Comp_Desc_{className}";
+        var val = TranslationService.Get(specificKey);
+        if (val != $"[{specificKey}]")
+        {
+            return val;
+        }
+
+        if (component is ISearchResultAction) return TranslationService.Get("Plugins_TypeDesc_ISearchResultAction");
+        if (component is IInstantResultProvider) return TranslationService.Get("Plugins_TypeDesc_IInstantResultProvider");
+        if (component is ISearchableItemProvider) return TranslationService.Get("Plugins_TypeDesc_ISearchableItemProvider");
+        if (component is IActivePathCollector) return TranslationService.Get("Plugins_TypeDesc_IActivePathCollector");
+        if (component is IInlineSearchAdapter) return TranslationService.Get("Plugins_TypeDesc_IInlineSearchAdapter");
+        if (component is IFilePreviewProvider) return TranslationService.Get("Plugins_TypeDesc_IFilePreviewProvider");
+        if (component is IQueryTokenProvider) return TranslationService.Get("Plugins_TypeDesc_IQueryTokenProvider");
+        if (component is ITranslationProvider) return TranslationService.Get("Plugins_TypeDesc_ITranslationProvider");
+        if (component is IThemeProvider) return TranslationService.Get("Plugins_TypeDesc_IThemeProvider");
+        if (component is IThumbnailProvider) return TranslationService.Get("Plugins_TypeDesc_IThumbnailProvider");
+        if (component is IQuickNavigationProvider) return TranslationService.Get("Plugins_TypeDesc_IQuickNavigationProvider");
+        if (component is IResultColumnProvider) return TranslationService.Get("Plugins_TypeDesc_IResultColumnProvider");
+        if (component is ISidebarFilterProvider) return TranslationService.Get("Plugins_TypeDesc_ISidebarFilterProvider");
+        if (component is IStartupPanelTabProvider) return TranslationService.Get("Plugins_TypeDesc_IStartupPanelTabProvider");
+        if (component is IFileDialogAdapter) return TranslationService.Get("Plugins_TypeDesc_IFileDialogAdapter");
+        if (component is IAliasProvider) return TranslationService.Get("Plugins_TypeDesc_IAliasProvider");
+        if (component is IDynamicActionProvider) return TranslationService.Get("Plugins_TypeDesc_IDynamicActionProvider");
+
+        return string.Empty;
+    }
 }

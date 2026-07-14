@@ -7,6 +7,8 @@ public class WebSearchInstantProvider : IInstantResultProvider
 {
     public string Name => TranslationService.Get("WebSearch_ProviderName");
 
+    public string Description => TranslationService.Get("WebSearch_ProviderDesc");
+
     public class SearchSourceItem
     {
         public string Name { get; set; } = string.Empty;

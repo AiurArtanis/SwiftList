@@ -10,5 +10,6 @@
   "WebSearch_Config_NameLabel": "Name",
   "WebSearch_Config_KeywordLabel": "Trigger Keyword",
   "WebSearch_Config_IconLabel": "Icon",
-  "WebSearch_Config_UrlLabel": "URL (use %s as placeholder)"
+  "WebSearch_Config_UrlLabel": "URL (use %s as placeholder)",
+  "WebSearch_ProviderDesc": "Triggers mainstream or custom web search engines quickly in the search box using keywords."
 }

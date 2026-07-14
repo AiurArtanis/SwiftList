@@ -20,17 +20,5 @@ public interface IPluginComponent
     /// <summary>
     /// A short description of this component.
     /// </summary>
-    string Description
-    {
-        get
-        {
-            var key = $"Plugin_Comp_Desc_{GetType().Name}";
-            var val = Services.TranslationService.Get(key);
-            if (val == $"[{key}]")
-            {
-                return string.Empty;
-            }
-            return val;
-        }
-    }
+    string Description => string.Empty;
 }

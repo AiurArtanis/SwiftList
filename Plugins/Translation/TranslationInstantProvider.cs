@@ -10,6 +10,8 @@ public class TranslationInstantProvider : IInstantResultProvider
 {
     public string Name => TranslationService.Get("Translation_ProviderName");
 
+    public string Description => TranslationService.Get("Plugin_Comp_Desc_TranslationInstantProvider");
+
     // Falls back to the default even if an empty string was already persisted before RequireNonEmpty
     // started enforcing this at save time -- an empty keyword should never silently make this
     // unreachable.

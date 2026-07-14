@@ -1,4 +1,6 @@
 {
   "Plugins_ListSearchPluginName": "通用列表搜索插件",
-  "Plugins_ListSearchTargetName": "通用列表框"
+  "Plugins_ListSearchTargetName": "通用列表框",
+  "Plugin_Comp_Desc_ListSearchPlugin": "通用列表搜索插件，为各种第三方和系统内置列表框提供快捷字符搜索接管与交互支撑服务。",
+  "Plugin_Comp_Desc_ListSearchInlineSearchAdapter": "为各种标准的 Windows ListBox/ListView/SysListView32 控件提供极速首字母/文本过滤和跳转服务。"
 }

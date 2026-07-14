@@ -8,6 +8,8 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
 {
     public string Name => TranslationService.Get("Plugins_PinyinAliasPluginName");
 
+    public string Description => TranslationService.Get("Plugin_Comp_Desc_PinyinAliasProvider");
+
 
     public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(System.Reflection.Assembly.GetExecutingAssembly());
 

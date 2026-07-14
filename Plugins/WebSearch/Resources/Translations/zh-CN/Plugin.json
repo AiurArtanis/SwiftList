@@ -10,5 +10,6 @@
   "WebSearch_Config_NameLabel": "名称",
   "WebSearch_Config_KeywordLabel": "触发关键字",
   "WebSearch_Config_IconLabel": "图标",
-  "WebSearch_Config_UrlLabel": "网址 (使用 %s 作为占位符)"
+  "WebSearch_Config_UrlLabel": "网址 (使用 %s 作为占位符)",
+  "WebSearch_ProviderDesc": "通过设置的关键字，在输入框中快捷触发主流搜索引擎或自定义网页搜索。"
 }

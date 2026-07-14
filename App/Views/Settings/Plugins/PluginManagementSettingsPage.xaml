@@ -230,8 +230,8 @@
                                                                     <Grid>
                                                                         <Grid.ColumnDefinitions>
                                                                             <ColumnDefinition Width="*"/>
-                                                                            <ColumnDefinition Width="Auto"/>
-                                                                            <ColumnDefinition Width="Auto"/>
+                                                                            <ColumnDefinition Width="28"/>
+                                                                            <ColumnDefinition Width="28"/>
                                                                         </Grid.ColumnDefinitions>
 
                                                                         <TextBlock Grid.Column="0"
@@ -244,7 +244,7 @@
                                                                         <Border Grid.Column="1" Width="14" Height="14" CornerRadius="7" 
                                                                                 Background="{DynamicResource HoverBackground}" 
                                                                                 BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1"
-                                                                                Margin="0,0,12,0" VerticalAlignment="Center" Cursor="Help">
+                                                                                HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Help">
                                                                             <Border.ToolTip>
                                                                                 <ToolTip MaxWidth="300">
                                                                                     <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
@@ -271,6 +271,7 @@
                                                                         <!-- CheckBox shown for toggleable components -->
                                                                         <CheckBox Grid.Column="2"
                                                                                   IsChecked="{Binding IsEnabled}"
+                                                                                  HorizontalAlignment="Center"
                                                                                   VerticalAlignment="Center"
                                                                                   Visibility="{Binding IsToggleable, Converter={StaticResource BoolToVis}}"/>
 
@@ -281,6 +282,7 @@
                                                                                    FontSize="13"
                                                                                    Foreground="{DynamicResource SeparatorBrush}"
                                                                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Plugins_ReadOnlyTooltip]}"
+                                                                                   HorizontalAlignment="Center"
                                                                                    VerticalAlignment="Center"
                                                                                    Visibility="{Binding IsToggleable, Converter={StaticResource InvertBoolToVis}}"/>
                                                                     </Grid>

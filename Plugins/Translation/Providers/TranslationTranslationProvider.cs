@@ -8,6 +8,8 @@ public class TranslationTranslationProvider : ITranslationProvider
 {
     public string Name => "Translation Plugin Translation Provider";
 
+    public string Description => TranslationService.Get("Plugin_Comp_Desc_TranslationTranslationProvider");
+
     public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(Assembly.GetExecutingAssembly());
 
     private static readonly Dictionary<string, Dictionary<string, string>> Cache = new(StringComparer.OrdinalIgnoreCase);

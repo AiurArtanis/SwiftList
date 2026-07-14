@@ -7,6 +7,8 @@ public class ListSearchPlugin : IPlugin, ITranslationProvider
 {
     public string Name => TranslationService.Get("Plugins_ListSearchPluginName");
 
+    public string Description => TranslationService.Get("Plugin_Comp_Desc_ListSearchPlugin");
+
 
     public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(System.Reflection.Assembly.GetExecutingAssembly());
 

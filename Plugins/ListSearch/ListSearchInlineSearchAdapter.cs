@@ -10,6 +10,8 @@ public class ListSearchInlineSearchAdapter : IInlineSearchAdapter
     private const string UniversalListScope = "__UniversalList__";
     public string Name => TranslationService.Get("Plugins_ListSearchTargetName");
 
+    public string Description => TranslationService.Get("Plugin_Comp_Desc_ListSearchInlineSearchAdapter");
+
     private readonly HashSet<int> _originallySelectedIndices = new HashSet<int>();
     private IntPtr _lastHwnd = IntPtr.Zero;
     private int _lastPreviewIndex = -1;
