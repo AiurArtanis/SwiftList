@@ -13,6 +13,22 @@ internal static class KeyboardUtils
         if (key == "BACK" || key == "BACKSPACE") return 0x08;
         if (key == "CAPSLOCK") return 0x14;
 
+        // OEM/punctuation keys -- WPF's Key enum names these "OemN"/"OemXxx" (what HotkeyRecorderControl
+        // records via Key.ToString()), and none of them were mapped here, so a hotkey using one (e.g.
+        // Alt+Oem3, the `~ key) silently never matched: GetKeyVirtualCode returned 0, and the caller's
+        // `targetVk != 0` guard rejected it before the key comparison ever ran.
+        if (key == "OEM1") return 0xBA;      // ;:
+        if (key == "OEMPLUS") return 0xBB;   // =+
+        if (key == "OEMCOMMA") return 0xBC;  // ,<
+        if (key == "OEMMINUS") return 0xBD;  // -_
+        if (key == "OEMPERIOD") return 0xBE; // .>
+        if (key == "OEM2") return 0xBF;      // /?
+        if (key == "OEM3") return 0xC0;      // `~
+        if (key == "OEM4") return 0xDB;      // [{
+        if (key == "OEM5") return 0xDC;      // \|
+        if (key == "OEM6") return 0xDD;      // ]}
+        if (key == "OEM7") return 0xDE;      // '"
+
         if (key.Length == 1 && key[0] >= 'A' && key[0] <= 'Z')
             return key[0];
         if (key.Length == 1 && key[0] >= '0' && key[0] <= '9')

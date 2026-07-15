@@ -19,7 +19,25 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
     private static void OnValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is HotkeyRecorderControl ctrl)
-            ctrl.HotkeyBox.Text = e.NewValue as string ?? string.Empty;
+            ctrl.HotkeyBox.Text = ToDisplayText(e.NewValue as string ?? string.Empty);
+    }
+
+    // WPF's Key enum name (what's actually stored/matched -- see KeyDisplayName below) is meaningless to
+    // most users for a punctuation key ("Oem3" for the `~ key even confused a maintainer reading a bug
+    // report). Leaves the stored/matched format untouched and only prettifies what's shown in the box.
+    private static readonly Dictionary<string, string> OemDisplaySymbols = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Oem1"] = ";", ["OemPlus"] = "=", ["OemComma"] = ",", ["OemMinus"] = "-", ["OemPeriod"] = ".",
+        ["Oem2"] = "/", ["Oem3"] = "`", ["Oem4"] = "[", ["Oem5"] = "\\", ["Oem6"] = "]", ["Oem7"] = "'",
+    };
+
+    private static string ToDisplayText(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        var parts = value.Split('+');
+        if (OemDisplaySymbols.TryGetValue(parts[^1], out var symbol))
+            parts[^1] = symbol;
+        return string.Join("+", parts);
     }
 
     public static readonly DependencyProperty RequireModifierProperty =
