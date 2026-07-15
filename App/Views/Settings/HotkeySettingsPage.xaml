@@ -212,6 +212,7 @@
                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
                         <ColumnDefinition Width="200"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ToggleLabel]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
@@ -230,6 +231,9 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
+                    <CheckBox x:Name="RowAllowHotkeysInFullscreen" Grid.Column="3" VerticalAlignment="Center" Margin="16,0,0,0"
+                              Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_AllowInFullscreen]}"
+                              IsChecked="{Binding AllowHotkeysInFullscreen, Mode=TwoWay}"/>
                 </Grid>
 
                 <Grid x:Name="RowQuickSwitch" Margin="0,8,0,0">

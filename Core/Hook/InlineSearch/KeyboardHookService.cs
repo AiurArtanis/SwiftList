@@ -76,7 +76,8 @@ public class KeyboardHookService : IDisposable
             // quick-window toggle, Quick Switch, and inline-search invocation below, and still yields
             // to an active file dialog (IsActiveWindowDialog) same as the blacklist does. Key-up
             // tracking and Explorer-tracker bookkeeping run unconditionally either way.
-            var shouldDisableAllHooks = (IsHotkeysDisabledTemporarily || KeyboardUtils.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses) || FullscreenHelper.IsForegroundWindowFullScreen())
+            var isFullscreenBlocking = !_settings.Hotkeys.AllowHotkeysInFullscreen && FullscreenHelper.IsForegroundWindowFullScreen();
+            var shouldDisableAllHooks = (IsHotkeysDisabledTemporarily || KeyboardUtils.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses) || isFullscreenBlocking)
                                          && !_explorerTracker.IsActiveWindowDialog;
 
             if (!shouldDisableAllHooks && _hotkeyDetector.CheckToggleWindowHotkey(vkCode, time, out var consumeToggleKey, OnDoubleCtrl))

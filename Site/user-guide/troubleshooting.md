@@ -16,9 +16,11 @@
    foreground app's executable name was added there (intentionally or by accident), SwiftList's
    global hotkeys are deliberately let through untouched while it's focused.
 4. If the foreground app is genuinely full-screen (fills the entire monitor), SwiftList
-   automatically lets its hotkeys through too — by design, so it doesn't fight with fullscreen
-   games — and there's no setting to turn this off. Alt-tabbing out, or running the game in
-   borderless/windowed mode instead of exclusive full-screen, avoids it.
+   automatically lets its hotkeys through too by default — so it doesn't fight with fullscreen
+   games. If your configured combo won't collide with anything the fullscreen app itself uses,
+   enable **Still respond while a fullscreen app is focused** next to **Settings → Hotkeys →
+   Show/Hide Quick Search** to keep it working there too. Otherwise, alt-tabbing out, or running
+   the app in borderless/windowed mode instead of exclusive full-screen, avoids it.
 
 ## Search results seem out of date
 

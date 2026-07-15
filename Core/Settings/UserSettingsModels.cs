@@ -30,6 +30,15 @@ public class HotkeyPageSettings
     /// </summary>
     public string ToggleWindowHotkey { get; set; } = "Ctrl";
 
+    /// <summary>
+    /// By default, the global hotkeys (this one, Quick Switch, and inline-search activation) are let
+    /// through untouched while the foreground window is genuinely full-screen, so they don't fight with
+    /// fullscreen games -- see KeyboardHookService's shouldDisableAllHooks gate. Opting in here removes
+    /// that exemption for a user whose configured combo won't collide with anything the fullscreen app
+    /// itself uses (see #118).
+    /// </summary>
+    public bool AllowHotkeysInFullscreen { get; set; }
+
     /// <summary>Same flat format as <see cref="ToggleWindowHotkey"/>.</summary>
     public string QuickSwitchHotkey { get; set; } = "Ctrl+G";
 

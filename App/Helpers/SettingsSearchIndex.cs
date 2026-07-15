@@ -99,6 +99,7 @@ public static class SettingsSearchIndex
         new("Hotkeys_Tab_Global", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "TabGlobal"),
         new("Hotkeys_GroupGlobal", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowGroupGlobal", "Hotkeys_Tab_Global"),
         new("Hotkeys_ToggleLabel", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowToggleHotkey", "Hotkeys_Tab_Global"),
+        new("Hotkeys_AllowInFullscreen", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowToggleHotkey", "Hotkeys_Tab_Global"),
         new("Hotkeys_QuickSwitchLabel", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowQuickSwitch", "Hotkeys_Tab_Global"),
         new("Hotkeys_SelectionTitle", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowSelectionTitle", "Hotkeys_Tab_Global"),
         new("Hotkeys_SelectNextItem", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowSelectNext", "Hotkeys_Tab_Global"),

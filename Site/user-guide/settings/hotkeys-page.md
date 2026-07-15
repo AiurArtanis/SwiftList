@@ -9,7 +9,10 @@ UI itself.
 **Global Hotkeys** group:
 
 - **Show/Hide Quick Search** — recorder control; accepts either a bare modifier (double-tap mode,
-  default `Ctrl`) or a full combo.
+  default `Ctrl`) or a full combo. Next to it, **Still respond while a fullscreen app is focused**
+  — checkbox, off by default — opts this hotkey (and Quick Switch, and inline-search activation)
+  out of the automatic fullscreen exemption described under [Process Blacklist](#process-blacklist)
+  below.
 - **Quick Switch** — default `Ctrl+G`.
 
 **Function Keys** group:
@@ -48,5 +51,7 @@ existing entries, and a bulk textbox with **Generate Text** / **Apply Text**.
 
 This is the fix for hotkey conflicts with fullscreen games or other apps that grab raw keyboard
 input — see [Troubleshooting](../troubleshooting#the-global-hotkey-doesn-t-respond). Any foreground
-app that's genuinely full-screen gets the same treatment automatically, with no entry needed here.
-Either way, an active file dialog is always exempt, so quick navigation still works there.
+app that's genuinely full-screen gets the same treatment automatically, with no entry needed here —
+unless **Still respond while a fullscreen app is focused** (under **Global**, next to Show/Hide
+Quick Search) is turned on, which opts back out of that exemption entirely. Either way, an active
+file dialog is always exempt, so quick navigation still works there.

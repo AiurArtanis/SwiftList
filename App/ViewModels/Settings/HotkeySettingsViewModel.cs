@@ -18,6 +18,7 @@ public class HotkeySettingsViewModel : ViewModelBase
 
         // Initialize local bindings from user settings
         _toggleHotkeyValue = hotkeys.ToggleWindowHotkey;
+        _allowHotkeysInFullscreen = hotkeys.AllowHotkeysInFullscreen;
         _quickSwitchHotkeyValue = hotkeys.QuickSwitchHotkey;
 
         _quickNavTriggerOnDoubleClick = hotkeys.QuickNavTriggerOnDoubleClick;
@@ -121,6 +122,15 @@ public class HotkeySettingsViewModel : ViewModelBase
     // "(Double Tap)" hint shown next to the recorder.
     public bool IsToggleModifierClick => HotkeyStringFormat.IsBareModifier(_toggleHotkeyValue, out _);
 
+    // Opts every global hotkey (this one, Quick Switch, inline search) out of the automatic
+    // fullscreen-app exemption -- see KeyboardHookService's shouldDisableAllHooks gate.
+    private bool _allowHotkeysInFullscreen;
+    public bool AllowHotkeysInFullscreen
+    {
+        get => _allowHotkeysInFullscreen;
+        set => SetProperty(ref _allowHotkeysInFullscreen, value);
+    }
+
     // Quick Switch: same flat format, bound directly to the recorder (combo-only in the current UI).
     private string _quickSwitchHotkeyValue;
     public string QuickSwitchComboHotkey
@@ -212,6 +222,7 @@ public class HotkeySettingsViewModel : ViewModelBase
         var hotkeys = _userSettings.Hotkeys;
 
         hotkeys.ToggleWindowHotkey = ToggleHotkeyValue;
+        hotkeys.AllowHotkeysInFullscreen = AllowHotkeysInFullscreen;
         hotkeys.QuickSwitchHotkey = QuickSwitchComboHotkey;
 
         hotkeys.QuickNavTriggerOnDoubleClick = QuickNavTriggerOnDoubleClick;
