@@ -17,6 +17,9 @@ public enum IpcMessageId : byte
     GetSelectedIndices = 12,
     ForceForeground = 13,
     KillProcess = 14,
+    ExecuteInlineItem = 15,
+    InlineSelectionChanged = 16,
+    InlineSearchFinished = 17,
 
     // Hook -> App
     Activate = 20,
@@ -38,7 +41,8 @@ public enum IpcMessageId : byte
     GetListItemsResponse = 36,
     GetSelectedIndicesResponse = 37,
     MouseDoubleClick = 38,
-    MouseMiddleClick = 39
+    MouseMiddleClick = 39,
+    ExecuteInlineItemResponse = 40
 }
 
 public struct IpcMessage

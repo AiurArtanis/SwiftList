@@ -2,6 +2,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using SwiftList.App.Services;
 using SwiftList.Core;
+using SwiftList.Core.Hook;
 namespace SwiftList.App.Views.InlineSearchWindow.Helpers;
 
 public static class InlineSearchNavigator
@@ -53,10 +54,10 @@ public static class InlineSearchNavigator
     private static void OpenPathFromInline(this SwiftList.App.InlineSearchWindow window, string path, bool asAdmin)
     {
         var tracker = window.Manager.ExplorerTracker;
-        if (!asAdmin && path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero)
+        if (!asAdmin && path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero && App.HookClient?.IsConnected == true)
         {
             window.Manager.IsExecuting = true;
-            if (tracker.ActiveInlineAdapter.ExecuteItem(tracker.ActiveHwnd, path, window.SearchText))
+            if (InlineAdapterIpcCoordinator.ExecuteItem(tracker.ActiveHwnd, path, window.SearchText, App.HookClient.SendMessage))
             {
                 window.HideWindow();
                 return;

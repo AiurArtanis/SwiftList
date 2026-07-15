@@ -1,6 +1,7 @@
 using System.IO;
 using System.Diagnostics;
 using SwiftList.Core;
+using SwiftList.Core.Hook;
 
 namespace SwiftList.App.Services;
 
@@ -44,8 +45,8 @@ public static class QuickNavigationNavigator
         // Total Commander, ...) so a folder navigates that window and a file opens/selects there -- the
         // same adapter inline search already uses to execute a result.
         var tracker = InlineSearchManager.Instance.ExplorerTracker;
-        if (tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero
-            && tracker.ActiveInlineAdapter.ExecuteItem(tracker.ActiveHwnd, path, string.Empty))
+        if (tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero && App.HookClient?.IsConnected == true
+            && InlineAdapterIpcCoordinator.ExecuteItem(tracker.ActiveHwnd, path, string.Empty, App.HookClient.SendMessage))
         {
             return;
         }

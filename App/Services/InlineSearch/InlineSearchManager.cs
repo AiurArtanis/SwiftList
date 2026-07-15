@@ -239,14 +239,12 @@ public class InlineSearchManager : IDisposable
 
         if (_explorerTracker.ActiveInlineAdapter != null && _explorerTracker.ActiveHwnd != IntPtr.Zero)
         {
-            try
+            App.HookClient?.SendMessage(new IpcMessage
             {
-                _explorerTracker.ActiveInlineAdapter.OnSearchFinished(_explorerTracker.ActiveHwnd, IsExecuting);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"[InlineSearchManager] Error calling OnSearchFinished: {ex.Message}", LogLevel.Error);
-            }
+                Id = IpcMessageId.InlineSearchFinished,
+                Hwnd = _explorerTracker.ActiveHwnd.ToInt64(),
+                BoolVal = IsExecuting
+            });
         }
         IsExecuting = false;
 

@@ -184,7 +184,12 @@ public class InlineSearchWindowInputHandler
         var tracker = _window.Manager.ExplorerTracker;
         if (tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero)
         {
-            tracker.ActiveInlineAdapter.OnSelectionChanged(tracker.ActiveHwnd, result.FullPath);
+            App.HookClient?.SendMessage(new IpcMessage
+            {
+                Id = IpcMessageId.InlineSelectionChanged,
+                Hwnd = tracker.ActiveHwnd.ToInt64(),
+                StringVal1 = result.FullPath
+            });
         }
     }
 

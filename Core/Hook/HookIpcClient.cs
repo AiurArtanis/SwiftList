@@ -13,6 +13,10 @@ public sealed class HookIpcClient : IDisposable
     private readonly SemaphoreSlim _writeGate = new(1, 1);
 
     public int ServiceProcessId { get; private set; }
+    // False for the whole cold-start window before the hook process/pipes are up (or if it's down for any
+    // other reason) -- lets IPC-bound calls like InlineAdapterIpcCoordinator.ExecuteItem fail fast instead
+    // of blocking their caller for a full timeout waiting on a reply that can never arrive.
+    public bool IsConnected => _cmdPipe != null && _cmdPipe.IsConnected;
     private bool _isHotkeysDisabled;
 
     public bool IsHotkeysDisabled
@@ -269,11 +273,15 @@ public sealed class HookIpcClient : IDisposable
                     break;
 
                 case IpcMessageId.GetListItemsResponse:
-                    ListIpcCoordinator.AddListItemsChunk(msg.StringArray, msg.BoolVal);
+                    ListIpcCoordinator.AddListItemsChunk(msg.IntVal, msg.StringArray, msg.BoolVal);
                     break;
 
                 case IpcMessageId.GetSelectedIndicesResponse:
-                    ListIpcCoordinator.SetSelectedIndicesResult(msg.IntArray);
+                    ListIpcCoordinator.SetSelectedIndicesResult(msg.IntVal, msg.IntArray);
+                    break;
+
+                case IpcMessageId.ExecuteInlineItemResponse:
+                    InlineAdapterIpcCoordinator.SetExecuteItemResult(msg.IntVal, msg.BoolVal);
                     break;
             }
         }
