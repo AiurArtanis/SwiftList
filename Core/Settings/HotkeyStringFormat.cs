@@ -54,4 +54,19 @@ public static class HotkeyStringFormat
         if (string.IsNullOrEmpty(key)) return string.IsNullOrEmpty(mod) ? string.Empty : mod;
         return string.IsNullOrEmpty(mod) ? key : $"{mod}+{key}";
     }
+
+    private static readonly Dictionary<string, string> OemDisplaySymbols = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Oem1"] = ";", ["OemPlus"] = "=", ["OemComma"] = ",", ["OemMinus"] = "-", ["OemPeriod"] = ".",
+        ["Oem2"] = "/", ["Oem3"] = "`", ["Oem4"] = "[", ["Oem5"] = "\\", ["Oem6"] = "]", ["Oem7"] = "'",
+    };
+
+    public static string ToDisplayText(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        var parts = value.Split('+');
+        if (OemDisplaySymbols.TryGetValue(parts[^1], out var symbol))
+            parts[^1] = symbol;
+        return string.Join("+", parts);
+    }
 }

@@ -272,13 +272,13 @@ public class SettingsViewModel : ViewModelBase
 
     private void ScheduleApplyUiState()
     {
-        if (System.Threading.Interlocked.CompareExchange(ref _uiUpdateScheduled, 1, 0) != 0)
+        if (Interlocked.CompareExchange(ref _uiUpdateScheduled, 1, 0) != 0)
             return; // already scheduled/running -- it will pick up the latest state fields once it runs
 
         _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
         {
             try { ApplyUiState(); }
-            finally { System.Threading.Interlocked.Exchange(ref _uiUpdateScheduled, 0); }
+            finally { Interlocked.Exchange(ref _uiUpdateScheduled, 0); }
         }));
     }
 

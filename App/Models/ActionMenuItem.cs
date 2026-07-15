@@ -15,7 +15,12 @@ public class ActionMenuItem
     public IntPtr SubMenuHandle { get; set; }
     public bool IsDisabled { get; set; }
     public ImageSource? Icon { get; set; }
-    public string ShortcutHint { get; set; } = string.Empty;
+    private string _shortcutHint = string.Empty;
+    public string ShortcutHint
+    {
+        get => _shortcutHint;
+        set => _shortcutHint = Core.HotkeyStringFormat.ToDisplayText(value);
+    }
     public Action? OnExecute { get; set; }
 
     public double ItemHeight { get; set; } = Services.UiMetrics.ListItemHeight;

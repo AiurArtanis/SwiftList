@@ -51,8 +51,8 @@ public static class InlineAdapterIpcCoordinator
     private static string NormalizePath(string path, bool isDir)
     {
         if (isDir)
-            return System.IO.Path.EndsInDirectorySeparator(path) ? path : path + "\\";
-        return System.IO.Path.TrimEndingDirectorySeparator(path);
+            return Path.EndsInDirectorySeparator(path) ? path : path + "\\";
+        return Path.TrimEndingDirectorySeparator(path);
     }
 
     public static void SetExecuteItemResult(int requestId, bool result)
