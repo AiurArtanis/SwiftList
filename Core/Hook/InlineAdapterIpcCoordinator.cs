@@ -17,8 +17,20 @@ public static class InlineAdapterIpcCoordinator
     // A live hook answers a same-machine named-pipe round trip in low single-digit milliseconds; 1s bounds
     // the worst case (hook busy, or briefly unreachable during a cold start) without stalling the caller's
     // UI thread for long -- ExecuteItem is on the "press Enter to navigate" hot path.
-    public static bool ExecuteItem(IntPtr hwnd, string path, string searchInput, Action<IpcMessage> sendMsg)
+    //
+    // isDir is the caller's own already-known answer (from search-result/menu-item metadata, e.g.
+    // AppSearchResult.IsDir or QuickNavigationMenu's item.HasSubMenu) for whether path is a directory.
+    // Adapters no longer call Directory.Exists/File.Exists themselves to figure this out -- the Hook
+    // process runs elevated for admin users, and UAC's split token puts an elevated process in a different
+    // logon session than the one that mapped any network drive letters, so a mapped-drive path that's
+    // perfectly valid in the caller's own (never-elevated) session would silently resolve to "doesn't
+    // exist" from inside the Hook. Baked into the path itself (a trailing separator marks a directory,
+    // matching Path.EndsInDirectorySeparator) rather than a new IpcMessage field, since every adapter reads
+    // path as a plain string already and this needs no protocol/interface change.
+    public static bool ExecuteItem(IntPtr hwnd, string path, bool isDir, string searchInput, Action<IpcMessage> sendMsg)
     {
+        var normalizedPath = NormalizePath(path, isDir);
+
         lock (_lock)
         {
             using var evt = new AutoResetEvent(false);
@@ -27,10 +39,20 @@ public static class InlineAdapterIpcCoordinator
             _executeItemEvent = evt;
             _executeItemResult = false;
 
-            sendMsg(new IpcMessage { Id = IpcMessageId.ExecuteInlineItem, Hwnd = hwnd.ToInt64(), StringVal1 = path, StringVal2 = searchInput, IntVal = requestId });
+            sendMsg(new IpcMessage { Id = IpcMessageId.ExecuteInlineItem, Hwnd = hwnd.ToInt64(), StringVal1 = normalizedPath, StringVal2 = searchInput, IntVal = requestId });
 
             return evt.WaitOne(1000) && _executeItemResult;
         }
+    }
+
+    // Path.EndsInDirectorySeparator/TrimEndingDirectorySeparator, not a manual TrimEnd -- a bare TrimEnd
+    // would eat a drive/UNC root's own separator too (e.g. "C:\" -> "C:", which no longer means the root),
+    // where these two treat the root's separator as non-optional.
+    private static string NormalizePath(string path, bool isDir)
+    {
+        if (isDir)
+            return System.IO.Path.EndsInDirectorySeparator(path) ? path : path + "\\";
+        return System.IO.Path.TrimEndingDirectorySeparator(path);
     }
 
     public static void SetExecuteItemResult(int requestId, bool result)

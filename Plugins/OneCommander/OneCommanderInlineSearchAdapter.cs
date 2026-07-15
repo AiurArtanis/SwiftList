@@ -64,17 +64,19 @@ public class OneCommanderInlineSearchAdapter : IInlineSearchAdapter
     {
         try
         {
-            if (Directory.Exists(path))
+            // The Hook (which runs this) doesn't check Directory.Exists/File.Exists itself -- when it runs
+            // elevated (admin auto-elevate), UAC's split token puts it in a different logon session than
+            // the one that mapped any network drive letters, so a perfectly valid mapped-drive path would
+            // otherwise silently resolve to "doesn't exist". The caller already knows and encodes it as a
+            // trailing separator (see InlineAdapterIpcCoordinator.ExecuteItem); stripped back off here so
+            // the path handed to UIA is unchanged from before.
+            if (Path.EndsInDirectorySeparator(path))
             {
-                return UiaPathAccessor.SetCurrentPath(hwnd, path);
+                return UiaPathAccessor.SetCurrentPath(hwnd, Path.TrimEndingDirectorySeparator(path));
             }
-            if (File.Exists(path))
-            {
-                // UI Automation can't place the cursor on a specific file, so navigate to its folder.
-                var parent = Path.GetDirectoryName(path);
-                return !string.IsNullOrEmpty(parent) && UiaPathAccessor.SetCurrentPath(hwnd, parent);
-            }
-            return false;
+            // UI Automation can't place the cursor on a specific file, so navigate to its folder.
+            var parent = Path.GetDirectoryName(path);
+            return !string.IsNullOrEmpty(parent) && UiaPathAccessor.SetCurrentPath(hwnd, parent);
         }
         catch
         {

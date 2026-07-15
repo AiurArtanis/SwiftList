@@ -195,7 +195,7 @@ public static class QuickNavigationMenu
             {
                 if (item.HasSubMenu)
                 {
-                    if (canNavigate) QuickNavigationNavigator.NavigateOrOpen(itemPath!, dialogHwndAtTrigger);
+                    if (canNavigate) QuickNavigationNavigator.NavigateOrOpen(itemPath!, isDir: true, dialogHwndAtTrigger);
                 }
                 else
                 {
@@ -203,7 +203,7 @@ public static class QuickNavigationMenu
                     if (item.OnExecute != null)
                         item.OnExecute();
                     else if (!string.IsNullOrEmpty(itemPath))
-                        QuickNavigationNavigator.NavigateOrOpen(itemPath, dialogHwndAtTrigger);
+                        QuickNavigationNavigator.NavigateOrOpen(itemPath, isDir: false, dialogHwndAtTrigger);
                     else
                         provider.ExecuteCommand(result, item.CommandId, IntPtr.Zero);
                 }

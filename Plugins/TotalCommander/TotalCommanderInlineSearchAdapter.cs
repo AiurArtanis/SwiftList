@@ -84,17 +84,17 @@ public class TotalCommanderInlineSearchAdapter : IInlineSearchAdapter
     {
         try
         {
-            if (Directory.Exists(path))
-            {
-                // Enter the folder in the active pane.
-                return Win32Helper.ChangeSourcePanelDirectory(hwnd, path, placeCursorOnItem: false);
-            }
-            if (File.Exists(path))
-            {
-                // Pass the file itself; the 'A' flag opens its parent folder and puts the cursor on it.
-                return Win32Helper.ChangeSourcePanelDirectory(hwnd, path, placeCursorOnItem: true);
-            }
-            return false;
+            // The Hook (which runs this) doesn't check Directory.Exists/File.Exists itself -- when it runs
+            // elevated (admin auto-elevate), UAC's split token puts it in a different logon session than
+            // the one that mapped any network drive letters, so a perfectly valid mapped-drive path would
+            // otherwise silently resolve to "doesn't exist". The caller already knows and encodes it as a
+            // trailing separator (see InlineAdapterIpcCoordinator.ExecuteItem); stripped back off here so
+            // the path actually sent to TC is unchanged from before.
+            var isDir = Path.EndsInDirectorySeparator(path);
+            var cleanPath = isDir ? Path.TrimEndingDirectorySeparator(path) : path;
+            // Enter the folder directly, or pass the file itself -- the 'A' flag opens its parent folder
+            // and puts the cursor on it.
+            return Win32Helper.ChangeSourcePanelDirectory(hwnd, cleanPath, placeCursorOnItem: !isDir);
         }
         catch
         {

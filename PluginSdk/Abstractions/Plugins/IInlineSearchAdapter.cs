@@ -22,6 +22,15 @@ public interface IInlineSearchAdapter : IPluginComponent
     /// Defines the action when a search result item is clicked or executed.
     /// Returns true if the action was successfully handled, false otherwise.
     /// </summary>
+    /// <remarks>
+    /// This can run in the host app's elevated Hook process rather than the main App process. Don't call
+    /// <c>Directory.Exists</c>/<c>File.Exists</c> on <paramref name="path"/> to tell a folder from a file --
+    /// when running elevated (as SwiftList's own built-in adapters can), a mapped network drive letter set
+    /// up under the caller's own non-elevated logon session is invisible to that check (UAC's split token
+    /// puts the elevated process in a different logon session), so it would silently report a perfectly
+    /// valid path as nonexistent. The caller already knows and marks it with a trailing directory separator
+    /// (<c>Path.EndsInDirectorySeparator(path)</c>) -- trust that instead.
+    /// </remarks>
     bool ExecuteItem(IntPtr hwnd, string path, string searchInput);
 
     /// <summary>

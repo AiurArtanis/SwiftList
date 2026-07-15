@@ -99,38 +99,44 @@ public class DirectoryOpusInlineSearchAdapter : IInlineSearchAdapter
     {
         try
         {
+            // The Hook (which runs this) doesn't check Directory.Exists/File.Exists itself -- when it runs
+            // elevated (admin auto-elevate), UAC's split token puts it in a different logon session than
+            // the one that mapped any network drive letters, so a perfectly valid mapped-drive path would
+            // otherwise silently resolve to "doesn't exist". The caller already knows and encodes it as a
+            // trailing separator (see InlineAdapterIpcCoordinator.ExecuteItem); stripped back off here so
+            // the path embedded in the DO command is unchanged from before.
+            var isDir = Path.EndsInDirectorySeparator(path);
+            var cleanPath = isDir ? Path.TrimEndingDirectorySeparator(path) : path;
+
             var scope = GetSearchScope(hwnd);
-            var parent = Path.GetDirectoryName(path);
+            var parent = Path.GetDirectoryName(cleanPath);
             var isInCurrentFolder = !string.IsNullOrEmpty(scope) && string.Equals(parent?.TrimEnd('\\'), scope.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
 
-            if (Directory.Exists(path))
+            if (isDir)
             {
-                if (RunDopusCommandViaCopyData($"Go \"{path}\""))
+                if (RunDopusCommandViaCopyData($"Go \"{cleanPath}\""))
                 {
                     return true;
                 }
             }
-            else if (File.Exists(path))
+            else
             {
-                var filename = Path.GetFileName(path);
+                var filename = Path.GetFileName(cleanPath);
                 if (isInCurrentFolder)
                 {
                     RunDopusCommandViaCopyData($"Select \"{filename}\" DESELECTNOMATCH SETFOCUS");
                     return true;
                 }
-                else
+                else if (parent != null)
                 {
-                    if (parent != null && Directory.Exists(parent))
+                    if (RunDopusCommandViaCopyData($"Go \"{parent}\""))
                     {
-                        if (RunDopusCommandViaCopyData($"Go \"{parent}\""))
+                        _ = Task.Run(async () =>
                         {
-                            _ = Task.Run(async () =>
-                            {
-                                await Task.Delay(200);
-                                RunDopusCommandViaCopyData($"Select \"{filename}\" DESELECTNOMATCH SETFOCUS");
-                            });
-                            return true;
-                        }
+                            await Task.Delay(200);
+                            RunDopusCommandViaCopyData($"Select \"{filename}\" DESELECTNOMATCH SETFOCUS");
+                        });
+                        return true;
                     }
                 }
             }

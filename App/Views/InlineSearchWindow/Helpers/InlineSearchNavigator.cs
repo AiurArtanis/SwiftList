@@ -24,9 +24,20 @@ public static class InlineSearchNavigator
         FileExecutor.LocateInExplorer(path);
     }
 
-    public static void OpenFileOrFolderExternal(this SwiftList.App.InlineSearchWindow window, string path) => window.OpenPathFromInline(path, asAdmin: false);
+    public static void OpenFileOrFolderExternal(this SwiftList.App.InlineSearchWindow window, string path) => window.OpenPathFromInline(path, asAdmin: false, ResolveIsDir(path));
 
-    public static void OpenFileOrFolderAsAdminExternal(this SwiftList.App.InlineSearchWindow window, string path) => window.OpenPathFromInline(path, asAdmin: true);
+    public static void OpenFileOrFolderAsAdminExternal(this SwiftList.App.InlineSearchWindow window, string path) => window.OpenPathFromInline(path, asAdmin: true, ResolveIsDir(path));
+
+    // null means "doesn't exist" -- distinct from false ("is a file"), so OpenPathFromInline can skip
+    // ExecuteItem entirely for a path that no longer exists rather than asking an adapter to navigate a
+    // third-party app to it. Directory.Exists(path) alone can't tell "is a file" apart from "doesn't exist
+    // at all" (both false), which is exactly the ambiguity that needs resolving here.
+    private static bool? ResolveIsDir(string path)
+    {
+        if (Directory.Exists(path)) return true;
+        if (File.Exists(path)) return false;
+        return null;
+    }
 
     public static void ExecuteSearchResult(this SwiftList.App.InlineSearchWindow window, AppSearchResult result, bool asAdmin = false)
     {
@@ -48,16 +59,24 @@ public static class InlineSearchNavigator
             return;
         }
 
-        window.OpenPathFromInline(result.FullPath, asAdmin);
+        // Trust result.IsDir for *which kind* it is (that's already known from the index), but still
+        // confirm the path actually still exists right now -- a search result can go stale between when it
+        // was indexed and when the user acts on it (e.g. the file was deleted in between).
+        var exists = result.IsDir ? Directory.Exists(result.FullPath) : File.Exists(result.FullPath);
+        window.OpenPathFromInline(result.FullPath, asAdmin, exists ? result.IsDir : (bool?)null);
     }
 
-    private static void OpenPathFromInline(this SwiftList.App.InlineSearchWindow window, string path, bool asAdmin)
+    // isDir: null means the path doesn't exist (skip ExecuteItem, go straight to the "not found" fallback
+    // below); otherwise the caller's already-known answer for file vs directory -- see
+    // InlineAdapterIpcCoordinator.ExecuteItem for why the Hook process must never be asked to re-derive
+    // this itself via Directory.Exists/File.Exists.
+    private static void OpenPathFromInline(this SwiftList.App.InlineSearchWindow window, string path, bool asAdmin, bool? isDir)
     {
         var tracker = window.Manager.ExplorerTracker;
-        if (!asAdmin && path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero && App.HookClient?.IsConnected == true)
+        if (!asAdmin && isDir.HasValue && path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero && App.HookClient?.IsConnected == true)
         {
             window.Manager.IsExecuting = true;
-            if (InlineAdapterIpcCoordinator.ExecuteItem(tracker.ActiveHwnd, path, window.SearchText, App.HookClient.SendMessage))
+            if (InlineAdapterIpcCoordinator.ExecuteItem(tracker.ActiveHwnd, path, isDir.Value, window.SearchText, App.HookClient.SendMessage))
             {
                 window.HideWindow();
                 return;
@@ -81,7 +100,7 @@ public static class InlineSearchNavigator
             return;
         }
 
-        if (Directory.Exists(path)
+        if (isDir == true
             && tracker.IsExplorerOrDesktopActive
 
             && !tracker.IsDesktop

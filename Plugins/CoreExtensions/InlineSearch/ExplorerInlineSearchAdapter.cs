@@ -61,6 +61,15 @@ public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
     {
         try
         {
+            // The Hook (which runs this) doesn't check Directory.Exists/File.Exists itself -- when it runs
+            // elevated (admin auto-elevate), UAC's split token puts it in a different logon session than
+            // the one that mapped any network drive letters, so a perfectly valid mapped-drive path would
+            // otherwise silently resolve to "doesn't exist". The caller already knows and encodes it as a
+            // trailing separator (see InlineAdapterIpcCoordinator.ExecuteItem); stripped back off here so
+            // the path passed to Navigate2/ProcessStartInfo is unchanged from before.
+            var isDir = Path.EndsInDirectorySeparator(path);
+            var cleanPath = isDir ? Path.TrimEndingDirectorySeparator(path) : path;
+
             var sbClass = new StringBuilder(256);
             ExplorerAdapterHelpers.GetClassName(hwnd, sbClass, sbClass.Capacity);
             var className = sbClass.ToString();
@@ -68,34 +77,31 @@ public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
             var isDesktop = className.Equals("Progman", StringComparison.OrdinalIgnoreCase) ||
 
                              className.Equals("WorkerW", StringComparison.OrdinalIgnoreCase);
-            if (Directory.Exists(path) && !isDesktop)
+            if (isDir && !isDesktop)
             {
-                if (TryLocateInExistingExplorer(path, hwnd))
+                if (TryLocateInExistingExplorer(cleanPath, isDir, hwnd))
                 {
                     return true;
                 }
             }
 
-            if (File.Exists(path) || Directory.Exists(path))
+            var startInfo = new ProcessStartInfo
             {
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = path,
-                    UseShellExecute = true
+                FileName = cleanPath,
+                UseShellExecute = true
 
-                };
-                if (File.Exists(path))
+            };
+            if (!isDir)
+            {
+                var workingDirectory = Path.GetDirectoryName(cleanPath);
+                if (!string.IsNullOrWhiteSpace(workingDirectory))
                 {
-                    var workingDirectory = Path.GetDirectoryName(path);
-                    if (!string.IsNullOrWhiteSpace(workingDirectory) && Directory.Exists(workingDirectory))
-                    {
-                        startInfo.WorkingDirectory = workingDirectory;
-                    }
+                    startInfo.WorkingDirectory = workingDirectory;
                 }
-
-                Process.Start(startInfo);
-                return true;
             }
+
+            Process.Start(startInfo);
+            return true;
         }
 
         catch { }
@@ -207,18 +213,18 @@ public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
 
     public bool CanEnterActionsMode(IntPtr hwnd) => true;
 
-    private bool TryLocateInExistingExplorer(string path, IntPtr explorerHwnd)
+    private bool TryLocateInExistingExplorer(string path, bool isDir, IntPtr explorerHwnd)
     {
         if (explorerHwnd == IntPtr.Zero) return false;
         try
         {
             dynamic? window = ExplorerAdapterHelpers.FindExplorerWindow(explorerHwnd);
             if (window == null) return false;
-            var targetFolder = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
-            if (string.IsNullOrWhiteSpace(targetFolder) || !Directory.Exists(targetFolder))
+            var targetFolder = isDir ? path : Path.GetDirectoryName(path);
+            if (string.IsNullOrWhiteSpace(targetFolder))
                 return false;
             window.Navigate2(targetFolder);
-            if (File.Exists(path))
+            if (!isDir)
             {
                 ExplorerAdapterHelpers.SelectItemInExplorerLater(path, explorerHwnd);
             }
