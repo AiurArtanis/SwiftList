@@ -18,6 +18,18 @@ internal static class DriveRefreshRunner
         var root = PathHelpers.BuildSourceRoot(drive);
         var physicalRoot = root;
 
+        // A drive/share that's temporarily offline (virtual disk unmounted, network hiccup) enumerates
+        // its root as empty rather than throwing loudly -- TreeBuilder.WalkDirectory just CountErrors and
+        // returns, so the walk below "succeeds" with a near-empty store (just the root record), and would
+        // unconditionally overwrite a good, previously-built cache with it. Bailing out here before
+        // touching status/building anything leaves the existing cache and status completely untouched,
+        // so it just gets picked up again next scheduled/manual refresh once the drive is back.
+        if (!Directory.Exists(physicalRoot))
+        {
+            Logger.Log($"[NetworkIndexer] {drive}: root is currently unreachable, skipping this refresh (existing cache left untouched).", LogLevel.Warn);
+            return;
+        }
+
         var stopwatch = Stopwatch.StartNew();
         try
         {
