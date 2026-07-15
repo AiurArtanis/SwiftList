@@ -10,6 +10,15 @@ namespace SwiftList.Core.Hook;
 // Directory Opus, ...) still works when that file manager is running elevated and the App -- which never
 // elevates itself -- would otherwise have its window messages silently dropped by UIPI. Mirrors the
 // resolve-then-dispatch shape HookCommandHandler already uses for NavigateDialog/RestoreDialogFocus.
+//
+// Each call runs on its own freshly-spun-up STA thread (RunOnSta), not ThreadPool.QueueUserWorkItem and
+// NOT the tracker thread that owns ExplorerTracker: some adapters (Explorer's IShellWindows/Navigate2/
+// SelectItem, OneCommander's UI Automation) are STA-affine COM interop, so an MTA ThreadPool thread would
+// force COM to marshal across apartments. A dedicated thread per call, rather than routing through the
+// tracker thread, matters because at least one adapter (Total Commander) calls plain SendMessage with no
+// timeout (see TotalCommander/Win32/Win32Helper.cs) -- if that target hangs, only this one call's thread
+// leaks/blocks; ExplorerTracker's own WinEvent-based foreground/focus tracking (which runs on the tracker
+// thread) keeps working for every other window and adapter regardless.
 internal static class InlineAdapterCommandHandler
 {
     public static void Handle(HookProcess process, IpcMessage msg)
@@ -23,12 +32,12 @@ internal static class InlineAdapterCommandHandler
                 var path = msg.StringVal1 ?? string.Empty;
                 var searchInput = msg.StringVal2 ?? string.Empty;
                 var requestId = msg.IntVal;
-                ThreadPool.QueueUserWorkItem(_ =>
+                RunOnSta(() =>
                 {
                     // Adapter code is third-party-plugin-authored native/COM interop -- an uncaught
-                    // exception on a ThreadPool thread would take down the whole hook process (and every
-                    // user's global hotkeys with it), so this must never propagate. On failure, still send
-                    // a response so the App's blocking ExecuteItem call fails fast instead of timing out.
+                    // exception here would take down whatever thread it ran on, so this must never
+                    // propagate. On failure, still send a response so the App's blocking ExecuteItem call
+                    // fails fast instead of timing out.
                     var result = false;
                     try
                     {
@@ -44,7 +53,7 @@ internal static class InlineAdapterCommandHandler
 
             case IpcMessageId.InlineSelectionChanged:
                 var selectedPath = msg.StringVal1 ?? string.Empty;
-                ThreadPool.QueueUserWorkItem(_ =>
+                RunOnSta(() =>
                 {
                     try { ResolveAdapter(process, hwnd)?.OnSelectionChanged(hwnd, selectedPath); }
                     catch (Exception ex) { Logger.Log($"[InlineAdapterCommandHandler] OnSelectionChanged threw: {ex.Message}", LogLevel.Error); }
@@ -53,13 +62,32 @@ internal static class InlineAdapterCommandHandler
 
             case IpcMessageId.InlineSearchFinished:
                 var executed = msg.BoolVal;
-                ThreadPool.QueueUserWorkItem(_ =>
+                RunOnSta(() =>
                 {
                     try { ResolveAdapter(process, hwnd)?.OnSearchFinished(hwnd, executed); }
                     catch (Exception ex) { Logger.Log($"[InlineAdapterCommandHandler] OnSearchFinished threw: {ex.Message}", LogLevel.Error); }
                 });
                 break;
         }
+    }
+
+    private static void RunOnSta(Action action)
+    {
+        var thread = new Thread(() =>
+        {
+            // Belt-and-suspenders: every caller already wraps its own logic in try/catch, but an
+            // exception escaping this thread's entry point entirely (e.g. from the catch block's own
+            // Logger.Log call) would otherwise crash the whole process, same as any other unhandled
+            // exception on a non-pooled thread.
+            try { action(); }
+            catch (Exception ex) { Logger.Log($"[InlineAdapterCommandHandler] STA thread threw: {ex.Message}", LogLevel.Error); }
+        })
+        {
+            IsBackground = true,
+            Name = "InlineAdapterSta"
+        };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
     }
 
     private static IInlineSearchAdapter? ResolveAdapter(HookProcess process, IntPtr hwnd)

@@ -133,99 +133,68 @@ public class NetworkDriveSettingsViewModel : ViewModelBase
     // Deliberately just !folderBusy, not CanRebuildFolders itself -- CanRebuildFolders is also false
     // whenever nothing is AppliedEnabled yet (e.g. a folder just added and not applied), which would
     // disable Add right after adding your first folder, before you'd ever get a chance to add a second one.
-    public bool CanAddFolder { get => _canAddFolder; private set => SetProperty(ref _canAddFolder, value); }
+    public bool CanAddFolder { get => _canAddFolder; internal set => SetProperty(ref _canAddFolder, value); }
 
     public bool IsNetworkDrivesEmpty { get => _isNetworkDrivesEmpty; set => SetProperty(ref _isNetworkDrivesEmpty, value); }
     public string DrivesPlaceholderText { get => _drivesPlaceholderText; set => SetProperty(ref _drivesPlaceholderText, value); }
 
+    private (UserSettings settings, IReadOnlyList<NetworkIndexStatus>? statuses, bool isGlobalBusy)? _pendingRefresh;
+    private bool _refreshInFlight;
+
+    // Entry point, called from SettingsViewModel.ApplyUiState on every indexer status push (up to ~10/sec
+    // while a drive is actively indexing). The data gathering below (NetworkDriveResolver's
+    // WNetGetConnection/DriveInfo.IsReady, and especially the WSL \\wsl$\<distro> probe) does blocking
+    // syscalls that can each take a noticeable amount of time, so it now runs on a background thread --
+    // only the final ObservableCollection update happens back on the UI thread. Only ever called from the
+    // UI thread (ApplyUiState always runs inside a Dispatcher.BeginInvoke), so _pendingRefresh/
+    // _refreshInFlight need no locking: every read/write of them happens on that same thread, just
+    // interleaved across await continuations.
     public void RefreshNetworkDrives(UserSettings userSettings, IReadOnlyList<NetworkIndexStatus>? indexStatuses = null, bool isGlobalBusy = false)
     {
-        var configured = userSettings.NetworkDrives
-            .Where(d => !string.IsNullOrWhiteSpace(d.Id))
-            .GroupBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.First())
-            .ToDictionary(d => d.Id, StringComparer.OrdinalIgnoreCase);
-        var configuredWsl = userSettings.WslSettings
-            .Where(w => !string.IsNullOrWhiteSpace(w.Id))
-            .ToDictionary(w => w.Id, StringComparer.OrdinalIgnoreCase);
-        var configuredFolders = userSettings.FolderIndexes
-            .Where(f => !string.IsNullOrWhiteSpace(f.Path))
-            .GroupBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.First())
-            .ToDictionary(f => f.Path, StringComparer.OrdinalIgnoreCase);
+        _pendingRefresh = (userSettings, indexStatuses, isGlobalBusy);
+        if (_refreshInFlight) return; // a gather is already running; it'll pick up this latest request when it loops
+        _refreshInFlight = true;
+        _ = RunRefreshLoopAsync();
+    }
 
-        var statuses = (indexStatuses ?? Array.Empty<NetworkIndexStatus>())
-            .ToDictionary(s => s.Drive, StringComparer.OrdinalIgnoreCase);
+    private async Task RunRefreshLoopAsync()
+    {
+        try
+        {
+            while (_pendingRefresh is { } request)
+            {
+                _pendingRefresh = null;
+                try
+                {
+                    var data = await Task.Run(() => NetworkDriveRefreshCoordinator.GatherData(request.settings, request.statuses, _searchService));
+                    NetworkDriveRefreshCoordinator.ApplyGatheredData(this, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds, request.settings, request.statuses, request.isGlobalBusy, data);
+                }
+                catch (Exception ex)
+                {
+                    // Never let one bad refresh (e.g. a transient network-resolution failure) permanently
+                    // wedge _refreshInFlight -- that would silently stop this Settings window from ever
+                    // refreshing network drive state again for the rest of its lifetime.
+                    Logger.Log($"[NetworkDriveSettingsViewModel] Network drive refresh failed: {ex.Message}", LogLevel.Error);
+                }
+            }
+        }
+        finally
+        {
+            _refreshInFlight = false;
+        }
+    }
 
-        var resolvedDrives = NetworkDriveResolver.GetNetworkDrives();
-        var resolvedByDrive = resolvedDrives.ToDictionary(d => d.Letter, StringComparer.OrdinalIgnoreCase);
-        var visibleDrives = resolvedDrives.Select(d => d.Letter)
-            .Concat(_searchService.GetCachedNetworkDrives().Where(d => d.Length == 1))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(d => d, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+    public void ResetPendingEdits() => HasPendingEdits = false;
 
-        var wslDistros = NetworkDriveSettingsHelper.GetWslDistros();
-        // Specifically "\\wsl$\..."/"\\wsl.localhost\...", not every "\\"-prefixed cached key -- a real
-        // UNC share cached via the folder-index feature ("\\server\share") must not get folded in here
-        // just for sharing the same leading "\\", which would show it as a fake WSL distro (and risk a
-        // name collision if a real distro happens to share the share's leaf name).
-        var cachedWslDrives = _searchService.GetCachedNetworkDrives()
-            .Where(NetworkDriveSettingsHelper.IsWslPath)
-            .Select(d => System.IO.Path.GetFileName(d.TrimEnd('\\')))
-            .ToList();
-        var visibleWsl = wslDistros
-            .Concat(cachedWslDrives)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(w => w, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        var visibleFolders = NetworkDriveFolderHelper.GetVisibleFolders(this, _searchService, userSettings);
-
-        // Update in place (don't Clear+rebuild) whenever the drive/WSL/folder set is unchanged. A periodic
-        // status refresh rebuilding the rows would replace the item a "refresh mode" ComboBox is bound to
-        // and instantly close its open dropdown -- which is why the WSL refresh mode couldn't be changed
-        // once indexing started producing status. Only rebuild when a drive/distro/folder is actually
-        // added or removed.
-        var structureUnchanged =
-            NetworkDrives.Count == visibleDrives.Count &&
-            visibleDrives.All(letter => NetworkDrives.Any(d => d.Drive.Equals(letter, StringComparison.OrdinalIgnoreCase))) &&
-            WslDrives.Count == visibleWsl.Count &&
-            visibleWsl.All(name => WslDrives.Any(d => d.DistroName.Equals(name, StringComparison.OrdinalIgnoreCase))) &&
-            FolderIndexes.Count == visibleFolders.Count &&
-            visibleFolders.All(path => FolderIndexes.Any(f => f.Path.Equals(path, StringComparison.OrdinalIgnoreCase)));
-
-        if (HasPendingEdits || structureUnchanged)
-            NetworkDriveFolderHelper.UpdateRowsInPlace(this, _searchService, visibleDrives, visibleWsl, visibleFolders, statuses, resolvedByDrive, wslDistros, configured, configuredWsl, configuredFolders);
-        else
-            NetworkDriveFolderHelper.RebuildRows(this, _searchService, _onTriggerFastRefresh, _pendingRowRebuilds, _observedRowRebuilds, visibleDrives, visibleWsl, visibleFolders, statuses, resolvedByDrive, wslDistros, configured, configuredWsl, configuredFolders);
-
-        // Scoped to NetworkDrives alone -- this used to require every category empty at once, so the
-        // "no network drives" placeholder never showed as long as some unrelated folder or WSL distro was
-        // configured, leaving the Network tab's own list looking like a headers-only blank.
-        IsNetworkDrivesEmpty = NetworkDrives.Count == 0;
-        DrivesPlaceholderText = TranslationManager.Instance["Network_Placeholder"];
-
-        // Per-category busy, so an indexing folder can't disable a network drive's row controls (or the
-        // reverse) just because this used to check one indexStatuses list combined across all three.
-        // isGlobalBusy (the elevated local USN service's reachability) still applies to drives/WSL as
-        // before -- only folders exclude it, since folder indexing never goes through that service.
-        var driveBusy = isGlobalBusy || NetworkDrivePermissionsHelper.IsCategoryBusy(_pendingRowRebuilds, NetworkDrives.Select(d => d.Drive), indexStatuses);
-        var wslBusy = isGlobalBusy || NetworkDrivePermissionsHelper.IsCategoryBusy(_pendingRowRebuilds, WslDrives.Select(w => $@"\\wsl$\{w.DistroName}"), indexStatuses);
-        var folderBusy = NetworkDrivePermissionsHelper.IsCategoryBusy(_pendingRowRebuilds, FolderIndexes.Select(f => f.Path), indexStatuses);
-        CanRebuildDrives = NetworkDrives.Any(d => d.AppliedEnabled) && !driveBusy;
-        CanRebuildWsl = WslDrives.Any(w => w.AppliedEnabled) && !wslBusy;
-        CanRebuildFolders = FolderIndexes.Any(f => f.AppliedEnabled) && !folderBusy;
-        CanAddFolder = !folderBusy;
-        NetworkDrivePermissionsHelper.UpdateRowPermissions(this, driveBusy, wslBusy, folderBusy);
-        NetworkDriveSummaryHelper.UpdateSummaries(this, indexStatuses, driveBusy, wslBusy, folderBusy);
-
+    // Called from NetworkDriveRefreshCoordinator.ApplyGatheredData once it's done updating the row
+    // collections -- OnPropertyChanged is protected, so this small wrapper is what lets that (external,
+    // same-assembly) helper class raise these three notifications.
+    internal void NotifyRefreshResultChanged()
+    {
         OnPropertyChanged(nameof(IsWslPanelVisible));
         OnPropertyChanged(nameof(IsFolderIndexesEmpty));
         OnPropertyChanged(nameof(HasFolderIndexes));
     }
-
-    public void ResetPendingEdits() => HasPendingEdits = false;
 
     internal void OnNetworkDriveItemChanged(object? sender, PropertyChangedEventArgs e)
     {

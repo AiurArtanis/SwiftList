@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Windows.Automation;
 
 namespace SwiftList.Plugins.OneCommander.Automation;
@@ -18,7 +19,11 @@ namespace SwiftList.Plugins.OneCommander.Automation;
 /// </summary>
 internal static class UiaPathAccessor
 {
-    private static readonly Dictionary<IntPtr, AutomationElement> _focusAnchors = new();
+    // ConcurrentDictionary, not Dictionary: RefreshFocusAnchor writes from the Hook's tracker thread
+    // (WinEvent-driven focus tracking) while GetCurrentPath/SetCurrentPath can now read from whatever
+    // thread is running an IInlineSearchAdapter call -- each ExecuteItem/etc. gets its own dedicated STA
+    // thread (see InlineAdapterCommandHandler.RunOnSta), so a read here can genuinely race a write.
+    private static readonly ConcurrentDictionary<IntPtr, AutomationElement> _focusAnchors = new();
 
     /// <summary>
     /// Snapshots the currently-focused UI element for later use, while OneCommander (hwnd) still plausibly

@@ -21,6 +21,13 @@ public class SettingsViewModel : ViewModelBase
     private UsnIndexer.IndexerStatus _latestStatus = new() { State = "error" };
     private IReadOnlyList<NetworkIndexStatus> _latestNetworkStatuses = Array.Empty<NetworkIndexStatus>();
     private MachineSettings _latestMachineSettings = new();
+    // 1 while a Dispatcher.BeginInvoke(ApplyUiState) is queued or running, 0 otherwise -- Interlocked since
+    // ScheduleApplyUiState is called from both the UI thread and background threads (the status-stream
+    // callback, RefreshLists' Task.Run continuation). Coalesces bursts of status pushes (up to ~10/sec
+    // while a drive is actively indexing -- see UsnIndexer.NotifyProgressChanged) into at most one
+    // ApplyUiState in flight plus one queued, instead of one queued per push; an unthrottled queue is what
+    // made Settings tab-switching feel stuck during indexing (issue #112).
+    private int _uiUpdateScheduled;
 
     public SettingsViewModel()
     {
@@ -120,7 +127,7 @@ public class SettingsViewModel : ViewModelBase
             _latestStatus = new UsnIndexer.IndexerStatus { State = "error" };
 
         EnsureStatusSubscription();
-        _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplyUiState));
+        ScheduleApplyUiState();
     });
 
     public void Apply()
@@ -249,7 +256,7 @@ public class SettingsViewModel : ViewModelBase
             await SearchStatusStream.SubscribeAsync(status =>
             {
                 _latestStatus = status;
-                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplyUiState));
+                ScheduleApplyUiState();
             }, token).ConfigureAwait(false);
         }
         catch
@@ -260,7 +267,19 @@ public class SettingsViewModel : ViewModelBase
     private void OnNetworkStatusesChanged(IReadOnlyList<NetworkIndexStatus> statuses)
     {
         _latestNetworkStatuses = statuses;
-        _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplyUiState));
+        ScheduleApplyUiState();
+    }
+
+    private void ScheduleApplyUiState()
+    {
+        if (System.Threading.Interlocked.CompareExchange(ref _uiUpdateScheduled, 1, 0) != 0)
+            return; // already scheduled/running -- it will pick up the latest state fields once it runs
+
+        _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            try { ApplyUiState(); }
+            finally { System.Threading.Interlocked.Exchange(ref _uiUpdateScheduled, 0); }
+        }));
     }
 
     private void ApplyUiState()

@@ -133,6 +133,28 @@ public static class PipeRequestBinarySerializer
             case IpcMessageId.GetSelectedIndicesResponse:
                 PipeArraySerializer.WriteIntArray(writer, msg.IntArray);
                 break;
+
+            case IpcMessageId.ExecuteInlineItem:
+                writer.Write(msg.Hwnd);
+                writer.Write(msg.StringVal1 ?? string.Empty);
+                writer.Write(msg.StringVal2 ?? string.Empty);
+                writer.Write(msg.IntVal);
+                break;
+
+            case IpcMessageId.InlineSelectionChanged:
+                writer.Write(msg.Hwnd);
+                writer.Write(msg.StringVal1 ?? string.Empty);
+                break;
+
+            case IpcMessageId.InlineSearchFinished:
+                writer.Write(msg.Hwnd);
+                writer.Write(msg.BoolVal);
+                break;
+
+            case IpcMessageId.ExecuteInlineItemResponse:
+                writer.Write(msg.IntVal);
+                writer.Write(msg.BoolVal);
+                break;
         }
     }
 
@@ -228,6 +250,28 @@ public static class PipeRequestBinarySerializer
 
             case IpcMessageId.GetSelectedIndicesResponse:
                 msg.IntArray = PipeArraySerializer.ReadIntArray(reader);
+                break;
+
+            case IpcMessageId.ExecuteInlineItem:
+                msg.Hwnd = reader.ReadInt64();
+                msg.StringVal1 = reader.ReadString();
+                msg.StringVal2 = reader.ReadString();
+                msg.IntVal = reader.ReadInt32();
+                break;
+
+            case IpcMessageId.InlineSelectionChanged:
+                msg.Hwnd = reader.ReadInt64();
+                msg.StringVal1 = reader.ReadString();
+                break;
+
+            case IpcMessageId.InlineSearchFinished:
+                msg.Hwnd = reader.ReadInt64();
+                msg.BoolVal = reader.ReadBoolean();
+                break;
+
+            case IpcMessageId.ExecuteInlineItemResponse:
+                msg.IntVal = reader.ReadInt32();
+                msg.BoolVal = reader.ReadBoolean();
                 break;
         }
 
