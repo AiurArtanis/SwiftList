@@ -39,7 +39,7 @@ CloseApplicationsFilter={#AppExeName}
 
 [Languages]
 Name: "en_US"; MessagesFile: "compiler:Default.isl"
-Name: "zh_CN"; MessagesFile: "ChineseSimplified.isl"
+Name: "zh_CN"; MessagesFile: "ThirdParty\ChineseSimplified.isl"
 
 #include "Languages\en-US.iss"
 #include "Languages\zh-CN.iss"
