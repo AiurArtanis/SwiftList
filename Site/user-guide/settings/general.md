@@ -5,9 +5,6 @@ Four tabs: **System**, **Search Bar Layout**, **Preview**, and **Search Window**
 ## System
 
 - **Start SwiftList with Windows** — checkbox, launches SwiftList at sign-in.
-- **Run as Administrator** — checkbox, only enabled if the current user account is an
-  administrator. Elevates just the background hotkey-listener process (not the whole app), so the
-  global hotkey isn't blocked by other elevated (as-admin) foreground applications.
 - **Auto check for updates on startup** — checkbox.
 - **Auto silent update when a new version is detected** — checkbox, only enabled while the check
   above is on; downloads and installs updates in the background without prompting.

@@ -118,7 +118,9 @@ public sealed class HookIpcClient : IDisposable
                 _hookProcess = await LaunchHookProcessAsync(token).ConfigureAwait(false);
                 if (_hookProcess == null)
                 {
-                    Logger.Log("[HookIpcClient] Failed to launch hook process.", LogLevel.Error);
+                    // Warn, not Error: expected on a cold start while the Service is still coming up --
+                    // this loop retries every 5s and self-heals once it's reachable.
+                    Logger.Log("[HookIpcClient] Failed to launch hook process.", LogLevel.Warn);
                     await Task.Delay(5000, token);
                     continue;
                 }

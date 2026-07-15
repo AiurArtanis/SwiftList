@@ -6,8 +6,12 @@
    restarting it from that page usually fixes indexing-related issues, but the toggle hotkey itself
    is handled by the App process, not the service, so this is a secondary check.
 2. If the foreground app is running elevated (as administrator) and SwiftList isn't, Windows blocks
-   lower-privilege processes from sending it input. Enable **Run as Administrator** under
-   **Settings → General → System**, or run SwiftList elevated once to confirm this is the cause.
+   lower-privilege processes from sending it input. SwiftList's background hotkey-listener process
+   is elevated automatically whenever your account is an administrator — no setting to enable, no
+   UAC prompt. If hotkeys still don't reach an elevated window, check
+   **[Settings → Service Status](./settings/service-status)** to confirm the background service is
+   running, since it's what launches the elevated listener. If your account isn't an administrator,
+   there's no workaround — Windows won't let a lower-privilege process signal a higher-privilege one.
 3. Check the **[Process Blacklist](./settings/hotkeys-page#process-blacklist)** — if the
    foreground app's executable name was added there (intentionally or by accident), SwiftList's
    global hotkeys are deliberately let through untouched while it's focused.

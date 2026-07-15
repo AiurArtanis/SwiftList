@@ -265,7 +265,10 @@ public class SearchService : IDisposable
         }
         catch (Exception ex)
         {
-            Logger.Log($"[PipeClient] SendPipeCommand failed for {msg.Id}: {ex.Message}", LogLevel.Error);
+            // Warn, not Error: this fires routinely on a cold start (App connects before the Service has
+            // finished coming up) and is expected to self-heal via the caller's own retry -- callers that
+            // need to surface a persistent failure to the user already re-log at Error with more context.
+            Logger.Log($"[PipeClient] SendPipeCommand failed for {msg.Id}: {ex.Message}", LogLevel.Warn);
             return new PipeResponse { Kind = PipeResponseKind.Error, Message = ex.Message };
         }
     }
