@@ -66,6 +66,8 @@ internal static class ActionMenuBuilder
             }
         }
 
+        var pluginActionHotkeys = Core.UserSettings.Load().Hotkeys.PluginActionHotkeys;
+
         foreach (var kvp in groupedActions)
         {
             uiItems.Add(new ActionMenuItem
@@ -78,13 +80,21 @@ internal static class ActionMenuBuilder
             foreach (var registration in kvp.Value)
             {
                 var action = registration.Action;
+                var effectiveHotkey = action.Hotkey;
+                var pluginId = System.IO.Path.GetFileNameWithoutExtension(PluginManagerCore.ComponentFilter.GetDllName(registration.Plugin));
+                if (pluginActionHotkeys.TryGetValue(pluginId, out var overrides)
+                    && overrides.TryGetValue(action.GetType().Name, out var overrideHotkey))
+                {
+                    effectiveHotkey = overrideHotkey;
+                }
+
                 uiItems.Add(new ActionMenuItem
                 {
                     Text = action.DisplayName,
                     CommandId = registration.RuntimeActionId,
                     Icon = action.Icon,
                     ItemHeight = itemHeight,
-                    ShortcutHint = action.Hotkey
+                    ShortcutHint = effectiveHotkey
                 });
             }
         }

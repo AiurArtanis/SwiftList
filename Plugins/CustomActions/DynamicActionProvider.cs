@@ -33,6 +33,14 @@ public class DynamicActionProvider : IDynamicActionProvider
     // Invalidated on ClearSession() (called when exiting actions mode / settings save).
     private static List<ActionItem>? _cache;
 
+    static DynamicActionProvider() => PluginSettingsService.SettingChanged += (pluginId, key) =>
+                                           {
+                                               if (pluginId == "SwiftList.Plugins.CustomActions" && key == "Actions")
+                                               {
+                                                   _cache = null;
+                                               }
+                                           };
+
     private static List<ActionItem> LoadActions()
     {
         if (_cache != null) return _cache;
