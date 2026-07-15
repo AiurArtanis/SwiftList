@@ -80,6 +80,10 @@ copy "%ROOT%portable-updater.bat" "%OUT%\" >nul
 if errorlevel 1 (
     echo [Warning] Failed to copy portable-updater.bat.
 )
+copy "%ROOT%install-dotnet-runtime.bat" "%OUT%\" >nul
+if errorlevel 1 (
+    echo [Warning] Failed to copy install-dotnet-runtime.bat.
+)
 del /s /q "%OUT%\*.pdb" >nul 2>&1
 
 :: 7. Find Inno Setup compiler
