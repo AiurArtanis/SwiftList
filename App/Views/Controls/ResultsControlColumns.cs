@@ -32,6 +32,12 @@ internal static class ResultsControlColumns
                 textBlockFactory.SetValue(TextBlock.ForegroundProperty, new DynamicResourceExtension("TextSecondary2"));
                 textBlockFactory.SetValue(TextBlock.FontSizeProperty, 12.0);
                 textBlockFactory.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
+                // A TextBlock with no Background is only hit-testable over its rendered glyphs (WPF's
+                // usual "empty space in an unpainted element passes mouse input through" rule), which is
+                // why hovering past the end of a short value (or above/below it) swallowed the mouse
+                // wheel instead of scrolling the list -- see the matching fix in ResultsControl.xaml.
+                textBlockFactory.SetValue(TextBlock.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
+                textBlockFactory.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Stretch);
                 gvc.CellTemplate = new DataTemplate { VisualTree = textBlockFactory };
                 gridView.Columns.Add(gvc);
             }

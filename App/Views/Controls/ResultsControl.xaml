@@ -58,15 +58,17 @@
                             <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderName]}" Width="320">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Grid Width="{Binding Path=ActualWidth, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" VerticalAlignment="Center">
+                                        <Grid Width="{Binding Path=ActualWidth, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" VerticalAlignment="Stretch" Background="Transparent">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Image Grid.Column="0" Source="{Binding Icon}" Width="18" Height="18" Margin="0,0,10,0" VerticalAlignment="Center"
                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
-                                            <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="0,0,26,0">
-                                                <TextBlock Foreground="{DynamicResource TextPrimary2}"
+                                            <ScrollViewer Grid.Column="1" Background="Transparent" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="0,0,26,0"
+                                                          local:ScrollViewerHelper.BubbleMouseWheel="True">
+                                                <TextBlock Background="Transparent"
+                                                           Foreground="{DynamicResource TextPrimary2}"
                                                            local:TextHighlighter.Text="{Binding Name}"
                                                            local:TextHighlighter.HighlightText="{Binding SearchQuery}"
                                                            local:TextHighlighter.HighlightBrush="{DynamicResource AccentBlue}"
@@ -82,9 +84,11 @@
                             <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderPath]}" Width="260">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Grid Width="{Binding Path=ActualWidth, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" VerticalAlignment="Center">
-                                            <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="0,0,24,0">
-                                                <TextBlock Foreground="{DynamicResource TextSecondary2}"
+                                        <Grid Width="{Binding Path=ActualWidth, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" VerticalAlignment="Stretch" Background="Transparent">
+                                            <ScrollViewer Background="Transparent" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="0,0,24,0"
+                                                          local:ScrollViewerHelper.BubbleMouseWheel="True">
+                                                <TextBlock Background="Transparent"
+                                                           Foreground="{DynamicResource TextSecondary2}"
                                                            local:TextHighlighter.Text="{Binding ParentDir}"
                                                            local:TextHighlighter.HighlightText="{Binding SearchQuery}"
                                                            local:TextHighlighter.HighlightBrush="{DynamicResource AccentBlue}"
@@ -101,7 +105,8 @@
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding DateModifiedText}"
-                                                   
+                                                   Background="Transparent"
+                                                   VerticalAlignment="Stretch"
                                                    Foreground="{DynamicResource TextSecondary2}"
                                                    FontSize="12"/>
                                     </DataTemplate>
