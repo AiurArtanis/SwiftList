@@ -33,7 +33,7 @@ public class QuickSearchWindowInputHandler
         // Modifiers == None guards this against Ctrl+Right (and any other Right combo), which should
         // fall through to its own handling below (e.g. StartupPanelNextTabHotkey) instead of always
         // opening the actions menu just because the underlying key happens to be the same.
-        if (e.Key == Key.Right && Keyboard.Modifiers == ModifierKeys.None && IsSearchCaretAtEnd())
+        if (e.Key == Key.Right && Keyboard.Modifiers == ModifierKeys.None && SearchInputHelper.IsSearchCaretAtEnd(_window))
         {
             if (_window.LstResults.SelectedItem is AppSearchResult result)
             {
@@ -265,9 +265,4 @@ public class QuickSearchWindowInputHandler
         }
         return path;
     }
-    private bool IsSearchCaretAtEnd() => _window.TxtSearch.IsKeyboardFocusWithin
-
-               && _window.TxtSearch.SelectionLength == 0
-
-               && _window.TxtSearch.CaretIndex >= _window.TxtSearch.Text.Length;
 }

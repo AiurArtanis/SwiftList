@@ -13,6 +13,13 @@ public static class SearchInputHelper
         return WpfUiHelper.MatchesHotkey(UserSettings.Load().Hotkeys.QuickLookHotkey, Keyboard.Modifiers, checkKey);
     }
 
+    // Shared by SearchWindow/QuickSearchWindow/InlineSearchWindow's own Right-arrow-opens-Actions check,
+    // so it only fires when Right would otherwise be a no-op for the caret (not moving it or collapsing a
+    // selection) instead of hijacking normal text-cursor movement while editing earlier in the query.
+    public static bool IsSearchCaretAtEnd(ISearchWindow window) => window.SearchTextBox.IsKeyboardFocusWithin
+        && window.SearchTextBox.SelectionLength == 0
+        && window.SearchTextBox.CaretIndex >= window.SearchTextBox.Text.Length;
+
     public static bool HandleActionsModeKeys(System.Windows.Input.KeyEventArgs e, ISearchWindow? window, ShellMenuPresenter? menuPresenter)
     {
         if (menuPresenter == null || !menuPresenter.IsInActionsMode)

@@ -262,10 +262,4 @@ public class SearchWindowInputHandler
 
         ActionFlyout.Show(selection, _window, _window, anchor, placement);
     }
-
-    private bool IsSearchCaretAtEnd() => _window.TxtSearchBoxControl.IsKeyboardFocusWithin
-
-               && _window.TxtSearchBoxControl.SelectionLength == 0
-
-               && _window.TxtSearchBoxControl.CaretIndex >= _window.TxtSearchBoxControl.Text.Length;
 }

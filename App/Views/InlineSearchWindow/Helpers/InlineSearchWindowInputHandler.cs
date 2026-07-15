@@ -94,8 +94,9 @@ public class InlineSearchWindowInputHandler
             return;
         }
 
-        // Right arrow
-        if (e.Key == Key.Right && noModifiers)
+        // Right arrow -- only opens Actions when the caret is already at the end of the query, so it
+        // doesn't hijack normal text-cursor movement while editing earlier in the search box.
+        if (e.Key == Key.Right && noModifiers && SearchInputHelper.IsSearchCaretAtEnd(_window))
         {
             if (_window.LstResults.SelectedItem is AppSearchResult result)
             {
