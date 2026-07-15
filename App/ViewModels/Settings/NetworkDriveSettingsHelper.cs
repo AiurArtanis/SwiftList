@@ -37,12 +37,7 @@ internal static class NetworkDriveSettingsHelper
                     var distroName = subKey?.GetValue("DistributionName") as string;
                     if (!string.IsNullOrEmpty(distroName))
                     {
-                        // Verify that the network path for the distro is actually accessible via \\wsl$
-                        var targetPath = $@"\\wsl$\{distroName}";
-                        if (System.IO.Directory.Exists(targetPath))
-                        {
-                            distros.Add(distroName);
-                        }
+                        distros.Add(distroName);
                     }
                 }
             }
