@@ -83,8 +83,7 @@ public partial class App : Application
             return;
         }
 
-        var serviceExe = ServiceInstallManager.GetServiceExePath();
-        HookClient = new Core.Hook.HookIpcClient(serviceExe, settings.AutoElevateIfAdmin);
+        HookClient = new Core.Hook.HookIpcClient();
 
         HookClient.OnMouseDoubleClick += (x, y) =>
         {

@@ -16,7 +16,8 @@ public enum SearchRequestId : byte
     GetFileMetadata = 11,
     ClearServiceLog = 12,
     GetRecentFiles = 13,
-    ClearPathCaches = 14
+    ClearPathCaches = 14,
+    LaunchHook = 15
 }
 
 public struct SearchRequestMessage
@@ -35,4 +36,7 @@ public struct SearchRequestMessage
     public List<string>? Directories { get; set; }
     // GetRecentFiles' max-age cutoff, in minutes.
     public int MaxAgeMinutes { get; set; }
+    // LaunchHook: whether the caller wants the hook elevated (only honored if that session's user is
+    // genuinely an administrator -- see HookProcessBroker).
+    public bool RequestElevation { get; set; }
 }

@@ -4,14 +4,8 @@ namespace SwiftList.Core.Hook;
 
 public sealed class HookIpcClient : IDisposable
 {
-    private readonly string _serviceExePath;
-    private readonly bool _autoElevate;
-    private bool _effectiveAutoElevate;
-    private int _consecutiveLaunchFailures;
-    // Retries every 5s (see RunLoop), so 3 misses covers ~15s of a stuck/denied elevation prompt
-    // before giving up on it for the rest of this session.
-    private const int MaxElevationFailuresBeforeFallback = 3;
     private Process? _hookProcess;
+    private readonly HookLaunchBroker _launchBroker = new();
     private NamedPipeClientStream? _eventPipe;
     private NamedPipeClientStream? _cmdPipe;
     private CancellationTokenSource? _cts;
@@ -71,11 +65,8 @@ public sealed class HookIpcClient : IDisposable
     public event Action? OnActiveWindowMoved;
     public event Action<string>? OnError;
 
-    public HookIpcClient(string serviceExePath, bool autoElevate)
+    public HookIpcClient()
     {
-        _serviceExePath = serviceExePath;
-        _autoElevate = autoElevate;
-        _effectiveAutoElevate = autoElevate;
     }
 
     public void Start()
@@ -124,28 +115,14 @@ public sealed class HookIpcClient : IDisposable
         {
             try
             {
-                _hookProcess = LaunchHookProcess();
+                _hookProcess = await LaunchHookProcessAsync(token).ConfigureAwait(false);
                 if (_hookProcess == null)
                 {
                     Logger.Log("[HookIpcClient] Failed to launch hook process.", LogLevel.Error);
-
-                    if (_effectiveAutoElevate && ++_consecutiveLaunchFailures >= MaxElevationFailuresBeforeFallback)
-                    {
-                        // Repeated failures while elevating (e.g. the UAC prompt keeps getting denied,
-                        // or is being suppressed) would otherwise retry forever, popping a fresh prompt
-                        // every cycle -- global hotkeys not working at all is worse than losing the
-                        // elevated-only capabilities, so fall back to a non-elevated hook for the rest
-                        // of this session.
-                        Logger.Log($"[HookIpcClient] Hook process failed to launch elevated {_consecutiveLaunchFailures} times in a row; falling back to a non-elevated hook for this session.", LogLevel.Error);
-                        _effectiveAutoElevate = false;
-                        _consecutiveLaunchFailures = 0;
-                    }
-
                     await Task.Delay(5000, token);
                     continue;
                 }
 
-                _consecutiveLaunchFailures = 0;
                 ServiceProcessId = _hookProcess.Id;
                 Logger.Log($"[HookIpcClient] Hook process launched (PID {_hookProcess.Id}), connecting to Event and Cmd pipes...", LogLevel.Debug);
                 await Task.Delay(500, token);
@@ -305,7 +282,10 @@ public sealed class HookIpcClient : IDisposable
         }
     }
 
-    private Process? LaunchHookProcess() => HookProcessLauncher.Launch(_serviceExePath, _effectiveAutoElevate);
+    // Always asks for elevation -- the Service only actually grants it when this session's user is
+    // genuinely an administrator (see HookProcessBroker), so there's nothing left for the App to decide.
+    private Task<Process?> LaunchHookProcessAsync(CancellationToken token) =>
+        _launchBroker.LaunchAsync(requestElevation: true, token);
 
     public void Dispose()
     {
@@ -313,5 +293,6 @@ public sealed class HookIpcClient : IDisposable
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
+        _launchBroker.Dispose();
     }
 }

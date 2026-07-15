@@ -28,6 +28,16 @@ public class SearchService : IDisposable
         return resp.Kind == PipeResponseKind.Ok;
     }
 
+    // Asks the already-running --service instance to spawn the hook process directly into this caller's
+    // own session (see HookProcessBroker) -- the App itself never launches the hook process anymore, so
+    // it never has a "runas" UAC prompt of its own to show. requestElevation is only honored server-side
+    // when that session's user is genuinely an administrator; otherwise it just launches non-elevated.
+    public async Task<(bool Ok, int Pid, string? Error)> RequestHookLaunchAsync(bool requestElevation, CancellationToken token = default)
+    {
+        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.LaunchHook, RequestElevation = requestElevation }, token).ConfigureAwait(false);
+        return resp.Kind == PipeResponseKind.HookLaunched ? (true, resp.Pid, null) : (false, 0, resp.Message);
+    }
+
     // Fire-and-forget, called whenever a search window closes/hides (mirrors ShellIconHelper.ClearCache()'s
     // existing trigger points) -- gives back the local drives' per-row full-path memo, which otherwise
     // only self-clears once it crosses its own high backstop threshold (see PathQueryExtensions).

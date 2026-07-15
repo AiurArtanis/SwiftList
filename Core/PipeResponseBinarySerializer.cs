@@ -11,7 +11,8 @@ public enum PipeResponseKind : byte
     Status = 3,
     MachineSettings = 4,
     FileMetadata = 5,
-    RecentFiles = 6
+    RecentFiles = 6,
+    HookLaunched = 7
 }
 public readonly struct PipeResponse
 {
@@ -21,6 +22,7 @@ public readonly struct PipeResponse
     public MachineSettings? MachineSettings { get; init; }
     public Dictionary<string, FileMetadataEntry>? FileMetadata { get; init; }
     public List<SearchResult>? RecentFiles { get; init; }
+    public int Pid { get; init; }
     public bool IsOk => Kind != PipeResponseKind.Error;
 }
 public static class PipeResponseBinarySerializer
@@ -38,6 +40,8 @@ public static class PipeResponseBinarySerializer
         => WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.MachineSettings, MachineSettings = settings }, token);
     public static Task WriteFileMetadataAsync(Stream stream, Dictionary<string, FileMetadataEntry> metadata, CancellationToken token = default)
         => WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.FileMetadata, FileMetadata = metadata }, token);
+    public static Task WriteHookLaunchAsync(Stream stream, int pid, CancellationToken token = default)
+        => WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.HookLaunched, Pid = pid }, token);
     public static async Task<PipeResponse> ReadAsync(Stream stream, CancellationToken token = default)
     {
         var magic = await ReadInt32Async(stream, token).ConfigureAwait(false);
@@ -64,6 +68,7 @@ public static class PipeResponseBinarySerializer
             PipeResponseKind.MachineSettings => new PipeResponse { Kind = kind, MachineSettings = ReadMachineSettings(payload, ref offset) },
             PipeResponseKind.FileMetadata => new PipeResponse { Kind = kind, FileMetadata = ReadFileMetadata(payload, ref offset) },
             PipeResponseKind.RecentFiles => new PipeResponse { Kind = kind, RecentFiles = RecentFilesResponseCodec.ReadRecentFiles(payload, ref offset) },
+            PipeResponseKind.HookLaunched => new PipeResponse { Kind = kind, Pid = ReadInt32(payload, ref offset) },
             _ => throw new InvalidDataException($"Unknown pipe response kind: {kind}.")
         };
     }
@@ -87,6 +92,9 @@ public static class PipeResponseBinarySerializer
                 break;
             case PipeResponseKind.RecentFiles:
                 payloadSize += RecentFilesResponseCodec.CalculateRecentFilesSize(response.RecentFiles ?? new List<SearchResult>());
+                break;
+            case PipeResponseKind.HookLaunched:
+                payloadSize += 4;
                 break;
         }
         var totalSize = 12 + payloadSize; // Magic(4) + Version(4) + Length(4) + Payload
@@ -113,6 +121,10 @@ public static class PipeResponseBinarySerializer
                     break;
                 case PipeResponseKind.RecentFiles:
                     RecentFilesResponseCodec.WriteRecentFiles(span, ref offset, response.RecentFiles ?? new List<SearchResult>());
+                    break;
+                case PipeResponseKind.HookLaunched:
+                    BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), response.Pid);
+                    offset += 4;
                     break;
             }
 
@@ -239,6 +251,13 @@ public static class PipeResponseBinarySerializer
                 return (int)result;
         }
         throw new FormatException("Invalid 7-bit encoded integer.");
+    }
+
+    private static int ReadInt32(byte[] buffer, ref int offset)
+    {
+        var value = BinaryPrimitives.ReadInt32LittleEndian(buffer.AsSpan(offset));
+        offset += 4;
+        return value;
     }
 
     internal static string ReadString(byte[] buffer, ref int offset)

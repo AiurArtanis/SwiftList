@@ -110,6 +110,15 @@ public sealed class UsnServicePipeServer : IDisposable
                         continue;
                     }
 
+                    if (request.Id == SearchRequestId.LaunchHook)
+                    {
+                        var hookResponse = HookLaunchRequestHandler.Handle(pipe, request.RequestElevation);
+                        await WriteControlResponseAsync(pipe, hookResponse, token);
+                        if (verboseLog)
+                            Logger.Log("[PipeServer] Response sent.", LogLevel.Debug);
+                        continue;
+                    }
+
                     if (!pipe.IsConnected)
                     {
                         break;
@@ -273,6 +282,7 @@ public sealed class UsnServicePipeServer : IDisposable
         PipeResponseKind.MachineSettings => PipeResponseBinarySerializer.WriteMachineSettingsAsync(stream, response.MachineSettings ?? new MachineSettings(), token),
         PipeResponseKind.FileMetadata => PipeResponseBinarySerializer.WriteFileMetadataAsync(stream, response.FileMetadata ?? new Dictionary<string, FileMetadataEntry>(), token),
         PipeResponseKind.RecentFiles => RecentFilesResponseCodec.WriteRecentFilesAsync(stream, response.RecentFiles ?? new List<SearchResult>(), token),
+        PipeResponseKind.HookLaunched => PipeResponseBinarySerializer.WriteHookLaunchAsync(stream, response.Pid, token),
         _ => PipeResponseBinarySerializer.WriteErrorAsync(stream, "Unknown response kind", token)
     };
 

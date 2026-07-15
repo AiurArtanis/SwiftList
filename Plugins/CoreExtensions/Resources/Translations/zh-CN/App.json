@@ -168,7 +168,6 @@
   "General_SysTitle": "系统",
   "General_SysHint": "控制开机启动方式、日志级别、界面语言与主题。",
   "General_Startup": "开机自动启动 SwiftList",
-  "General_AutoElevate": "以管理员权限启动热键监听进程 (解决高权限窗口下快捷键失效)",
   "General_AutoCheckUpdates": "启动时自动检查更新",
   "General_AutoSilentUpdate": "自动静默更新 (检测到新版本时)",
   "General_HardwareAcceleration": "启用硬件加速 (需重启程序)",

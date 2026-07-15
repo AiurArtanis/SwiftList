@@ -66,7 +66,6 @@ public static class SettingsSearchIndex
         new("Settings_General", "General"),
         new("General_SysTitle", "General", vm => vm.General.SelectedTab = "System", "TabSystem"),
         new("General_Startup", "General", vm => vm.General.SelectedTab = "System", "RowStartup", "General_SysTitle"),
-        new("General_AutoElevate", "General", vm => vm.General.SelectedTab = "System", "RowAutoElevate", "General_SysTitle"),
         new("General_AutoCheckUpdates", "General", vm => vm.General.SelectedTab = "System", "RowAutoCheckUpdates", "General_SysTitle"),
         new("General_AutoSilentUpdate", "General", vm => vm.General.SelectedTab = "System", "RowAutoSilentUpdate", "General_SysTitle"),
         new("General_HardwareAcceleration", "General", vm => vm.General.SelectedTab = "System", "RowHardwareAcceleration", "General_SysTitle"),

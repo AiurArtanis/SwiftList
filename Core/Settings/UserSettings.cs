@@ -29,7 +29,6 @@ public class UserSettings
     public bool EnableHistory { get; set; } = true;
     public bool EnableKeywordHistory { get; set; } = true;
     public bool StartWithWindows { get; set; } = true;
-    public bool AutoElevateIfAdmin { get; set; }
     public bool AutoCheckUpdates { get; set; } = true;
     public bool AutoSilentUpdate { get; set; } = false;
     // Applied only to QuickSearchWindow (Window_Loaded), not process-wide -- see GitHub issue #82

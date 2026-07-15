@@ -182,11 +182,6 @@
                                IsChecked="{Binding General.StartWithWindows, Mode=TwoWay}"
                                Margin="0,4"/>
 
-                    <CheckBox x:Name="RowAutoElevate" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_AutoElevate]}"
-                               IsChecked="{Binding General.AutoElevateIfAdmin, Mode=TwoWay}"
-                               IsEnabled="{Binding General.IsUserAdmin}"
-                               Margin="0,4"/>
-
                     <CheckBox x:Name="RowAutoCheckUpdates" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_AutoCheckUpdates]}"
                                IsChecked="{Binding General.AutoCheckUpdates, Mode=TwoWay}"
                                Margin="0,4"/>

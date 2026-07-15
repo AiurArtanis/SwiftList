@@ -15,7 +15,6 @@ public class GeneralSettingsViewModel : ViewModelBase
     // Staged edits -- everything below except SelectedTheme/PreferredLanguage (which apply live for
     // instant preview) only commits to _userSettings when Apply() runs (Settings window's Apply/OK).
     private bool _startWithWindows;
-    private bool _autoElevateIfAdmin;
     private bool _autoCheckUpdates;
     private bool _autoSilentUpdate;
     private bool _enableHardwareAcceleration;
@@ -40,7 +39,6 @@ public class GeneralSettingsViewModel : ViewModelBase
         Theme = new ThemeSettingsViewModel(userSettings);
 
         _startWithWindows = userSettings.StartWithWindows;
-        _autoElevateIfAdmin = userSettings.AutoElevateIfAdmin;
         _autoCheckUpdates = userSettings.AutoCheckUpdates;
         _autoSilentUpdate = userSettings.AutoSilentUpdate;
         _enableHardwareAcceleration = userSettings.EnableHardwareAcceleration;
@@ -116,12 +114,6 @@ public class GeneralSettingsViewModel : ViewModelBase
         set => SetProperty(ref _startWithWindows, value);
     }
 
-    public bool AutoElevateIfAdmin
-    {
-        get => _autoElevateIfAdmin;
-        set => SetProperty(ref _autoElevateIfAdmin, value);
-    }
-
     public bool AutoCheckUpdates
     {
         get => _autoCheckUpdates;
@@ -171,7 +163,6 @@ public class GeneralSettingsViewModel : ViewModelBase
         var logLevelChanged = _userSettings.LogLevel != LogLevel;
 
         _userSettings.StartWithWindows = _startWithWindows;
-        _userSettings.AutoElevateIfAdmin = _autoElevateIfAdmin;
         _userSettings.AutoCheckUpdates = _autoCheckUpdates;
         if (IsUserAdmin)
             _userSettings.AutoSilentUpdate = _autoSilentUpdate;

@@ -33,6 +33,9 @@ public static class SearchRequestBinarySerializer
             case SearchRequestId.GetRecentFiles:
                 payloadSize += 8 + CalculateStringListSize(msg.Directories);
                 break;
+            case SearchRequestId.LaunchHook:
+                payloadSize += 1;
+                break;
         }
 
         var totalSize = 12 + payloadSize; // Magic(4) + Version(4) + Length(4) + Payload
@@ -78,6 +81,9 @@ public static class SearchRequestBinarySerializer
                     BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), msg.MaxAgeMinutes);
                     offset += 4;
                     WriteStringList(span, ref offset, msg.Directories);
+                    break;
+                case SearchRequestId.LaunchHook:
+                    span[offset++] = (byte)(msg.RequestElevation ? 1 : 0);
                     break;
             }
 
@@ -150,6 +156,9 @@ public static class SearchRequestBinarySerializer
                 msg.MaxAgeMinutes = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
                 offset += 4;
                 msg.Directories = ReadStringList(payload, ref offset);
+                break;
+            case SearchRequestId.LaunchHook:
+                msg.RequestElevation = payload[offset++] != 0;
                 break;
         }
 
