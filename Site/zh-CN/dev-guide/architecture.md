@@ -14,7 +14,8 @@ SwiftList 运行为三个独立进程，按权限级别和生命周期有意拆�
   单/QuickLook 界面都在这里。它通过命名管道(`Core.Services` 里的 `SearchService`/
   `UsnServicePipeServer`)和 Service 通信，从不直接访问磁盘索引。
 - **`SwiftList.Service --hook`** —— 一个独立的小进程，专门托管低层级全局键盘钩子，这样钩子崩溃
-  或者某个前台应用行为异常都不会连累主 App 进程。
+  或者某个前台应用行为异常都不会连累主 App 进程。它还会加载插件的窗口集成适配器，并在自己进程里
+  执行这些调用——见下文[插件在架构中的位置](#插件在架构中的位置)。
 
 ## 共享的 Core
 
@@ -39,3 +40,10 @@ SwiftList 运行为三个独立进程，按权限级别和生命周期有意拆�
 
 插件从不直接和 Service 通信;它们通过插件 SDK 参考里记录的接口和 App 交互，如果需要索引自定义目
 录，则通过 `DirectoryIndexerService` 代为向 Service 转发请求。
+
+窗口集成类适配器是"只在 App 里跑"这条规则的唯一例外:
+[`IActivePathCollector`、`IFileDialogAdapter`、`IInlineSearchAdapter`](./sdk/system-adapters) 的实现
+会被再加载一份到 Hook 进程里，它们的调用实际在 Hook 进程里执行，而不是在 App 里。这也是为什么
+SwiftList 能操作一个以管理员身份运行的文件资源管理器/文件对话框/第三方文件管理器窗口——即使 App
+本身从来不提权:Windows 不允许低权限进程向高权限进程发送输入，所以这类调用必须从一个和目标窗口权
+限级别相同的进程发起。

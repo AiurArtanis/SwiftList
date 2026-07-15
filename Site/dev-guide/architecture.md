@@ -17,7 +17,8 @@ SwiftList runs as three separate processes, deliberately isolated by privilege l
   index directly.
 - **`SwiftList.Service --hook`** — a small separate process hosting the low-level global keyboard
   hook, so a hook crash or a misbehaving foreground app can't take the main App process down with
-  it.
+  it. It also loads plugins' window-integration adapters and runs their calls itself — see
+  [Where plugins fit](#where-plugins-fit) below.
 
 ## Shared Core
 
@@ -44,3 +45,11 @@ aliasing for Chinese filenames) — see [Example Plugins](./examples) for a walk
 Plugins never talk to the Service directly; they interact with the App through the interfaces
 documented in the Plugin SDK Reference, and with the disk index (when they need custom indexed
 directories) through `DirectoryIndexerService`, which proxies to the Service on their behalf.
+
+Window-integration adapters are the one exception to being App-only:
+[`IActivePathCollector`, `IFileDialogAdapter`, and `IInlineSearchAdapter`](./sdk/system-adapters)
+implementations are loaded a second time into the Hook process, and their calls run there instead
+of in the App. This is what lets SwiftList drive an elevated File Explorer/file dialog/third-party
+file manager window even though the App itself always runs unelevated — Windows blocks a
+lower-privilege process from sending input to a higher-privilege one, so the call has to originate
+from a process running at the same privilege level as the target.
