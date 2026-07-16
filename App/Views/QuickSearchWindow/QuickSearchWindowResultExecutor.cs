@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using SwiftList.App.Services;
+using SwiftList.App.ViewModels.Search;
 using SwiftList.Core;
 using ListBoxItem = System.Windows.Controls.ListBoxItem;
 
@@ -42,7 +43,7 @@ public class QuickSearchWindowResultExecutor
             return;
         if (!result.IsPluginSearchAction && !result.IsInstantResult)
         {
-            SearchHistoryStore.Record(result.IsApplication ? "app:" + result.FullPath : result.FullPath);
+            SearchHistoryStore.Record(_window.TxtSearch.Text, result.FullPath, SearchResultHelper.HistoryKindOf(result));
         }
 
         if (result.IsPluginSearchAction)

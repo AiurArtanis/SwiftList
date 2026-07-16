@@ -88,7 +88,11 @@ public static class SearchResultMapper
 
         foreach (var (result, weight) in SearchableItemMapper.CollectSearchableItemResults(query, isInlineWindow))
         {
-            var lookupPath = result.IsApplication ? "app:" + result.FullPath : SearchResultHelper.NormalizePath(result.FullPath);
+            // An application's FullPath can be a virtual shell:AppsFolder\{AUMID} id (packaged apps) --
+            // Path.GetFullPath (inside NormalizePath) would mangle that, and SearchHistoryStore itself
+            // never runs it through NormalizePath either (see SearchHistoryStore.RecordCore), so the
+            // lookup key has to skip it here too or an app's history priority would never resolve.
+            var lookupPath = result.IsApplication ? result.FullPath.Trim() : SearchResultHelper.NormalizePath(result.FullPath);
             var hasHistory = historySnapshot.TryGetValue(lookupPath, out var priority);
             candidates.Add(new RankedCandidate(
                 result,

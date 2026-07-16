@@ -17,13 +17,13 @@ public class HistorySettingsViewModel : ViewModelBase
     {
         _userSettings = userSettings;
 
-        SearchHistory = new HistoryListViewModel(
-            SearchHistoryStore.GetEntries,
+        SearchHistory = new HistoryListViewModel<HistoryEntry>(
+            () => SearchHistoryStore.GetEntries().ToList(),
             MapSearchEntry,
             () => _userSettings.EnableHistory,
             v => _userSettings.EnableHistory = v);
 
-        KeywordHistory = new HistoryListViewModel(
+        KeywordHistory = new HistoryListViewModel<string>(
             KeywordHistoryStore.GetEntries,
             MapKeywordEntry,
             () => _userSettings.EnableKeywordHistory,
@@ -38,35 +38,37 @@ public class HistorySettingsViewModel : ViewModelBase
 
     public ICommand SelectTabCommand => _selectTabCommand ??= new RelayCommand<string>(tab => SelectedTab = tab);
 
-    public HistoryListViewModel SearchHistory { get; }
-    public HistoryListViewModel KeywordHistory { get; }
+    public HistoryListViewModel<HistoryEntry> SearchHistory { get; }
+    public HistoryListViewModel<string> KeywordHistory { get; }
 
-    private const string FileIconGlyph = "";
-    private const string FolderIconGlyph = "";
-    private const string KeywordIconGlyph = "";
+    private const string FileIconGlyph = "";
+    private const string FolderIconGlyph = "";
+    private const string ApplicationIconGlyph = "";
+    private const string KeywordIconGlyph = "";
 
-    private static HistoryEntryViewModel MapSearchEntry(string path)
+    private static HistoryEntryViewModel<HistoryEntry> MapSearchEntry(HistoryEntry entry)
     {
-        // App-type entries carry a leading "app:" marker (see HistoryService.IsAppEntry) so this list
-        // shows the underlying app path/id, not the raw marker -- RawValue keeps the marker so saving
-        // the list back doesn't lose it.
-        var rawPath = HistoryService.GetRawPath(path);
-        var isVirtual = rawPath.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) || rawPath.StartsWith("::", StringComparison.Ordinal);
-        var isDir = !isVirtual && Directory.Exists(rawPath);
+        var isVirtual = entry.Path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) || entry.Path.StartsWith("::", StringComparison.Ordinal);
         var primary = isVirtual
-            ? ShellPathHelper.GetVirtualFolderDisplayName(rawPath, rawPath)
-            : (Path.GetFileName(rawPath) is { Length: > 0 } name ? name : rawPath);
-
-        return new HistoryEntryViewModel
+            ? ShellPathHelper.GetVirtualFolderDisplayName(entry.Path, entry.Path)
+            : (Path.GetFileName(entry.Path) is { Length: > 0 } name ? name : entry.Path);
+        var iconGlyph = entry.Kind switch
         {
-            RawValue = path,
+            HistoryEntryKind.Folder => FolderIconGlyph,
+            HistoryEntryKind.Application => ApplicationIconGlyph,
+            _ => FileIconGlyph
+        };
+
+        return new HistoryEntryViewModel<HistoryEntry>
+        {
+            RawValue = entry,
             Primary = primary,
-            Secondary = rawPath,
-            IconGlyph = isDir ? FolderIconGlyph : FileIconGlyph
+            Secondary = entry.Path,
+            IconGlyph = iconGlyph
         };
     }
 
-    private static HistoryEntryViewModel MapKeywordEntry(string keyword) => new()
+    private static HistoryEntryViewModel<string> MapKeywordEntry(string keyword) => new()
     {
         RawValue = keyword,
         Primary = keyword,

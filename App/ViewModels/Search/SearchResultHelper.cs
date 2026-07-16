@@ -1,11 +1,15 @@
 using System.IO;
 using SwiftList.Core;
 using SwiftList.App.Services;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.App.ViewModels.Search;
 
 internal static class SearchResultHelper
 {
+    public static HistoryEntryKind HistoryKindOf(AppSearchResult result) =>
+        result.IsApplication ? HistoryEntryKind.Application : result.IsDir ? HistoryEntryKind.Folder : HistoryEntryKind.File;
+
     public static void AddSectionHeader(List<AppSearchResult> uiResults, string title, string query) => uiResults.Add(new AppSearchResult
     {
         Name = title,

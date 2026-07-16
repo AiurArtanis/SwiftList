@@ -63,8 +63,7 @@ public class PluginManager : PluginRegistry
             UserSettings.Load().GetPluginSetting(pluginId, key, defaultValue);
 
         // Wire up the history service delegate for plugins using Core SearchHistoryStore
-        PluginSdk.Services.HistoryService.GetHistoryPathsFunc = () =>
-            SearchHistoryStore.GetEntries();
+        PluginSdk.Services.HistoryService.GetHistoryEntriesFunc = SearchHistoryStore.GetEntries;
 
         // Wire up the favorites service delegate for plugins using Core UserSettings
         PluginSdk.Services.FavoritesService.GetFavoritesFunc = () =>

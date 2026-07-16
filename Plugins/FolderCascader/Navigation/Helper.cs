@@ -15,7 +15,7 @@ public static class Helper
     private static readonly object _iconLock = new();
     private static readonly Dictionary<string, IntPtr> _extensionIconCache = new(StringComparer.OrdinalIgnoreCase);
 
-    public static List<string> GetHistoryPaths() => HistoryService.GetHistoryPaths().Take(30).ToList();
+    public static List<HistoryEntry> GetRecentHistoryEntries() => HistoryService.GetHistoryEntries().Take(30).ToList();
 
     public static List<string> GetOpenedExplorerPaths()
     {

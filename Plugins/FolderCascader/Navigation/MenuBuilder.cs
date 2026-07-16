@@ -84,7 +84,7 @@ public static class MenuBuilder
                 });
             }
 
-            if (showHistory && Helper.GetHistoryPaths().Count > 0)
+            if (showHistory && Helper.GetRecentHistoryEntries().Count > 0)
             {
                 if (items.Count > 0 && !items.Last().IsSeparator)
                 {
@@ -116,21 +116,21 @@ public static class MenuBuilder
 
             if (path == "foldercascader://history")
             {
-                var recentPaths = Helper.GetHistoryPaths();
-                foreach (var rpath in recentPaths)
+                var recentEntries = Helper.GetRecentHistoryEntries();
+                foreach (var entry in recentEntries)
                 {
+                    var rpath = entry.Path;
                     if (string.IsNullOrWhiteSpace(rpath)) continue;
 
                     // An app-type entry is always a launchable leaf, never a browsable folder -- and
-                    // its raw path (a real exe path, or a virtual shell:AppsFolder\{AUMID} id) can't be
+                    // its path (a real exe path, or a virtual shell:AppsFolder\{AUMID} id) can't be
                     // existence-checked with Directory.Exists/File.Exists the way a real path can.
-                    if (HistoryService.IsAppEntry(rpath))
+                    if (entry.Kind == HistoryEntryKind.Application)
                     {
-                        var appPath = HistoryService.GetRawPath(rpath);
                         items.Add(new DynamicMenuItem
                         {
-                            Text = GetDisplayName(appPath, ""),
-                            CommandId = provider.AllocateCommand(appPath),
+                            Text = GetDisplayName(rpath, ""),
+                            CommandId = provider.AllocateCommand(rpath),
                             HBitmapItem = IntPtr.Zero
                         });
                     }

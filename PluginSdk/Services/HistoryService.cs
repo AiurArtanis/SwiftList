@@ -1,33 +1,32 @@
 namespace SwiftList.PluginSdk.Services;
 
 /// <summary>
+/// What kind of target a <see cref="HistoryEntry"/> points to -- replaces the old "app:"-prefix
+/// convention with an explicit field so callers never have to guess/parse it back out.
+/// </summary>
+public enum HistoryEntryKind { File, Folder, Application }
+
+/// <summary>
+/// One recorded history entry: the search keyword that led to it (empty if opened directly, e.g. from
+/// a Startup Panel tab with no query typed), the target path/id, its kind, and when it was opened
+/// (Unix seconds). A path appears at most once -- if it's opened again under a different keyword, the
+/// newer keyword replaces the older one rather than both coexisting.
+/// </summary>
+public readonly record struct HistoryEntry(string Keyword, string Path, HistoryEntryKind Kind, long Time);
+
+/// <summary>
 /// A decoupled service to retrieve search and navigation history from the host application.
 /// </summary>
 public static class HistoryService
 {
     /// <summary>
-    /// Delegate function set by the host application to retrieve history paths.
+    /// Delegate function set by the host application to retrieve history entries.
     /// </summary>
-    public static Func<IEnumerable<string>>? GetHistoryPathsFunc { get; set; }
+    public static Func<IEnumerable<HistoryEntry>>? GetHistoryEntriesFunc { get; set; }
 
     /// <summary>
-    /// Retrieves the list of recently visited paths.
+    /// Retrieves every recorded history entry (each path appears at most once), most-recently-opened
+    /// first.
     /// </summary>
-    public static IEnumerable<string> GetHistoryPaths() => GetHistoryPathsFunc?.Invoke() ?? Array.Empty<string>();
-
-    private const string AppPrefix = "app:";
-
-    /// <summary>
-    /// Whether a history entry refers to a Start-Menu application rather than a file/folder path.
-    /// The host marks these with a leading "app:" so a plain <c>File.Exists</c>/<c>Directory.Exists</c>
-    /// check never has to run against them -- a packaged app's target can be a virtual
-    /// <c>shell:AppsFolder\{AUMID}</c> path, not a real filesystem path.
-    /// </summary>
-    public static bool IsAppEntry(string entry) => !string.IsNullOrEmpty(entry) && entry.StartsWith(AppPrefix, StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// The entry's underlying path/id with the "app:" marker (if any) stripped -- what to actually
-    /// open, display, or (for a non-app entry) check for existence.
-    /// </summary>
-    public static string GetRawPath(string entry) => IsAppEntry(entry) ? entry.Substring(AppPrefix.Length) : entry;
+    public static IEnumerable<HistoryEntry> GetHistoryEntries() => GetHistoryEntriesFunc?.Invoke() ?? Array.Empty<HistoryEntry>();
 }

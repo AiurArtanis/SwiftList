@@ -8,20 +8,22 @@ namespace SwiftList.App.ViewModels.Settings;
 /// <summary>
 /// Backs the reusable history list UI (search box, scrollable entries, remove/clear, enable toggle).
 /// Shared by the "search history" and "keyword history" tabs -- each supplies its own storage and how
-/// a raw stored string maps to a displayable entry.
+/// a raw stored entry (a <see cref="PluginSdk.Services.HistoryEntry"/> for search history, a bare
+/// keyword string for keyword history) maps to a displayable row, and gets it back unchanged from
+/// <see cref="GetEntriesToSave"/> to persist.
 /// </summary>
-public class HistoryListViewModel : ViewModelBase
+public class HistoryListViewModel<T> : ViewModelBase
 {
-    private readonly Func<IReadOnlyList<string>> _loadEntries;
-    private readonly Func<string, HistoryEntryViewModel> _mapEntry;
+    private readonly Func<IReadOnlyList<T>> _loadEntries;
+    private readonly Func<T, HistoryEntryViewModel<T>> _mapEntry;
     private readonly Func<bool> _getEnabled;
     private readonly Action<bool> _setEnabled;
-    private readonly List<HistoryEntryViewModel> _allItems = new();
+    private readonly List<HistoryEntryViewModel<T>> _allItems = new();
     private string _searchText = string.Empty;
 
     public HistoryListViewModel(
-        Func<IReadOnlyList<string>> loadEntries,
-        Func<string, HistoryEntryViewModel> mapEntry,
+        Func<IReadOnlyList<T>> loadEntries,
+        Func<T, HistoryEntryViewModel<T>> mapEntry,
         Func<bool> getEnabled,
         Action<bool> setEnabled)
     {
@@ -33,8 +35,8 @@ public class HistoryListViewModel : ViewModelBase
         foreach (var raw in _loadEntries())
             _allItems.Add(_mapEntry(raw));
 
-        FilteredItems = new ObservableCollection<HistoryEntryViewModel>(_allItems);
-        RemoveItemCommand = new RelayCommand<HistoryEntryViewModel>(RemoveItem);
+        FilteredItems = new ObservableCollection<HistoryEntryViewModel<T>>(_allItems);
+        RemoveItemCommand = new RelayCommand<HistoryEntryViewModel<T>>(RemoveItem);
         ClearAllCommand = new RelayCommand(ClearAll);
     }
 
@@ -51,7 +53,7 @@ public class HistoryListViewModel : ViewModelBase
         }
     }
 
-    public ObservableCollection<HistoryEntryViewModel> FilteredItems { get; }
+    public ObservableCollection<HistoryEntryViewModel<T>> FilteredItems { get; }
     public ICommand RemoveItemCommand { get; }
     public ICommand ClearAllCommand { get; }
 
@@ -65,7 +67,7 @@ public class HistoryListViewModel : ViewModelBase
         }
     }
 
-    private void RemoveItem(HistoryEntryViewModel? item)
+    private void RemoveItem(HistoryEntryViewModel<T>? item)
     {
         if (item == null) return;
         _allItems.Remove(item);
@@ -96,14 +98,14 @@ public class HistoryListViewModel : ViewModelBase
     }
 
     /// <summary>Returns the current entries (in their edited order) for the caller to persist.</summary>
-    public IEnumerable<string> GetEntriesToSave() => _allItems.Select(x => x.RawValue);
+    public IEnumerable<T> GetEntriesToSave() => _allItems.Select(x => x.RawValue);
 }
 
-/// <summary>One row in the history list -- a file/folder path (with a subtitle) or a bare keyword.</summary>
-public class HistoryEntryViewModel : ViewModelBase
+/// <summary>One row in the history list -- a file/folder/app path (with a subtitle) or a bare keyword.</summary>
+public class HistoryEntryViewModel<T> : ViewModelBase
 {
-    public string RawValue { get; set; } = string.Empty;
-    public string Primary { get; set; } = string.Empty;
-    public string Secondary { get; set; } = string.Empty;
-    public string IconGlyph { get; set; } = "";
+    public required T RawValue { get; init; }
+    public string Primary { get; init; } = string.Empty;
+    public string Secondary { get; init; } = string.Empty;
+    public string IconGlyph { get; init; } = "";
 }

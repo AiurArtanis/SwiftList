@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using SwiftList.App.Services;
 using SwiftList.App.Helpers;
+using SwiftList.App.ViewModels.Search;
 using SwiftList.Core;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 namespace SwiftList.App.Views.QuickSearchWindow;
@@ -195,7 +196,7 @@ public class QuickSearchWindowInputHandler
             return;
         if (!result.IsPluginSearchAction && !result.IsInstantResult)
         {
-            SearchHistoryStore.Record(result.IsApplication ? "app:" + result.FullPath : result.FullPath);
+            SearchHistoryStore.Record(_window.TxtSearch.Text, result.FullPath, SearchResultHelper.HistoryKindOf(result));
         }
         if (result.IsPluginSearchAction)
         {
