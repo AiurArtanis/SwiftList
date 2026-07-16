@@ -17,17 +17,12 @@ public static class MenuBuilder
             provider.ClearSession();
             var items = new List<DynamicMenuItem>();
 
-            var defaults = new List<FolderCascaderPlugin.FolderConfigItem>
-            {
-                new FolderCascaderPlugin.FolderConfigItem { Name = "", Path = "shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}" },
-                new FolderCascaderPlugin.FolderConfigItem { Name = "", Path = "shell:::{20d04fe0-3aea-1069-a2d8-08002b30309d}" },
-                new FolderCascaderPlugin.FolderConfigItem { Name = "", Path = "shell:::{450d8fba-ad25-11d0-98a8-0800361b1103}" }
-            };
-
+            // Unpersisted falls back to FolderCascaderPlugin's own schema DefaultValue automatically
+            // -- see PluginManager.GetSettingFunc -- so there's no separate hardcoded default here.
             var folders = PluginSettingsService.GetSetting(
                 "SwiftList.Plugins.FolderCascader",
                 "Folders",
-                defaults);
+                new List<FolderCascaderPlugin.FolderConfigItem>());
 
             if (folders != null)
             {

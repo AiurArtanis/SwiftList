@@ -38,15 +38,12 @@ public class ShellThumbnailProvider : IThumbnailProvider
             if (_supportedExtensions != null)
                 return _supportedExtensions;
 
-            var defaultList = new List<string>
-            {
-                ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".ico", ".tiff", ".tif",
-                ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".m4v"
-            };
-
             try
             {
-                var list = PluginSettingsService.GetSetting(PluginId, SettingKey, defaultList);
+                // Unpersisted falls back to this plugin's own schema DefaultValue automatically --
+                // see PluginManager.GetSettingFunc -- so there's no separate hardcoded default list
+                // to keep in sync with CoreExtensionsPlugin's schema here.
+                var list = PluginSettingsService.GetSetting(PluginId, SettingKey, new List<string>());
                 if (list != null)
                 {
                     _supportedExtensions = new HashSet<string>(list, StringComparer.OrdinalIgnoreCase);
@@ -57,7 +54,7 @@ public class ShellThumbnailProvider : IThumbnailProvider
                 _supportedExtensions = null;
             }
 
-            _supportedExtensions ??= new HashSet<string>(defaultList, StringComparer.OrdinalIgnoreCase);
+            _supportedExtensions ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
         return _supportedExtensions;
     }
