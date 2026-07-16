@@ -36,6 +36,11 @@ public class PluginManager : PluginRegistry
     private readonly List<PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider> _startupPanelTabProviders = new();
     private uint _nextRuntimeActionId = 0x80000000;
 
+    // pluginId -> (field Key -> schema DefaultValue), built once after all plugins are loaded, so
+    // GetSettingFunc can fall back to a plugin's own declared default without every call site needing
+    // to duplicate it in code. See PluginLoaderHelper.BuildSchemaDefaultsMap.
+    private Dictionary<string, Dictionary<string, object?>> _pluginSchemaDefaults = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly ComponentFilter _filter = new();
 
     private PluginManager()
@@ -58,9 +63,24 @@ public class PluginManager : PluginRegistry
         PluginSdk.Registries.InlineSearchAdapterRegistry.FilterFunc = prov =>
             _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.InlineSearchAdapter, prov.GetType().Name);
 
-        // Wire up the settings delegate for plugins using the in-memory UserSettings cache
+        // Wire up the settings delegate for plugins using the in-memory UserSettings cache. Falls back
+        // to the plugin's own schema-declared DefaultValue (see _pluginSchemaDefaults) when nothing has
+        // been persisted yet, before falling back to whatever default the call site itself passed in --
+        // so a plugin's config schema is the single source of truth for its defaults instead of needing
+        // a second hardcoded copy in code for the "never opened settings" case.
         PluginSdk.Services.PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
-            UserSettings.Load().GetPluginSetting(pluginId, key, defaultValue);
+        {
+            var settings = UserSettings.Load();
+            if (settings.PluginSettings.TryGetValue(pluginId, out var pluginDict) && pluginDict.ContainsKey(key))
+            {
+                return settings.GetPluginSetting<object?>(pluginId, key, defaultValue);
+            }
+            if (_pluginSchemaDefaults.TryGetValue(pluginId, out var fieldDefaults) && fieldDefaults.TryGetValue(key, out var schemaDefault))
+            {
+                return schemaDefault;
+            }
+            return defaultValue;
+        };
 
         // Wire up the history service delegate for plugins using Core SearchHistoryStore
         PluginSdk.Services.HistoryService.GetHistoryEntriesFunc = SearchHistoryStore.GetEntries;
@@ -94,6 +114,10 @@ public class PluginManager : PluginRegistry
         _ = CoreDirectoryIndexManager.Instance;
 
         PluginLoader.Load(this);
+
+        // Must run after PluginLoader.Load so every plugin's IConfigurable is discoverable; must pass
+        // `this` rather than PluginManager.Instance since Instance's Lazy<T> is still initializing here.
+        _pluginSchemaDefaults = Helpers.PluginLoaderHelper.BuildSchemaDefaultsMap(this);
     }
 
     // ── PluginRegistry callbacks ──────────────────────────────────────────

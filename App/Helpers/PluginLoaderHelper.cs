@@ -109,35 +109,96 @@ public static class PluginLoaderHelper
     {
         try
         {
-            var configurableType = assembly.GetTypes()
-                .FirstOrDefault(t => typeof(IConfigurable).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
-            if (configurableType != null)
+            var configurableInstance = ResolveConfigurable(assembly, pluginInstance);
+            if (configurableInstance != null)
             {
-                IConfigurable? configurableInstance = null;
-                if (pluginInstance != null && configurableType.IsAssignableFrom(pluginInstance.GetType()))
+                var schema = configurableInstance.GetConfigSchema();
+                if (schema != null && schema.Fields != null)
                 {
-                    configurableInstance = (IConfigurable)pluginInstance;
-                }
-                else
-                {
-                    configurableInstance = Activator.CreateInstance(configurableType) as IConfigurable;
-                }
-
-                if (configurableInstance != null)
-                {
-                    var schema = configurableInstance.GetConfigSchema();
-                    if (schema != null && schema.Fields != null)
+                    var pluginId = Path.GetFileNameWithoutExtension(dllName);
+                    foreach (var field in schema.Fields)
                     {
-                        var pluginId = Path.GetFileNameWithoutExtension(dllName);
-                        foreach (var field in schema.Fields)
-                        {
-                            configFields.Add(new PluginConfigFieldViewModel(pluginId, field, userSettings));
-                        }
+                        configFields.Add(new PluginConfigFieldViewModel(pluginId, field, userSettings));
                     }
                 }
             }
         }
         catch { }
+    }
+
+    /// <summary>Finds this assembly's IConfigurable component (at most one is currently supported per
+    /// assembly), reusing the plugin instance if it implements IConfigurable itself, else creating a
+    /// throwaway instance just to call GetConfigSchema().</summary>
+    private static IConfigurable? ResolveConfigurable(Assembly assembly, IPlugin? pluginInstance)
+    {
+        var configurableType = assembly.GetTypes()
+            .FirstOrDefault(t => typeof(IConfigurable).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+        if (configurableType == null)
+            return null;
+
+        if (pluginInstance != null && configurableType.IsAssignableFrom(pluginInstance.GetType()))
+            return (IConfigurable)pluginInstance;
+
+        return Activator.CreateInstance(configurableType) as IConfigurable;
+    }
+
+    /// <summary>Builds a pluginId -> (field Key -> schema DefaultValue) map from every loaded plugin's
+    /// IConfigurable.GetConfigSchema(), so PluginSettingsService.GetSetting can fall back to a plugin's
+    /// own declared default when nothing has been persisted yet, instead of every call site needing to
+    /// duplicate that default in code. Group fields' SubFields are flattened in (they persist as
+    /// independent top-level keys -- see PluginConfigFieldViewModel.Commit); Array/Object fields' own
+    /// SubFields describe their single stored value's shape and are left nested under that field's Key.</summary>
+    public static Dictionary<string, Dictionary<string, object?>> BuildSchemaDefaultsMap(PluginManager manager)
+    {
+        var result = new Dictionary<string, Dictionary<string, object?>>(StringComparer.OrdinalIgnoreCase);
+
+        var pluginsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins");
+        if (!Directory.Exists(pluginsDir))
+            return result;
+
+        var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => !a.IsDynamic && a.Location.StartsWith(pluginsDir, StringComparison.OrdinalIgnoreCase));
+
+        foreach (var assembly in loadedAssemblies)
+        {
+            try
+            {
+                var dllName = Path.GetFileName(assembly.Location);
+                if (dllName.Equals("SwiftList.PluginSdk.dll", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var pluginType = assembly.GetTypes().FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+                var pluginInstance = pluginType != null ? manager.Plugins.FirstOrDefault(p => p.GetType() == pluginType) : null;
+
+                var configurableInstance = ResolveConfigurable(assembly, pluginInstance);
+                var schema = configurableInstance?.GetConfigSchema();
+                if (schema?.Fields == null)
+                    continue;
+
+                var pluginId = Path.GetFileNameWithoutExtension(dllName);
+                var fieldDefaults = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                FlattenFieldDefaults(schema.Fields, fieldDefaults);
+                result[pluginId] = fieldDefaults;
+            }
+            catch { }
+        }
+
+        return result;
+    }
+
+    private static void FlattenFieldDefaults(IEnumerable<PluginConfigField> fields, Dictionary<string, object?> target)
+    {
+        foreach (var field in fields)
+        {
+            if (field.FieldType == ConfigFieldType.Group && field.SubFields != null)
+            {
+                FlattenFieldDefaults(field.SubFields, target);
+            }
+            else if (!string.IsNullOrEmpty(field.Key))
+            {
+                target[field.Key] = field.DefaultValue;
+            }
+        }
     }
 
     private static List<PluginComponentViewModel> BuildComponents(IPlugin plugin, string dllName, PluginManager manager, HashSet<string> disabledSet)
