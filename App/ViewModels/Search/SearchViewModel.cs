@@ -173,7 +173,7 @@ public class SearchViewModel : ViewModelBase, IDisposable
         if (_allResults == null) return;
 
         var activeFilters = DynamicSidebarGroups
-            .Select(g => g.SelectedItem?.FilterPredicate)
+            .Select(g => g.CombinedPredicate)
             .Where(p => p != null)
             .Select(p => p!)
             .ToList();

@@ -28,16 +28,9 @@ public class TypeFilterProvider : ISidebarFilterProvider
     {
         var group = new SidebarFilterGroup
         {
-            Header = TranslationService.Get("Filter_TypeHeader")
+            Header = TranslationService.Get("Filter_TypeHeader"),
+            AllowMultiSelect = true
         };
-
-        group.Items.Add(new SidebarFilterItem
-        {
-            Id = "Type_All",
-            DisplayName = TranslationService.Get("Filter_TypeAny"),
-            IconData = "M3,4 H17 V6 H3 Z M3,9 H17 V11 H3 Z M3,14 H13 V16 H3 Z",
-            FilterPredicate = results => Task.FromResult(results)
-        });
 
         group.Items.Add(new SidebarFilterItem
         {

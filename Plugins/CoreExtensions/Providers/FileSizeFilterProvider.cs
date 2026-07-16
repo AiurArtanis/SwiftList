@@ -12,16 +12,9 @@ public class FileSizeFilterProvider : ISidebarFilterProvider
     {
         var group = new SidebarFilterGroup
         {
-            Header = TranslationService.Get("Filter_SizeHeader")
+            Header = TranslationService.Get("Filter_SizeHeader"),
+            AllowMultiSelect = true
         };
-
-        group.Items.Add(new SidebarFilterItem
-        {
-            Id = "Size_All",
-            DisplayName = TranslationService.Get("Filter_SizeAny"),
-            IconData = "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-11c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z",
-            FilterPredicate = results => Task.FromResult(results)
-        });
 
         group.Items.Add(new SidebarFilterItem
         {

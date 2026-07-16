@@ -28,27 +28,52 @@
                                         </Style>
                                     </Rectangle.Style>
                                 </Rectangle>
-                                <TextBlock Text="{Binding Header}" FontSize="11" FontWeight="Bold"
-                                           Foreground="{DynamicResource TextSecondary}" Margin="20,4,20,6"
-                                           />
-                                <ListBox ItemsSource="{Binding Items}" BorderThickness="0" Background="Transparent"
-                                         ItemContainerStyle="{StaticResource SidebarItemStyle}"
-                                         SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                                         PreviewMouseWheel="ListBox_PreviewMouseWheel"
-                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                         ScrollViewer.VerticalScrollBarVisibility="Disabled">
-                                    <ListBox.ItemTemplate>
+                                <DockPanel Margin="20,4,20,6" LastChildFill="True">
+                                    <!-- Visibility toggles Hidden/Visible, not Collapsed/Visible: Collapsed
+                                         would remove the button from layout entirely, so the row's height
+                                         (driven by the taller of the two children) would shrink/grow as
+                                         selections come and go, jittering the whole sidebar underneath it.
+                                         Hidden keeps its layout space reserved while still not rendering
+                                         or accepting input when there's nothing to clear. -->
+                                    <Button DockPanel.Dock="Right" Content="&#xE711;"
+                                            Command="{Binding ClearCommand}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource SidebarClearButtonStyle}">
+                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasSelection}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                    <TextBlock Text="{Binding Header}" FontSize="11" FontWeight="Bold"
+                                               Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"/>
+                                </DockPanel>
+                                <!-- ItemsControl (not ListBox): each item toggles its own IsSelected
+                                     independently: a single-select group enforces "only one at a time"
+                                     itself (DynamicSidebarGroupViewModel.OnItemSelectionChanged), a
+                                     multi-select group leaves every item free to combine with OR. -->
+                                <ItemsControl ItemsSource="{Binding Items}"
+                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                              ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                    <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <DockPanel LastChildFill="True">
-                                                <Grid DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,10,0" Width="14" Height="14">
-                                                    <TextBlock x:Name="TxtIcon" Text="{Binding IconString}" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    <Path x:Name="PathIcon" Data="{Binding IconData}" Stretch="Uniform" Visibility="Collapsed"
-                                                          Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                                                </Grid>
-                                                <TextBlock Text="{Binding DisplayName}"  FontSize="13"
-                                                           VerticalAlignment="Center"
-                                                           TextWrapping="Wrap"/>
-                                            </DockPanel>
+                                            <ToggleButton Style="{StaticResource SidebarFilterItemStyle}"
+                                                          HorizontalAlignment="Stretch"
+                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}">
+                                                <DockPanel LastChildFill="True">
+                                                    <Grid DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,10,0" Width="14" Height="14">
+                                                        <TextBlock x:Name="TxtIcon" Text="{Binding IconString}" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <Path x:Name="PathIcon" Data="{Binding IconData}" Stretch="Uniform" Visibility="Collapsed"
+                                                              Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding DisplayName}"  FontSize="13"
+                                                               VerticalAlignment="Center"
+                                                               TextWrapping="Wrap"/>
+                                                </DockPanel>
+                                            </ToggleButton>
                                             <DataTemplate.Triggers>
                                                 <DataTrigger Binding="{Binding HasIconData}" Value="True">
                                                     <Setter TargetName="TxtIcon" Property="Visibility" Value="Collapsed"/>
@@ -56,8 +81,8 @@
                                                 </DataTrigger>
                                             </DataTemplate.Triggers>
                                         </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

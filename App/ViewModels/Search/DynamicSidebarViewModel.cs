@@ -1,3 +1,5 @@
+using System.Windows.Input;
+using SwiftList.App.Helpers;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
@@ -6,20 +8,19 @@ namespace SwiftList.App.ViewModels.Search;
 public class DynamicSidebarGroupViewModel : ViewModelBase
 {
     private readonly SearchViewModel _mainVm;
-    private DynamicSidebarItemViewModel? _selectedItem;
 
     public DynamicSidebarGroupViewModel(SidebarFilterGroup group, SearchViewModel mainVm)
     {
         _mainVm = mainVm;
         Header = group.Header;
+        AllowMultiSelect = group.AllowMultiSelect;
         Items = group.Items.Select(item => new DynamicSidebarItemViewModel(item, this)).ToList();
-        if (Items.Count > 0)
-        {
-            _selectedItem = Items[0];
-        }
+        // Nothing selected by default -- there's no "All" pseudo-item anymore; an empty selection IS
+        // the unfiltered state.
     }
 
     public string Header { get; }
+    public bool AllowMultiSelect { get; }
     public List<DynamicSidebarItemViewModel> Items { get; }
 
     private bool _isFirst;
@@ -29,22 +30,71 @@ public class DynamicSidebarGroupViewModel : ViewModelBase
         set => SetProperty(ref _isFirst, value);
     }
 
-    public DynamicSidebarItemViewModel? SelectedItem
+    public bool HasSelection => Items.Any(i => i.IsSelected);
+
+    // Combines every currently-selected item's predicate with OR: a result survives if it matches ANY
+    // of them. Null (not an identity no-op) when nothing is selected, so the caller can tell "this
+    // group contributes no filter at all" apart from "this group's filter happens to keep everything".
+    public Func<IReadOnlyList<ISearchResult>, Task<IReadOnlyList<ISearchResult>>>? CombinedPredicate
     {
-        get => _selectedItem;
-        set
+        get
         {
-            if (_selectedItem != value)
+            var selected = Items.Where(i => i.IsSelected).ToList();
+            if (selected.Count == 0)
+                return null;
+            if (selected.Count == 1)
+                return selected[0].FilterPredicate;
+
+            return async results =>
             {
-                _selectedItem = value;
-                OnPropertyChanged();
-                _mainVm.OnDynamicFilterChanged();
+                var matchedSets = new List<HashSet<ISearchResult>>(selected.Count);
+                foreach (var item in selected)
+                {
+                    var subset = item.FilterPredicate != null ? await item.FilterPredicate(results) : results;
+                    matchedSets.Add(new HashSet<ISearchResult>(subset));
+                }
+                // Filter the ORIGINAL list once (rather than concatenating each subset) so the union
+                // comes back in the same relative order results already had.
+                return results.Where(r => matchedSets.Any(s => s.Contains(r))).ToList();
+            };
+        }
+    }
+
+    // Called by an item's IsSelected setter, and by ClearSelection below -- the single place that
+    // enforces "at most one selected item" for a non-multi-select group and fires exactly one
+    // OnDynamicFilterChanged per user action (not once per sibling silently cleared).
+    internal void OnItemSelectionChanged(DynamicSidebarItemViewModel changed)
+    {
+        if (changed.IsSelected && !AllowMultiSelect)
+        {
+            foreach (var item in Items)
+            {
+                if (item != changed)
+                    item.SetSelectedSilently(false);
             }
         }
+        OnPropertyChanged(nameof(HasSelection));
+        _mainVm.OnDynamicFilterChanged();
+    }
+
+    private ICommand? _clearCommand;
+    public ICommand ClearCommand => _clearCommand ??= new RelayCommand(ClearSelection);
+
+    private void ClearSelection()
+    {
+        var anyChanged = false;
+        foreach (var item in Items)
+            anyChanged |= item.SetSelectedSilently(false);
+
+        if (!anyChanged)
+            return;
+
+        OnPropertyChanged(nameof(HasSelection));
+        _mainVm.OnDynamicFilterChanged();
     }
 }
 
-public class DynamicSidebarItemViewModel
+public class DynamicSidebarItemViewModel : ViewModelBase
 {
     private readonly SidebarFilterItem _item;
     public DynamicSidebarGroupViewModel Group { get; }
@@ -61,4 +111,29 @@ public class DynamicSidebarItemViewModel
     public string? IconData => _item.IconData;
     public bool HasIconData => !string.IsNullOrEmpty(_item.IconData);
     public Func<IReadOnlyList<ISearchResult>, Task<IReadOnlyList<ISearchResult>>>? FilterPredicate => _item.FilterPredicate;
+
+    private bool _isSelected;
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value) return;
+            _isSelected = value;
+            OnPropertyChanged();
+            Group.OnItemSelectionChanged(this);
+        }
+    }
+
+    // Sets the backing field directly (raises the property-changed notification but does NOT call back
+    // into Group.OnItemSelectionChanged) -- used when the GROUP is the one driving the change (clearing
+    // siblings for a single-select group, or a full group clear), so that one user action fires exactly
+    // one OnDynamicFilterChanged instead of one per item touched. Returns whether it actually changed.
+    internal bool SetSelectedSilently(bool value)
+    {
+        if (_isSelected == value) return false;
+        _isSelected = value;
+        OnPropertyChanged(nameof(IsSelected));
+        return true;
+    }
 }

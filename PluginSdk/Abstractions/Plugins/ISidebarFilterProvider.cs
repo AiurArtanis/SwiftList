@@ -23,6 +23,14 @@ public class SidebarFilterGroup
 {
     public string Header { get; set; } = string.Empty;
     public List<SidebarFilterItem> Items { get; set; } = new();
+
+    /// <summary>
+    /// Whether more than one item in this group can be selected at once, combined with OR (a result
+    /// matching ANY selected item's <see cref="SidebarFilterItem.FilterPredicate"/> is kept). Leave
+    /// false for items whose meaning only makes sense one at a time (e.g. overlapping/cumulative date
+    /// ranges) -- the host still lets the user clear the group's selection entirely regardless.
+    /// </summary>
+    public bool AllowMultiSelect { get; set; }
 }
 
 /// <summary>

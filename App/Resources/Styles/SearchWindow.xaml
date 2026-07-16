@@ -6,6 +6,9 @@
     </ResourceDictionary.MergedDictionaries>
 
     <!-- ═══════════ Sidebar Item Style (light, consistent with main app) ═══════════ -->
+    <!-- Used as an ItemContainerStyle for real ListBox/ListBoxItem navigation lists (Settings window's
+         section lists): do not repoint this at a different TargetType; see SidebarFilterItemStyle
+         below for the ToggleButton-based equivalent used by the search sidebar's filter items. -->
     <Style x:Key="SidebarItemStyle" TargetType="ListBoxItem">
         <Setter Property="Foreground" Value="{DynamicResource SidebarText}"/>
         <Setter Property="Padding" Value="0"/>
@@ -18,9 +21,9 @@
                 <ControlTemplate TargetType="ListBoxItem">
                     <Grid>
                         <!-- Left accent bar for selected item -->
-                        <Rectangle x:Name="AccentBar" Width="3" HorizontalAlignment="Left" 
+                        <Rectangle x:Name="AccentBar" Width="3" HorizontalAlignment="Left"
                                    RadiusX="1.5" RadiusY="1.5" Fill="Transparent" Margin="0,4"/>
-                        <Border x:Name="ItemBorder" CornerRadius="7" 
+                        <Border x:Name="ItemBorder" CornerRadius="7"
                                 Background="Transparent" Padding="16,11" Margin="8,2,8,2">
                             <ContentPresenter/>
                         </Border>
@@ -34,6 +37,80 @@
                             <Setter TargetName="AccentBar" Property="Fill" Value="{DynamicResource AccentBarColor}"/>
                             <Setter Property="Foreground" Value="{DynamicResource SidebarTextActive}"/>
                             <Setter Property="TextElement.Foreground" Value="{DynamicResource SidebarTextActive}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ═══════════ Sidebar Filter Item Style (ToggleButton, search sidebar's filter items) ═══════════ -->
+    <!-- ToggleButton, not ListBoxItem: each item toggles its own selection independently (a single-
+         select group enforces exclusivity itself in the view model), so there's no ListBox/SelectedItem
+         to key a selection style off of: IsChecked stands in for what SidebarItemStyle's IsSelected does. -->
+    <Style x:Key="SidebarFilterItemStyle" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{DynamicResource SidebarText}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Grid>
+                        <!-- Left accent bar for a checked item -->
+                        <Rectangle x:Name="AccentBar" Width="3" HorizontalAlignment="Left"
+                                   RadiusX="1.5" RadiusY="1.5" Fill="Transparent" Margin="0,4"/>
+                        <Border x:Name="ItemBorder" CornerRadius="7"
+                                Background="Transparent" Padding="16,11" Margin="8,2,8,2">
+                            <ContentPresenter/>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SidebarHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SidebarHover}"/>
+                            <Setter TargetName="AccentBar" Property="Fill" Value="{DynamicResource AccentBarColor}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource SidebarTextActive}"/>
+                            <Setter Property="TextElement.Foreground" Value="{DynamicResource SidebarTextActive}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ═══════════ Sidebar Group Clear Button (small "x", shown only while the group has a selection) ═══════════ -->
+    <Style x:Key="SidebarClearButtonStyle" TargetType="Button">
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="Width" Value="18"/>
+        <Setter Property="Height" Value="18"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <!-- Clicking this button immediately hides it (HasSelection flips to false), and WPF moves
+             keyboard focus off a focused element that just lost visibility: landing focus somewhere
+             further down the sidebar makes the ScrollViewer auto-scroll to bring it into view. Matches
+             HotkeyRecorderControl's IconButtonBaseStyle, the same fix for the same class of button. -->
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" CornerRadius="4" Background="{TemplateBinding Background}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SidebarHover}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource SidebarTextActive}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
