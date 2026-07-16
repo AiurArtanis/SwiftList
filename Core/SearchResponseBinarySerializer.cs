@@ -1,13 +1,14 @@
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Text;
+using SwiftList.PluginSdk.Abstractions;
 
 namespace SwiftList.Core;
 
 public static class SearchResponseBinarySerializer
 {
     private const int Magic = 0x53524C53; // SLRS
-    private const int Version = 3;
+    private const int Version = 4; // v4: gained Size/Created/Modified/Accessed (SearchResult.Metadata)
     private const byte EndFrame = 0;
     private const byte FileResultFrame = 1;
     private const byte AppResultFrame = 2;
@@ -122,7 +123,7 @@ public static class SearchResponseBinarySerializer
         var pathLen = Encoding.UTF8.GetByteCount(path);
         var driveLen = Encoding.UTF8.GetByteCount(drive);
 
-        var maxPayloadSize = nameLen + pathLen + driveLen + 24;
+        var maxPayloadSize = nameLen + pathLen + driveLen + 44;
         var totalSize = 9 + maxPayloadSize;
 
         var buffer = ArrayPool<byte>.Shared.Rent(totalSize);
@@ -160,6 +161,15 @@ public static class SearchResponseBinarySerializer
 
             BinaryPrimitives.WriteUInt64LittleEndian(span.Slice(offset), result.RankSortKey);
             offset += 8;
+
+            BinaryPrimitives.WriteInt64LittleEndian(span.Slice(offset), result.Metadata.Size);
+            offset += 8;
+            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset), FileTimeHelper.ToUnixSeconds(result.Metadata.Created.ToUniversalTime()));
+            offset += 4;
+            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset), FileTimeHelper.ToUnixSeconds(result.Metadata.Modified.ToUniversalTime()));
+            offset += 4;
+            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset), FileTimeHelper.ToUnixSeconds(result.Metadata.Accessed.ToUniversalTime()));
+            offset += 4;
 
             var payloadLength = offset - payloadStart;
             BinaryPrimitives.WriteInt32LittleEndian(span.Slice(payloadLengthOffset), payloadLength);
@@ -216,13 +226,26 @@ public static class SearchResponseBinarySerializer
         var isDir = payload[offset++] != 0;
         var drive = ReadString(payload, ref offset);
         var rankSortKey = BinaryPrimitives.ReadUInt64LittleEndian(payload.AsSpan(offset));
+        offset += 8;
+        var size = BinaryPrimitives.ReadInt64LittleEndian(payload.AsSpan(offset));
+        offset += 8;
+        var created = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(offset));
+        offset += 4;
+        var modified = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(offset));
+        offset += 4;
+        var accessed = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(offset));
         return new SearchResult
         {
             Name = name,
             Path = path,
             IsDir = isDir,
             Drive = drive,
-            RankSortKey = rankSortKey
+            RankSortKey = rankSortKey,
+            Metadata = new FileMetadata(
+                size,
+                FileTimeHelper.FromUnixSeconds(created).ToLocalTime(),
+                FileTimeHelper.FromUnixSeconds(modified).ToLocalTime(),
+                FileTimeHelper.FromUnixSeconds(accessed).ToLocalTime()),
         };
     }
 
