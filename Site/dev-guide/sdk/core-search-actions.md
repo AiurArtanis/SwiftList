@@ -49,6 +49,13 @@ interface IInstantResultProvider : IPluginComponent
 }
 ```
 
+`GetInstantResults` is synchronous only — there's no async/cancellation-token overload. If your data
+needs a network round-trip (translating text, fetching search-engine suggestions), return a
+placeholder item immediately, kick off the real work with `Task.Run`, cache the result once it lands,
+and call `SearchRefreshService.RefreshIfMatches` (see [Host Services](./services)) so the host re-runs
+any search whose current query would now hit your cache — see the WebSearch plugin's suggestion
+fetching (`Plugins/WebSearch/WebSearchInstantProvider.cs`) for a worked example.
+
 ### `IAliasProvider`
 
 Generates extra searchable strings for non-ASCII text — this is how pinyin aliasing for Chinese

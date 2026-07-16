@@ -49,6 +49,12 @@ interface IInstantResultProvider : IPluginComponent
 }
 ```
 
+`GetInstantResults`只有同步这一种形态——没有异步/可取消令牌的重载。如果你的数据需要走一次网络请求
+(比如翻译文字、拉取搜索引擎的联想建议)，做法是:立刻返回一个占位结果项，用 `Task.Run` 在后台去真正
+干活，拿到结果后缓存起来，再调用 `SearchRefreshService.RefreshIfMatches`(参见[宿主服务](./services))
+让宿主把当前 query 会命中你缓存的那些搜索重新跑一遍——可以参考 WebSearch 插件的建议拉取逻辑
+(`Plugins/WebSearch/WebSearchInstantProvider.cs`)作为完整示例。
+
 ### `IAliasProvider`
 
 为非 ASCII 文本生成额外的可搜索字符串——中文文件名的拼音别名就是这样实现的(见
