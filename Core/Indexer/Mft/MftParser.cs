@@ -75,6 +75,12 @@ internal static class MftParser
         creationTimeUtc = 0;
         lastWriteTimeUtc = 0;
         lastAccessTimeUtc = 0;
+        // $FILE_NAME's own "real size" (read below, per name) is $DATA's real size DUPLICATED into the
+        // directory-entry-like $FILE_NAME record for fast listing -- NTFS only refreshes that copy on
+        // rename/move/link, so it can sit stale (often 0) for a file that was written once and never
+        // touched again. $DATA's own real-size field (read here from the same already-loaded record,
+        // no extra I/O) is the one NTFS keeps authoritative, so it wins whenever present.
+        long? dataSize = null;
         int a = BitConverter.ToUInt16(buf, recOff + 0x14);
         while (a + 8 <= recLen)
         {
@@ -106,15 +112,38 @@ internal static class MftParser
                     if (ns != 2)
                     {
                         UInt128 parent = (ulong)BitConverter.ToInt64(buf, vp);
-                        var size = BitConverter.ToInt64(buf, vp + 0x30); // real (logical) size
+                        var size = BitConverter.ToInt64(buf, vp + 0x30); // real (logical) size -- may be stale, see dataSize above
                         int nameLen = buf[vp + 0x40];
                         if (vp + 0x42 + nameLen * 2 <= recOff + recLen)
                             names.Add((parent, Encoding.Unicode.GetString(buf, vp + 0x42, nameLen * 2), size));
                     }
                 }
             }
+            else if (type == 0x80 && buf[recOff + a + 0x09] == 0) // $DATA, unnamed stream only (skip alternate data streams)
+            {
+                if (resident)
+                {
+                    // Resident value length IS the file's content length -- no separate size field.
+                    if (a + 0x14 <= recLen)
+                        dataSize = BitConverter.ToUInt32(buf, recOff + a + 0x10);
+                }
+                else if (a + 0x38 <= recLen)
+                {
+                    dataSize = BitConverter.ToInt64(buf, recOff + a + 0x30); // real (logical) size, always current
+                }
+            }
             a += (int)len;
         }
+
+        if (dataSize.HasValue)
+        {
+            for (var i = 0; i < names.Count; i++)
+            {
+                var (parent, name, _) = names[i];
+                names[i] = (parent, name, dataSize.Value);
+            }
+        }
+
         return stdAttrs;
     }
 
