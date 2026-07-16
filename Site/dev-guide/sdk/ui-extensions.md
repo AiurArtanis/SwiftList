@@ -14,8 +14,12 @@ interface ISidebarFilterProvider
 }
 ```
 
-`SidebarFilterGroup` has a `Header` and a list of `SidebarFilterItem`s (Id, DisplayName, optional
-icon, and an optional async `FilterPredicate` over the current result list).
+`SidebarFilterGroup` has a `Header`, an `AllowMultiSelect` flag (default `false`; opts the group into
+letting more than one item be selected at once, combined with OR — leave it off for items whose
+meaning only makes sense one at a time, e.g. overlapping/cumulative date ranges), and a list of
+`SidebarFilterItem`s (Id, DisplayName, optional icon, and an optional async `FilterPredicate` over the
+current result list). The host shows a clear button on a group once it has a selection, so a provider
+doesn't need an "All"/"Any" pseudo-item of its own.
 
 ### `IResultColumnProvider`
 

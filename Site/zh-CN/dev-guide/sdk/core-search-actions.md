@@ -59,6 +59,8 @@ interface IAliasProvider
 {
     string Name { get; }
     bool CanHandle(string text);
+    IReadOnlyList<(char Start, char End)> InputRanges { get; }
+    IReadOnlyList<(char Start, char End)> OutputRanges { get; }
     IEnumerable<string> GetAliases(string text);
 
     int Version { get; } // 默认 1
@@ -66,6 +68,12 @@ interface IAliasProvider
     void GetAliasesUtf8(string text, AliasByteSink dest); // 默认:内部转调 GetAliases
 }
 ```
+
+`InputRanges` 和 `OutputRanges`没有默认实现——每个 provider 都必须自己声明。`InputRanges` 是这个
+provider 转写的**源**字符范围(比如拼音对应的是 CJK 表意文字区块);`OutputRanges` 是它生成的别
+名所使用的字符范围(比如拼音就是小写 `a`-`z`)。宿主会用这两个范围,把一个同时混用了某个 provider
+自己的输入、输出两种字母表的查询词(比如用"大cj"匹配"大长今")切分成一段按候选项原文匹配的字面
+片段,和一段按这个 provider 生成的别名匹配的别名语法片段,而不用去猜测"是不是非 ASCII"。
 
 `Version`、`MapAliasToSourceIndices`、`GetAliasesUtf8` 都有默认实现——绝大多数 provider 都不需要
 碰它们:

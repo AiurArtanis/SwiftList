@@ -25,6 +25,9 @@ SwiftList 自带两个插件，都是很有参考价值的真实案例——都�
 `PinyinAliasProvider` 同时实现了 `IAliasProvider` 和 `ITranslationProvider`——一个插件可以自由组
 合多个相关的 SDK 角色，这是个很好的参考模板:
 
+- **`IAliasProvider.InputRanges`/`OutputRanges`** 直接复用 `PinyinEngine` 自己表里的边界来声明这
+  两个字母表(`InputRanges`:CJK 区块;`OutputRanges`:`a`-`z`),不重复写魔数——宿主用它们支持
+  "大cj"匹配"大长今"这类混合了字面汉字和拼音的查询。
 - **`IAliasProvider.CanHandle(text)`** 会先扫描是否存在任意中文字符，再决定要不要做实际工作，所
   以非中文文件名会完全跳过别名生成。
 - **`IAliasProvider.GetAliases(text)`** 先构建一张按字符划分的音节表(每个汉字映射到它可能的拼

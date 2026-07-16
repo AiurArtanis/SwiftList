@@ -9,7 +9,7 @@
 | `TranslationService` | `Get(key)` / `Format(key, args)` 在运行时按当前语言查询;`LoadEmbeddedTranslations(assembly, cultureKey, typeName)` 加载插件自己内嵌的 JSON 语言包;`GetSupportedCultures(assembly)`。 |
 | `IconService` | `GetIcon(path, isDir)` 和 `GetThumbnail(path, size)` —— 带缓存的 Shell 图标/缩略图提取，插件不需要自己调 Windows 图标 API。 |
 | `FavoritesService` | `GetFavorites()` —— 只读访问用户的[收藏夹](../../user-guide/settings/favorites)列表(`FavoriteItem`:Name、Path)。 |
-| `HistoryService` | `GetHistoryPaths()` —— 来自[历史记录](../../user-guide/settings/history)的最近访问路径。 |
+| `HistoryService` | `GetHistoryEntries()` —— 每一条已记录的[历史记录](../../user-guide/settings/history)条目,按最近打开优先排序,类型是 `HistoryEntry { Keyword, Path, Kind, Time }`(`Kind` 是 `HistoryEntryKind`:`File` / `Folder` / `Application`;`Keyword` 是打开时输入框里的搜索文字,没打字直接从初始面板点开的话就是空字符串;`Time` 是 Unix 秒)。同一个路径最多只会出现一次,归属于最近一次带它进来的那个关键字。 |
 | `FileMetadataService` | `GetMetadataAsync(paths)` —— 批量查询 Size/Created/Modified/Accessed([`FileMetadata`](./abstractions#filemetadata))，用于查询**不属于**你当前结果集的路径——每个 `ISearchResult` 本身就通过自己的 `Metadata` 属性免费携带这些数据(参见[共享抽象契约](./abstractions#isearchresult))，所以只有拿到的路径不是来自结果对象(比如来自你自己的配置)时才需要用这个服务。 |
 | `DirectoryIndexerService` | `RegisterDirectory(pluginId, path, recursive, filterPattern)` / `UnregisterDirectories(pluginId)` / `SearchDirectoriesAsync(pluginId, query, token)` / `NotifyDirectoryChanged(pluginId)` —— 让插件注册自己的目录进行后台索引和 USN 监听，而不用自己重新实现这套机制。 |
 | `PluginSettingsService` | `GetSetting<T>(pluginId, key, defaultValue)` —— 从宿主的配置存储里只读访问插件自己持久化的设置。 |

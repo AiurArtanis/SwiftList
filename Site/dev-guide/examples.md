@@ -30,6 +30,10 @@ Two plugins ship with SwiftList itself and are useful, real-world references —
 `PinyinAliasProvider` implements both `IAliasProvider` and `ITranslationProvider` — a plugin can
 freely combine SDK roles when they're related, and this one is a good template for that:
 
+- **`IAliasProvider.InputRanges`/`OutputRanges`** declare its two alphabets straight from
+  `PinyinEngine`'s own table bounds (`InputRanges`: the CJK block; `OutputRanges`: `a`-`z`) instead of
+  duplicating magic numbers — the host uses these to support mixed literal+pinyin queries like `大cj`
+  against `大长今`.
 - **`IAliasProvider.CanHandle(text)`** scans for any Chinese character before doing any real work,
   so non-Chinese filenames skip alias generation entirely.
 - **`IAliasProvider.GetAliases(text)`** builds a per-character syllable table (each Chinese

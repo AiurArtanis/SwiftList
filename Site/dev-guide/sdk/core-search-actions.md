@@ -59,6 +59,8 @@ interface IAliasProvider
 {
     string Name { get; }
     bool CanHandle(string text);
+    IReadOnlyList<(char Start, char End)> InputRanges { get; }
+    IReadOnlyList<(char Start, char End)> OutputRanges { get; }
     IEnumerable<string> GetAliases(string text);
 
     int Version { get; } // default 1
@@ -66,6 +68,14 @@ interface IAliasProvider
     void GetAliasesUtf8(string text, AliasByteSink dest); // default: adapts GetAliases
 }
 ```
+
+`InputRanges` and `OutputRanges` have no default — every provider must declare them.
+`InputRanges` is the character range(s) this provider transliterates *from* (e.g. the CJK ideograph
+block, for pinyin); `OutputRanges` is the range(s) its generated aliases are made of (e.g. lowercase
+`a`-`z`). The host uses the two together to segment a query term that mixes a provider's own input and
+output alphabets (e.g. `大cj` against a candidate `大长今`) into a literal run matched against the
+candidate's own text and an alias-syntax run matched against this provider's alias, instead of
+guessing at ASCII-ness.
 
 `Version`, `MapAliasToSourceIndices`, and `GetAliasesUtf8` are all default-implemented — most
 providers never need to touch them:

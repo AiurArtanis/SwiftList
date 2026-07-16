@@ -14,8 +14,11 @@ interface ISidebarFilterProvider
 }
 ```
 
-`SidebarFilterGroup` 有一个 `Header` 和一份 `SidebarFilterItem` 列表(Id、DisplayName、可选图
-标，以及一个可选的、对当前结果列表做异步过滤的 `FilterPredicate`)。
+`SidebarFilterGroup` 有一个 `Header`、一个 `AllowMultiSelect` 开关(默认 `false`;打开后这个分组
+允许同时选中多项,用 OR 组合——如果分组里的选项只在单选时才有意义(比如互相重叠/累进的日期区
+间),就不要打开它),以及一份 `SidebarFilterItem` 列表(Id、DisplayName、可选图标，以及一个可选
+的、对当前结果列表做异步过滤的 `FilterPredicate`)。宿主会在分组有选中项时自动显示一个清空按钮,
+所以 provider 不需要自己维护一个"全部"/"任意"伪选项。
 
 ### `IResultColumnProvider`
 
