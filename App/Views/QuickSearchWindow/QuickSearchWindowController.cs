@@ -225,12 +225,34 @@ public class QuickSearchWindowController
             _window.Activate();
             _window.Focus();
 
-            _window.Dispatcher.BeginInvoke(new Action(() =>
-            {
-                _window.TxtSearch.Focus();
-                System.Windows.Input.Keyboard.Focus(_window.TxtSearch);
-            }), DispatcherPriority.Background);
+            FocusSearchBoxWhenForeground(hwnd);
         }), DispatcherPriority.Input);
+    }
+
+    // ForceForeground's SetForegroundWindow call -- whether it succeeds locally or has to round-trip
+    // through the elevated Hook process's IPC -- doesn't complete synchronously with the call that
+    // requested it. TxtSearch.Focus() used to fire after a single fixed-priority dispatcher hop, a
+    // guess at "enough time has probably passed" that could still land before the OS actually handed
+    // this window real keyboard focus, silently dropping any keys the user typed in that gap right
+    // after invoking the hotkey (see issue #121). Poll the real OS state instead: 10ms ticks, capped
+    // at 200ms so a case where foreground genuinely never arrives (something else is holding it,
+    // blocked by Windows' foreground-lock rules) still ends in focusing the search box rather than
+    // leaving it silently unfocused forever.
+    private void FocusSearchBoxWhenForeground(IntPtr hwnd)
+    {
+        var deadline = Environment.TickCount64 + 200;
+        var timer = new DispatcherTimer(DispatcherPriority.Input) { Interval = TimeSpan.FromMilliseconds(10) };
+        timer.Tick += (s, _) =>
+        {
+            var isForeground = hwnd == IntPtr.Zero || GetForegroundWindow() == hwnd;
+            if (!isForeground && Environment.TickCount64 < deadline)
+                return;
+
+            timer.Stop();
+            _window.TxtSearch.Focus();
+            System.Windows.Input.Keyboard.Focus(_window.TxtSearch);
+        };
+        timer.Start();
     }
 
     public void HideWindow(bool restoreFocus = true)
