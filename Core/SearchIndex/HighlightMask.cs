@@ -78,7 +78,10 @@ internal static class HighlightMask
             return;
 
         materialized ??= fullText.ToString();
-        MarkViaAliasProviders(materialized, term, caseSensitive, highlights);
+        if (MarkViaAliasProviders(materialized, term, caseSensitive, highlights))
+            return;
+
+        MarkViaMixedQuery(materialized, term, caseSensitive, highlights);
     }
 
     private static bool MarkLiteralSpan(ReadOnlySpan<char> haystack, ReadOnlySpan<char> needle, StringComparison comparison, Span<bool> highlights)
@@ -152,7 +155,7 @@ internal static class HighlightMask
     // camelCase/word-boundary structure for the real algorithm's bonus scoring to add value from -- so
     // paying its full DP cost per candidate measured slower overall than this simpler scan, for a mask
     // that (per real name/text) comes out effectively identical either way.
-    private static void MarkViaAliasProviders(string text, string term, bool caseSensitive, Span<bool> highlights)
+    private static bool MarkViaAliasProviders(string text, string term, bool caseSensitive, Span<bool> highlights)
     {
         var termLower = caseSensitive ? term : term.ToLowerInvariant();
 
@@ -203,7 +206,37 @@ internal static class HighlightMask
             }
 
             if (matchedAny)
-                return;
+                return true;
+        }
+
+        return false;
+    }
+
+    // Mixed-alphabet fallback (e.g. "大cj" against "大长今"): only reached once both the plain-alias
+    // tier above and this term's own literal/direct-fuzzy tiers have failed. Segments the term by an
+    // active provider's own InputRanges/OutputRanges and, on a genuine mix, paints via
+    // MixedQueryMatcher -- see its header comment for the run-by-run algorithm.
+    private static void MarkViaMixedQuery(string text, string term, bool caseSensitive, Span<bool> highlights)
+    {
+        if (caseSensitive)
+            return;
+
+        var mixedTerm = MixedQueryMatcher.TrySegment(term);
+        if (mixedTerm == null || !mixedTerm.Provider.CanHandle(text))
+            return;
+
+        foreach (var aliasGroup in mixedTerm.Provider.GetAliases(text))
+        {
+            if (string.IsNullOrEmpty(aliasGroup))
+                continue;
+
+            foreach (var alias in aliasGroup.Split('|'))
+            {
+                if (string.IsNullOrEmpty(alias))
+                    continue;
+                if (MixedQueryMatcher.TryMatchAndHighlight(mixedTerm, text, alias, highlights))
+                    return;
+            }
         }
     }
 

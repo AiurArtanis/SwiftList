@@ -13,6 +13,10 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
 
     public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(System.Reflection.Assembly.GetExecutingAssembly());
 
+    public IReadOnlyList<(char Start, char End)> InputRanges { get; } = new[] { PinyinEngine.TableRange };
+
+    public IReadOnlyList<(char Start, char End)> OutputRanges { get; } = new[] { ('a', 'z') };
+
     private static readonly Dictionary<string, Dictionary<string, string>> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object LockObj = new();
     private static readonly string[][] AsciiSyllableCache;

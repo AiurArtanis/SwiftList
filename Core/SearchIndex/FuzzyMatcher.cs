@@ -51,6 +51,26 @@ public static class FuzzyMatcher
             }
         }
 
+        // Mixed-alphabet fallback ("大cj" against "大长今") -- mirrors the equivalent tier added to
+        // SearchMatcher/SearchMatcherRow so this public seam keeps matching the host's own file search.
+        // TrySegmentPattern already excluded a disabled provider from consideration.
+        var mixedTerm = MixedQueryMatcher.TrySegmentPattern(fzf);
+        if (mixedTerm != null && mixedTerm.Provider.CanHandle(text))
+        {
+            foreach (var aliasGroup in mixedTerm.Provider.GetAliases(text))
+            {
+                if (string.IsNullOrEmpty(aliasGroup))
+                    continue;
+                foreach (var segment in aliasGroup.Split('|'))
+                {
+                    if (segment.Length == 0)
+                        continue;
+                    if (MixedQueryMatcher.TryMatch(mixedTerm, text.AsSpan(), text, segment, out _))
+                        return true;
+                }
+            }
+        }
+
         return false;
     }
 

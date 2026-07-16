@@ -1,3 +1,4 @@
+using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
 namespace SwiftList.Core.IndexV2;
@@ -43,6 +44,34 @@ internal static class SearchMatcherRow
                 }
             }
         }
+
+        if (!matched)
+        {
+            // TrySegmentPattern already excluded a disabled provider from consideration.
+            var mixedTerm = MixedQueryMatcher.TrySegmentPattern(pattern);
+            if (mixedTerm != null)
+            {
+                foreach (var (alias, providerId) in aliasScratch)
+                {
+                    if (providerId != mixedTerm.ProviderId)
+                        continue;
+                    foreach (var segment in alias.Split('|'))
+                    {
+                        if (segment.Length == 0)
+                            continue;
+                        if (!MixedQueryMatcher.TryMatch(mixedTerm, name.AsSpan(), name, segment, out var mm))
+                            continue;
+                        var candidate = new FzfPatternResult(mm.Score, mm.MinBegin, mm.MaxEnd, mm.MaxEnd, mm.ValidOffsetFound);
+                        if (!matched || candidate.Score > match.Score)
+                        {
+                            matched = true;
+                            match = candidate;
+                        }
+                    }
+                }
+            }
+        }
+
         return matched;
     }
 
@@ -71,6 +100,34 @@ internal static class SearchMatcherRow
                 }
             }
         }
+
+        if (!matched && providerIds != null)
+        {
+            // TrySegmentPattern already excluded a disabled provider from consideration.
+            var mixedTerm = MixedQueryMatcher.TrySegmentPattern(pattern);
+            if (mixedTerm != null)
+            {
+                for (var j = 0; j < aliases.Length && j < providerIds.Length; j++)
+                {
+                    if (providerIds[j] != mixedTerm.ProviderId)
+                        continue;
+                    foreach (var segment in aliases[j].Split('|'))
+                    {
+                        if (segment.Length == 0)
+                            continue;
+                        if (!MixedQueryMatcher.TryMatch(mixedTerm, name.AsSpan(), name, segment, out var mm))
+                            continue;
+                        var candidate = new FzfPatternResult(mm.Score, mm.MinBegin, mm.MaxEnd, mm.MaxEnd, mm.ValidOffsetFound);
+                        if (!matched || candidate.Score > result.Score)
+                        {
+                            matched = true;
+                            result = candidate;
+                        }
+                    }
+                }
+            }
+        }
+
         return matched;
     }
 }

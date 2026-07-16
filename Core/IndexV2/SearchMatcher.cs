@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
+using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
 namespace SwiftList.Core.IndexV2;
@@ -39,6 +40,7 @@ internal static class SearchMatcher
         public required ulong[][] OrSetMasks; // per multi-term set: candidate must cover at least one term
         public required bool CanFilter;
         public required int QueryLen;
+        public required MixedTerm? MixedTerm; // non-null only for a bare single term mixing an alias provider's own two alphabets, e.g. "大cj"
     }
 
     private static readonly ConcurrentBag<Worker> WorkerPool = new();
@@ -85,6 +87,7 @@ internal static class SearchMatcher
             OrSetMasks = orSets?.ToArray() ?? Array.Empty<ulong[]>(),
             CanFilter = requiredMask != 0 || orSets != null,
             QueryLen = pattern.GetTotalTermLength(),
+            MixedTerm = MixedQueryMatcher.TrySegmentPattern(pattern),
         };
     }
 
@@ -222,6 +225,51 @@ internal static class SearchMatcher
         {
             worker.Hits.Add(new UniqueMatch(uid, best, FzfResultRank.ForDefaultScheme(uid, name, best).SortKey));
         }
+        else if (ctx.MixedTerm != null && snapshot.HasAliases(uid) && TryMatchMixed(snapshot, ctx, uid, name, out var mixedBest))
+        {
+            worker.Hits.Add(new UniqueMatch(uid, mixedBest, FzfResultRank.ForDefaultScheme(uid, name, mixedBest).SortKey));
+        }
+    }
+
+    // Last-resort tier for a query mixing an alias provider's own two alphabets (e.g. "大cj"): only
+    // the baked aliases belonging to that exact provider are worth trying, since MapAliasToSourceIndices
+    // (needed to align the alias-syntax run back onto `name`) is only meaningful for the provider that
+    // produced the alias. Decodes each candidate alias to UTF-16 -- acceptable here since this only runs
+    // for the rare candidates that already failed both the literal-name and whole-query-alias tiers.
+    private static bool TryMatchMixed(Snapshot snapshot, QueryContext ctx, int uid, ReadOnlySpan<char> name, out FzfPatternResult best)
+    {
+        best = default;
+        var mixedTerm = ctx.MixedTerm!; // TrySegmentPattern already excluded a disabled provider from consideration
+        var matched = false;
+        var (start, end) = snapshot.AliasEntryRange(uid);
+        string? nameStr = null;
+        for (var e = start; e < end; e++)
+        {
+            if (snapshot.AliasProviderId(e) != mixedTerm.ProviderId)
+                continue;
+
+            var aliasUtf8 = snapshot.AliasUtf8(e);
+            if (aliasUtf8.Length == 0)
+                continue;
+
+            nameStr ??= name.ToString();
+            var aliasStr = Encoding.UTF8.GetString(aliasUtf8);
+            foreach (var segment in aliasStr.Split('|'))
+            {
+                if (segment.Length == 0)
+                    continue;
+                if (!MixedQueryMatcher.TryMatch(mixedTerm, name, nameStr, segment, out var mm))
+                    continue;
+
+                var candidate = new FzfPatternResult(mm.Score, mm.MinBegin, mm.MaxEnd, mm.MaxEnd, mm.ValidOffsetFound);
+                if (!matched || candidate.Score > best.Score)
+                {
+                    matched = true;
+                    best = candidate;
+                }
+            }
+        }
+        return matched;
     }
 
     // Zero-copy alias fallback: each baked alias is matched from its raw UTF-8 (byte path for ASCII

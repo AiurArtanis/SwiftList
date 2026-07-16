@@ -4107,4 +4107,7 @@ public static class PinyinEngine
     /// </summary>
     public static bool MayContainChinese(ReadOnlySpan<char> text)
         => text.ContainsAnyInRange((char)12295, (char)(12295 + 28647 - 1));
+
+    /// <summary>The char table's covered range, as (first char, last char) -- mirrors the bounds baked into <see cref="MayContainChinese"/>/<see cref="IsChinese"/>.</summary>
+    public static readonly (char Start, char End) TableRange = ((char)12295, (char)(12295 + 28647 - 1));
 }

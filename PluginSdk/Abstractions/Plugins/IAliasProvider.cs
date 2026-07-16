@@ -12,6 +12,21 @@ public interface IAliasProvider : IPluginComponent
     bool CanHandle(string text);
 
     /// <summary>
+    /// The character range(s) this provider transliterates FROM -- the alphabet of the literal
+    /// source text it recognizes (e.g. the CJK ideograph block, for pinyin). Used to split a query
+    /// term that mixes this alphabet with <see cref="OutputRanges"/> (e.g. "大cj") into a literal
+    /// run to match against the candidate's own text, and an alias-syntax run to match against this
+    /// provider's generated alias -- see <c>Core.SearchIndex.MixedQueryMatcher</c>.
+    /// </summary>
+    IReadOnlyList<(char Start, char End)> InputRanges { get; }
+
+    /// <summary>
+    /// The character range(s) this provider's generated aliases are made of (e.g. lowercase a-z,
+    /// for pinyin). Paired with <see cref="InputRanges"/> for mixed-query segmentation.
+    /// </summary>
+    IReadOnlyList<(char Start, char End)> OutputRanges { get; }
+
+    /// <summary>
     /// Generates aliases for the given text.
     /// </summary>
     /// <param name="text">The original text.</param>
