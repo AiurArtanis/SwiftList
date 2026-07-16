@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using SwiftList.App.Services;
+using SwiftList.Core;
 
 namespace SwiftList.App.Views.Controls;
 
@@ -44,12 +45,16 @@ internal static class ResultsControlColumns
         }
     }
 
-    public static void HandleColumnHeaderClick(object sender, object? dataContext, System.Windows.Controls.ListView lstGridResults)
+    public static void HandleColumnHeaderClick(GridViewColumnHeader? headerClicked, object? dataContext, System.Windows.Controls.ListView lstGridResults)
     {
-        if (sender is not GridViewColumnHeader { Column: not null } headerClicked) return;
+        // Null, or missing a Column, whenever the click resolved to something other than a header cell
+        // (e.g. the resize gripper) -- not an error, just nothing to sort by.
+        if (headerClicked is not { Column: not null })
+            return;
 
         var headerText = headerClicked.Column.Header as string ?? string.Empty;
-        if (string.IsNullOrEmpty(headerText) || dataContext == null) return;
+        if (string.IsNullOrEmpty(headerText) || dataContext == null)
+            return;
 
         var cleanHeader = headerText.Replace(" ▲", "").Replace(" ▼", "");
         dynamic vm = dataContext;
@@ -70,6 +75,9 @@ internal static class ResultsControlColumns
                     : cleanColHeader;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Logger.Log($"[ResultsControlColumns] HandleColumnHeaderClick failed for header '{cleanHeader}': {ex}", LogLevel.Error);
+        }
     }
 }

@@ -41,7 +41,7 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
         };
     }
 
-    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+    internal static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
     {
         while (child != null)
         {
@@ -234,6 +234,12 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
         Views.Controls.ResultsControlColumns.PopulateDynamicColumns(LstGridResults);
     }
 
+    // sender is always the ListView itself (that's where GridViewColumnHeader.Click="..." attaches the
+    // handler in XAML) -- WPF only walks the handler UP the tree via routing, it doesn't rewrite
+    // `sender` to whatever was actually clicked. The real clicked element is e.OriginalSource, which for
+    // a click on the header's own text/content is some element INSIDE the header (a ContentPresenter,
+    // a TextBlock, ...), so it needs walking back up to find the enclosing GridViewColumnHeader.
     private void GridViewColumnHeader_Click(object sender, RoutedEventArgs e) =>
-        Views.Controls.ResultsControlColumns.HandleColumnHeaderClick(sender, DataContext, LstGridResults);
+        Views.Controls.ResultsControlColumns.HandleColumnHeaderClick(
+            FindVisualParent<GridViewColumnHeader>(e.OriginalSource as DependencyObject), DataContext, LstGridResults);
 }
