@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using SwiftList.App.Helpers;
 
 namespace SwiftList.App.Views.Controls;
 
@@ -98,7 +99,7 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
     private void HotkeyBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         e.Handled = true;
-        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        var key = WpfUiHelper.GetActualKey(e);
 
         if (key == Key.Escape) { Value = string.Empty; return; }
         if (key is Key.Clear or Key.OemClear) return;
@@ -143,7 +144,7 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
     private void HotkeyBox_PreviewKeyUp(object sender, System.Windows.Input.KeyEventArgs e)
     {
         e.Handled = true;
-        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        var key = WpfUiHelper.GetActualKey(e);
 
         var releasedModifier = ModifierName(key);
         if (releasedModifier == null) return;

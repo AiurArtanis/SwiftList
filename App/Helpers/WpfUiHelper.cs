@@ -20,8 +20,19 @@ public static class WpfUiHelper
         };
     }
 
-    /// <summary>When Alt is held, WPF sets e.Key = Key.System and e.SystemKey = the real key. Normalize it.</summary>
-    public static Key GetActualKey(System.Windows.Input.KeyEventArgs e) => e.Key == Key.System ? e.SystemKey : e.Key;
+    /// <summary>
+    /// Unwraps WPF's two "the real key is somewhere else" cases: Alt held sets e.Key = Key.System with
+    /// e.SystemKey holding the actual key, and an active IME (even just intercepting a plain ASCII key,
+    /// not necessarily composing anything) sets e.Key = Key.ImeProcessed with e.ImeProcessedKey holding
+    /// it instead -- without this, callers see the literal placeholder "ImeProcessed"/"System" key
+    /// rather than the key that was actually pressed.
+    /// </summary>
+    public static Key GetActualKey(System.Windows.Input.KeyEventArgs e) => e.Key switch
+    {
+        Key.System => e.SystemKey,
+        Key.ImeProcessed => e.ImeProcessedKey,
+        _ => e.Key
+    };
 
     /// <summary>Parses a recorder-style combo string (e.g. "Ctrl+Shift+Enter") into its key + modifiers.</summary>
     public static bool TryParseHotkey(string? hotkey, out Key key, out ModifierKeys modifiers)
