@@ -15,7 +15,7 @@ public class HistoryTabProvider : IStartupPanelTabProvider
     public string Name => TranslationService.Get("StartupPanel_TabHistory");
 
     public IEnumerable<ISearchResult> GetItems() => HistoryService.GetHistoryPaths()
-        .Where(p => File.Exists(p) || Directory.Exists(p))
+        .Where(p => HistoryService.IsAppEntry(p) || File.Exists(p) || Directory.Exists(p))
         .Take(MaxItems)
-        .Select(p => (ISearchResult)new StartupPanelResultItem(p));
+        .Select(p => (ISearchResult)new StartupPanelResultItem(HistoryService.GetRawPath(p)));
 }

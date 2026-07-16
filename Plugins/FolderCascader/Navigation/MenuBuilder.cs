@@ -120,7 +120,21 @@ public static class MenuBuilder
                 foreach (var rpath in recentPaths)
                 {
                     if (string.IsNullOrWhiteSpace(rpath)) continue;
-                    if (Directory.Exists(rpath))
+
+                    // An app-type entry is always a launchable leaf, never a browsable folder -- and
+                    // its raw path (a real exe path, or a virtual shell:AppsFolder\{AUMID} id) can't be
+                    // existence-checked with Directory.Exists/File.Exists the way a real path can.
+                    if (HistoryService.IsAppEntry(rpath))
+                    {
+                        var appPath = HistoryService.GetRawPath(rpath);
+                        items.Add(new DynamicMenuItem
+                        {
+                            Text = GetDisplayName(appPath, ""),
+                            CommandId = provider.AllocateCommand(appPath),
+                            HBitmapItem = IntPtr.Zero
+                        });
+                    }
+                    else if (Directory.Exists(rpath))
                     {
                         items.Add(new DynamicMenuItem
                         {
@@ -266,7 +280,10 @@ public static class MenuBuilder
     private static string GetDisplayName(string path, string customName)
     {
         if (!string.IsNullOrWhiteSpace(customName)) return customName;
-        if (path.StartsWith("shell:::", StringComparison.OrdinalIgnoreCase) || path.StartsWith("::", StringComparison.OrdinalIgnoreCase))
+        // "shell:" covers both the "shell:::{CLSID}" virtual-folder form and "shell:AppsFolder\{AUMID}"
+        // (packaged apps) -- not just the CLSID form -- matching the isVirtual check already used for
+        // favorites above.
+        if (path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) || path.StartsWith("::", StringComparison.OrdinalIgnoreCase))
             return ShellPathHelper.GetVirtualFolderDisplayName(path, path);
         try
         {

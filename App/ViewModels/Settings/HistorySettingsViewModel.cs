@@ -2,6 +2,8 @@ using System.IO;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
 using SwiftList.Core;
+using SwiftList.PluginSdk.Helpers;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.App.ViewModels.Settings;
 
@@ -45,12 +47,21 @@ public class HistorySettingsViewModel : ViewModelBase
 
     private static HistoryEntryViewModel MapSearchEntry(string path)
     {
-        var isDir = Directory.Exists(path);
+        // App-type entries carry a leading "app:" marker (see HistoryService.IsAppEntry) so this list
+        // shows the underlying app path/id, not the raw marker -- RawValue keeps the marker so saving
+        // the list back doesn't lose it.
+        var rawPath = HistoryService.GetRawPath(path);
+        var isVirtual = rawPath.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) || rawPath.StartsWith("::", StringComparison.Ordinal);
+        var isDir = !isVirtual && Directory.Exists(rawPath);
+        var primary = isVirtual
+            ? ShellPathHelper.GetVirtualFolderDisplayName(rawPath, rawPath)
+            : (Path.GetFileName(rawPath) is { Length: > 0 } name ? name : rawPath);
+
         return new HistoryEntryViewModel
         {
             RawValue = path,
-            Primary = Path.GetFileName(path) is { Length: > 0 } name ? name : path,
-            Secondary = path,
+            Primary = primary,
+            Secondary = rawPath,
             IconGlyph = isDir ? FolderIconGlyph : FileIconGlyph
         };
     }

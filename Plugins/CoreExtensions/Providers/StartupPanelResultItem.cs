@@ -1,5 +1,6 @@
 using System.IO;
 using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Helpers;
 
 namespace SwiftList.Plugins.CoreExtensions.Providers;
 
@@ -23,6 +24,12 @@ internal sealed class StartupPanelResultItem : ISearchResult
 
     private static string DeriveName(string path)
     {
+        // A packaged app's path is a virtual shell:AppsFolder\{AUMID} id, not a real filename --
+        // Path.GetFileName on it would surface the raw AUMID, so resolve the shell's own friendly
+        // display name instead (same fallback Favorites already uses for shell:/:: paths).
+        if (path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) || path.StartsWith("::", StringComparison.Ordinal))
+            return ShellPathHelper.GetVirtualFolderDisplayName(path, path);
+
         var name = Path.GetFileName(path.TrimEnd('\\', '/'));
         return string.IsNullOrEmpty(name) ? path : name;
     }

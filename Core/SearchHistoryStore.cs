@@ -1,3 +1,5 @@
+using SwiftList.PluginSdk.Services;
+
 namespace SwiftList.Core;
 
 public static class SearchHistoryStore
@@ -22,7 +24,7 @@ public static class SearchHistoryStore
 
     private static void RecordCore(string path)
     {
-        var isApp = path.StartsWith("app:", StringComparison.OrdinalIgnoreCase);
+        var isApp = HistoryService.IsAppEntry(path);
         var normalized = isApp ? path.Trim() : NormalizePath(path);
         if (!isApp && !File.Exists(normalized) && !Directory.Exists(normalized))
             return;
@@ -33,7 +35,11 @@ public static class SearchHistoryStore
             if (_entriesCache == null)
                 _entriesCache = new List<string>();
 
-            _entriesCache.RemoveAll(x => x.Equals(normalized, StringComparison.OrdinalIgnoreCase));
+            // Dedup by the underlying target, not the exact stored string -- the same path opened once
+            // as a plain file and once as a Start-Menu app (or vice versa) is still one history entry;
+            // whichever way it was JUST opened replaces the older one instead of both coexisting.
+            var rawPath = HistoryService.GetRawPath(normalized);
+            _entriesCache.RemoveAll(x => HistoryService.GetRawPath(x).Equals(rawPath, StringComparison.OrdinalIgnoreCase));
             _entriesCache.Insert(0, normalized);
 
             if (_entriesCache.Count > MaxEntries)
@@ -61,7 +67,7 @@ public static class SearchHistoryStore
         lock (Gate)
         {
             EnsureCacheNoLock();
-            var isApp = path.StartsWith("app:", StringComparison.OrdinalIgnoreCase);
+            var isApp = HistoryService.IsAppEntry(path);
             var normalized = isApp ? path.Trim() : NormalizePath(path);
             return _priorityCache != null && _priorityCache.TryGetValue(normalized, out var priority)
                 ? priority
@@ -83,9 +89,13 @@ public static class SearchHistoryStore
         lock (Gate)
         {
             _entriesCache = entries
-                .Select(x => x.StartsWith("app:", StringComparison.OrdinalIgnoreCase) ? x.Trim() : NormalizePath(x))
-                .Where(x => x.StartsWith("app:", StringComparison.OrdinalIgnoreCase) || File.Exists(x) || Directory.Exists(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(x => HistoryService.IsAppEntry(x) ? x.Trim() : NormalizePath(x))
+                .Where(x => HistoryService.IsAppEntry(x) || File.Exists(x) || Directory.Exists(x))
+                // Dedup by underlying target (see RecordCore) -- first occurrence wins, i.e. whichever
+                // representation is listed first/most-recently in the incoming (already most-recent-
+                // first) order.
+                .GroupBy(HistoryService.GetRawPath, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
                 .Take(MaxEntries)
                 .ToList();
 
@@ -133,8 +143,11 @@ public static class SearchHistoryStore
             return File.ReadLines(HistoryPath)
                 .Select(line => line.Trim())
                 .Where(line => !string.IsNullOrWhiteSpace(line))
-                .Select(x => x.StartsWith("app:", StringComparison.OrdinalIgnoreCase) ? x : NormalizePath(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(x => HistoryService.IsAppEntry(x) ? x : NormalizePath(x))
+                // Dedup by underlying target (see RecordCore) -- also collapses any duplicate pair
+                // already sitting in an existing search-history.txt from before this was fixed.
+                .GroupBy(HistoryService.GetRawPath, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
                 .Take(MaxEntries)
                 .ToList();
         }
