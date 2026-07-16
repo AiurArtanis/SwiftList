@@ -21,6 +21,26 @@ namespace SwiftList.Core.Hook;
 // thread) keeps working for every other window and adapter regardless.
 internal static class InlineAdapterCommandHandler
 {
+    // Each InlineSelectionChanged gets its own throwaway thread (see RunOnSta below), so rapid
+    // selection changes can have several calls in flight at once with no ordering guarantee between
+    // them -- a slower, older call finishing after a faster, newer one would silently revert Explorer's
+    // highlighted item back to a stale selection. InlineSelectionChanged fires on far more than just
+    // arrow-key navigation -- the App re-selects each new result set's first item on every keystroke
+    // while typing, so this message arrives roughly once per character during normal use, not just
+    // during deliberate navigation.
+    //
+    // This counter gives each call a sequence number assigned in arrival order (IPC messages are
+    // handled one at a time, so the assignment itself is race-free). Each dispatched call first waits
+    // SelectionDebounceMs before doing anything, then bails out if a newer call has been assigned in
+    // the meantime -- so a burst of rapid changes (continuous typing, or holding an arrow key) produces
+    // at most one real sync, for wherever the user actually settles, instead of racing a COM call per
+    // intermediate keystroke (which starved out almost every call during active typing -- an earlier,
+    // debounce-less version of this fix that only checked staleness immediately at thread-start made
+    // auto-select feel completely broken while typing, since a newer keystroke's message almost always
+    // arrived before the current thread even got scheduled).
+    private static long _selectionSequence;
+    private const int SelectionDebounceMs = 120;
+
     public static void Handle(HookProcess process, IpcMessage msg)
     {
         var hwnd = (IntPtr)msg.Hwnd;
@@ -53,9 +73,16 @@ internal static class InlineAdapterCommandHandler
 
             case IpcMessageId.InlineSelectionChanged:
                 var selectedPath = msg.StringVal1 ?? string.Empty;
+                var mySequence = System.Threading.Interlocked.Increment(ref _selectionSequence);
                 RunOnSta(() =>
                 {
-                    try { ResolveAdapter(process, hwnd)?.OnSelectionChanged(hwnd, selectedPath); }
+                    try
+                    {
+                        System.Threading.Thread.Sleep(SelectionDebounceMs);
+                        if (System.Threading.Interlocked.Read(ref _selectionSequence) != mySequence)
+                            return; // superseded during the debounce wait; this one is stale
+                        ResolveAdapter(process, hwnd)?.OnSelectionChanged(hwnd, selectedPath);
+                    }
                     catch (Exception ex) { Logger.Log($"[InlineAdapterCommandHandler] OnSelectionChanged threw: {ex.Message}", LogLevel.Error); }
                 });
                 break;
