@@ -13,7 +13,11 @@ public class FileSizeColumnProvider : IResultColumnProvider
             {
                 ColumnId = "FileSize",
                 HeaderText = TranslationService.Get("Column_HeaderSize"),
-                Width = 100
+                Width = 100,
+                // Without this, sorting falls back to comparing the formatted display strings
+                // ("1.06 KB" vs "1 MB") as plain text, which ignores the unit entirely. Compare the
+                // raw byte count instead.
+                SortComparer = (a, b) => a.Metadata.Size.CompareTo(b.Metadata.Size)
             },
             new ResultColumnDefinition
             {
