@@ -10,6 +10,7 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
 
     public string Description => TranslationService.Get("Plugin_Comp_Desc_PinyinAliasProvider");
 
+    public int Version => 2;
 
     public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(System.Reflection.Assembly.GetExecutingAssembly());
 
