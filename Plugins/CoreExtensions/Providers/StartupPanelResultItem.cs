@@ -12,17 +12,18 @@ internal sealed class StartupPanelResultItem : ISearchResult
     public string FullPath { get; }
     public string ContextDirectory { get; }
     public bool IsDir { get; }
-    public bool IsApplication => false;
+    public bool IsApplication { get; }
 
-    public StartupPanelResultItem(string path, string? displayName = null)
+    public StartupPanelResultItem(string path, string? displayName = null, bool isApplication = false)
     {
         FullPath = path;
-        IsDir = Directory.Exists(path);
-        Name = string.IsNullOrWhiteSpace(displayName) ? DeriveName(path) : displayName!;
+        IsApplication = isApplication;
+        IsDir = !isApplication && Directory.Exists(path);
+        Name = string.IsNullOrWhiteSpace(displayName) ? DeriveName(path, isApplication) : displayName!;
         ContextDirectory = IsDir ? path : (Path.GetDirectoryName(path) ?? path);
     }
 
-    private static string DeriveName(string path)
+    private static string DeriveName(string path, bool isApplication)
     {
         // A packaged app's path is a virtual shell:AppsFolder\{AUMID} id, not a real filename --
         // Path.GetFileName on it would surface the raw AUMID, so resolve the shell's own friendly
@@ -31,6 +32,14 @@ internal sealed class StartupPanelResultItem : ISearchResult
             return ShellPathHelper.GetVirtualFolderDisplayName(path, path);
 
         var name = Path.GetFileName(path.TrimEnd('\\', '/'));
+
+        // A classic Start Menu app's FullPath is its .lnk shortcut file itself (see
+        // StartMenuAppItemProvider), whose own display name is the filename WITHOUT that extension
+        // (Path.GetFileNameWithoutExtension) -- matches what the main results list shows for the same
+        // app, instead of leaking the raw ".lnk" suffix into the name here.
+        if (isApplication && name.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
+            name = name.Substring(0, name.Length - 4);
+
         return string.IsNullOrEmpty(name) ? path : name;
     }
 }

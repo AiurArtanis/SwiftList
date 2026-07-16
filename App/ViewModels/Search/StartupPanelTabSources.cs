@@ -224,17 +224,24 @@ internal sealed class PluginTabSource : ITabSource
         // already shows for WSL results (see SearchResultHelper.GetParentDisplayText), so a WSL favorite/
         // history entry doesn't display differently just because it came through this tab instead.
         var parentDir = isWebUrl ? item.FullPath : SearchResultHelper.FormatWslPath(Path.GetDirectoryName(item.FullPath) ?? string.Empty);
+        var fullPath = item.FullPath;
         return new AppSearchResult
         {
             Name = item.Name,
-            FullPath = item.FullPath,
+            FullPath = fullPath,
             ParentDir = parentDir,
             ContextDirectory = item.ContextDirectory,
             IsDir = item.IsDir,
-            Drive = string.IsNullOrEmpty(item.FullPath) ? string.Empty : (Path.GetPathRoot(item.FullPath) ?? string.Empty).TrimEnd('\\'),
+            Drive = string.IsNullOrEmpty(fullPath) ? string.Empty : (Path.GetPathRoot(fullPath) ?? string.Empty).TrimEnd('\\'),
             ResultKind = item.IsApplication ? "Application" : "File",
             Index = index,
-            IconOverride = isWebUrl ? FavoriteUrlHelper.Icon : null
+            IconOverride = isWebUrl ? FavoriteUrlHelper.Icon : null,
+            // "Application" results execute as an instant-result (PluginActionExecutor.TryExecute), not
+            // through the "File" fallback path (FileExecutor.OpenFileOrFolder called by the search
+            // window's own input handler) -- wire it up explicitly so it still actually launches instead
+            // of silently no-op'ing into the default Copy-empty-string instant-result action.
+            InstantResultOnExecute = item.IsApplication ? () => FileExecutor.OpenFileOrFolder(fullPath) : null,
+            InstantResultActionArgument = item.IsApplication ? fullPath : string.Empty
         };
     }
 }

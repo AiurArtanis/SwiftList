@@ -17,5 +17,5 @@ public class HistoryTabProvider : IStartupPanelTabProvider
     public IEnumerable<ISearchResult> GetItems() => HistoryService.GetHistoryEntries()
         .Where(e => e.Kind == HistoryEntryKind.Application || File.Exists(e.Path) || Directory.Exists(e.Path))
         .Take(MaxItems)
-        .Select(e => (ISearchResult)new StartupPanelResultItem(e.Path));
+        .Select(e => (ISearchResult)new StartupPanelResultItem(e.Path, isApplication: e.Kind == HistoryEntryKind.Application));
 }
