@@ -15,7 +15,8 @@ internal sealed class DynamicFilterCoordinator
         List<Func<IReadOnlyList<ISearchResult>, Task<IReadOnlyList<ISearchResult>>>> activeFilters,
         Func<IEnumerable<AppSearchResult>, List<AppSearchResult>> sort,
         Func<List<AppSearchResult>> currentResults,
-        Action<List<AppSearchResult>> render)
+        Action<List<AppSearchResult>> render,
+        Action<bool> setBusy)
     {
         var sorted = sort(allResults);
 
@@ -28,7 +29,8 @@ internal sealed class DynamicFilterCoordinator
 
         render(sorted);
         _pendingFilters = activeFilters;
-        _ = ApplyAsync(allResults, activeFilters, sort, currentResults, render);
+        setBusy(true);
+        _ = ApplyAsync(allResults, activeFilters, sort, currentResults, render, setBusy);
     }
 
     private async Task ApplyAsync(
@@ -36,15 +38,27 @@ internal sealed class DynamicFilterCoordinator
         List<Func<IReadOnlyList<ISearchResult>, Task<IReadOnlyList<ISearchResult>>>> filtersSnapshot,
         Func<IEnumerable<AppSearchResult>, List<AppSearchResult>> sort,
         Func<List<AppSearchResult>> currentResults,
-        Action<List<AppSearchResult>> render)
+        Action<List<AppSearchResult>> render,
+        Action<bool> setBusy)
     {
-        IReadOnlyList<ISearchResult> current = resultsSnapshot;
-        foreach (var filter in filtersSnapshot)
-            current = await filter(current);
+        try
+        {
+            IReadOnlyList<ISearchResult> current = resultsSnapshot;
+            foreach (var filter in filtersSnapshot)
+                current = await filter(current);
 
-        if (!ReferenceEquals(currentResults(), resultsSnapshot) || !ReferenceEquals(_pendingFilters, filtersSnapshot))
-            return;
+            if (!ReferenceEquals(currentResults(), resultsSnapshot) || !ReferenceEquals(_pendingFilters, filtersSnapshot))
+                return;
 
-        render(sort(current.Cast<AppSearchResult>()));
+            render(sort(current.Cast<AppSearchResult>()));
+        }
+        finally
+        {
+            // A newer Apply() call already reassigned _pendingFilters to ITS OWN filter list -- that
+            // call owns the busy indicator now, so this (superseded) call must not clear it out from
+            // under it.
+            if (ReferenceEquals(_pendingFilters, filtersSnapshot))
+                setBusy(false);
+        }
     }
 }

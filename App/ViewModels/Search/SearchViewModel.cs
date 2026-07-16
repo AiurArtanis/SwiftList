@@ -185,7 +185,8 @@ public class SearchViewModel : ViewModelBase, IDisposable
             activeFilters,
             results => SearchResultSorter.Sort(results, _currentSortColumn, _isSortAscending).ToList(),
             () => _allResults,
-            RenderFinal);
+            RenderFinal,
+            v => IsSearching = v);
     }
 
     private void RenderFinal(List<AppSearchResult> finalResults)
