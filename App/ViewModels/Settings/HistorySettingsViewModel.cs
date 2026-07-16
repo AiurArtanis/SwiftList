@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
 using SwiftList.Core;
@@ -41,10 +41,14 @@ public class HistorySettingsViewModel : ViewModelBase
     public HistoryListViewModel<HistoryEntry> SearchHistory { get; }
     public HistoryListViewModel<string> KeywordHistory { get; }
 
-    private const string FileIconGlyph = "";
-    private const string FolderIconGlyph = "";
-    private const string ApplicationIconGlyph = "";
-    private const string KeywordIconGlyph = "";
+    // Segoe MDL2 Assets glyphs (U+E160 Page2, U+E8B7 Folder, U+E737 AppIconDefault, U+E81C). These are
+    // private-use-area characters, invisible in a plain-text diff/editor view -- a hand-retyped edit
+    // previously replaced them with empty strings without the change looking any different, which
+    // silently blanked every icon in this list. Codepoints noted here so the same slip is easy to catch.
+    private const string FileIconGlyph = "";
+    private const string FolderIconGlyph = "";
+    private const string ApplicationIconGlyph = "";
+    private const string KeywordIconGlyph = "";
 
     private static HistoryEntryViewModel<HistoryEntry> MapSearchEntry(HistoryEntry entry)
     {
