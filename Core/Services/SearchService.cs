@@ -239,7 +239,7 @@ public class SearchService : IDisposable
         var localResults = resp.Kind == PipeResponseKind.RecentFiles && resp.RecentFiles != null ? resp.RecentFiles : new List<SearchResult>();
 
         var networkResults = await networkTask.ConfigureAwait(false);
-        var merged = localResults.Concat(networkResults).OrderByDescending(r => r.ModifiedUtc);
+        var merged = localResults.Concat(networkResults).OrderByDescending(r => r.Metadata.Modified);
         return (limit > 0 ? merged.Take(limit) : merged).ToList();
     }
 

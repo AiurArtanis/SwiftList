@@ -31,7 +31,7 @@ public static class NetworkIndexerRecentFilesExtensions
             index.CollectRecentFiles(canonicalDirLower, cutoffUtc, candidates);
         }
 
-        var ordered = candidates.OrderByDescending(c => c.ModifiedUtc);
+        var ordered = candidates.OrderByDescending(c => c.Metadata.Modified);
         return (limit > 0 ? ordered.Take(limit) : ordered).ToList();
     }
 

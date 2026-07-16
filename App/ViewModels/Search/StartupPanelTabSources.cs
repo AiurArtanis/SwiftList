@@ -50,7 +50,7 @@ internal sealed class RecentFilesTabSource : ITabSource
         for (var i = 0; i < recentFiles.Count; i++)
         {
             var uiResult = SearchResultHelper.CreateUiResult(recentFiles[i], string.Empty, i, isApplication: false, scope: null);
-            var relativeTime = FormatRelativeTime(recentFiles[i].ModifiedUtc);
+            var relativeTime = FormatRelativeTime(recentFiles[i].Metadata.Modified);
             if (!string.IsNullOrEmpty(relativeTime))
                 uiResult.ParentDir = $"{relativeTime} - {uiResult.ParentDir}";
             uiResults.Add(uiResult);
@@ -58,11 +58,10 @@ internal sealed class RecentFilesTabSource : ITabSource
         return uiResults;
     }
 
-    private static string FormatRelativeTime(uint modifiedUtc)
+    private static string FormatRelativeTime(DateTime modified)
     {
-        if (modifiedUtc == 0) return string.Empty;
+        if (modified == DateTime.MinValue) return string.Empty;
 
-        var modified = FileTimeHelper.FromUnixSeconds(modifiedUtc).ToLocalTime();
         var totalSeconds = (long)Math.Max(0, (DateTime.Now - modified).TotalSeconds);
 
         if (totalSeconds < 60)
@@ -144,7 +143,11 @@ internal sealed class LastDirectoryTabSource : ITabSource
                     IsDir = isDir,
                     Drive = drive,
                     Attributes = entry.Attributes,
-                    ModifiedUtc = FileTimeHelper.ToUnixSeconds(entry.LastWriteTimeUtc)
+                    Metadata = new PluginSdk.Abstractions.FileMetadata(
+                        entry is FileInfo fi ? fi.Length : 0,
+                        entry.CreationTime,
+                        entry.LastWriteTime,
+                        entry.LastAccessTime),
                 };
                 uiResults.Add(SearchResultHelper.CreateUiResult(item, string.Empty, index, isApplication: false, scope: null));
                 index++;

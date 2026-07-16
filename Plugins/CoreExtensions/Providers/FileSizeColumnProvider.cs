@@ -30,25 +30,20 @@ public class FileSizeColumnProvider : IResultColumnProvider
             return columnId == "Extension" ? TranslationService.Get("Column_TypeFolder") : string.Empty;
         }
 
-        try
+        if (columnId == "FileSize")
         {
-            if (columnId == "FileSize")
-            {
-                var fi = new FileInfo(result.FullPath);
-                if (!fi.Exists) return string.Empty;
-                return FormatSize(fi.Length);
-            }
-
-            if (columnId == "Extension")
-            {
-                var ext = Path.GetExtension(result.FullPath).ToUpper();
-                return string.IsNullOrEmpty(ext)
-                    ? TranslationService.Get("Column_TypeFile")
-                    : TranslationService.Format("Column_TypeExtFile", ext.TrimStart('.'));
-            }
+            // Already known from the index via ISearchResult.Metadata -- no per-cell disk I/O.
+            // Metadata.Modified == DateTime.MinValue means this result isn't file-index-backed (e.g.
+            // a plugin-provided item), matching the old fi.Exists == false -> empty case.
+            return result.Metadata.Modified == DateTime.MinValue ? string.Empty : FormatSize(result.Metadata.Size);
         }
-        catch
+
+        if (columnId == "Extension")
         {
+            var ext = Path.GetExtension(result.FullPath).ToUpper();
+            return string.IsNullOrEmpty(ext)
+                ? TranslationService.Get("Column_TypeFile")
+                : TranslationService.Format("Column_TypeExtFile", ext.TrimStart('.'));
         }
 
         return string.Empty;

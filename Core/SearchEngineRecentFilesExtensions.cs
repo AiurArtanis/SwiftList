@@ -41,7 +41,7 @@ public static class SearchEngineRecentFilesExtensions
 
         // limit <= 0 means "unlimited" -- still bounded by RecentFilesV2.MaxScannedPerDirectory and
         // the age cutoff above, so this can't turn into an unbounded full-volume dump.
-        var ordered = candidates.OrderByDescending(c => c.ModifiedUtc);
+        var ordered = candidates.OrderByDescending(c => c.Metadata.Modified);
         return (limit > 0 ? ordered.Take(limit) : ordered).ToList();
     }
 }

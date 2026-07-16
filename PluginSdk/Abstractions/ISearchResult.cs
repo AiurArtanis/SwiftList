@@ -24,4 +24,12 @@ public interface ISearchResult
     /// Returns a custom highlight mask if supported.
     /// </summary>
     bool[]? GetHighlightMask(string text, string query) => null;
+
+    /// <summary>
+    /// Size/Created/Modified/Accessed, already known from the index for most file-index-backed
+    /// results (no disk I/O or IPC needed) -- <c>default</c> for results this doesn't apply to (e.g.
+    /// plugin-provided, non-file results). See <see cref="FileMetadata"/> for how to tell a
+    /// genuinely-unknown value apart from a legitimate zero/default one.
+    /// </summary>
+    FileMetadata Metadata => default;
 }

@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using SwiftList.PluginSdk.Abstractions;
 
 namespace SwiftList.Core;
 
@@ -9,9 +10,11 @@ public static class RecentFilesResponseCodec
     public static Task WriteRecentFilesAsync(Stream stream, List<SearchResult> recentFiles, CancellationToken token = default)
         => PipeResponseBinarySerializer.WriteAsync(stream, new PipeResponse { Kind = PipeResponseKind.RecentFiles, RecentFiles = recentFiles }, token);
 
-    // Name/Path/IsDir/Drive/ModifiedUtc only -- Attributes isn't read by any caller (see
-    // SearchResultHelper.CreateUiResult). ModifiedUtc is carried so SearchService.GetRecentFilesAsync can
-    // merge this response with the network/WSL result set by actual recency instead of just concatenating.
+    // Name/Path/IsDir/Drive/modified-time only -- Attributes isn't read by any caller (see
+    // SearchResultHelper.CreateUiResult). The modified time is carried so SearchService.GetRecentFilesAsync
+    // can merge this response with the network/WSL result set by actual recency instead of just
+    // concatenating -- reconstructed into a Metadata with only Modified set (Size/Created/Accessed aren't
+    // needed for Recent Files and were never in this wire format).
     internal static int CalculateRecentFilesSize(List<SearchResult> recentFiles)
     {
         var size = 4; // Count
@@ -30,7 +33,7 @@ public static class RecentFilesResponseCodec
             PipeResponseBinarySerializer.WriteString(span, ref offset, item.Path);
             span[offset++] = (byte)(item.IsDir ? 1 : 0);
             PipeResponseBinarySerializer.WriteString(span, ref offset, item.Drive);
-            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset), item.ModifiedUtc);
+            BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset), FileTimeHelper.ToUnixSeconds(item.Metadata.Modified.ToUniversalTime()));
             offset += 4;
         }
     }
@@ -48,7 +51,8 @@ public static class RecentFilesResponseCodec
             var drive = PipeResponseBinarySerializer.ReadString(payload, ref offset);
             var modifiedUtc = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(offset));
             offset += 4;
-            recentFiles.Add(new SearchResult { Name = name, Path = path, IsDir = isDir, Drive = drive, ModifiedUtc = modifiedUtc });
+            var modified = FileTimeHelper.FromUnixSeconds(modifiedUtc).ToLocalTime();
+            recentFiles.Add(new SearchResult { Name = name, Path = path, IsDir = isDir, Drive = drive, Metadata = new FileMetadata(0, DateTime.MinValue, modified, DateTime.MinValue) });
         }
         return recentFiles;
     }

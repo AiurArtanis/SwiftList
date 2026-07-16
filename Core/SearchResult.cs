@@ -1,3 +1,5 @@
+using SwiftList.PluginSdk.Abstractions;
+
 namespace SwiftList.Core;
 
 
@@ -12,11 +14,12 @@ public class SearchResult
 
     // Populated from the index for every result that comes from one (local or network/WSL) -- lets
     // SearchService merge GetRecentFiles' local and network/WSL result sets by actual recency instead of
-    // just concatenating two already-sorted-but-incomparable lists, and lets the UI show a modified date
-    // without re-touching the filesystem (see AppSearchResult.DateModified). Zero for results that don't
-    // come from an index (plugin results, etc.) or genuinely have no recorded time. Last-write time, not
-    // creation time: a long-lived file you just edited should still count as "recent".
-    public uint ModifiedUtc { get; set; }
+    // just concatenating two already-sorted-but-incomparable lists, lets the sidebar Size/Date filters and
+    // the Size column run synchronously off already-known data instead of a per-application IPC round
+    // trip (see FileSizeFilterProvider/DateModifiedFilterProvider), and lets the UI show a modified date
+    // without re-touching the filesystem (see AppSearchResult.DateModified). Default for results that
+    // don't come from an index (plugin results, etc.) or genuinely have no recorded metadata.
+    public FileMetadata Metadata { get; set; }
 }
 
 public sealed class SearchResultRankComparer : IComparer<SearchResult>

@@ -32,7 +32,7 @@ internal static class SearchResultHelper
             ResultKind = isApplication ? "Application" : "File",
             Index = index,
             SearchQuery = query,
-            ModifiedUtc = item.ModifiedUtc
+            Metadata = item.Metadata
         };
     }
 

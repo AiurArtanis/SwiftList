@@ -1,14 +1,14 @@
-namespace SwiftList.PluginSdk.Services;
+using SwiftList.PluginSdk.Abstractions;
 
-/// <summary>
-/// A file's Size and Created/Modified/Accessed timestamps.
-/// </summary>
-public readonly record struct FileMetadata(long Size, DateTime Created, DateTime Modified, DateTime Accessed);
+namespace SwiftList.PluginSdk.Services;
 
 /// <summary>
 /// Lets plugins fetch Size/Created/Modified/Accessed for a batch of paths in one call. The host
 /// answers from its in-memory file index where possible (no disk I/O) and falls back to a live
 /// filesystem stat only for paths it isn't tracking -- callers never need to stat files themselves.
+/// Most search results already carry this via <see cref="ISearchResult.Metadata"/> without needing a
+/// call here at all; reach for this service only for a path that ISN'T one of the current results
+/// (e.g. one a plugin discovered some other way).
 /// </summary>
 public static class FileMetadataService
 {

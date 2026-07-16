@@ -182,8 +182,9 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         }
     }
 
-    // Already known from the index (Core.SearchResult.ModifiedUtc) for most results; 0 falls back below.
-    public uint ModifiedUtc { get; set; }
+    // Already known from the index (Core.SearchResult.Metadata) for most results; DateTime.MinValue
+    // (see FileMetadata) falls back below.
+    public PluginSdk.Abstractions.FileMetadata Metadata { get; set; }
 
     // Lazy-loaded File Date Modified
     private DateTime? _dateModified;
@@ -193,8 +194,8 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         get
         {
             if (_dateModified.HasValue) return _dateModified.Value;
-            if (ModifiedUtc != 0)
-                return (_dateModified = Core.FileTimeHelper.FromUnixSeconds(ModifiedUtc).ToLocalTime()).Value;
+            if (Metadata.Modified != DateTime.MinValue)
+                return (_dateModified = Metadata.Modified).Value;
             if (!_dateModifiedLoadingStarted)
             {
                 _dateModifiedLoadingStarted = true;

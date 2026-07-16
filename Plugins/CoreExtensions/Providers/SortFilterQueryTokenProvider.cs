@@ -16,13 +16,8 @@ public class SortFilterQueryTokenProvider : IQueryTokenProvider
 
     public bool CanHandle(string token) => IsFilterToken(token) || SortTokenPattern.IsMatch(token);
 
-    public async Task<IReadOnlyList<ISearchResult>> ApplyAsync(string token, IReadOnlyList<ISearchResult> results)
-    {
-        if (IsFilterToken(token))
-            return ApplyFilter(token, results);
-
-        return await ApplySortAsync(token, results);
-    }
+    public Task<IReadOnlyList<ISearchResult>> ApplyAsync(string token, IReadOnlyList<ISearchResult> results) =>
+        Task.FromResult(IsFilterToken(token) ? ApplyFilter(token, results) : ApplySort(token, results));
 
     private static bool IsFilterToken(string token) => token.Length > 1 && token[0] == '.';
 
@@ -37,23 +32,21 @@ public class SortFilterQueryTokenProvider : IQueryTokenProvider
         return results.Where(r => !r.IsDir && extensions.Contains(Path.GetExtension(r.FullPath).TrimStart('.').ToLowerInvariant())).ToList();
     }
 
-    private static async Task<IReadOnlyList<ISearchResult>> ApplySortAsync(string token, IReadOnlyList<ISearchResult> results)
+    private static IReadOnlyList<ISearchResult> ApplySort(string token, IReadOnlyList<ISearchResult> results)
     {
         var descending = token[0] == '-' || token[^1] == '-';
         var letter = char.ToUpperInvariant(token.Trim('-')[0]);
 
-        // ISearchResult.DateModified is itself lazily/asynchronously loaded (same as Size/Created/
-        // Accessed would be if read directly) -- reading it synchronously here would silently sort
-        // against unloaded placeholders. Route every field through the awaited batch lookup instead.
-        var paths = results.Select(r => r.FullPath).Distinct().ToList();
-        var metadata = await FileMetadataService.GetMetadataAsync(paths);
-
+        // Already known from the index via ISearchResult.Metadata for every real file result -- no
+        // more batch metadata lookup/IPC round trip (see FileSizeFilterProvider/DateModifiedFilterProvider
+        // for the same change). A result with no real metadata (not file-index-backed) sorts using
+        // Metadata's own default (0 / DateTime.MinValue), matching the old per-path lookup miss fallback.
         Func<ISearchResult, IComparable> keySelector = letter switch
         {
-            'S' => r => metadata.TryGetValue(r.FullPath, out var m) ? m.Size : 0,
-            'C' => r => metadata.TryGetValue(r.FullPath, out var m) ? m.Created : DateTime.MinValue,
-            'M' => r => metadata.TryGetValue(r.FullPath, out var m) ? m.Modified : DateTime.MinValue,
-            'A' => r => metadata.TryGetValue(r.FullPath, out var m) ? m.Accessed : DateTime.MinValue,
+            'S' => r => r.Metadata.Size,
+            'C' => r => r.Metadata.Created,
+            'M' => r => r.Metadata.Modified,
+            'A' => r => r.Metadata.Accessed,
             _ => r => r.Name
         };
 

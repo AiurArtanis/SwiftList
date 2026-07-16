@@ -1,3 +1,5 @@
+using SwiftList.PluginSdk.Abstractions;
+
 namespace SwiftList.Core.IndexV2;
 
 // Mirrors RecentFilesWalker.CollectFromDirectory over Snapshot+DeltaOverlay: an in-memory subtree DFS
@@ -64,12 +66,14 @@ public static class RecentFilesV2
         candidates.Add(ToResult(record.Name, delta.GetFullPath(row), (record.Flags & (ushort)FileRecordFlags.Directory) != 0, drive, record.LastWrite));
     }
 
+    // Size/Created/Accessed aren't tracked here -- Recent Files only ever needs Modified, for the
+    // recency merge/sort (see SearchEngineRecentFilesExtensions/SearchService.GetRecentFilesAsync).
     private static SearchResult ToResult(string name, string path, bool isDir, string drive, uint modifiedUtc) => new()
     {
         Name = name,
         Path = path,
         IsDir = isDir,
         Drive = drive,
-        ModifiedUtc = modifiedUtc,
+        Metadata = new FileMetadata(0, DateTime.MinValue, FileTimeHelper.FromUnixSeconds(modifiedUtc).ToLocalTime(), DateTime.MinValue),
     };
 }

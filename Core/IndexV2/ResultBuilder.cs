@@ -1,4 +1,5 @@
 using SwiftList.Core.SearchIndex.Fzf;
+using SwiftList.PluginSdk.Abstractions;
 
 namespace SwiftList.Core.IndexV2;
 
@@ -20,11 +21,11 @@ internal static class ResultBuilder
                 Drive = snapshot.SourceKey,
                 Attributes = FileRecordFlagsHelper.ToAttributes((FileRecordFlags)record.Flags),
                 RankSortKey = rank.SortKey,
-                ModifiedUtc = record.LastWrite,
+                Metadata = ToMetadata(record.Size, record.Creation, record.LastWrite, record.LastAccess),
             };
         }
 
-        var (_, _, lastWrite, _) = delta.MetadataOf(entryIndex);
+        var (size, creation, lastWrite, lastAccess) = delta.MetadataOf(entryIndex);
         var flags = delta.BaseOverrides.TryGetValue(entryIndex, out var o) ? (FileRecordFlags)o.Flags : (FileRecordFlags)snapshot.Flags[entryIndex];
         return new SearchResult
         {
@@ -34,7 +35,13 @@ internal static class ResultBuilder
             Drive = snapshot.SourceKey,
             Attributes = FileRecordFlagsHelper.ToAttributes(flags),
             RankSortKey = rank.SortKey,
-            ModifiedUtc = lastWrite,
+            Metadata = ToMetadata(size, creation, lastWrite, lastAccess),
         };
     }
+
+    private static FileMetadata ToMetadata(long size, uint creation, uint lastWrite, uint lastAccess) => new(
+        size,
+        FileTimeHelper.FromUnixSeconds(creation).ToLocalTime(),
+        FileTimeHelper.FromUnixSeconds(lastWrite).ToLocalTime(),
+        FileTimeHelper.FromUnixSeconds(lastAccess).ToLocalTime());
 }
