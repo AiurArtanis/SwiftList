@@ -14,9 +14,20 @@ public static class TranslationService
     public static Func<string, string> LookupFunc { get; set; } = key => $"[{key}]";
 
     /// <summary>
+    /// Delegate function set by the main application to expose the app's currently selected
+    /// UI language (e.g. "zh-CN"), which is a user setting independent of the OS system locale.
+    /// </summary>
+    public static Func<string> CurrentCultureFunc { get; set; } = () => System.Globalization.CultureInfo.CurrentUICulture.Name;
+
+    /// <summary>
     /// Gets translation by key.
     /// </summary>
     public static string Get(string key) => LookupFunc(key);
+
+    /// <summary>
+    /// Gets the app's currently selected UI language/culture code (e.g. "zh-CN"), not the OS system locale.
+    /// </summary>
+    public static string GetCurrentCulture() => CurrentCultureFunc();
 
     /// <summary>
     /// Gets formatted translation by key.

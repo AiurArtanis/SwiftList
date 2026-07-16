@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 
@@ -15,11 +16,42 @@ public class WebSearchInstantProvider : IInstantResultProvider
         public string Keyword { get; set; } = string.Empty;
         public string Icon { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
+        public string SuggestUrl { get; set; } = string.Empty;
     }
 
-    private List<SearchSourceItem>? _cachedSources;
+    private const int MaxSuggestions = 5;
+    private static readonly TimeSpan SuggestionDebounce = TimeSpan.FromMilliseconds(200);
 
-    private List<SearchSourceItem> GetDefaultSearchSources() => new List<SearchSourceItem>
+    private static readonly HttpClient SuggestionHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(4) };
+    private static readonly HashSet<string> PendingSuggestionRequests = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, List<string>> SuggestionCache = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+    private static string? _latestSuggestionRequestKey;
+
+    private const string PluginId = "SwiftList.Plugins.WebSearch";
+
+    static WebSearchInstantProvider()
+    {
+        try
+        {
+            // Some suggestion endpoints (e.g. Wikipedia's) reject requests with no User-Agent header.
+            SuggestionHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0");
+        }
+        catch { }
+
+        // Invalidate the cached sources as soon as the host reports this plugin's settings were
+        // saved, so config changes apply to the very next keystroke instead of requiring a restart.
+        PluginSettingsService.SettingChanged += (pluginId, key) =>
+        {
+            if (string.Equals(pluginId, PluginId, StringComparison.OrdinalIgnoreCase))
+            {
+                _cachedSources = null;
+            }
+        };
+    }
+
+    private static List<SearchSourceItem>? _cachedSources;
+
+    private static List<SearchSourceItem> GetDefaultSearchSources() => new List<SearchSourceItem>
         {
             new SearchSourceItem { Name = "Baidu", Keyword = "bd", Icon = "M9.154 0C7.71 0 6.54 1.658 6.54 3.707c0 2.051 1.171 3.71 2.615 3.71 1.446 0 2.614-1.659 2.614-3.71C11.768 1.658 10.6 0 9.154 0zm7.025.594C14.86.58 13.347 2.589 13.2 3.927c-.187 1.745.25 3.487 2.179 3.735 1.933.25 3.175-1.806 3.422-3.364.252-1.555-.995-3.364-2.362-3.674a1.218 1.218 0 0 0-.261-.03zM3.582 5.535a2.811 2.811 0 0 0-.156.008c-2.118.19-2.428 3.24-2.428 3.24-.287 1.41.686 4.425 3.297 3.864 2.617-.561 2.262-3.68 2.183-4.362-.125-1.018-1.292-2.773-2.896-2.75zm16.534 1.753c-2.308 0-2.617 2.119-2.617 3.616 0 1.43.121 3.425 2.988 3.362 2.867-.063 2.553-3.238 2.553-3.988 0-.745-.62-2.99-2.924-2.99zm-8.264 2.478c-1.424.014-2.708.925-3.565 2.483-1.642 2.986-.888 7.023 1.83 8.356 2.72 1.334 6.643-.092 7.733-3.084 1.092-2.993-.83-6.618-3.55-7.587a6.22 6.22 0 0 0-2.448-.168zm-.129 1.157c1.782.022 3.14 1.442 3.033 3.169-.107 1.727-1.637 3.092-3.418 3.07-1.781-.023-3.138-1.444-3.03-3.17.106-1.726 1.636-3.092 3.415-3.07z", Url = "https://www.baidu.com/s?wd=%s" },
             new SearchSourceItem { Name = "Google", Keyword = "g", Icon = "M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.535 0-6.4-2.865-6.4-6.4s2.865-6.4 6.4-6.4c1.582 0 3.02.574 4.136 1.518l3.12-3.12C19.094 2.14 15.918 1 12.24 1c-6.075 0-11 4.925-11 11s4.925 11 11 11c5.833 0 10.744-4.2 11.233-9.715H12.24z", Url = "https://www.google.com/search?q=%s" },
@@ -29,7 +61,7 @@ public class WebSearchInstantProvider : IInstantResultProvider
             new SearchSourceItem { Name = "YouTube", Keyword = "yt", Icon = "M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.503 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.387.508 9.387.508s7.517 0 9.387-.508a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z", Url = "https://www.youtube.com/results?search_query=%s" }
         };
 
-    private List<SearchSourceItem> LoadSearchSources()
+    private static List<SearchSourceItem> LoadSearchSources()
     {
         if (_cachedSources != null)
         {
@@ -38,7 +70,7 @@ public class WebSearchInstantProvider : IInstantResultProvider
 
         try
         {
-            var sources = PluginSettingsService.GetSetting<List<SearchSourceItem>>("SwiftList.Plugins.WebSearch", "SearchSources", null!);
+            var sources = PluginSettingsService.GetSetting<List<SearchSourceItem>>(PluginId, "SearchSources", null!);
             if (sources != null && sources.Count > 0)
             {
                 var defaults = GetDefaultSearchSources();
@@ -76,10 +108,7 @@ public class WebSearchInstantProvider : IInstantResultProvider
     public IEnumerable<InstantResultItem> GetInstantResults(string query)
     {
         if (string.IsNullOrEmpty(query))
-        {
-            _cachedSources = null; // Clear cache on empty/reset query to allow picking up configuration changes
             yield break;
-        }
 
         var sources = LoadSearchSources();
         SearchSourceItem? matchedSource = null;
@@ -120,20 +149,7 @@ public class WebSearchInstantProvider : IInstantResultProvider
             yield break;
         }
 
-        var searchUrlTemplate = matchedSource.Url;
-        string searchUrl;
-        if (searchUrlTemplate.Contains("%s"))
-        {
-            searchUrl = searchUrlTemplate.Replace("%s", Uri.EscapeDataString(searchTerm));
-        }
-        else if (searchUrlTemplate.Contains("{0}"))
-        {
-            searchUrl = string.Format(searchUrlTemplate, Uri.EscapeDataString(searchTerm));
-        }
-        else
-        {
-            searchUrl = searchUrlTemplate + Uri.EscapeDataString(searchTerm);
-        }
+        var searchUrl = BuildUrl(matchedSource.Url, searchTerm);
 
         yield return new InstantResultItem
         {
@@ -144,6 +160,172 @@ public class WebSearchInstantProvider : IInstantResultProvider
             ActionType = "Execute",
             ActionArgument = searchUrl
         };
+
+        if (string.IsNullOrWhiteSpace(matchedSource.SuggestUrl))
+            yield break;
+
+        var suggestionKey = matchedSource.Keyword + ":" + searchTerm;
+        _latestSuggestionRequestKey = suggestionKey;
+
+        List<string>? suggestions;
+        lock (SuggestionCache)
+        {
+            SuggestionCache.TryGetValue(suggestionKey, out suggestions);
+        }
+
+        if (suggestions != null)
+        {
+            var shownCount = 0;
+            foreach (var suggestion in suggestions)
+            {
+                if (shownCount >= MaxSuggestions)
+                    break;
+
+                if (string.Equals(suggestion, searchTerm, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                shownCount++;
+                yield return new InstantResultItem
+                {
+                    Title = suggestion,
+                    Description = TranslationService.Format("WebSearch_SuggestionDesc", searchEngineName),
+                    IconData = iconData,
+                    IconColor = iconColor,
+                    ActionType = "Execute",
+                    ActionArgument = BuildUrl(matchedSource.Url, suggestion),
+                    TabCompletion = prefix + suggestion
+                };
+            }
+        }
+        else
+        {
+            var shouldTrigger = false;
+            lock (PendingSuggestionRequests)
+            {
+                if (!PendingSuggestionRequests.Contains(suggestionKey))
+                {
+                    PendingSuggestionRequests.Add(suggestionKey);
+                    shouldTrigger = true;
+                }
+            }
+
+            if (shouldTrigger)
+            {
+                TriggerSuggestionFetch(matchedSource, searchTerm, suggestionKey, prefix);
+            }
+        }
+    }
+
+    private static string BuildUrl(string template, string term)
+    {
+        var encoded = Uri.EscapeDataString(term);
+        if (template.Contains("%s"))
+        {
+            return template.Replace("%s", encoded);
+        }
+        if (template.Contains("{0}"))
+        {
+            return string.Format(template, encoded);
+        }
+        return template + encoded;
+    }
+
+    private static void TriggerSuggestionFetch(SearchSourceItem source, string searchTerm, string suggestionKey, string prefix)
+    {
+        Task.Run(async () =>
+        {
+            var fetched = false;
+            try
+            {
+                await Task.Delay(SuggestionDebounce);
+                if (_latestSuggestionRequestKey != suggestionKey)
+                {
+                    // The user has already moved on to a different query; skip the network call.
+                    return;
+                }
+
+                var suggestions = await FetchSuggestionsAsync(source.SuggestUrl, searchTerm);
+                lock (SuggestionCache)
+                {
+                    SuggestionCache[suggestionKey] = suggestions;
+                }
+                fetched = true;
+            }
+            catch
+            {
+                lock (SuggestionCache)
+                {
+                    SuggestionCache[suggestionKey] = new List<string>();
+                }
+                fetched = true;
+            }
+            finally
+            {
+                lock (PendingSuggestionRequests)
+                {
+                    PendingSuggestionRequests.Remove(suggestionKey);
+                }
+            }
+
+            if (fetched)
+            {
+                RefreshActiveSearches(prefix, searchTerm);
+            }
+        });
+    }
+
+    private static async Task<List<string>> FetchSuggestionsAsync(string suggestUrlTemplate, string searchTerm)
+    {
+        var url = BuildUrl(suggestUrlTemplate, searchTerm);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        var cultureName = TranslationService.GetCurrentCulture();
+        if (!string.IsNullOrWhiteSpace(cultureName))
+        {
+            try
+            {
+                request.Headers.AcceptLanguage.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue(cultureName));
+            }
+            catch { }
+        }
+
+        using var response = await SuggestionHttpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync();
+        return ParseOpenSearchSuggestions(json);
+    }
+
+    private static List<string> ParseOpenSearchSuggestions(string json)
+    {
+        var result = new List<string>();
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() < 2)
+            return result;
+
+        var suggestionsElement = root[1];
+        if (suggestionsElement.ValueKind != JsonValueKind.Array)
+            return result;
+
+        foreach (var item in suggestionsElement.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String)
+                continue;
+
+            var text = item.GetString();
+            if (!string.IsNullOrWhiteSpace(text))
+                result.Add(text);
+        }
+        return result;
+    }
+
+    // Re-triggers active searches so they pick up newly-cached suggestions, via the host-provided
+    // SearchRefreshService rather than reflecting into concrete App-side view model types.
+    private static void RefreshActiveSearches(string prefix, string searchTerm)
+    {
+        SearchRefreshService.RefreshIfMatches(currentQueryText =>
+            currentQueryText.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(currentQueryText.Substring(prefix.Length).Trim(), searchTerm, StringComparison.OrdinalIgnoreCase));
     }
 
     private (string iconData, string iconColor) GetIconInfo(string iconNameOrPath)

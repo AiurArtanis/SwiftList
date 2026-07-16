@@ -14,19 +14,28 @@ public class ShellThumbnailProvider : IThumbnailProvider
     public string Id => "CoreExtensions::ThumbnailProvider::Shell";
     public string Name => TranslationService.Get("Plugins_SystemThumbnailProviderName");
 
+    private const string PluginId = "SwiftList.Plugins.CoreExtensions";
+    private const string SettingKey = "ThumbnailExtensions";
+
     private static HashSet<string>? _supportedExtensions;
-    private static DateTime _lastLoaded = DateTime.MinValue;
     private static readonly object ExtLock = new();
+
+    static ShellThumbnailProvider() => PluginSettingsService.SettingChanged += (pluginId, key) =>
+    {
+        if (pluginId == PluginId && key == SettingKey)
+        {
+            _supportedExtensions = null;
+        }
+    };
 
     private static HashSet<string> GetSupportedExtensions()
     {
-        var now = DateTime.UtcNow;
-        if (_supportedExtensions != null && (now - _lastLoaded).TotalSeconds < 3)
+        if (_supportedExtensions != null)
             return _supportedExtensions;
 
         lock (ExtLock)
         {
-            if (_supportedExtensions != null && (now - _lastLoaded).TotalSeconds < 3)
+            if (_supportedExtensions != null)
                 return _supportedExtensions;
 
             var defaultList = new List<string>
@@ -37,10 +46,7 @@ public class ShellThumbnailProvider : IThumbnailProvider
 
             try
             {
-                var list = PluginSettingsService.GetSetting(
-                    "SwiftList.Plugins.CoreExtensions",
-                    "ThumbnailExtensions",
-                    defaultList);
+                var list = PluginSettingsService.GetSetting(PluginId, SettingKey, defaultList);
                 if (list != null)
                 {
                     _supportedExtensions = new HashSet<string>(list, StringComparer.OrdinalIgnoreCase);
@@ -52,7 +58,6 @@ public class ShellThumbnailProvider : IThumbnailProvider
             }
 
             _supportedExtensions ??= new HashSet<string>(defaultList, StringComparer.OrdinalIgnoreCase);
-            _lastLoaded = now;
         }
         return _supportedExtensions;
     }

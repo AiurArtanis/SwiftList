@@ -126,6 +126,15 @@ public static class ServicePluginLoader
             }
 
             TranslationService.LookupFunc = key => translations.TryGetValue(key, out var val) ? val : $"[{key}]";
+            TranslationService.CurrentCultureFunc = () =>
+            {
+                try
+                {
+                    var preferred = UserSettings.Load().PreferredLanguage;
+                    return string.IsNullOrEmpty(preferred) ? cultureName : preferred;
+                }
+                catch { return cultureName; }
+            };
 
             PluginSettingsService.GetSettingFunc = (pluginId, key, defVal) =>
             {
