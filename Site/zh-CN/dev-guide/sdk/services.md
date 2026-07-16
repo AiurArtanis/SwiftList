@@ -10,7 +10,7 @@
 | `IconService` | `GetIcon(path, isDir)` 和 `GetThumbnail(path, size)` —— 带缓存的 Shell 图标/缩略图提取，插件不需要自己调 Windows 图标 API。 |
 | `FavoritesService` | `GetFavorites()` —— 只读访问用户的[收藏夹](../../user-guide/settings/favorites)列表(`FavoriteItem`:Name、Path)。 |
 | `HistoryService` | `GetHistoryPaths()` —— 来自[历史记录](../../user-guide/settings/history)的最近访问路径。 |
-| `FileMetadataService` | `GetMetadataAsync(paths)` —— 批量查询 Size/Created/Modified/Accessed(`FileMetadata` record struct)，适合插件添加一个需要对大量结果同时取这些数据的[结果列](./ui-extensions#iresultcolumnprovider)。 |
+| `FileMetadataService` | `GetMetadataAsync(paths)` —— 批量查询 Size/Created/Modified/Accessed([`FileMetadata`](./abstractions#filemetadata))，用于查询**不属于**你当前结果集的路径——每个 `ISearchResult` 本身就通过自己的 `Metadata` 属性免费携带这些数据(参见[共享抽象契约](./abstractions#isearchresult))，所以只有拿到的路径不是来自结果对象(比如来自你自己的配置)时才需要用这个服务。 |
 | `DirectoryIndexerService` | `RegisterDirectory(pluginId, path, recursive, filterPattern)` / `UnregisterDirectories(pluginId)` / `SearchDirectoriesAsync(pluginId, query, token)` / `NotifyDirectoryChanged(pluginId)` —— 让插件注册自己的目录进行后台索引和 USN 监听，而不用自己重新实现这套机制。 |
 | `PluginSettingsService` | `GetSetting<T>(pluginId, key, defaultValue)` —— 从宿主的配置存储里只读访问插件自己持久化的设置。 |
 | `Logger` | `Log(message, level = LogLevel.Info)` —— 写入 App 的日志文件，和宿主自己的日志行一样，显示在**设置 → 运行状态 → App** 里。 |

@@ -14,9 +14,24 @@ interface ISearchResult
     string ContextDirectory { get; }
     bool IsDir { get; }
     bool IsApplication { get; }
+    FileMetadata Metadata { get; }
     bool[]? GetHighlightMask(string text, string query);
 }
 ```
+
+`Metadata` 携带了宿主自己的文件索引为每个结果生成的 Size/Created/Modified/Accessed——读取它是免费
+的(不涉及磁盘 I/O 或 IPC),不像 `FileMetadataService.GetMetadataAsync`(参见[宿主服务](./services))
+那样,只有在查询**不属于**你当前结果集的路径时才值得调用。
+
+## `FileMetadata`
+
+```csharp
+readonly record struct FileMetadata(long Size, DateTime Created, DateTime Modified, DateTime Accessed);
+```
+
+本地时间。`default`(每个字段都是零/`DateTime.MinValue`)表示"不可用"——这种结果不是由文件索引
+生成的(比如来自另一个插件)。用 `Metadata.Modified != default` 来区分这种"确实不知道"的情况和
+一个真实的、合法的零字节文件——后者 `Size` 确实是 `0`,但时间戳仍然是真实的。
 
 ## `IPluginSearchWindow`
 

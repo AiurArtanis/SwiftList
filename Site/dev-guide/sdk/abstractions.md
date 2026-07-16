@@ -15,9 +15,26 @@ interface ISearchResult
     string ContextDirectory { get; }
     bool IsDir { get; }
     bool IsApplication { get; }
+    FileMetadata Metadata { get; }
     bool[]? GetHighlightMask(string text, string query);
 }
 ```
+
+`Metadata` carries Size/Created/Modified/Accessed for every result the host's own file index
+produced — reading it is free (no disk I/O or IPC), unlike `FileMetadataService.GetMetadataAsync`
+(see [Host Services](./services)), which is only worth calling for a path that **isn't** already
+one of your current results.
+
+## `FileMetadata`
+
+```csharp
+readonly record struct FileMetadata(long Size, DateTime Created, DateTime Modified, DateTime Accessed);
+```
+
+Local time. `default` (every field zero/`DateTime.MinValue`) means "not available" — a result that
+isn't backed by the file index (e.g. one another plugin produced). Check `Metadata.Modified !=
+default` to tell that apart from a real, legitimately zero-byte file, whose `Size` is genuinely `0`
+but whose timestamps are still real.
 
 ## `IPluginSearchWindow`
 
