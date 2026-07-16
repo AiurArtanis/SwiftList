@@ -35,6 +35,7 @@ public class HotkeySettingsViewModel : ViewModelBase
         _keywordHistoryDeleteHotkey = hotkeys.KeywordHistoryDeleteHotkey;
         _startupPanelNextTabHotkey = hotkeys.StartupPanelNextTabHotkey;
         _startupPanelPreviousTabHotkey = hotkeys.StartupPanelPreviousTabHotkey;
+        _openFullWindowHotkey = hotkeys.OpenFullWindowHotkey;
 
         PluginActionGroups = BuildPluginActionGroups(hotkeys.PluginActionHotkeys);
 
@@ -217,6 +218,13 @@ public class HotkeySettingsViewModel : ViewModelBase
         set => SetProperty(ref _startupPanelPreviousTabHotkey, value);
     }
 
+    private string _openFullWindowHotkey;
+    public string OpenFullWindowHotkey
+    {
+        get => _openFullWindowHotkey;
+        set => SetProperty(ref _openFullWindowHotkey, value);
+    }
+
     public void Apply()
     {
         var hotkeys = _userSettings.Hotkeys;
@@ -239,6 +247,7 @@ public class HotkeySettingsViewModel : ViewModelBase
         hotkeys.KeywordHistoryDeleteHotkey = KeywordHistoryDeleteHotkey;
         hotkeys.StartupPanelNextTabHotkey = StartupPanelNextTabHotkey;
         hotkeys.StartupPanelPreviousTabHotkey = StartupPanelPreviousTabHotkey;
+        hotkeys.OpenFullWindowHotkey = OpenFullWindowHotkey;
 
         var pluginActionHotkeys = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in PluginActionGroups)

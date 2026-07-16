@@ -65,6 +65,10 @@ public class HotkeyPageSettings
     public string StartupPanelNextTabHotkey { get; set; } = "Ctrl+Right";
     public string StartupPanelPreviousTabHotkey { get; set; } = "Ctrl+Left";
 
+    // Opens the full SearchWindow from the Quick Window, carrying over the current query -- the same
+    // action as the Quick Window's own expand ("Open More") button. Empty by default (opt-in only).
+    public string OpenFullWindowHotkey { get; set; } = string.Empty;
+
     /// <summary>
     /// User overrides for plugin action hotkeys, keyed by plugin ID (the DLL file name without its
     /// extension, matching <see cref="PluginSettings"/>'s convention) then by
