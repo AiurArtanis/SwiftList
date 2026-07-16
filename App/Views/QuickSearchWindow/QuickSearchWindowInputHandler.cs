@@ -79,6 +79,18 @@ public class QuickSearchWindowInputHandler
         }
         if (actualKey == Key.Enter)
         {
+            // An actively-composing IME (e.g. Sogou/Microsoft Pinyin in "Enter commits the raw typed
+            // code" mode) reports this key as Key.ImeProcessed with ImeProcessedKey == Key.Enter, not
+            // a plain Key.Enter -- GetActualKey unwraps that identically to a real Enter press, so
+            // without this guard the composition text never reaches the TextBox and whatever result
+            // happens to be selected gets executed instead (#125). Let it fall through unhandled so
+            // WPF's normal IME pipeline commits the composition into the search box, same as it would
+            // if this handler didn't exist at all.
+            if (e.Key == Key.ImeProcessed)
+            {
+                return;
+            }
+
             var result = _window.LstResults.SelectedItem as AppSearchResult;
             if (result == null && _window.LstResults.Items.Count > 0)
             {
