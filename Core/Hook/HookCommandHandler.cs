@@ -31,6 +31,7 @@ public sealed class HookCommandHandler
     private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, IntPtr dwExtraInfo);
 
     private const byte VK_MENU = 0x12;
+    private const byte VK_UNASSIGNED = 0xFF;
     private const uint KEYEVENTF_KEYUP = 0x0002;
 
     public HookCommandHandler(HookProcess process) => _process = process;
@@ -66,8 +67,19 @@ public sealed class HookCommandHandler
                         {
                             Logger.Log($"[HookCommandHandler] Forcing foreground for HWND 0x{appHwnd.ToInt64():X}", LogLevel.Debug);
 
-                            // Simulate Alt key press to bypass SetForegroundWindow restrictions
+                            // Simulate Alt key press to bypass SetForegroundWindow restrictions.
+                            // keybd_event is async (system input queue) while SetForegroundWindow below
+                            // takes effect immediately, so this Alt tap is often delivered to the app
+                            // window AFTER it becomes the focus window. A lone Alt down+up makes
+                            // DefWindowProc enter the invisible system-menu keyboard loop (SC_KEYMENU),
+                            // which silently eats the next keystroke as a menu mnemonic -- the caret
+                            // keeps blinking but the first typed character never arrives. Sandwich a
+                            // reserved, unassigned VK (0xFF: no character, ignored by apps) inside the
+                            // tap so the Alt counts as "used" and never activates menu mode, wherever
+                            // the events end up landing.
                             keybd_event(VK_MENU, 0, 0, IntPtr.Zero);
+                            keybd_event(VK_UNASSIGNED, 0, 0, IntPtr.Zero);
+                            keybd_event(VK_UNASSIGNED, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
                             keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
 
                             var fgHwnd = GetForegroundWindow();

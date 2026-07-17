@@ -148,6 +148,9 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
 
     private static readonly int WM_TASKBARCREATED = Views.InlineSearchWindow.Helpers.InlineSearchWindowNativeMethods.RegisterWindowMessage("TaskbarCreated");
 
+    private const int WM_SYSCOMMAND = 0x0112;
+    private const int SC_KEYMENU = 0xF100;
+
     // Fires as soon as the Win32 HWND exists, before WPF's first layout/render pass -- the earliest
     // point CompositionTarget.RenderMode can be set. This window is created once at startup and only
     // ever Hidden, never Closed -- its DirectX composition surface stays alive for the whole process
@@ -191,6 +194,15 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
             {
                 if (msg == WM_TASKBARCREATED)
                     _trayService?.HandleTaskbarCreated();
+
+                // A lone Alt tap landing on this window (the ForceForeground focus-bypass injects one,
+                // and a user hotkey containing Alt leaves a stray Alt-up after the hook consumes the
+                // paired key) makes DefWindowProc enter the invisible system-menu keyboard loop, which
+                // eats the next keystroke as a menu mnemonic -- the "caret blinks but the first typed
+                // character disappears" bug. This window has no menu bar, so keyboard menu activation
+                // (SC_KEYMENU with no mnemonic char in lParam) is never meaningful here; swallow it.
+                if (msg == WM_SYSCOMMAND && ((int)wParam & 0xFFF0) == SC_KEYMENU && lParam == IntPtr.Zero)
+                    handled = true;
                 return IntPtr.Zero;
             });
         }
