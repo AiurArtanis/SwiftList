@@ -272,14 +272,6 @@ public sealed class HookIpcClient : IDisposable
                     OnError?.Invoke(msg.StringVal1 ?? string.Empty);
                     break;
 
-                case IpcMessageId.GetListItemsResponse:
-                    ListIpcCoordinator.AddListItemsChunk(msg.IntVal, msg.StringArray, msg.BoolVal);
-                    break;
-
-                case IpcMessageId.GetSelectedIndicesResponse:
-                    ListIpcCoordinator.SetSelectedIndicesResult(msg.IntVal, msg.IntArray);
-                    break;
-
                 case IpcMessageId.ExecuteInlineItemResponse:
                     InlineAdapterIpcCoordinator.SetExecuteItemResult(msg.IntVal, msg.BoolVal);
                     break;

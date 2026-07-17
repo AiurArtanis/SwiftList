@@ -109,28 +109,6 @@ public partial class App : Application
                 Dispatcher.BeginInvoke(() => QuickNavigationMenu.Show(x, y));
         };
 
-        PluginSdk.Models.ListControlIpcBridge.GetListItemsFunc = hwnd => HookClient != null ? Core.Hook.ListIpcCoordinator.GetListItems(hwnd, HookClient.SendMessage) : Array.Empty<string>();
-        PluginSdk.Models.ListControlIpcBridge.GetSelectedIndicesFunc = (hwnd, className) => HookClient != null ? Core.Hook.ListIpcCoordinator.GetSelectedIndices(hwnd, className, HookClient.SendMessage) : Array.Empty<int>();
-
-        PluginSdk.Models.ListControlIpcBridge.SelectItemAction = (hwnd, className, index, clearOthers, selectState) =>
-            HookClient?.SendMessage(new IpcMessage
-            {
-                Id = IpcMessageId.SelectItem,
-                Hwnd = hwnd.ToInt64(),
-                StringVal1 = className,
-                IntVal = index,
-                BoolVal = clearOthers,
-                IsDesktop = selectState
-            });
-
-        PluginSdk.Models.ListControlIpcBridge.ClearSelectionAction = (hwnd, className) =>
-            HookClient?.SendMessage(new IpcMessage
-            {
-                Id = IpcMessageId.ClearSelection,
-                Hwnd = hwnd.ToInt64(),
-                StringVal1 = className
-            });
-
         HookClient.OnActivated += () => Dispatcher.BeginInvoke(new Action(() =>
         {
             if (InlineSearchManager.Instance.IsInlineSearchActive)

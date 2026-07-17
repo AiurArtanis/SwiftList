@@ -1,6 +1,0 @@
-{
-  "Plugins_ListSearchPluginName": "Universal List Search Plugin",
-  "Plugins_ListSearchTargetName": "Universal List Control",
-  "Plugin_Comp_Desc_ListSearchPlugin": "Universal list search plugin providing language translation mapping and setup services for list box search adapters.",
-  "Plugin_Comp_Desc_ListSearchInlineSearchAdapter": "Integrates high speed letter/text filtering and navigation within standard Windows ListBox/ListView/SysListView32 controls."
-}

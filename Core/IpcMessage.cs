@@ -11,10 +11,6 @@ public enum IpcMessageId : byte
     RestoreDialogFocus = 6,
     ReloadSettings = 7,
     SetHotkeysDisabled = 8,
-    GetListItems = 9,
-    SelectItem = 10,
-    ClearSelection = 11,
-    GetSelectedIndices = 12,
     ForceForeground = 13,
     KillProcess = 14,
     ExecuteInlineItem = 15,
@@ -38,8 +34,6 @@ public enum IpcMessageId : byte
     ExplorerActivated = 33,
     PathCaptured = 34,
     Error = 35,
-    GetListItemsResponse = 36,
-    GetSelectedIndicesResponse = 37,
     MouseDoubleClick = 38,
     MouseMiddleClick = 39,
     ExecuteInlineItemResponse = 40
@@ -58,6 +52,4 @@ public struct IpcMessage
     public string? StringVal1 { get; set; }
     public string? StringVal2 { get; set; }
     public bool IsDesktop { get; set; }
-    public string[]? StringArray { get; set; }
-    public int[]? IntArray { get; set; }
 }

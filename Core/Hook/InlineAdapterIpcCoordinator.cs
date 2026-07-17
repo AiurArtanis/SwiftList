@@ -1,8 +1,6 @@
 namespace SwiftList.Core.Hook;
 
-// Correlates the App-side blocking ExecuteItem call with the Hook's async reply over the event pipe --
-// same request/response-over-a-fire-and-forget-pipe shape as ListIpcCoordinator, kept separate since this
-// is IInlineSearchAdapter-specific rather than generic list-control interop.
+// Correlates the App-side blocking ExecuteItem call with the Hook's async reply over the event pipe.
 public static class InlineAdapterIpcCoordinator
 {
     private static readonly object _lock = new();

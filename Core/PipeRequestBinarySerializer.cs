@@ -77,7 +77,6 @@ public static class PipeRequestBinarySerializer
                 break;
 
             case IpcMessageId.RestoreDialogFocus:
-            case IpcMessageId.GetListItems:
             case IpcMessageId.ForceForeground:
                 writer.Write(msg.Hwnd);
                 break;
@@ -109,29 +108,6 @@ public static class PipeRequestBinarySerializer
                 writer.Write(msg.StringVal1 ?? string.Empty);
                 if (msg.Id == IpcMessageId.PathCaptured)
                     writer.Write(msg.IsDesktop);
-                break;
-
-            case IpcMessageId.SelectItem:
-                writer.Write(msg.Hwnd);
-                writer.Write(msg.StringVal1 ?? string.Empty);
-                writer.Write(msg.IntVal);
-                writer.Write(msg.BoolVal);
-                writer.Write(msg.IsDesktop);
-                break;
-
-            case IpcMessageId.ClearSelection:
-            case IpcMessageId.GetSelectedIndices:
-                writer.Write(msg.Hwnd);
-                writer.Write(msg.StringVal1 ?? string.Empty);
-                break;
-
-            case IpcMessageId.GetListItemsResponse:
-                PipeArraySerializer.WriteStringArray(writer, msg.StringArray);
-                writer.Write(msg.BoolVal);
-                break;
-
-            case IpcMessageId.GetSelectedIndicesResponse:
-                PipeArraySerializer.WriteIntArray(writer, msg.IntArray);
                 break;
 
             case IpcMessageId.ExecuteInlineItem:
@@ -193,7 +169,6 @@ public static class PipeRequestBinarySerializer
                 break;
 
             case IpcMessageId.RestoreDialogFocus:
-            case IpcMessageId.GetListItems:
             case IpcMessageId.ForceForeground:
                 msg.Hwnd = reader.ReadInt64();
                 break;
@@ -227,29 +202,6 @@ public static class PipeRequestBinarySerializer
 
             case IpcMessageId.Error:
                 msg.StringVal1 = reader.ReadString();
-                break;
-
-            case IpcMessageId.SelectItem:
-                msg.Hwnd = reader.ReadInt64();
-                msg.StringVal1 = reader.ReadString();
-                msg.IntVal = reader.ReadInt32();
-                msg.BoolVal = reader.ReadBoolean();
-                msg.IsDesktop = reader.ReadBoolean();
-                break;
-
-            case IpcMessageId.ClearSelection:
-            case IpcMessageId.GetSelectedIndices:
-                msg.Hwnd = reader.ReadInt64();
-                msg.StringVal1 = reader.ReadString();
-                break;
-
-            case IpcMessageId.GetListItemsResponse:
-                msg.StringArray = PipeArraySerializer.ReadStringArray(reader);
-                msg.BoolVal = reader.ReadBoolean();
-                break;
-
-            case IpcMessageId.GetSelectedIndicesResponse:
-                msg.IntArray = PipeArraySerializer.ReadIntArray(reader);
                 break;
 
             case IpcMessageId.ExecuteInlineItem:

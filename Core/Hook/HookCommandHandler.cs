@@ -109,18 +109,6 @@ public sealed class HookCommandHandler
                     _process.IsHotkeysDisabledTemporarily = msg.BoolVal;
                     _process.KeyboardHook?.IsHotkeysDisabledTemporarily = msg.BoolVal;
                     break;
-                case IpcMessageId.GetListItems:
-                    ListControlCommandHandler.HandleGetListItems(_process, msg);
-                    break;
-                case IpcMessageId.SelectItem:
-                    ListControlCommandHandler.HandleSelectItem(msg);
-                    break;
-                case IpcMessageId.ClearSelection:
-                    ListControlCommandHandler.HandleClearSelection(msg);
-                    break;
-                case IpcMessageId.GetSelectedIndices:
-                    ListControlCommandHandler.HandleGetSelectedIndices(_process, msg);
-                    break;
                 case IpcMessageId.ExecuteInlineItem:
                 case IpcMessageId.InlineSelectionChanged:
                 case IpcMessageId.InlineSearchFinished:
