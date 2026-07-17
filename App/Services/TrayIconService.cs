@@ -26,6 +26,7 @@ public class TrayIconService : IDisposable
     private System.Windows.Controls.MenuItem? _wpfItemExit;
     private Window? _dummyWindow;
     private bool _isHotkeysDisabled;
+    private bool _trayIconVisibleSetting = true;
     private Action? _pendingShowWindowOverride;
 
     public TrayIconService(QuickSearchViewModel viewModel, Action showWindowAction, Action toggleVisibilityAction)
@@ -44,10 +45,11 @@ public class TrayIconService : IDisposable
 
     private void InitializeNotifyIcon()
     {
+        _trayIconVisibleSetting = !UserSettings.Load().HideTrayIcon;
         _notifyIcon = new NotifyIcon
         {
             Text = "SwiftList",
-            Visible = !UserSettings.Load().HideTrayIcon
+            Visible = _trayIconVisibleSetting
         };
 
         UpdateTrayIconThemeColor();
@@ -251,7 +253,17 @@ public class TrayIconService : IDisposable
 
     // Applies a live change to the "hide tray icon" setting: toggles the actual NotifyIcon and hands
     // control of the (now sole, or now redundant) menu entry point back to the caller-supplied button.
-    public void SetTrayIconVisible(bool visible) => _notifyIcon?.Visible = visible;
+    // While hotkeys are temporarily disabled the icon is forced visible regardless -- see ToggleHotkeys.
+    public void SetTrayIconVisible(bool visible)
+    {
+        _trayIconVisibleSetting = visible;
+        ApplyTrayIconVisible();
+    }
+
+    private void ApplyTrayIconVisible()
+    {
+        _notifyIcon?.Visible = _trayIconVisibleSetting || _isHotkeysDisabled;
+    }
 
     private void UpdateMenuTexts()
     {
@@ -269,6 +281,11 @@ public class TrayIconService : IDisposable
         _isHotkeysDisabled = !_isHotkeysDisabled;
         App.HookClient?.IsHotkeysDisabled = _isHotkeysDisabled;
         UpdateHotkeysMenuState();
+
+        // With hotkeys disabled, the hotkey can no longer summon the Quick window -- if "hide tray
+        // icon" is also on, the user would have no way back into the app at all. Force the tray icon
+        // visible for as long as hotkeys stay disabled, then fall back to the actual setting.
+        ApplyTrayIconVisible();
     }
 
     private void UpdateHotkeysMenuState()
