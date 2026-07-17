@@ -36,6 +36,10 @@ public class UserSettings
     // surface, since it's created once at startup and only ever hidden, never closed). Requires a
     // restart to take effect, since the window's HwndTarget.RenderMode is only set once at load.
     public bool EnableHardwareAcceleration { get; set; } = true;
+    // The Quick window's tray-menu capsule button (only shown while this is true) is the replacement
+    // entry point for Settings/Exit/etc., so hiding the tray icon never strands the user -- see
+    // QuickSearchWindow's BtnTrayMenu and TrayIconService.ShowMenuAt.
+    public bool HideTrayIcon { get; set; } = false;
     public string LogLevel { get; set; } = "Info";
     public string PreferredLanguage { get; set; } = GetDefaultSystemLanguage();
     public string Theme { get; set; } = "Light";

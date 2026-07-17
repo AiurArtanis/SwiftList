@@ -69,9 +69,9 @@ public class QuickSearchWindowInputHandler
         }
         if (WpfUiHelper.MatchesHotkey(settings.OpenFullWindowHotkey, Keyboard.Modifiers, actualKey))
         {
-            // Mirrors the Quick Window's own expand ("Open More") button -- QuickSearchWindow.xaml.cs's
-            // BtnOpenMore_Click -- so the hotkey opens the exact same full SearchWindow, carrying over
-            // whatever query is currently active (including a saved query while in actions mode).
+            // Opens the full SearchWindow directly (bypassing BtnMenu's menu detour), carrying over
+            // whatever query is currently active (including a saved query while in actions mode) --
+            // same query-carrying behavior BtnMenu_Click gets to via its "Show Main Window" item.
             var queryText = (_window.IsInActionsMode && _window.MenuPresenter != null) ? _window.MenuPresenter.SavedSearchQuery : _window.TxtSearch.Text;
             FileExecutor.OpenFileOrFolder("__SHOW_MORE__", queryText, _window.HideWindowNoRestore);
             e.Handled = true;

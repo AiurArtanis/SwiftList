@@ -102,7 +102,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
 
         // Wire up event handlers to subcontrols
 
-        BtnOpenMore.Click += BtnOpenMore_Click;
+        BtnMenu.Click += BtnMenu_Click;
         SearchBox.IconRightClicked += _controller.ResetPosition;
         LstResults.PreviewMouseLeftButtonUp += (s, e) => _resultExecutor.HandlePreviewMouseLeftButtonUp(e);
         LstResults.PreviewMouseRightButtonUp += (s, e) => _resultExecutor.HandlePreviewMouseRightButtonUp(e);
@@ -210,6 +210,11 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
 
     // ==========================================
 
+    // Called by GeneralSettingsViewModel.Apply() when the "hide tray icon" setting changes, so the
+    // real NotifyIcon updates live without needing a restart. BtnMenu itself is unaffected by this
+    // setting -- it's a permanent, always-visible entry point regardless of the tray icon's state.
+    public void ApplyTrayIconVisibility(bool hideTrayIcon) => _trayService?.SetTrayIconVisible(!hideTrayIcon);
+
     public void ShowWindow() => _controller.ShowWindow(null);
     public void ShowWindow(string? initialQuery) => _controller.ShowWindow(initialQuery);
     public void HideWindow() => _controller.HideWindow(true);
@@ -253,10 +258,10 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e) => _inputHandler.HandleWindowPreviewKeyDown(e);
 
-    private void BtnOpenMore_Click(object sender, RoutedEventArgs e)
+    private void BtnMenu_Click(object sender, RoutedEventArgs e)
     {
         var queryText = (IsInActionsMode && _menuPresenter != null) ? _menuPresenter.SavedSearchQuery : TxtSearch.Text;
-        FileExecutor.OpenFileOrFolder("__SHOW_MORE__", queryText, HideWindowNoRestore);
+        _trayService?.ShowMenuAt(BtnMenu, () => FileExecutor.OpenFileOrFolder("__SHOW_MORE__", queryText, HideWindowNoRestore));
     }
 
     private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject

@@ -201,8 +201,11 @@
             </Border>
         </Border>
 
-    <!-- Floating Open full search window button -->
-    <Button x:Name="BtnOpenMore"
+    <!-- Floating menu button: same menu the tray icon's right-click shows (Show Main Window/Settings/
+         etc.), anchored to this button instead of the tray icon's dummy-window+mouse-point placement.
+         "Show Main Window" from here additionally carries over whatever query is currently typed:
+         see BtnMenu_Click / TrayIconService.ShowMenuAt. -->
+    <Button x:Name="BtnMenu"
             Style="{StaticResource FloatingCircleButtonStyle}"
             Width="29"
             Height="29"
@@ -210,10 +213,10 @@
             Padding="0"
             HorizontalAlignment="Right"
             VerticalAlignment="Top"
-            ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[QuickSearch_OpenMore]}">
+            ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[QuickSearch_TrayMenu]}">
         <Viewbox Width="16" Height="16" Opacity="0.85">
             <Canvas Width="24" Height="24">
-                <Path Data="M7 7h10v10h-2V10.41l-8.29 8.3-1.42-1.42 8.3-8.29H7V7z"
+                <Path Data="M4 5h16v2H4V5zM4 11h16v2H4v-2zM4 17h16v2H4v-2z"
                       Fill="{DynamicResource TextSecondary}"/>
             </Canvas>
         </Viewbox>

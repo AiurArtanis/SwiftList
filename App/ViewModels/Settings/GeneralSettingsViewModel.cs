@@ -18,6 +18,7 @@ public class GeneralSettingsViewModel : ViewModelBase
     private bool _autoCheckUpdates;
     private bool _autoSilentUpdate;
     private bool _enableHardwareAcceleration;
+    private bool _hideTrayIcon;
 
     // Tab navigation for the System/Layout/Preview Window split of this page.
     private string _selectedTab = "System";
@@ -42,6 +43,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         _autoCheckUpdates = userSettings.AutoCheckUpdates;
         _autoSilentUpdate = userSettings.AutoSilentUpdate;
         _enableHardwareAcceleration = userSettings.EnableHardwareAcceleration;
+        _hideTrayIcon = userSettings.HideTrayIcon;
 
         _selectedLogLevel = LogLevelOptions.FirstOrDefault(o => o.Value == SettingsOptionGenerator.NormalizeLogLevel(_userSettings.LogLevel))
                             ?? LogLevelOptions[2]; // Default to Info
@@ -136,6 +138,12 @@ public class GeneralSettingsViewModel : ViewModelBase
         set => SetProperty(ref _enableHardwareAcceleration, value);
     }
 
+    public bool HideTrayIcon
+    {
+        get => _hideTrayIcon;
+        set => SetProperty(ref _hideTrayIcon, value);
+    }
+
     public string LogLevel => SettingsOptionGenerator.NormalizeLogLevel(_selectedLogLevel?.Value ?? _userSettings.LogLevel);
 
     public string PreferredLanguage
@@ -167,9 +175,11 @@ public class GeneralSettingsViewModel : ViewModelBase
         if (IsUserAdmin)
             _userSettings.AutoSilentUpdate = _autoSilentUpdate;
         _userSettings.EnableHardwareAcceleration = _enableHardwareAcceleration;
+        _userSettings.HideTrayIcon = _hideTrayIcon;
         _userSettings.LogLevel = LogLevel;
 
         StartupManager.SetEnabled(StartWithWindows);
+        (System.Windows.Application.Current.MainWindow as QuickSearchWindow)?.ApplyTrayIconVisibility(_hideTrayIcon);
         Logger.MinimumLevel = SettingsOptionGenerator.ParseLogLevel(LogLevel);
         if (logLevelChanged)
         {

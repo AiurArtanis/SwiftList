@@ -195,6 +195,10 @@
                                IsChecked="{Binding General.EnableHardwareAcceleration, Mode=TwoWay}"
                                Margin="0,4"/>
 
+                    <CheckBox x:Name="RowHideTrayIcon" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_HideTrayIcon]}"
+                               IsChecked="{Binding General.HideTrayIcon, Mode=TwoWay}"
+                               Margin="0,4"/>
+
                     <Grid x:Name="RowLogLevel" Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>

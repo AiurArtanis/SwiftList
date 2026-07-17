@@ -26,6 +26,7 @@ public class TrayIconService : IDisposable
     private System.Windows.Controls.MenuItem? _wpfItemExit;
     private Window? _dummyWindow;
     private bool _isHotkeysDisabled;
+    private Action? _pendingShowWindowOverride;
 
     public TrayIconService(QuickSearchViewModel viewModel, Action showWindowAction, Action toggleVisibilityAction)
     {
@@ -46,7 +47,7 @@ public class TrayIconService : IDisposable
         _notifyIcon = new NotifyIcon
         {
             Text = "SwiftList",
-            Visible = true
+            Visible = !UserSettings.Load().HideTrayIcon
         };
 
         UpdateTrayIconThemeColor();
@@ -111,7 +112,19 @@ public class TrayIconService : IDisposable
         {
             Icon = CreateIcon("\uE721", "MenuText")
         };
-        _wpfItemShowWindow.Click += (s, e) => ShowSearchWindow();
+        // ShowMenuAt's caller (the Quick window's menu button) can supply a one-shot override here --
+        // e.g. to open the full window carrying over whatever query is currently typed, the way the
+        // old direct "open full window" button used to -- instead of the tray icon's plain reopen with
+        // no query. Consumed once and cleared so a later real-tray-icon invocation (which never sets
+        // an override) can't accidentally replay a stale one from an earlier menu that was dismissed
+        // without this item being clicked.
+        _wpfItemShowWindow.Click += (s, e) =>
+        {
+            var overrideAction = _pendingShowWindowOverride;
+            _pendingShowWindowOverride = null;
+            if (overrideAction != null) overrideAction();
+            else ShowSearchWindow();
+        };
 
         _wpfItemToggleHotkeys = new System.Windows.Controls.MenuItem();
         _wpfItemToggleHotkeys.Click += (s, e) => ToggleHotkeys();
@@ -168,12 +181,12 @@ public class TrayIconService : IDisposable
 
     private void ShowWpfContextMenu()
     {
-        if (_wpfContextMenu == null)
-        {
-            InitializeWpfContextMenu();
-        }
-
-        UpdateCleanExitVisibility();
+        // The tray icon is a WinForms NotifyIcon, not a WPF element, and at click time the Quick
+        // window it belongs to may well be Hidden -- neither can serve as a PlacementTarget for
+        // screen-coordinate placement, hence this throwaway 1x1 transparent window purely to anchor
+        // the menu at the mouse. See ShowMenuAt for the button case, which needs none of this.
+        EnsureMenuInitialized();
+        _pendingShowWindowOverride = null; // this path never has a query to carry -- see ShowMenuAt
 
         if (_dummyWindow != null)
         {
@@ -212,6 +225,35 @@ public class TrayIconService : IDisposable
         _wpfContextMenu.Closed += closedHandler;
 
         _wpfContextMenu.IsOpen = true;
+    }
+
+    // The Quick window's own menu button calls this directly with itself as the target -- a real,
+    // currently-visible WPF Button, so unlike ShowWpfContextMenu above it needs no dummy window: WPF
+    // placement works against any live element. onShowWindow, if given, overrides just this one
+    // upcoming "Show Main Window" click (see _pendingShowWindowOverride above).
+    public void ShowMenuAt(UIElement target, Action? onShowWindow = null)
+    {
+        EnsureMenuInitialized();
+        _pendingShowWindowOverride = onShowWindow;
+        _wpfContextMenu!.PlacementTarget = target;
+        _wpfContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        _wpfContextMenu.IsOpen = true;
+    }
+
+    private void EnsureMenuInitialized()
+    {
+        if (_wpfContextMenu == null)
+        {
+            InitializeWpfContextMenu();
+        }
+        UpdateCleanExitVisibility();
+    }
+
+    // Applies a live change to the "hide tray icon" setting: toggles the actual NotifyIcon and hands
+    // control of the (now sole, or now redundant) menu entry point back to the caller-supplied button.
+    public void SetTrayIconVisible(bool visible)
+    {
+        _notifyIcon?.Visible = visible;
     }
 
     private void UpdateMenuTexts()

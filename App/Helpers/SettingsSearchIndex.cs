@@ -69,6 +69,7 @@ public static class SettingsSearchIndex
         new("General_AutoCheckUpdates", "General", vm => vm.General.SelectedTab = "System", "RowAutoCheckUpdates", "General_SysTitle"),
         new("General_AutoSilentUpdate", "General", vm => vm.General.SelectedTab = "System", "RowAutoSilentUpdate", "General_SysTitle"),
         new("General_HardwareAcceleration", "General", vm => vm.General.SelectedTab = "System", "RowHardwareAcceleration", "General_SysTitle"),
+        new("General_HideTrayIcon", "General", vm => vm.General.SelectedTab = "System", "RowHideTrayIcon", "General_SysTitle"),
         new("General_LogLevel", "General", vm => vm.General.SelectedTab = "System", "RowLogLevel", "General_SysTitle"),
         new("General_LangSelect", "General", vm => vm.General.SelectedTab = "System", "RowLangSelect", "General_SysTitle"),
         new("General_ThemeSelect", "General", vm => vm.General.SelectedTab = "System", "RowThemeSelect", "General_SysTitle",
