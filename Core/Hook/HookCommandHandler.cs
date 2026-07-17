@@ -123,8 +123,12 @@ public sealed class HookCommandHandler
                             {
                                 try
                                 {
+                                    // Kill only the target process, not its descendant tree: a process
+                                    // can legitimately have unrelated child processes (e.g. a helper
+                                    // tool launched through it), and entireProcessTree:true would take
+                                    // those down too even though the user only asked to end this one.
                                     using var proc = System.Diagnostics.Process.GetProcessById(pid);
-                                    proc.Kill(true);
+                                    proc.Kill();
                                     Logger.Log($"[HookCommandHandler] Killed process {pid} successfully", LogLevel.Info);
                                 }
                                 catch (Exception ex)
