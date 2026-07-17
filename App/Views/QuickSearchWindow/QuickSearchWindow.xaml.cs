@@ -239,7 +239,16 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
             // Do not hide if there are visible owned windows (e.g. a crash MessageBox dialog).
             foreach (Window owned in OwnedWindows)
                 if (owned.IsVisible) return;
-            _controller.HideWindow();
+
+            // If activation moved to one of our own other windows (e.g. Settings/About opened via
+            // BtnMenu's menu), restoring foreground to whatever was active before this window was
+            // shown would immediately steal it right back off that window. Only restore focus when
+            // the user has actually left the app entirely.
+            var movedToOwnWindow = false;
+            foreach (Window w in System.Windows.Application.Current.Windows)
+                if (w != this && w.IsActive) { movedToOwnWindow = true; break; }
+
+            _controller.HideWindow(restoreFocus: !movedToOwnWindow);
         };
         timer.Start();
     }
