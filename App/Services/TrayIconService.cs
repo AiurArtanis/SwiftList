@@ -251,10 +251,7 @@ public class TrayIconService : IDisposable
 
     // Applies a live change to the "hide tray icon" setting: toggles the actual NotifyIcon and hands
     // control of the (now sole, or now redundant) menu entry point back to the caller-supplied button.
-    public void SetTrayIconVisible(bool visible)
-    {
-        _notifyIcon?.Visible = visible;
-    }
+    public void SetTrayIconVisible(bool visible) => _notifyIcon?.Visible = visible;
 
     private void UpdateMenuTexts()
     {
