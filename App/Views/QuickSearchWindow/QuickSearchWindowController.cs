@@ -19,34 +19,12 @@ public class QuickSearchWindowController
     [DllImport("user32.dll")] private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)] private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-    [DllImport("user32.dll", SetLastError = true)] private static extern bool GetGUIThreadInfo(uint idThread, ref GUITHREADINFO lpgui);
-    [DllImport("user32.dll")] private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, IntPtr dwExtraInfo);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct RECT { public int Left, Top, Right, Bottom; }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct GUITHREADINFO
-    {
-        public int cbSize;
-        public uint flags;
-        public IntPtr hwndActive;
-        public IntPtr hwndFocus;
-        public IntPtr hwndCapture;
-        public IntPtr hwndMenuOwner;
-        public IntPtr hwndMoveSize;
-        public IntPtr hwndCaret;
-        public RECT rcCaret;
-    }
 
     private const int SW_RESTORE = 9;
     private const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
     private const uint WINEVENT_OUTOFCONTEXT = 0;
-    private const byte VK_ESCAPE = 0x1B;
-    private const uint KEYEVENTF_KEYUP = 0x0002;
 
     private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
-
     private WinEventDelegate? _foregroundHookDelegate;
     private IntPtr _hForegroundHook = IntPtr.Zero;
     private IntPtr _lastActiveHwnd = IntPtr.Zero;
@@ -57,7 +35,6 @@ public class QuickSearchWindowController
         _foregroundHookDelegate = ForegroundEventProc;
         _hForegroundHook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, _foregroundHookDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
     }
-
     private void StopForegroundHook()
     {
         if (_hForegroundHook != IntPtr.Zero)
@@ -67,7 +44,6 @@ public class QuickSearchWindowController
         }
         _foregroundHookDelegate = null;
     }
-
     private void ForegroundEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
     {
         if (hwnd == IntPtr.Zero) return;
@@ -77,7 +53,7 @@ public class QuickSearchWindowController
             GetClassName(hwnd, sbClass, sbClass.Capacity);
             var className = sbClass.ToString();
             GetWindowThreadProcessId(hwnd, out var activePid);
-            var procName = TryGetProcessName(activePid);
+            var procName = StartMenuDismissHelper.TryGetProcessName(activePid);
 
             // TODO(issue #68): temporary diagnostic for "a system notification makes the search window
             // disappear" -- couldn't reproduce with a plain WinRT toast fired under Explorer's AUMID, so
@@ -119,12 +95,6 @@ public class QuickSearchWindowController
         catch { }
     }
 
-    private static string TryGetProcessName(uint pid)
-    {
-        try { return System.Diagnostics.Process.GetProcessById((int)pid).ProcessName; }
-        catch { return "?"; }
-    }
-
     public static void ForceForeground(IntPtr hwnd)
     {
         if (hwnd == IntPtr.Zero) return;
@@ -134,48 +104,14 @@ public class QuickSearchWindowController
         // foreground, on the assumption that Show()/Activate() already did the whole job. That
         // assumption isn't always safe (e.g. a still-open Start Menu can make Windows report our
         // window as foreground without real per-thread keyboard focus having actually moved -- see
-        // DismissStartMenuIfOpen, which handles that specific case earlier in ShowWindow()). Always
-        // send it regardless; redoing an already-correct foreground/focus state is cheap and harmless.
+        // StartMenuDismissHelper.DismissStartMenuIfOpen(), which handles that specific case earlier in
+        // ShowWindow()). Always send it regardless; redoing an already-correct foreground/focus state
+        // is cheap and harmless.
         App.HookClient?.SendMessage(new IpcMessage
         {
             Id = IpcMessageId.ForceForeground,
             Hwnd = hwnd.ToInt64()
         });
-    }
-
-    // Windows 11's Start Menu/taskbar search is a shell surface hosted by its own process
-    // (SearchHost.exe on this build, class "Windows.UI.Core.CoreWindow" -- confirmed via app.log
-    // during the issue #128 investigation; StartMenuExperienceHost.exe is the equivalent name on some
-    // other Windows builds/configs). If it's still open right as this window is about to be shown,
-    // Show()/Activate() below will make GetForegroundWindow() report OUR window as foreground (it
-    // doesn't compete for activation the normal way) while real per-thread keyboard focus never
-    // actually leaves it -- so it keeps swallowing typed characters even once covered by our topmost
-    // window, and only a click (which grabs focus locally) fixes it. Escape dismisses it as a built-in
-    // shell gesture regardless of what's drawn on top, so detect it and dismiss it ourselves before
-    // any of that contamination happens.
-    private static readonly string[] ShellSearchHostProcessNames = { "SearchHost", "StartMenuExperienceHost" };
-    private static void DismissStartMenuIfOpen()
-    {
-        var fgHwnd = GetForegroundWindow();
-        var threadId = GetWindowThreadProcessId(fgHwnd, out _);
-
-        var guiInfo = new GUITHREADINFO { cbSize = Marshal.SizeOf<GUITHREADINFO>() };
-        var gotInfo = GetGUIThreadInfo(threadId, ref guiInfo);
-
-        var focusProcessName = "";
-        if (gotInfo && guiInfo.hwndFocus != IntPtr.Zero)
-        {
-            GetWindowThreadProcessId(guiInfo.hwndFocus, out var focusPid);
-            focusProcessName = TryGetProcessName(focusPid);
-        }
-
-        if (!ShellSearchHostProcessNames.Any(p => string.Equals(p, focusProcessName, StringComparison.OrdinalIgnoreCase)))
-            return;
-
-        Logger.Log("[QuickSearchWindowController] Start Menu detected open -- dismissing before showing", LogLevel.Debug);
-        keybd_event(VK_ESCAPE, 0, 0, IntPtr.Zero);
-        keybd_event(VK_ESCAPE, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
-        Thread.Sleep(30);
     }
 
     public QuickSearchWindowController(SwiftList.App.QuickSearchWindow window) => _window = window;
@@ -253,7 +189,7 @@ public class QuickSearchWindowController
         // once any of those runs, GetForegroundWindow() starts reporting THIS window as foreground
         // (the Start Menu doesn't compete for activation the normal way), so this is the last point
         // where it still reflects the real, uncontaminated state.
-        DismissStartMenuIfOpen();
+        StartMenuDismissHelper.DismissStartMenuIfOpen();
 
         _lastActiveHwnd = GetForegroundWindow();
         if (_lastActiveHwnd != IntPtr.Zero)
