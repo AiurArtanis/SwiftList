@@ -38,7 +38,7 @@ internal static class ResultsControlColumns
                 // why hovering past the end of a short value (or above/below it) swallowed the mouse
                 // wheel instead of scrolling the list -- see the matching fix in ResultsControl.xaml.
                 textBlockFactory.SetValue(TextBlock.BackgroundProperty, System.Windows.Media.Brushes.Transparent);
-                textBlockFactory.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Stretch);
+                textBlockFactory.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Stretch);
                 gvc.CellTemplate = new DataTemplate { VisualTree = textBlockFactory };
                 gridView.Columns.Add(gvc);
             }

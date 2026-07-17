@@ -73,7 +73,7 @@ public class PluginManager : PluginRegistry
             var settings = UserSettings.Load();
             if (settings.PluginSettings.TryGetValue(pluginId, out var pluginDict) && pluginDict.ContainsKey(key))
             {
-                return settings.GetPluginSetting<object?>(pluginId, key, defaultValue);
+                return settings.GetPluginSetting(pluginId, key, defaultValue);
             }
             if (_pluginSchemaDefaults.TryGetValue(pluginId, out var fieldDefaults) && fieldDefaults.TryGetValue(key, out var schemaDefault))
             {

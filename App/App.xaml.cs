@@ -137,13 +137,12 @@ public partial class App : Application
             PluginSdk.Services.TranslationService.LookupFunc = key => TranslationManager.Instance[key];
             PluginSdk.Services.TranslationService.CurrentCultureFunc = () => TranslationManager.Instance.CurrentCulture;
             PluginSdk.Services.SearchRefreshService.RefreshMatchingFunc = queryMatches =>
-            {
                 // Callers may invoke this from a background thread (e.g. after an async fetch
                 // completes), so marshal onto the UI thread here rather than requiring every caller
                 // to remember to do so themselves.
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    foreach (System.Windows.Window window in Windows)
+                    foreach (Window window in Windows)
                     {
                         if (window.DataContext is QuickSearchViewModel quickVm)
                         {
@@ -159,7 +158,6 @@ public partial class App : Application
                         }
                     }
                 }));
-            };
             PluginSdk.Services.IconService.GetIconFunc = (path, isDir) => ShellIconHelper.GetIconForPath(path, isDir);
             PluginSdk.Services.IconService.GetThumbnailFunc = (path, size) => ShellImageListInterop.TryGetPreviewThumbnail(path, size);
             PluginSdk.Services.FileMetadataService.BatchLookupFunc = FileMetadataBridge.GetMetadataBatchAsync;
@@ -168,7 +166,7 @@ public partial class App : Application
             Logger.Log("[App] TranslationManager initialized.");
 
             // Preload app searchable items now that translations are fully loaded and settled
-            ViewModels.Search.SearchableItemMapper.Preload();
+            SearchableItemMapper.Preload();
 
             var startupThemeId = settings.ThemeFollowSystem
                 ? ThemeManager.Instance.ResolveLightDarkThemeId(SystemThemeWatcher.IsSystemLight, settings)

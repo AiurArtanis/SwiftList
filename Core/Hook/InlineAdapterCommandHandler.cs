@@ -73,13 +73,13 @@ internal static class InlineAdapterCommandHandler
 
             case IpcMessageId.InlineSelectionChanged:
                 var selectedPath = msg.StringVal1 ?? string.Empty;
-                var mySequence = System.Threading.Interlocked.Increment(ref _selectionSequence);
+                var mySequence = Interlocked.Increment(ref _selectionSequence);
                 RunOnSta(() =>
                 {
                     try
                     {
-                        System.Threading.Thread.Sleep(SelectionDebounceMs);
-                        if (System.Threading.Interlocked.Read(ref _selectionSequence) != mySequence)
+                        Thread.Sleep(SelectionDebounceMs);
+                        if (Interlocked.Read(ref _selectionSequence) != mySequence)
                             return; // superseded during the debounce wait; this one is stale
                         ResolveAdapter(process, hwnd)?.OnSelectionChanged(hwnd, selectedPath);
                     }

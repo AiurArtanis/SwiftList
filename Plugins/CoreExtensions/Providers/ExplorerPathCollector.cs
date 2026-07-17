@@ -110,8 +110,8 @@ public class ExplorerPathCollector : IActivePathCollector
     private static string? GetActiveExplorerPath(IntPtr targetHwnd)
     {
         string? result = null;
-        var done = new System.Threading.ManualResetEventSlim(false);
-        var worker = new System.Threading.Thread(() =>
+        var done = new ManualResetEventSlim(false);
+        var worker = new Thread(() =>
         {
             try { result = GetActiveExplorerPathCore(targetHwnd); }
             finally { done.Set(); }
@@ -120,12 +120,12 @@ public class ExplorerPathCollector : IActivePathCollector
             IsBackground = true,
             Name = "ExplorerPathCollectorSta"
         };
-        worker.SetApartmentState(System.Threading.ApartmentState.STA);
+        worker.SetApartmentState(ApartmentState.STA);
         worker.Start();
 
         if (!done.Wait(2000))
         {
-            SwiftList.PluginSdk.Logger.Log("[ExplorerPathCollector] Timed out waiting for Explorer's COM response; Explorer may be busy or unresponsive.", SwiftList.PluginSdk.LogLevel.Warn);
+            PluginSdk.Logger.Log("[ExplorerPathCollector] Timed out waiting for Explorer's COM response; Explorer may be busy or unresponsive.", PluginSdk.LogLevel.Warn);
             return null;
         }
         return result;
