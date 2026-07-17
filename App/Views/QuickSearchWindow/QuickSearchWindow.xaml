@@ -32,6 +32,15 @@
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <!-- Hidden until the pointer is somewhere over the window's visible surface (RootGrid's
+                 IsMouseOver only turns true over hit-testable descendants, namely the card and this
+                 button itself, since the Grid has no Background of its own, so the transparent margin
+                 around the card is correctly excluded without any extra hit-test region bookkeeping).
+                 Starts non-hit-testable so the hidden button can't swallow clicks meant for the card
+                 underneath it before the pointer has actually arrived; the trigger below re-enables it
+                 together with the fade so it's only clickable once actually visible. -->
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -58,10 +67,29 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsMouseOver, ElementName=RootGrid}" Value="True">
+                    <Setter Property="IsHitTestVisible" Value="True"/>
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                    <DataTrigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.ExitActions>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid x:Name="RootGrid">
         <Border Margin="24,40,24,24" CornerRadius="{Binding WindowCornerRadius}" Background="{DynamicResource CardBackground}"
                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                 MouseLeftButtonDown="Border_MouseLeftButtonDown">
