@@ -31,6 +31,19 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     // Must match QuickSearchWindow.xaml's root Border Margin ("24,40,24,24").
     public Thickness VisibleContentInset => new(24, 40, 24, 24);
 
+    // Backs FloatingCircleButtonStyle's visibility trigger alongside RootGrid.IsMouseOver, so BtnMenu
+    // stays visible for as long as its own menu is open even after the pointer leaves the window's
+    // surface to click an item in the popup (which would otherwise read as RootGrid.IsMouseOver
+    // going false and fade the button out from under an open menu).
+    public static readonly DependencyProperty IsMenuOpenProperty =
+        DependencyProperty.Register(nameof(IsMenuOpen), typeof(bool), typeof(QuickSearchWindow), new PropertyMetadata(false));
+
+    public bool IsMenuOpen
+    {
+        get => (bool)GetValue(IsMenuOpenProperty);
+        set => SetValue(IsMenuOpenProperty, value);
+    }
+
     public QuickSearchWindow()
     {
         InitializeComponent();
@@ -99,6 +112,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     {
         _menuPresenter = new ShellMenuPresenter(this);
         _trayService = new TrayIconService(_viewModel, ShowWindow, ToggleVisibility);
+        _trayService.MenuClosed += () => IsMenuOpen = false;
 
         // Wire up event handlers to subcontrols
 
@@ -270,6 +284,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     private void BtnMenu_Click(object sender, RoutedEventArgs e)
     {
         var queryText = (IsInActionsMode && _menuPresenter != null) ? _menuPresenter.SavedSearchQuery : TxtSearch.Text;
+        IsMenuOpen = true;
         _trayService?.ShowMenuAt(BtnMenu, () => FileExecutor.OpenFileOrFolder("__SHOW_MORE__", queryText, HideWindowNoRestore));
     }
 

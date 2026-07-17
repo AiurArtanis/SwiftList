@@ -229,6 +229,10 @@ public class TrayIconService : IDisposable
         _wpfContextMenu.IsOpen = true;
     }
 
+    // Raised when a ShowMenuAt-opened menu closes, so the caller (the Quick window's BtnMenu) can
+    // drop whatever "keep me visible, my menu is open" flag it set before calling ShowMenuAt.
+    public event Action? MenuClosed;
+
     // The Quick window's own menu button calls this directly with itself as the target -- a real,
     // currently-visible WPF Button, so unlike ShowWpfContextMenu above it needs no dummy window: WPF
     // placement works against any live element. onShowWindow, if given, overrides just this one
@@ -239,6 +243,15 @@ public class TrayIconService : IDisposable
         _pendingShowWindowOverride = onShowWindow;
         _wpfContextMenu!.PlacementTarget = target;
         _wpfContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+
+        RoutedEventHandler? closedHandler = null;
+        closedHandler = (s, e) =>
+        {
+            _wpfContextMenu.Closed -= closedHandler;
+            MenuClosed?.Invoke();
+        };
+        _wpfContextMenu.Closed += closedHandler;
+
         _wpfContextMenu.IsOpen = true;
     }
 
@@ -260,10 +273,7 @@ public class TrayIconService : IDisposable
         ApplyTrayIconVisible();
     }
 
-    private void ApplyTrayIconVisible()
-    {
-        _notifyIcon?.Visible = _trayIconVisibleSetting || _isHotkeysDisabled;
-    }
+    private void ApplyTrayIconVisible() => _notifyIcon?.Visible = _trayIconVisibleSetting || _isHotkeysDisabled;
 
     private void UpdateMenuTexts()
     {
