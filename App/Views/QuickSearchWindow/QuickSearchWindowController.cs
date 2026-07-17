@@ -53,7 +53,7 @@ public class QuickSearchWindowController
             GetClassName(hwnd, sbClass, sbClass.Capacity);
             var className = sbClass.ToString();
             GetWindowThreadProcessId(hwnd, out var activePid);
-            var procName = StartMenuDismissHelper.TryGetProcessName(activePid);
+            var procName = ShellOverlayDismissHelper.TryGetProcessName(activePid);
 
             // TODO(issue #68): temporary diagnostic for "a system notification makes the search window
             // disappear" -- couldn't reproduce with a plain WinRT toast fired under Explorer's AUMID, so
@@ -102,11 +102,11 @@ public class QuickSearchWindowController
 
         // Used to skip the IPC round-trip when GetForegroundWindow() already reported hwnd as
         // foreground, on the assumption that Show()/Activate() already did the whole job. That
-        // assumption isn't always safe (e.g. a still-open Start Menu can make Windows report our
-        // window as foreground without real per-thread keyboard focus having actually moved -- see
-        // StartMenuDismissHelper.DismissStartMenuIfOpen(), which handles that specific case earlier in
-        // ShowWindow()). Always send it regardless; redoing an already-correct foreground/focus state
-        // is cheap and harmless.
+        // assumption isn't always safe (e.g. a still-open shell overlay like the Start Menu can make
+        // Windows report our window as foreground without real per-thread keyboard focus having
+        // actually moved -- see ShellOverlayDismissHelper.DismissOverlayIfForeground(), which handles
+        // that case earlier in ShowWindow()). Always send it regardless; redoing an already-correct
+        // foreground/focus state is cheap and harmless.
         App.HookClient?.SendMessage(new IpcMessage
         {
             Id = IpcMessageId.ForceForeground,
@@ -187,9 +187,9 @@ public class QuickSearchWindowController
     {
         // Must run before anything below touches this window (Show()/Activate()/ForceForeground):
         // once any of those runs, GetForegroundWindow() starts reporting THIS window as foreground
-        // (the Start Menu doesn't compete for activation the normal way), so this is the last point
-        // where it still reflects the real, uncontaminated state.
-        StartMenuDismissHelper.DismissStartMenuIfOpen();
+        // (shell light-dismiss overlays don't compete for activation the normal way), so this is the
+        // last point where it still reflects the real, uncontaminated state.
+        ShellOverlayDismissHelper.DismissOverlayIfForeground();
 
         _lastActiveHwnd = GetForegroundWindow();
         if (_lastActiveHwnd != IntPtr.Zero)
