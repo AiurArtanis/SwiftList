@@ -129,9 +129,11 @@
                                  the box is empty there's nothing useful to type-hint about, so the clock takes
                                  over the same slot instead of adding a separate element elsewhere. Binds
                                  straight to the ambient DataContext (QuickSearchViewModel), matching how
-                                 IsSearching elsewhere in this control already does the same; FallbackValue
-                                 keeps this a no-op in SearchWindow/InlineSearchWindow, whose DataContexts
-                                 don't expose ClockVisibility at all. -->
+                                 IsSearching elsewhere in this control already does the same. FallbackValue
+                                 keeps this a no-op in SearchWindow, whose DataContext (SearchViewModel)
+                                 doesn't expose ClockVisibility at all; InlineSearchWindow DOES share
+                                 QuickSearchViewModel, so it needs ClockVisibility's own IsInlineSearchContext
+                                 check instead to stay excluded. -->
                             <DataTrigger Binding="{Binding ClockVisibility, FallbackValue=Collapsed}" Value="Visible">
                                 <Setter Property="Text" Value="{Binding ClockText}"/>
                             </DataTrigger>

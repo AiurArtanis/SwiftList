@@ -170,7 +170,11 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
     public double SearchBarWidth => UserSettings.Load().SearchWindow.SearchBarWidth;
     public double SearchBarHeight => UserSettings.Load().SearchWindow.SearchBarHeight;
 
-    public Visibility ClockVisibility => UserSettings.Load().SearchWindow.ShowClock ? Visibility.Visible : Visibility.Collapsed;
+    // Quick window only: InlineSearchWindow shares this same ViewModel class (see
+    // InlineSearchManager.EnsureWindowCreated setting IsInlineSearchContext), so without this check the
+    // clock would also take over its placeholder even though it's usually mid-task in some other app's
+    // window, not an idle "glance at the time" moment the way the Quick window's popup can be.
+    public Visibility ClockVisibility => !IsInlineSearchContext && UserSettings.Load().SearchWindow.ShowClock ? Visibility.Visible : Visibility.Collapsed;
 
     // Takes over the search box's own placeholder slot instead of a separate element elsewhere (see
     // SearchBoxControl.xaml's TxtPlaceholder) -- while the box is empty there's nothing to type-hint
