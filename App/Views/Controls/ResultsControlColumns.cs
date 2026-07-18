@@ -45,6 +45,37 @@ internal static class ResultsControlColumns
         }
     }
 
+    // Re-resolves every plugin-provided column's header text in the now-current language and re-applies
+    // it in place -- called on TranslationManager language switches so these headers don't stay stuck in
+    // whatever language was active when PopulateDynamicColumns ran, without needing to tear down and
+    // rebuild the columns themselves. GridViewColumn is a DependencyObject, not a FrameworkElement (no
+    // Tag to stash an identity on), so this correlates by position instead: dynamic columns are always
+    // appended after the fixed built-in ones, in this same provider/GetColumns() order every time,
+    // matching how PopulateDynamicColumns built them. If the dynamic column count no longer matches
+    // (a plugin was enabled/disabled mid-session), skip rather than risk relabeling the wrong column.
+    // Preserves an existing sort-arrow suffix (see HandleColumnHeaderClick below) so an active sort
+    // indicator survives the relabel.
+    public static void RefreshDynamicColumnHeaders(System.Windows.Controls.ListView lstGridResults)
+    {
+        if (lstGridResults.View is not GridView gridView) return;
+
+        var freshHeaders = new List<string>();
+        foreach (var provider in PluginManager.Instance.ResultColumnProviders)
+            foreach (var colDef in provider.GetColumns())
+                freshHeaders.Add(colDef.HeaderText);
+
+        var dynamicStartIndex = gridView.Columns.Count - freshHeaders.Count;
+        if (dynamicStartIndex < 0) return;
+
+        for (var i = 0; i < freshHeaders.Count; i++)
+        {
+            var col = gridView.Columns[dynamicStartIndex + i];
+            var current = col.Header as string ?? string.Empty;
+            var suffix = current.EndsWith(" ▲") ? " ▲" : current.EndsWith(" ▼") ? " ▼" : string.Empty;
+            col.Header = freshHeaders[i] + suffix;
+        }
+    }
+
     public static void HandleColumnHeaderClick(GridViewColumnHeader? headerClicked, object? dataContext, System.Windows.Controls.ListView lstGridResults)
     {
         // Null, or missing a Column, whenever the click resolved to something other than a header cell

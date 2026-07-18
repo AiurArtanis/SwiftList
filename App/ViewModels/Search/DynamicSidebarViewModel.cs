@@ -12,16 +12,27 @@ public class DynamicSidebarGroupViewModel : ViewModelBase
     public DynamicSidebarGroupViewModel(SidebarFilterGroup group, SearchViewModel mainVm)
     {
         _mainVm = mainVm;
-        Header = group.Header;
+        _header = group.Header;
         AllowMultiSelect = group.AllowMultiSelect;
         Items = group.Items.Select(item => new DynamicSidebarItemViewModel(item, this)).ToList();
         // Nothing selected by default -- there's no "All" pseudo-item anymore; an empty selection IS
         // the unfiltered state.
     }
 
-    public string Header { get; }
+    private string _header;
+    public string Header
+    {
+        get => _header;
+        private set => SetProperty(ref _header, value);
+    }
     public bool AllowMultiSelect { get; }
     public List<DynamicSidebarItemViewModel> Items { get; }
+
+    // group.Header above is a one-time translated snapshot (the provider resolved it via
+    // TranslationService.Get when SearchViewModel's constructor called GetFilterGroups()), so it goes
+    // stale on a language switch. Called from SearchViewModel.RefreshDynamicSidebarLabels with a freshly
+    // re-resolved value.
+    internal void UpdateHeader(string header) => Header = header;
 
     private bool _isFirst;
     public bool IsFirst
@@ -103,10 +114,22 @@ public class DynamicSidebarItemViewModel : ViewModelBase
     {
         _item = item;
         Group = group;
+        _displayName = item.DisplayName;
     }
 
     public string Id => _item.Id;
-    public string DisplayName => _item.DisplayName;
+
+    private string _displayName;
+    public string DisplayName
+    {
+        get => _displayName;
+        private set => SetProperty(ref _displayName, value);
+    }
+
+    // _item.DisplayName is a one-time translated snapshot, same staleness issue as Header above -- see
+    // SearchViewModel.RefreshDynamicSidebarLabels.
+    internal void UpdateDisplayName(string displayName) => DisplayName = displayName;
+
     public string IconString => !string.IsNullOrEmpty(_item.IconKey) ? _item.IconKey : "◆";
     public string? IconData => _item.IconData;
     public bool HasIconData => !string.IsNullOrEmpty(_item.IconData);

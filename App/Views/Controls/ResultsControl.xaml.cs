@@ -52,6 +52,24 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
             UpdateViewModeVisibility();
             LoadDynamicColumns();
         };
+
+        // Plugin-provided column headers (PopulateDynamicColumns) are a one-time translated snapshot,
+        // so they'd otherwise stay stuck in whatever language was active when this control was created
+        // (i.e. when its owning window was opened) even after a live language switch. Re-resolve them
+        // on every TranslationManager change; harmless no-op for List-mode-only owners (QuickSearchWindow/
+        // InlineSearchWindow) since LstGridResults still exists there, just hidden. Unsubscribes on
+        // Unloaded so a closed SearchWindow's ResultsControl doesn't linger forever pinned by the
+        // singleton's event -- never fires for QuickSearchWindow/InlineSearchWindow's instances since
+        // those windows are only ever Hidden, not Closed, which is exactly the lifetime this subscription
+        // should have there too.
+        Services.TranslationManager.Instance.PropertyChanged += OnTranslationsChanged;
+        Unloaded += (s, e) => Services.TranslationManager.Instance.PropertyChanged -= OnTranslationsChanged;
+    }
+
+    private void OnTranslationsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == "Item[]")
+            Views.Controls.ResultsControlColumns.RefreshDynamicColumnHeaders(LstGridResults);
     }
 
     private System.Windows.Point? _lastHoverPos;
