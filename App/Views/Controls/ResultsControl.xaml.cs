@@ -24,8 +24,21 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
         // Alfred-style launchers behave. Rows with IsHitTestVisible="False" (section headers, the
         // empty-result placeholder -- see ResultItemStyle) never resolve to a ListBoxItem here, so
         // they're naturally skipped without any extra checks.
+        //
+        // WPF re-hit-tests a stationary mouse whenever the visual tree changes underneath it (rows
+        // relaid out as results repopulate), and synthesizes a MouseMove for that even though the
+        // cursor never physically moved. If it happens to now sit over row 2+ (e.g. results expanded
+        // under a cursor that was resting there from a previous window position), that synthetic event
+        // used to steal selection away from the row 0 default OnCollectionChanged just set. Only treat
+        // a MouseMove as real hover if the coordinate actually changed since the last one seen --
+        // _lastHoverPos is reseeded to wherever the cursor currently sits every time OnCollectionChanged
+        // resets selection, so the first (synthetic) move after a refresh always matches and is ignored.
         LstResults.MouseMove += (s, e) =>
         {
+            var pos = e.GetPosition(LstResults);
+            if (_lastHoverPos.HasValue && pos == _lastHoverPos.Value) return;
+            _lastHoverPos = pos;
+
             var item = FindVisualParent<ListBoxItem>(e.OriginalSource as DependencyObject);
             if (item?.Content != null && !ReferenceEquals(LstResults.SelectedItem, item.Content))
             {
@@ -40,6 +53,8 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
             LoadDynamicColumns();
         };
     }
+
+    private System.Windows.Point? _lastHoverPos;
 
     internal static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
     {
@@ -151,6 +166,11 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
                                                                                                      {
                                                                                                          list?.SelectedIndex = -1;
                                                                                                      }
+
+                                                                                                     // Reseed the hover baseline to the cursor's current spot so the MouseMove WPF
+                                                                                                     // synthesizes once these rows finish laying out under it doesn't get mistaken for
+                                                                                                     // real movement (see LstResults.MouseMove above).
+                                                                                                     _lastHoverPos = System.Windows.Input.Mouse.GetPosition(LstResults);
                                                                                                  }), System.Windows.Threading.DispatcherPriority.Render);
 
     // SelectedItem DependencyProperty
