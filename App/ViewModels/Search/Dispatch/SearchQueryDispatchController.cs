@@ -105,6 +105,17 @@ internal sealed class SearchQueryDispatchController
                     _setIsSearching(false);
             },
             () => _serviceStatus.CheckServiceStatusOnStartup(),
+            // Unlike the quick/inline windows' SearchResultMapper.BuildQuickResults, this window's own
+            // resultMapper above only ever builds rows from real file matches -- it never folds instant
+            // results (a pasted URL, a calculator expression, ...) into the final render at all. Left at
+            // the default (emit unconditionally), SearchExecutionEngine.PerformSearch would still show
+            // that instant row the moment it's typed, only for the follow-up file-search render (which
+            // finds no file matches for something like a URL) to immediately wipe it back out -- a
+            // flash-then-vanish row that doesn't belong in this window's file-browser-style grid anyway
+            // (an "InstantResult" row has no real path/size/type, so those columns render nonsense for
+            // it). Suppressing the up-front emission here means instant results simply never appear in
+            // this window, matching that the settled render never included them to begin with.
+            shouldEmitInstantResults: () => false,
             bypassExclusions: bypassExclusions
         );
     }
