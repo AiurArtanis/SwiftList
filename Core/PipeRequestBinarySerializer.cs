@@ -77,8 +77,12 @@ public static class PipeRequestBinarySerializer
                 break;
 
             case IpcMessageId.RestoreDialogFocus:
+                writer.Write(msg.Hwnd);
+                break;
+
             case IpcMessageId.ForceForeground:
                 writer.Write(msg.Hwnd);
+                writer.Write(msg.BoolVal);
                 break;
 
             case IpcMessageId.KeyChar:
@@ -169,8 +173,12 @@ public static class PipeRequestBinarySerializer
                 break;
 
             case IpcMessageId.RestoreDialogFocus:
+                msg.Hwnd = reader.ReadInt64();
+                break;
+
             case IpcMessageId.ForceForeground:
                 msg.Hwnd = reader.ReadInt64();
+                msg.BoolVal = reader.ReadBoolean();
                 break;
 
             case IpcMessageId.KeyChar:

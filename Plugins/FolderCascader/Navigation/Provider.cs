@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
@@ -7,12 +8,21 @@ namespace SwiftList.Plugins.FolderCascader.Navigation;
 // in App/Services/ShellMenu/QuickNavigationTriggerGate.cs, not here -- that's host recognition (Explorer
 // empty-space hit-testing, other file managers via their adapters), not something specific to what this
 // class contributes to the popup once it's already open.
+//
+// This instance is a process-wide singleton (registered once, reused by every Show() call -- see
+// PluginManager's provider registry), so AllocateHandle/TryGetPath/ClearSession can genuinely run
+// concurrently from different threads: QuickNavigationSubMenuLoader loads a submenu's children on a
+// background Task while a NEW Show() (on the UI thread) can be clearing/rebuilding this same session at
+// the same time. A plain Dictionary under that access pattern is undefined behavior, not just "an entry
+// might be briefly missing" -- ConcurrentDictionary plus Interlocked counters make every individual
+// operation safe; QuickNavigationMenu.cs's own generation check is what prevents a STALE clear from
+// wiping a still-live session in the first place (a thread-safe clear at the wrong time is still wrong).
 public class Provider : IQuickNavigationProvider
 {
-    private readonly Dictionary<IntPtr, string> _nodeMap = new();
-    private readonly Dictionary<uint, string> _commandMap = new();
+    private readonly ConcurrentDictionary<IntPtr, string> _nodeMap = new();
+    private readonly ConcurrentDictionary<uint, string> _commandMap = new();
     private int _nextId = 1;
-    private uint _nextCmdId = 1;
+    private int _nextCmdId = 1;
 
     public bool CanProvide(ISearchResult result) => result != null && !string.IsNullOrEmpty(result.FullPath);
 
@@ -29,20 +39,20 @@ public class Provider : IQuickNavigationProvider
     {
         _nodeMap.Clear();
         _commandMap.Clear();
-        _nextId = 1;
-        _nextCmdId = 1;
+        Interlocked.Exchange(ref _nextId, 1);
+        Interlocked.Exchange(ref _nextCmdId, 1);
     }
 
     public IntPtr AllocateHandle(string path)
     {
-        var handle = new IntPtr(_nextId++);
+        var handle = new IntPtr(Interlocked.Increment(ref _nextId));
         _nodeMap[handle] = path;
         return handle;
     }
 
     public uint AllocateCommand(string path)
     {
-        var cmdId = _nextCmdId++;
+        var cmdId = (uint)Interlocked.Increment(ref _nextCmdId);
         _commandMap[cmdId] = path;
         return cmdId;
     }

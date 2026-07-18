@@ -67,20 +67,33 @@ public sealed class HookCommandHandler
                         {
                             Logger.Log($"[HookCommandHandler] Forcing foreground for HWND 0x{appHwnd.ToInt64():X}", LogLevel.Debug);
 
-                            // Simulate Alt key press to bypass SetForegroundWindow restrictions.
-                            // keybd_event is async (system input queue) while SetForegroundWindow below
-                            // takes effect immediately, so this Alt tap is often delivered to the app
-                            // window AFTER it becomes the focus window. A lone Alt down+up makes
-                            // DefWindowProc enter the invisible system-menu keyboard loop (SC_KEYMENU),
-                            // which silently eats the next keystroke as a menu mnemonic -- the caret
-                            // keeps blinking but the first typed character never arrives. Sandwich a
-                            // reserved, unassigned VK (0xFF: no character, ignored by apps) inside the
-                            // tap so the Alt counts as "used" and never activates menu mode, wherever
-                            // the events end up landing.
-                            keybd_event(VK_MENU, 0, 0, IntPtr.Zero);
-                            keybd_event(VK_UNASSIGNED, 0, 0, IntPtr.Zero);
-                            keybd_event(VK_UNASSIGNED, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
-                            keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
+                            if (msg.BoolVal)
+                            {
+                                // Simulate Alt key press to bypass SetForegroundWindow restrictions. Only
+                                // requested by callers whose invocation isn't already backed by very
+                                // recent real user input on this thread (e.g. QuickSearchWindow's global
+                                // hotkey activation) -- Quick Navigation's own ForceForeground call skips
+                                // this (see QuickNavigationMenu.Show()): it fires right after the Hook's
+                                // own mouse hook processed the click that triggered it, which already
+                                // satisfies the foreground-lock check on its own, and this Alt tap was
+                                // found to cause its own, self-inflicted deactivation of the popup shortly
+                                // after (WPF's own keyboard input handling reacts to a bare Alt press/
+                                // release independently of the SC_KEYMENU workaround below).
+                                //
+                                // keybd_event is async (system input queue) while SetForegroundWindow below
+                                // takes effect immediately, so this Alt tap is often delivered to the app
+                                // window AFTER it becomes the focus window. A lone Alt down+up makes
+                                // DefWindowProc enter the invisible system-menu keyboard loop (SC_KEYMENU),
+                                // which silently eats the next keystroke as a menu mnemonic -- the caret
+                                // keeps blinking but the first typed character never arrives. Sandwich a
+                                // reserved, unassigned VK (0xFF: no character, ignored by apps) inside the
+                                // tap so the Alt counts as "used" and never activates menu mode, wherever
+                                // the events end up landing.
+                                keybd_event(VK_MENU, 0, 0, IntPtr.Zero);
+                                keybd_event(VK_UNASSIGNED, 0, 0, IntPtr.Zero);
+                                keybd_event(VK_UNASSIGNED, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
+                                keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, IntPtr.Zero);
+                            }
 
                             var fgHwnd = GetForegroundWindow();
                             var fgThreadId = GetWindowThreadProcessId(fgHwnd, out _);

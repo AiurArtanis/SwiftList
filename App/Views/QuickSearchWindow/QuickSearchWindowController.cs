@@ -95,7 +95,9 @@ public class QuickSearchWindowController
         catch { }
     }
 
-    public static void ForceForeground(IntPtr hwnd)
+    // useAltTapBypass: see HookCommandHandler's ForceForeground case -- callers backed by very recent real
+    // input on the Hook's own thread already (e.g. Quick Navigation's own mouse click) should pass false.
+    public static void ForceForeground(IntPtr hwnd, bool useAltTapBypass = true)
     {
         if (hwnd == IntPtr.Zero) return;
         ShowWindow(hwnd, SW_RESTORE);
@@ -110,7 +112,8 @@ public class QuickSearchWindowController
         App.HookClient?.SendMessage(new IpcMessage
         {
             Id = IpcMessageId.ForceForeground,
-            Hwnd = hwnd.ToInt64()
+            Hwnd = hwnd.ToInt64(),
+            BoolVal = useAltTapBypass
         });
     }
 

@@ -20,8 +20,14 @@ public static class QuickNavigationMenu
 {
     public static bool IsShowingShellMenu { get; set; }
 
+    // Bumped once per Show() call so a menu's own Closed handler can tell whether a NEWER Show() has
+    // already started by the time it runs -- see that handler's own comment for the "(空)" bug this
+    // exists to fix.
+    private static int _sessionGeneration;
+
     public static void Show(int mouseX, int mouseY)
     {
+        var generation = ++_sessionGeneration;
         var tracker = InlineSearchManager.Instance.ExplorerTracker;
 
         // Captured now, before anything below (the helper window grabbing foreground, the popup sitting
@@ -67,7 +73,10 @@ public static class QuickNavigationMenu
         helperWin.Activate();
 
         var hwnd = new WindowInteropHelper(helperWin).Handle;
-        if (hwnd != IntPtr.Zero) Views.QuickSearchWindow.QuickSearchWindowController.ForceForeground(hwnd);
+        // useAltTapBypass: false -- this call is triggered by a mouse click the Hook's own mouse hook just
+        // processed, which already satisfies SetForegroundWindow's foreground-lock check on its own. See
+        // ForceForeground's own comment for why simulating Alt here caused this popup to self-deactivate.
+        if (hwnd != IntPtr.Zero) Views.QuickSearchWindow.QuickSearchWindowController.ForceForeground(hwnd, useAltTapBypass: false);
 
         contextMenu.PlacementTarget = helperWin;
         contextMenu.Placement = PlacementMode.AbsolutePoint;
@@ -97,17 +106,32 @@ public static class QuickNavigationMenu
             }
             helperWin.Close();
 
+            // Every registered IQuickNavigationProvider/IDynamicActionProvider is a process-wide singleton
+            // (PluginManager holds one shared instance, reused by every Show() call) -- ClearSession wipes
+            // its handle->path lookup table, which the CURRENTLY OPEN menu's own submenu handles still
+            // point into. Rapid re-triggering (e.g. several quick middle-clicks) can open a NEWER menu
+            // before an OLDER one's Closed event has been delivered; when that stale event finally arrives
+            // here and this ran unconditionally, it cleared the newer menu's still-live session data out
+            // from under it, so hovering e.g. "This PC" resolved no path for its handle and rendered an
+            // empty submenu ("(空)") even though the menu itself was still open and otherwise fine. Only
+            // clear when no NEWER Show() has started since this one did -- an older Closed event finding a
+            // mismatch just skips cleanup this time, which is harmless (the next real Show() clears these
+            // same lightweight dictionaries at its own start anyway, see the ClearSession call above).
+            //
             // Release everything the menu pulled in so memory falls back immediately on close: dispose the
             // shell COM sessions (they own the native HMENU/HBITMAPs), drop the icon cache, then return
             // the freed pages to the OS. Deferred + off the UI thread so WPF first tears down the menu
             // visual tree (matching QuickSearch's hide path); otherwise the GC still sees it referenced.
-            foreach (var provider in PluginManager.Instance.QuickNavigationProviders) provider.ClearSession();
-            foreach (var provider in PluginManager.Instance.DynamicActionProviders) provider.ClearSession();
-            _ = Task.Delay(100).ContinueWith(_ =>
+            if (generation == _sessionGeneration)
             {
-                try { ShellIconHelper.ClearCache(); } catch { }
-                try { Core.Win32Api.TrimWorkingSet(); } catch { }
-            });
+                foreach (var provider in PluginManager.Instance.QuickNavigationProviders) provider.ClearSession();
+                foreach (var provider in PluginManager.Instance.DynamicActionProviders) provider.ClearSession();
+                _ = Task.Delay(100).ContinueWith(_ =>
+                {
+                    try { ShellIconHelper.ClearCache(); } catch { }
+                    try { Core.Win32Api.TrimWorkingSet(); } catch { }
+                });
+            }
         };
 
         contextMenu.Opened += (s, e) => contextMenu.Focus();
