@@ -70,89 +70,50 @@ public sealed class HookIpcServer : IDisposable
     private async Task ServerLoop(CancellationToken token)
     {
         Logger.Log("[HookIpcServer] Starting dual-pipe server loops.", LogLevel.Debug);
-        PipeSecurity? pipeSecurity = null;
-
-        try
+        // Current-user-only, not Everyone/AuthenticatedUsers: unlike SwiftListPipe (a genuine machine-
+        // wide Windows Service meant to serve every logged-in account), each Hook instance is launched
+        // per-user into that specific user's own session -- see Services.PipeSecurityFactory.
+        // CreateCurrentUserOnly's own comment for why this SID-scoped ACL still works across the
+        // elevation boundary.
+        var pipeSecurity = SwiftList.Core.Services.PipeSecurityFactory.CreateCurrentUserOnly();
+        if (pipeSecurity == null)
         {
-            pipeSecurity = new PipeSecurity();
-            var everyoneSid = new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.WorldSid, null);
-
-            pipeSecurity.AddAccessRule(new PipeAccessRule(
-
-                everyoneSid,
-                PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
-                System.Security.AccessControl.AccessControlType.Allow
-
-            ));
-            var authenticatedUsersSid = new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.AuthenticatedUserSid, null);
-
-            pipeSecurity.AddAccessRule(new PipeAccessRule(
-
-                authenticatedUsersSid,
-                PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
-                System.Security.AccessControl.AccessControlType.Allow
-
-            ));
-        }
-
-        catch (Exception ex)
-        {
-            Logger.Log($"[HookIpcServer] Failed to create PipeSecurity: {ex.Message}", LogLevel.Warn);
+            // No unrestricted-pipe fallback here (unlike an earlier version of this method) -- the same
+            // rule AppSearchPipeService's own pipe follows (App\Services\AppSearchPipeService.cs): every
+            // one of App/Hook/CLI's IPC surfaces is meant to be scoped to its own user in a multi-user
+            // environment, so silently widening the ACL the one time SID resolution itself fails isn't an
+            // acceptable substitute -- refusing to start is the honest failure mode here too.
+            Logger.Log("[HookIpcServer] Could not resolve the current user's SID -- refusing to start.", LogLevel.Error);
+            return;
         }
 
         while (!token.IsCancellationRequested)
         {
             try
             {
-                NamedPipeServerStream eventPipe;
-                NamedPipeServerStream cmdPipe;
-                if (pipeSecurity != null)
-                {
-                    eventPipe = NamedPipeServerStreamAcl.Create(
+                var eventPipe = NamedPipeServerStreamAcl.Create(
 
-                        HookIpcNames.EventPipeName,
-                        PipeDirection.Out,
-                        1,
-                        PipeTransmissionMode.Byte,
-                        PipeOptions.Asynchronous,
-                        4096, 4096,
-                        pipeSecurity
+                    HookIpcNames.EventPipeName,
+                    PipeDirection.Out,
+                    1,
+                    PipeTransmissionMode.Byte,
+                    PipeOptions.Asynchronous,
+                    4096, 4096,
+                    pipeSecurity
 
-                    );
+                );
 
-                    cmdPipe = NamedPipeServerStreamAcl.Create(
+                var cmdPipe = NamedPipeServerStreamAcl.Create(
 
-                        HookIpcNames.CmdPipeName,
-                        PipeDirection.In,
-                        1,
-                        PipeTransmissionMode.Byte,
-                        PipeOptions.Asynchronous,
-                        4096, 4096,
-                        pipeSecurity
+                    HookIpcNames.CmdPipeName,
+                    PipeDirection.In,
+                    1,
+                    PipeTransmissionMode.Byte,
+                    PipeOptions.Asynchronous,
+                    4096, 4096,
+                    pipeSecurity
 
-                    );
-                }
-
-                else
-                {
-                    eventPipe = new NamedPipeServerStream(
-
-                        HookIpcNames.EventPipeName,
-                        PipeDirection.Out,
-                        1,
-                        PipeTransmissionMode.Byte,
-                        PipeOptions.Asynchronous,
-                        4096, 4096);
-
-                    cmdPipe = new NamedPipeServerStream(
-
-                        HookIpcNames.CmdPipeName,
-                        PipeDirection.In,
-                        1,
-                        PipeTransmissionMode.Byte,
-                        PipeOptions.Asynchronous,
-                        4096, 4096);
-                }
+                );
 
                 Logger.Log("[HookIpcServer] Waiting for App to connect on both pipes...", LogLevel.Debug);
 

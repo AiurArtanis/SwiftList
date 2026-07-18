@@ -183,6 +183,7 @@ public partial class App : Application
         // Start the activation named pipe server to listen to subsequent launches
 
         _ = AppPipeService.StartPipeServerAsync();
+        _ = AppSearchPipeService.StartPipeServerAsync(); // exposes the full window's search to external clients (see AppSearchPipeService)
         AppStartupServiceBootstrapper.EnsureServiceStarted();
         Logger.Log("Starting normal WPF GUI client mode.");
         base.OnStartup(e);
@@ -291,7 +292,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         HookClient?.Stop(); HookClient?.Dispose(); HookClient = null;
-        AppPipeService.StopServer(); InlineSearchManager.Instance.Dispose(); CloseAllManagedWindows();
+        AppPipeService.StopServer(); AppSearchPipeService.StopServer(); InlineSearchManager.Instance.Dispose(); CloseAllManagedWindows();
         if (_appMutex != null) { try { _appMutex.ReleaseMutex(); } catch { } _appMutex.Dispose(); }
         base.OnExit(e);
     }
