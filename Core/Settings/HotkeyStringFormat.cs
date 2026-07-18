@@ -57,8 +57,17 @@ public static class HotkeyStringFormat
 
     private static readonly Dictionary<string, string> OemDisplaySymbols = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Oem1"] = ";", ["OemPlus"] = "=", ["OemComma"] = ",", ["OemMinus"] = "-", ["OemPeriod"] = ".",
-        ["Oem2"] = "/", ["Oem3"] = "`", ["Oem4"] = "[", ["Oem5"] = "\\", ["Oem6"] = "]", ["Oem7"] = "'",
+        ["Oem1"] = ";",
+        ["OemPlus"] = "=",
+        ["OemComma"] = ",",
+        ["OemMinus"] = "-",
+        ["OemPeriod"] = ".",
+        ["Oem2"] = "/",
+        ["Oem3"] = "`",
+        ["Oem4"] = "[",
+        ["Oem5"] = "\\",
+        ["Oem6"] = "]",
+        ["Oem7"] = "'",
     };
 
     public static string ToDisplayText(string value)

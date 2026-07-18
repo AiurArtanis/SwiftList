@@ -75,7 +75,7 @@ public sealed class HookIpcServer : IDisposable
         // per-user into that specific user's own session -- see Services.PipeSecurityFactory.
         // CreateCurrentUserOnly's own comment for why this SID-scoped ACL still works across the
         // elevation boundary.
-        var pipeSecurity = SwiftList.Core.Services.PipeSecurityFactory.CreateCurrentUserOnly();
+        var pipeSecurity = Services.PipeSecurityFactory.CreateCurrentUserOnly();
         if (pipeSecurity == null)
         {
             // No unrestricted-pipe fallback here (unlike an earlier version of this method) -- the same
