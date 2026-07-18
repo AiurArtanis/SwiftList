@@ -16,6 +16,10 @@ powershell -Command "Start-Process net -ArgumentList 'stop SwiftListService' -Ve
 echo Requesting Administrator privileges to kill hook subprocess (SwiftList.Service.exe)...
 powershell -Command "Start-Process taskkill -ArgumentList '/f /im SwiftList.Service.exe' -Verb RunAs -WindowStyle Hidden -Wait"
 
+echo Stopping any running slf.exe (CLI)...
+taskkill /f /im slf.exe >nul 2>&1
+powershell -Command "Start-Process taskkill -ArgumentList '/f /im slf.exe' -Verb RunAs -WindowStyle Hidden -Wait"
+
 :: Wait a moment for file handles to be completely released
 ping 127.0.0.1 -n 3 >nul
 

@@ -36,6 +36,16 @@ if "%errorlevel%"=="0" (
     goto KillService
 )
 
+:: slf.exe (the CLI companion) sits in the same DST_DIR as everything else below -- if a copy of it
+:: is open in some terminal window right now, xcopy can't overwrite its locked file.
+:KillSlf
+tasklist /FI "IMAGENAME eq slf.exe" 2>NUL | find /I /N "slf.exe" >NUL
+if "%errorlevel%"=="0" (
+    taskkill /F /IM slf.exe >nul 2>&1
+    timeout /t 1 /nobreak >nul
+    goto KillSlf
+)
+
 :: Copy new files to destination directory, overwriting existing files
 xcopy "%SRC_DIR%\*" "%DST_DIR%\" /E /Y /Q /R
 

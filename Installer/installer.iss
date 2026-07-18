@@ -8,6 +8,7 @@
 #define AppExeName "SwiftList.App.exe"
 #define ServiceExeName "SwiftList.Service.exe"
 #define ServiceName "SwiftListService"
+#define CliExeName "slf.exe"
 
 [Setup]
 AppId={{D37D0B75-B5E3-40D9-92EE-429C7D4D7F2A}
@@ -33,9 +34,10 @@ ArchitecturesInstallIn64BitMode=x64
 PrivilegesRequired=admin
 VersionInfoVersion={#AppVersion4}
 VersionInfoTextVersion={#AppVersion}
-; Automatically check and close running instances of the App
+; Automatically check and close running instances of the App (and the slf CLI companion, which sits
+; in the same install directory and can otherwise hold its own exe/dll files locked)
 CloseApplications=yes
-CloseApplicationsFilter={#AppExeName}
+CloseApplicationsFilter={#AppExeName},{#CliExeName}
 
 [Languages]
 Name: "en_US"; MessagesFile: "compiler:Default.isl"
@@ -160,9 +162,12 @@ begin
   WizardForm.BackButton.Enabled := False;
   try
     // 1. Force stop the service before installing new files (deleting it is only done on uninstall,
-    // see CurUninstallStepChanged below)
+    // see CurUninstallStepChanged below), and any running copy of the CLI companion -- it sits in the
+    // same install directory as everything else here, so a locked slf.exe/slf.dll can block the file
+    // copy below just as easily as a locked App/Service file would.
     Exec('sc.exe', 'stop ' + '{#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Exec('taskkill.exe', '/F /IM ' + '{#ServiceExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('taskkill.exe', '/F /IM ' + '{#CliExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
     // 2. Check and Download .NET 10.0 Desktop Runtime if missing
     if not IsDotNet10Installed() then
@@ -214,8 +219,9 @@ var
 begin
   if CurUninstallStep = usUninstall then
   begin
-    // Force stop app and service on uninstallation
+    // Force stop app, CLI companion, and service on uninstallation
     Exec('taskkill.exe', '/F /IM ' + '{#AppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('taskkill.exe', '/F /IM ' + '{#CliExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Exec('sc.exe', 'stop ' + '{#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Exec('taskkill.exe', '/F /IM ' + '{#ServiceExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Exec('sc.exe', 'delete ' + '{#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
