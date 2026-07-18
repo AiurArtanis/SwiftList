@@ -6,4 +6,6 @@ en_US.DotNetInstalling=Installing .NET 10.0 Desktop Runtime...
 en_US.CreateStartMenuIcon=Create a Start Menu shortcut
 en_US.DotNetDownloadFailed=Failed to download .NET 10.0 Desktop Runtime. Please install it manually.
 en_US.DotNetInstallFailed=Failed to install .NET 10.0 Desktop Runtime (Code: %1).
+en_US.CommandLineTools=Command-line tools
+en_US.AddSlfToPath=Add the slf command-line search tool to PATH
 

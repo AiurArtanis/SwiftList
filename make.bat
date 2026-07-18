@@ -38,33 +38,28 @@ if exist "%DIST%" (
 )
 mkdir "%DIST%"
 
-:: 3. Publish App components in Release mode
+:: 3. Publish App/Service/Cli in Release mode
+::
+:: Solution-level `dotnet publish -o` prints NETSDK1194 ("specifying a solution-level output path...
+:: may result in inconsistent builds") since it's not an officially supported publish mode -- every
+:: project in SwiftList.slnx just publishes into the same -o in whatever order MSBuild picks, rather
+:: than each publish being independently well-defined the way `dotnet publish SomeProject.csproj -o`
+:: is. Used anyway (as SwiftList.Plugins.slnx already does below, without issue) since it's simpler to
+:: maintain than a separate pushd/publish/popd block per exe project, and has been verified to produce
+:: the same merged output (App+Service+Cli+Core+PluginSdk all landing in %OUT%) as the three separate
+:: publishes it replaces.
 echo.
-echo [2/6] Publishing App in Release mode...
-pushd "%ROOT%App"
-dotnet publish ".\App.csproj" -c Release -o "%OUT%" -v quiet
-set "APP_EXIT=%errorlevel%"
-popd
-if not "%APP_EXIT%"=="0" (
-    echo [Error] App publish failed.
-    exit /b %APP_EXIT%
+echo [2/6] Publishing App/Service/Cli in Release mode...
+dotnet publish "%ROOT%SwiftList.slnx" -c Release -o "%OUT%" -v quiet
+set "SLN_EXIT=%errorlevel%"
+if not "%SLN_EXIT%"=="0" (
+    echo [Error] App/Service/Cli publish failed.
+    exit /b %SLN_EXIT%
 )
 
-:: 4. Publish Service components in Release mode
+:: 4. Publish Plugins in Release mode
 echo.
-echo [3/6] Publishing Service in Release mode...
-pushd "%ROOT%Service"
-dotnet publish ".\Service.csproj" -c Release -o "%OUT%" -v quiet
-set "SERVICE_EXIT=%errorlevel%"
-popd
-if not "%SERVICE_EXIT%"=="0" (
-    echo [Error] Service publish failed.
-    exit /b %SERVICE_EXIT%
-)
-
-:: 5. Publish Plugins in Release mode
-echo.
-echo [4/6] Publishing Plugins in Release mode...
+echo [3/6] Publishing Plugins in Release mode...
 dotnet publish "%ROOT%SwiftList.Plugins.slnx" -c Release -o "%OUT%\Plugins" -v quiet
 set "PLUGINS_EXIT=%errorlevel%"
 if not "%PLUGINS_EXIT%"=="0" (
@@ -73,9 +68,9 @@ if not "%PLUGINS_EXIT%"=="0" (
 )
 
 
-:: 6. Copy portable updater and clean PDB files
+:: 5. Copy portable updater and clean PDB files
 echo.
-echo [5/6] Copying portable updater and cleaning PDB files...
+echo [4/6] Copying portable updater and cleaning PDB files...
 copy "%ROOT%portable-updater.bat" "%OUT%\" >nul
 if errorlevel 1 (
     echo [Warning] Failed to copy portable-updater.bat.
@@ -86,7 +81,7 @@ if errorlevel 1 (
 )
 del /s /q "%OUT%\*.pdb" >nul 2>&1
 
-:: 7. Find Inno Setup compiler
+:: 6. Find Inno Setup compiler
 set "ISCC="
 where iscc >nul 2>&1
 if "%errorlevel%"=="0" set "ISCC=iscc"
@@ -99,16 +94,16 @@ if "%ISCC%"=="" (
     exit /b 1
 )
 
-:: 8. Extract application version from App.csproj
+:: 7. Extract application version from App.csproj
 echo.
 echo Extracting application version...
 for /f "usebackq tokens=*" %%v in (`powershell -NoProfile -Command "([xml](Get-Content '%ROOT%App\App.csproj')).Project.PropertyGroup.Version"`) do set "APP_VER=%%v"
 for /f "usebackq tokens=*" %%v in (`powershell -NoProfile -Command "$a = '%APP_VER%.0.0.0' -split '\.'; $a[0..3] -join '.'"`) do set "APP_VER_4=%%v"
 echo App Version: %APP_VER% (PE Version: %APP_VER_4%)
 
-:: 9. Compile Inno Setup Installer
+:: 8. Compile Inno Setup Installer
 echo.
-echo [6/6] Compiling Inno Setup Installer...
+echo [5/6] Compiling Inno Setup Installer...
 echo Using Inno Setup compiler: "%ISCC%"
 "%ISCC%" /DAppVersion="%APP_VER%" /DAppVersion4="%APP_VER_4%" "%ROOT%Installer\installer.iss"
 if errorlevel 1 (

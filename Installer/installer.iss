@@ -47,6 +47,7 @@ Name: "zh_CN"; MessagesFile: "ThirdParty\ChineseSimplified.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "startmenuicon"; Description: "{cm:CreateStartMenuIcon}"; GroupDescription: "{cm:AdditionalIcons}"
+Name: "addtopath"; Description: "{cm:AddSlfToPath}"; GroupDescription: "{cm:CommandLineTools}"
 
 [Files]
 Source: "..\publish\SwiftList\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb"
@@ -66,6 +67,57 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchApp}"; Flags: postinsta
 [Code]
 var
   DownloadPage: TDownloadWizardPage;
+
+const
+  EnvironmentKey = 'SYSTEM\CurrentControlSet\Control\Session Manager\Environment';
+
+// Adds Dir to the MACHINE-wide PATH (HKLM, not HKCU) -- the installer already runs elevated
+// (PrivilegesRequired=admin above) and everything else it installs (Program Files location, the
+// Windows Service) is machine-wide too, so a per-user PATH entry would be the odd one out here. Reads
+// with the raw (non-expanded) string so an existing entry like "%SystemRoot%\..." isn't baked into a
+// literal path, and writes back as REG_EXPAND_SZ (RegWriteExpandStringValue, not
+// RegWriteStringValue) for the same reason -- downgrading the whole value's type would break expansion
+// for every OTHER entry already in there, not just whatever this adds. No-ops if Dir is already present
+// (checked as ;DIR; against ;PATH; so it can't false-match a longer path sharing the same prefix).
+procedure EnvAddPath(Dir: string);
+var
+  Paths: string;
+begin
+  if not RegQueryStringValue(HKEY_LOCAL_MACHINE, EnvironmentKey, 'Path', Paths) then
+    Paths := '';
+
+  if Pos(';' + Uppercase(Dir) + ';', ';' + Uppercase(Paths) + ';') > 0 then
+    exit;
+
+  if (Length(Paths) > 0) and (Paths[Length(Paths)] <> ';') then
+    Paths := Paths + ';';
+  Paths := Paths + Dir;
+
+  if not RegWriteExpandStringValue(HKEY_LOCAL_MACHINE, EnvironmentKey, 'Path', Paths) then
+    Log('Failed to add ' + Dir + ' to the machine PATH.');
+end;
+
+// Mirror of EnvAddPath -- same registry/type reasoning applies. Always attempted on uninstall
+// regardless of whether the "addtopath" task was originally selected (task selections aren't
+// remembered across a separate uninstall run) -- harmless no-op via the same Pos check above if Dir
+// was never actually added.
+procedure EnvRemovePath(Dir: string);
+var
+  Paths: string;
+  P: Integer;
+begin
+  if not RegQueryStringValue(HKEY_LOCAL_MACHINE, EnvironmentKey, 'Path', Paths) then
+    exit;
+
+  P := Pos(';' + Uppercase(Dir) + ';', ';' + Uppercase(Paths) + ';');
+  if P = 0 then
+    exit;
+
+  Delete(Paths, P - 1, Length(Dir) + 1);
+
+  if not RegWriteExpandStringValue(HKEY_LOCAL_MACHINE, EnvironmentKey, 'Path', Paths) then
+    Log('Failed to remove ' + Dir + ' from the machine PATH.');
+end;
 
 function IsDotNet10Installed(): Boolean;
 var
@@ -150,6 +202,12 @@ begin
   end;
 end;
 
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if (CurStep = ssPostInstall) and WizardIsTaskSelected('addtopath') then
+    EnvAddPath(ExpandConstant('{app}'));
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   ResultCode: Integer;
@@ -162,4 +220,9 @@ begin
     Exec('taskkill.exe', '/F /IM ' + '{#ServiceExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Exec('sc.exe', 'delete ' + '{#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   end;
+
+  // Always attempted (see EnvRemovePath's own comment on why) -- after files are gone (usPostUninstall),
+  // not usUninstall (which the block above uses to stop processes still holding files open).
+  if CurUninstallStep = usPostUninstall then
+    EnvRemovePath(ExpandConstant('{app}'));
 end;
