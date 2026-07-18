@@ -77,6 +77,14 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
         ResultCountText = string.Format(TranslationManager.Instance["Search_Total"], 0);
         AdvancedQuery = initialQuery;
+
+        TranslationManager.Instance.PropertyChanged += OnTranslationsChanged;
+    }
+
+    private void OnTranslationsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == "Item[]")
+            OnPropertyChanged(nameof(WindowTitle));
     }
 
     // ==========================================
@@ -104,9 +112,18 @@ public class SearchViewModel : ViewModelBase, IDisposable
                 }
                 OnPropertyChanged(nameof(ShowWelcomeHint));
                 OnPropertyChanged(nameof(ShowNoResultsHint));
+                OnPropertyChanged(nameof(WindowTitle));
             }
         }
     }
+
+    // "<keyword> - <app title>" while there's a query, falling back to the plain translated title once
+    // it's cleared -- lets the taskbar/Alt+Tab entry identify which search this window is showing.
+    // Re-raised on AdvancedQuery changes above and on translation reload below (OnPropertyChanged("Item[]")
+    // is TranslationManager's own convention for "every indexer-bound string may have changed").
+    public string WindowTitle => string.IsNullOrWhiteSpace(AdvancedQuery)
+        ? TranslationManager.Instance["Search_Title"]
+        : $"{AdvancedQuery} - {TranslationManager.Instance["Search_Title"]}";
 
     public string ResultCountText
     {
@@ -218,6 +235,7 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        TranslationManager.Instance.PropertyChanged -= OnTranslationsChanged;
         _searchEngine.Dispose();
         _serviceStatus.Dispose();
         _searchService.Dispose();
