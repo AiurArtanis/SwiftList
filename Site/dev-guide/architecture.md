@@ -14,7 +14,10 @@ SwiftList runs as three separate processes, deliberately isolated by privilege l
 - **`SwiftList.App`** — the per-user, session-level WPF application: the search windows, the
   Settings window, hotkey handling, and the Actions/QuickLook UI. It talks to the Service over a
   named pipe (`SearchService`/`UsnServicePipeServer` in `Core.Services`) and never touches the disk
-  index directly.
+  index directly. It also hosts a second, per-user pipe of its own (`AppSearchPipeService`) that
+  lets the `slf` CLI companion (see [Command-Line Search](../user-guide/cli)) reuse the App's
+  already-initialized search state — loaded alias/plugin providers, configured network-drive
+  indexes — instead of a bare client process having to replicate that setup itself.
 - **`SwiftList.Service --hook`** — a small separate process hosting the low-level global keyboard
   hook, so a hook crash or a misbehaving foreground app can't take the main App process down with
   it. It also loads plugins' window-integration adapters and runs their calls itself — see

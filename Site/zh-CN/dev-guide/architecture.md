@@ -12,7 +12,10 @@ SwiftList 运行为三个独立进程，按权限级别和生命周期有意拆�
   进程获得它本不需要的提升权限。
 - **`SwiftList.App`** —— 用户态、Session 级别的 WPF 应用:搜索窗口、设置窗口、热键处理、动作菜
   单/QuickLook 界面都在这里。它通过命名管道(`Core.Services` 里的 `SearchService`/
-  `UsnServicePipeServer`)和 Service 通信，从不直接访问磁盘索引。
+  `UsnServicePipeServer`)和 Service 通信，从不直接访问磁盘索引。它自己也额外托管了一条按用户区
+  分的管道(`AppSearchPipeService`)，让 `slf` 命令行伴侣工具(参见[命令行搜索](../user-guide/cli))
+  能复用 App 已经初始化好的搜索状态——已加载的别名/插件提供方、已配置的网络盘索引——而不用一个独
+  立的客户端进程自己重新初始化一遍。
 - **`SwiftList.Service --hook`** —— 一个独立的小进程，专门托管低层级全局键盘钩子，这样钩子崩溃
   或者某个前台应用行为异常都不会连累主 App 进程。它还会加载插件的窗口集成适配器，并在自己进程里
   执行这些调用——见下文[插件在架构中的位置](#插件在架构中的位置)。

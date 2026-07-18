@@ -11,6 +11,7 @@ export const navSchema = [
       { id: 'ugHotkeys', slug: 'user-guide/hotkeys' },
       { id: 'ugActionsPreview', slug: 'user-guide/actions-and-preview' },
       { id: 'ugInstantAnswers', slug: 'user-guide/instant-answers' },
+      { id: 'ugCli', slug: 'user-guide/cli' },
       {
         id: 'ugSettingsGroup',
         children: [

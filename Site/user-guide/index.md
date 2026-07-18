@@ -16,6 +16,8 @@ This manual covers everything a day-to-day user needs:
 - **[Instant Answers & Keyword Shortcuts](./instant-answers)** — the calculator, environment
   variables, run-command shortcuts, and keyword-triggered plugins like Process Manager,
   Translation, Browser Data, and Web Search.
+- **[Command-Line Search (slf)](./cli)** — the fzf-style CLI companion for searching from a
+  terminal.
 - **[Settings Reference](./settings/)** — every settings page, tab, and option, itemized.
 - **[Troubleshooting](./troubleshooting)** — common problems and how to fix them.
 - **[Donate](./donate)** — if SwiftList has been useful to you.
