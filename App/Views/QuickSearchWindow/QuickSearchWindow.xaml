@@ -71,14 +71,15 @@
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
-                <!-- Visible while the pointer is over the window, or this button's own menu is open:
+                <!-- Visible once the pointer has stayed over the window for IsMenuButtonHoverActive's
+                     debounce delay (see QuickSearchWindow.xaml.cs), or this button's own menu is open:
                      the latter keeps BtnMenu from fading out from under an open menu once the pointer
                      leaves the window's surface to click one of the popup's items (see QuickSearchWindow's
                      IsMenuOpen property, set around ShowMenuAt). -->
                 <DataTrigger Value="True">
                     <DataTrigger.Binding>
                         <MultiBinding Converter="{StaticResource BooleanOrConverter}">
-                            <Binding ElementName="RootGrid" Path="IsMouseOver"/>
+                            <Binding ElementName="RootWindow" Path="IsMenuButtonHoverActive"/>
                             <Binding ElementName="RootWindow" Path="IsMenuOpen"/>
                         </MultiBinding>
                     </DataTrigger.Binding>

@@ -44,6 +44,23 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         set => SetValue(IsMenuOpenProperty, value);
     }
 
+    // Gates FloatingCircleButtonStyle's visibility trigger instead of RootGrid.IsMouseOver directly:
+    // only flips true once the pointer has stayed over the window for MenuButtonHoverDelay, so a quick
+    // pass-through (mouse crossing the window on its way somewhere else) never shows the button at all,
+    // rather than flashing it in and immediately back out. Leaving still clears it -- and cancels any
+    // still-pending timer -- immediately, so hiding is never delayed, only showing.
+    public static readonly DependencyProperty IsMenuButtonHoverActiveProperty =
+        DependencyProperty.Register(nameof(IsMenuButtonHoverActive), typeof(bool), typeof(QuickSearchWindow), new PropertyMetadata(false));
+
+    public bool IsMenuButtonHoverActive
+    {
+        get => (bool)GetValue(IsMenuButtonHoverActiveProperty);
+        set => SetValue(IsMenuButtonHoverActiveProperty, value);
+    }
+
+    private static readonly TimeSpan MenuButtonHoverDelay = TimeSpan.FromMilliseconds(200);
+    private DispatcherTimer? _menuButtonHoverTimer;
+
     public QuickSearchWindow()
     {
         InitializeComponent();
@@ -112,11 +129,45 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     {
         _menuPresenter = new ShellMenuPresenter(this);
         _trayService = new TrayIconService(_viewModel, ShowWindow, ToggleVisibility);
-        _trayService.MenuClosed += () => IsMenuOpen = false;
+        _trayService.MenuClosed += () =>
+        {
+            IsMenuOpen = false;
+
+            // The popup that just closed is its own top-level window; while it covered BtnMenu's
+            // screen position, the pointer never actually left this window's surface but Windows still
+            // delivered a real MouseLeave/MouseEnter pair to it anyway, which restarted the hover-intent
+            // timer above independently of this menu-close event. If that timer hasn't finished yet
+            // when the menu closes (e.g. the user closed it by clicking straight into the search box,
+            // which both dismisses the menu and re-enters this window's surface at nearly the same
+            // moment), IsMenuButtonHoverActive is still false here: the OR condition drops the button
+            // out for an instant, then the still-ticking timer flips it back true a moment later -- a
+            // spurious vanish-then-reappear right as the menu closes. Resolve it synchronously against
+            // the pointer's real current position instead of leaving the outcome to that race.
+            _menuButtonHoverTimer?.Stop();
+            _menuButtonHoverTimer = null;
+            IsMenuButtonHoverActive = RootGrid.IsMouseOver;
+        };
 
         // Wire up event handlers to subcontrols
 
         BtnMenu.Click += BtnMenu_Click;
+        RootGrid.MouseEnter += (s, e) =>
+        {
+            _menuButtonHoverTimer?.Stop();
+            _menuButtonHoverTimer = new DispatcherTimer { Interval = MenuButtonHoverDelay };
+            _menuButtonHoverTimer.Tick += (s2, e2) =>
+            {
+                _menuButtonHoverTimer!.Stop();
+                IsMenuButtonHoverActive = true;
+            };
+            _menuButtonHoverTimer.Start();
+        };
+        RootGrid.MouseLeave += (s, e) =>
+        {
+            _menuButtonHoverTimer?.Stop();
+            _menuButtonHoverTimer = null;
+            IsMenuButtonHoverActive = false;
+        };
         SearchBox.IconRightClicked += _controller.ResetPosition;
         LstResults.PreviewMouseLeftButtonUp += (s, e) => _resultExecutor.HandlePreviewMouseLeftButtonUp(e);
         LstResults.PreviewMouseRightButtonUp += (s, e) => _resultExecutor.HandlePreviewMouseRightButtonUp(e);
