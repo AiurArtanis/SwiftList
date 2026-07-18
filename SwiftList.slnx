@@ -3,5 +3,6 @@
   <Project Path="Service/Service.csproj" />
   <Project Path="App/App.csproj" />
   <Project Path="PluginSdk/PluginSdk.csproj" />
+  <Project Path="Cli/Cli.csproj" />
 
 </Solution>
