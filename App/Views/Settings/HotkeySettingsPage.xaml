@@ -351,7 +351,7 @@
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_OpenFullWindow]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
                         Value="{Binding OpenFullWindowHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        RequireModifier="True"/>
+                        RequireModifier="True" DefaultValue="Ctrl+F"/>
                 </Grid>
 
                 <Border Style="{StaticResource SettingsGroupDivider}"/>
