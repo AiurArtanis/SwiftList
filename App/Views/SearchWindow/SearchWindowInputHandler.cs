@@ -52,9 +52,19 @@ public class SearchWindowInputHandler
             return;
         }
 
-        // The action menu opens on right-click only. Keyboard access to actions is via the registered
-        // action hotkeys (Ctrl+C, Ctrl+Enter, ...), handled directly on the item by HandleCommonSearchKeys
-        // above — no menu needed.
+        // The Menu/Application key mirrors right-click, same as Explorer and other Windows apps: opens
+        // the action flyout for whatever's currently selected. Reuses the exact same PlacementMode.
+        // MousePoint right-click uses -- WPF's Popup reads the current system cursor position itself for
+        // that mode, so this needs no coordinate math of its own; the pointer just happens to still be
+        // sitting wherever it last was (typically on/near the selected row) instead of mid-click. Other
+        // keyboard access to actions is via the registered action hotkeys (Ctrl+C, Ctrl+Enter, ...),
+        // handled directly on the item by HandleCommonSearchKeys above.
+        if (e.Key == Key.Apps)
+        {
+            ShowActionFlyout(PlacementMode.MousePoint);
+            e.Handled = true;
+            return;
+        }
     }
 
     public void HandleTxtSearchBoxKeyDown(KeyEventArgs e)
@@ -106,6 +116,12 @@ public class SearchWindowInputHandler
 
     public void HandleLstGridResultsMouseDoubleClick(MouseButtonEventArgs e)
     {
+        // Control.MouseDoubleClickEvent fires for ANY button's double-click (left, right, or middle),
+        // not just left -- without this guard, double-right-clicking a row both opens the action flyout
+        // (via PreviewMouseRightButtonUp) AND opens the file/folder itself.
+        if (e.ChangedButton != MouseButton.Left)
+            return;
+
         var depObj = e.OriginalSource as DependencyObject;
         while (depObj != null && !(depObj is ListViewItem))
         {
