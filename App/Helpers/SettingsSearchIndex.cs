@@ -112,6 +112,7 @@ public static class SettingsSearchIndex
         new("Hotkeys_KeywordHistoryPrevious", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowKeywordHistoryPrevious", "Hotkeys_Tab_Global"),
         new("Hotkeys_KeywordHistoryNext", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowKeywordHistoryNext", "Hotkeys_Tab_Global"),
         new("Hotkeys_KeywordHistoryDelete", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowKeywordHistoryDelete", "Hotkeys_Tab_Global"),
+        new("Hotkeys_OpenFullWindow", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowOpenFullWindow", "Hotkeys_Tab_Global"),
         new("Hotkeys_GroupQuickNav", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowGroupQuickNav", "Hotkeys_Tab_Global"),
         new("Hotkeys_QuickNavDoubleClick", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowQuickNavDoubleClick", "Hotkeys_Tab_Global"),
         new("Hotkeys_QuickNavMiddleClick", "Hotkeys", vm => vm.Hotkeys.SelectedTab = "Global", "RowQuickNavMiddleClick", "Hotkeys_Tab_Global"),
