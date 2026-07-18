@@ -67,6 +67,24 @@ public class SearchWindowInputHandler
         }
     }
 
+    // WPF's ContextMenuService reacts to the Menu/Application key independently of the handler above --
+    // its class handler runs on PreviewKeyUp with handledEventsToo:true, so setting e.Handled on KeyDown
+    // above doesn't suppress it -- and opens the search box's own default Cut/Copy/Paste ContextMenu at
+    // the same time as our action flyout. CursorLeft/CursorTop are both -1 specifically when this event
+    // was raised by a keyboard invocation (Apps key / Shift+F10) rather than an actual right-click, so
+    // this only suppresses the redundant native menu for that keyboard case, and only when our own
+    // flyout has something to show instead; a real right-click on the search box (e.g. to paste) is
+    // unaffected.
+    public void HandleSearchBoxContextMenuOpening(ContextMenuEventArgs e)
+    {
+        if (e.CursorLeft == -1 && e.CursorTop == -1
+            && _window.LstGridResultsControl.SelectedItem is AppSearchResult
+            && _window.MenuPresenter?.CanShowActionsMenu(GetSelectedResults()) == true)
+        {
+            e.Handled = true;
+        }
+    }
+
     public void HandleTxtSearchBoxKeyDown(KeyEventArgs e)
     {
         var actualKey = WpfUiHelper.GetActualKey(e);

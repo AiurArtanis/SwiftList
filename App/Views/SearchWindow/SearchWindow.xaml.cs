@@ -87,6 +87,8 @@ public partial class SearchWindow : Window, ISearchWindow, IHasVisibleContentIns
         };
 
         ResultsPanelControl.ActionsListBox.PreviewMouseLeftButtonUp += _menuPresenter.HandleActionsPreviewMouseLeftButtonUp;
+
+        TxtSearchBoxControl.ContextMenuOpening += (s, e) => _inputHandler.HandleSearchBoxContextMenuOpening(e);
     }
 
     // ==========================================
