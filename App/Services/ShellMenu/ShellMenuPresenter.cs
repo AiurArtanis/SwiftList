@@ -40,6 +40,17 @@ public class ShellMenuPresenter : IDisposable
         _executor = new ActionsMenuExecutor(view, _commandToProviderMap, _navigator, ExitActionsMode);
         _mouseHandler = new ShellMenuMouseInputHandler(this, view);
         _view.LstActions.MouseMove += _mouseHandler.HandleActionsMouseMove;
+        // Drives the badge's own IsSelected-bound highlight (see ActionMenuItem.xaml's own comment) --
+        // a plain data-bound flag kept in sync here instead of the ListBoxItem.IsSelected AncestorType
+        // DataTrigger the results list's badge uses successfully, which rendered every action row's
+        // badge as permanently selected for reasons not pinned down.
+        _view.LstActions.SelectionChanged += (s, e) =>
+        {
+            foreach (var removed in e.RemovedItems)
+                if (removed is ActionMenuItem item) item.IsSelected = false;
+            foreach (var added in e.AddedItems)
+                if (added is ActionMenuItem item) item.IsSelected = true;
+        };
         _view.SearchTextBox.TextChanged += (s, e) =>
         {
             if (_isInActionsMode)

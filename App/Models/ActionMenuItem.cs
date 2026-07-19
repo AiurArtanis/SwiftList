@@ -1,10 +1,30 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
 
 namespace SwiftList.App;
 
-public class ActionMenuItem
+public class ActionMenuItem : INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    // Driven explicitly by LstActions.SelectionChanged (see ShellMenuPresenter) rather than the
+    // RelativeSource-AncestorType-ListBoxItem DataTrigger the results list's own badge uses -- that
+    // pattern renders every row's badge as permanently "selected" in this ListBox specifically (not
+    // reproducible in the results list's own ListBox), root cause not pinned down; a plain
+    // INotifyPropertyChanged-backed flag sidesteps whatever ancestor-lookup quirk causes it entirely.
+    private bool _isSelected;
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value) return;
+            _isSelected = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+        }
+    }
+
     public string Text { get; set; } = string.Empty;
     public string SearchQuery { get; set; } = string.Empty;
     public uint CommandId { get; set; }

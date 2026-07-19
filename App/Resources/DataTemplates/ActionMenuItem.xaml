@@ -85,10 +85,14 @@
 				     Selected/highlighted switches to an AccentBlue border + text instead of an outline in
 				     SeparatorBrush (see that template's own comment: SeparatorBrush and the row's own
 				     selected background are nearly the same color in the Light theme, so that outline
-				     barely showed). This template renders in two containers with no shared ancestor type,
-				     so both are wired: ListBoxItem.IsSelected for the plain actions list, MenuItem.IsHighlighted
-				     for the ActionFlyoutMenuItemStyle popup below (right-click context menu): whichever
-				     ancestor doesn't exist for a given container just never fires, harmlessly. -->
+				     barely showed).
+				     Driven by the ActionMenuItem's own IsSelected flag (plain DataContext binding, no
+				     RelativeSource) rather than ListBoxItem.IsSelected via AncestorType: that pattern
+				     works fine for the results list's own badge, but here it rendered every row as
+				     permanently selected (root cause not pinned down); IsSelected is kept in sync
+				     explicitly by LstActions.SelectionChanged (see ShellMenuPresenter). The MenuItem
+				     flyout variant (ActionFlyoutMenuItemStyle below) still reacts correctly via
+				     MenuItem.IsHighlighted, which was never broken. -->
 				<Border Grid.Column="2"
                         Margin="14,0,0,0"
                         Padding="7,3,7,3"
@@ -107,7 +111,7 @@
 								<DataTrigger Binding="{Binding ShortcutHint}" Value="{x:Null}">
 									<Setter Property="Visibility" Value="Collapsed"/>
 								</DataTrigger>
-								<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+								<DataTrigger Binding="{Binding IsSelected}" Value="True">
 									<Setter Property="Background" Value="Transparent"/>
 									<Setter Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
 								</DataTrigger>
@@ -128,7 +132,7 @@
 									<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList">
 										<Setter Property="FontSize" Value="{Binding ScaledShortcutFontSize}"/>
 									</DataTrigger>
-									<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+									<DataTrigger Binding="{Binding IsSelected}" Value="True">
 										<Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
 									</DataTrigger>
 									<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type MenuItem}}, Path=IsHighlighted}" Value="True">
