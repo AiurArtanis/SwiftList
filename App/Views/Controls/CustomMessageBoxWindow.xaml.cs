@@ -27,22 +27,22 @@ public partial class CustomMessageBoxWindow : Window
         {
             case MessageBoxImage.Error: // Hand, Stop
                 TxtIcon.Text = "\uEA39";
-                TxtIcon.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(239, 68, 68)); // Slate Red/Red-500
+                TxtIcon.Foreground = ThemedBrush("ErrorBrush", 239, 68, 68);
                 TxtIcon.Visibility = Visibility.Visible;
                 break;
             case MessageBoxImage.Warning: // Exclamation
                 TxtIcon.Text = "\uE7BA";
-                TxtIcon.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(245, 158, 11)); // Warning Amber-500
+                TxtIcon.Foreground = ThemedBrush("WarningBrush", 245, 158, 11);
                 TxtIcon.Visibility = Visibility.Visible;
                 break;
             case MessageBoxImage.Information: // Asterisk
                 TxtIcon.Text = "\uE946";
-                TxtIcon.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(59, 130, 246)); // Info Blue-500
+                TxtIcon.Foreground = ThemedBrush("AccentBlue", 59, 130, 246);
                 TxtIcon.Visibility = Visibility.Visible;
                 break;
             case MessageBoxImage.Question:
                 TxtIcon.Text = "\uE9CE";
-                TxtIcon.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(59, 130, 246)); // Info Blue-500
+                TxtIcon.Foreground = ThemedBrush("AccentBlue", 59, 130, 246);
                 TxtIcon.Visibility = Visibility.Visible;
                 break;
             default:
@@ -50,6 +50,12 @@ public partial class CustomMessageBoxWindow : Window
                 break;
         }
     }
+
+    // Looks up the current theme's brush by key, falling back to the fixed color if the theme
+    // doesn't define it, so the icon color follows the active theme instead of a baked-in hex value.
+    private static System.Windows.Media.Brush ThemedBrush(string resourceKey, byte r, byte g, byte b)
+        => System.Windows.Application.Current?.TryFindResource(resourceKey) as System.Windows.Media.Brush
+           ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {

@@ -183,14 +183,14 @@
                                         Background="{DynamicResource ControlBackground}" 
                                         BorderBrush="{DynamicResource ControlBorderBrush}" 
                                         BorderThickness="1"/>
-                                <TextBlock x:Name="CheckMark" 
-                                           Text="&#xE73E;" 
-                                           FontFamily="Segoe MDL2 Assets" 
-                                           FontSize="10" 
+                                <TextBlock x:Name="CheckMark"
+                                           Text="&#xE73E;"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="10"
                                            FontWeight="Bold"
-                                           Foreground="White" 
-                                           HorizontalAlignment="Center" 
-                                           VerticalAlignment="Center" 
+                                           Foreground="{DynamicResource PrimaryButtonText}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
                                            Visibility="Collapsed"/>
                             </Grid>
                         </BulletDecorator.Bullet>

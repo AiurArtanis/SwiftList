@@ -8,22 +8,16 @@ namespace SwiftList.App;
 /// </summary>
 internal static class VectorIconFactory
 {
-    private static ImageSource? _showMore;
-
     public static ImageSource ShowMore()
     {
-        if (_showMore == null)
-        {
-            var geometry = Geometry.Parse("M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z");
-            var group = new DrawingGroup();
-            var brush = System.Windows.Application.Current?.TryFindResource("AccentBlue") as System.Windows.Media.Brush
-                        ?? System.Windows.Media.Brushes.Blue;
-            group.Children.Add(new GeometryDrawing(brush, null, geometry));
-            var image = new DrawingImage(group);
-            image.Freeze();
-            _showMore = image;
-        }
-        return _showMore;
+        var geometry = Geometry.Parse("M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z");
+        var group = new DrawingGroup();
+        var brush = System.Windows.Application.Current?.TryFindResource("AccentBlue") as System.Windows.Media.Brush
+                    ?? System.Windows.Media.Brushes.Blue;
+        group.Children.Add(new GeometryDrawing(brush, null, geometry));
+        var image = new DrawingImage(group);
+        image.Freeze();
+        return image;
     }
 
     public static ImageSource Create(string pathData, string colorHexOrKey)

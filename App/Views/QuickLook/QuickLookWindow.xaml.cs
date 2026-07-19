@@ -113,7 +113,8 @@ public partial class QuickLookWindow : Window
             var errTxt = new System.Windows.Controls.TextBlock
             {
                 Text = $"{TranslationService.Get("QuickLook_Error")}: {ex.Message}",
-                Foreground = System.Windows.Media.Brushes.Red,
+                Foreground = System.Windows.Application.Current?.TryFindResource("ErrorBrush") as System.Windows.Media.Brush
+                             ?? System.Windows.Media.Brushes.Red,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(8)
             };

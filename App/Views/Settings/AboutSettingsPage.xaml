@@ -108,7 +108,7 @@
                     <!-- Warning Tip for Non-Admins -->
                     <TextBlock x:Name="TxtNoAdminWarning" Visibility="Collapsed"
                                Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[About_NoAdminTip]}"
-                               Foreground="#E81123" TextWrapping="Wrap" Margin="0,12,0,0" FontSize="12"/>
+                               Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,12,0,0" FontSize="12"/>
 
                     <!-- Actions when new version found -->
                     <StackPanel x:Name="SpUpdateActions" Orientation="Horizontal" Margin="0,12,0,0" Visibility="Collapsed">
