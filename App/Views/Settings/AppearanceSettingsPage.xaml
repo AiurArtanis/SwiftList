@@ -14,6 +14,21 @@
                 <ResourceDictionary Source="../../Resources/Styles/SettingsWindow.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
+            <!-- Shared by every preview card below (theme cards and the three mode cards): the shadow
+                 lives on this unclipped wrapper, never on the same Border that also clips its rounded
+                 content. Putting a blurred Effect on a ClipToBounds="True" element let the blur's own
+                 silhouette poke out past the clip as a stray rounded shape at one corner, especially
+                 with cards packed this close together. Callers set Width/Height/CornerRadius per card
+                 and nest their own clipped, colored Border inside this one. -->
+            <Style x:Key="PreviewCardShadowWrapperStyle" TargetType="Border">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect BlurRadius="10" ShadowDepth="1.5" Opacity="0.18" Color="{DynamicResource ShadowColor}"/>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <!-- Card container: no ListBoxItem chrome of its own. Every selection cue (border,
                  checkmark) is drawn inside ThemeCardTemplate below, keyed off IsSelected via a
                  RelativeSource binding, so it can use the theme's own accent color instead of one
@@ -25,6 +40,14 @@
                      acquisition, so disabling it silently breaks mouse selection. Suppressing just the
                      focus visual (the dotted rectangle) is enough to get the "no chrome" look. -->
                 <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <!-- Selecting a ListBoxItem (by click, or programmatically when a mode card switches
+                     SelectedThemeId) raises RequestBringIntoView. This ListBox has no ScrollViewer of
+                     its own (see ThemeCardListBox's Template below), so that request bubbles straight up
+                     to the page's own ScrollViewer and yanks the whole page to wherever the card sits:
+                     jarring on its own, and disruptive mid-click since the layout shifts under the
+                     cursor before the click even finishes. The grid is small enough to not need
+                     scroll-to-reveal in the first place, so this just swallows the request outright. -->
+                <EventSetter Event="RequestBringIntoView" Handler="ThemeCard_RequestBringIntoView"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ListBoxItem">
@@ -37,30 +60,34 @@
             <!-- Mimics QuickSearchWindow: the floating search box and result list the user actually
                  sees dozens of times a day, rather than the settings window this page lives in.
                  Everything below is inset from the outer rounded edge with margin (never flush against
-                 it), so nothing needs corner-radius matching against CardBorder's own rounding; that
-                 sidestepped a rendering seam the previous title-strip/sidebar layout had at the corners. -->
+                 it), so nothing needs corner-radius matching against CardBorder's own rounding. -->
             <DataTemplate x:Key="ThemeCardTemplate">
                 <StackPanel Margin="0,0,12,16" Cursor="Hand">
-                    <!-- The shadow lives on this unclipped wrapper, not on CardBorder itself: putting a
-                         blurred Effect on an element that also has ClipToBounds="True" made the blur's
-                         own silhouette poke out past the clip as a stray rounded shape at one corner,
-                         especially with cards packed this close together. -->
-                    <Border Width="148" Height="96" CornerRadius="12" Background="Transparent">
-                        <Border.Effect>
-                            <DropShadowEffect BlurRadius="10" ShadowDepth="1.5" Opacity="0.18" Color="{DynamicResource ShadowColor}"/>
-                        </Border.Effect>
+                    <Border Width="148" Height="96" Style="{StaticResource PreviewCardShadowWrapperStyle}">
                         <Border x:Name="CardBorder" CornerRadius="12"
                                 Background="{Binding CardBg}" BorderThickness="1.5"
                                 BorderBrush="{Binding CardBorder}" ClipToBounds="True">
                             <StackPanel Margin="8">
-                                <!-- Search box -->
+                                <!-- Search box: the real quick-search bar's own status icon is a
+                                     monochrome logo (tray.png) tinted via OpacityMask, docked to the
+                                     right by default. Reused here instead of a generic magnifier glyph,
+                                     in the same spot, so this reads as "this app" not just "a search
+                                     box". -->
                                 <Border Height="20" CornerRadius="6" Background="{Binding SearchBg}">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0">
-                                        <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="8"
-                                                   Foreground="{Binding TextSecondary}" VerticalAlignment="Center"/>
-                                        <Rectangle Height="5" Width="40" RadiusX="2.5" RadiusY="2.5" Opacity="0.4"
-                                                   Fill="{Binding TextSecondary}" VerticalAlignment="Center" Margin="6,0,0,0"/>
-                                    </StackPanel>
+                                    <Grid Margin="6,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Grid.Column="0" Height="5" Width="40" RadiusX="2.5" RadiusY="2.5" Opacity="0.4"
+                                                   Fill="{Binding TextSecondary}" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                        <Border Grid.Column="1" Width="10" Height="10" Margin="6,0,0,0"
+                                                Background="{Binding TextSecondary}" VerticalAlignment="Center">
+                                            <Border.OpacityMask>
+                                                <ImageBrush ImageSource="pack://application:,,,/SwiftList.App;component/tray.png"/>
+                                            </Border.OpacityMask>
+                                        </Border>
+                                    </Grid>
                                 </Border>
 
                                 <!-- Two mock result rows, the second shown selected -->
@@ -115,6 +142,13 @@
                 <Setter Property="ItemContainerStyle" Value="{StaticResource ThemeCardContainerStyle}"/>
                 <Setter Property="ItemTemplate" Value="{StaticResource ThemeCardTemplate}"/>
                 <Setter Property="SelectedValuePath" Value="Id"/>
+                <!-- Belt-and-suspenders alongside ThemeCardContainerStyle's own EventSetter: when
+                     SelectedThemeId changes programmatically (a mode-card switch) right after this
+                     ListBox's ItemsSource just swapped to a freshly filtered list, the newly selected
+                     item's container can raise RequestBringIntoView before its own ItemContainerStyle
+                     has fully applied. Attaching here too, on the ListBox itself, is live from the
+                     moment the ListBox exists rather than per-item, so it can't miss that race. -->
+                <EventSetter Event="RequestBringIntoView" Handler="ThemeCard_RequestBringIntoView"/>
                 <Setter Property="ItemsPanel">
                     <Setter.Value>
                         <ItemsPanelTemplate>
@@ -147,19 +181,114 @@
 
             <TextBlock Style="{StaticResource SettingsGroupTitle}"
                         Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Appearance_ModeGroupTitle]}"/>
-            <Border Style="{StaticResource SettingsCard}">
-                <CheckBox x:Name="RowThemeFollowSystem"
-                          Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ThemeFollowSystem]}"
-                          IsChecked="{Binding Appearance.FollowSystem, Mode=TwoWay}"/>
+            <Border x:Name="RowThemeModeCards" Style="{StaticResource SettingsCard}">
+                <StackPanel Orientation="Horizontal">
+                    <!-- Light -->
+                    <StackPanel Margin="0,0,12,0" Cursor="Hand">
+                        <StackPanel.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding Appearance.SelectThemeModeCommand}" CommandParameter="Light"/>
+                        </StackPanel.InputBindings>
+                        <Border Width="108" Height="64" Style="{StaticResource PreviewCardShadowWrapperStyle}">
+                            <Border x:Name="ModeLightBorder" CornerRadius="10"
+                                    Background="#FFFFFF" BorderThickness="2" ClipToBounds="True">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Appearance.ThemeModeTag}" Value="Light">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock Text="&#xE706;" FontFamily="Segoe MDL2 Assets" FontSize="20"
+                                           Foreground="{DynamicResource AccentBlue}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Border>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Appearance_ModeLight]}"
+                                   FontSize="12" Margin="2,6,0,0" Foreground="{DynamicResource TextSecondary}"/>
+                    </StackPanel>
+
+                    <!-- Dark -->
+                    <StackPanel Margin="0,0,12,0" Cursor="Hand">
+                        <StackPanel.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding Appearance.SelectThemeModeCommand}" CommandParameter="Dark"/>
+                        </StackPanel.InputBindings>
+                        <Border Width="108" Height="64" Style="{StaticResource PreviewCardShadowWrapperStyle}">
+                            <Border x:Name="ModeDarkBorder" CornerRadius="10"
+                                    Background="#1E1E1E" BorderThickness="2" ClipToBounds="True">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Appearance.ThemeModeTag}" Value="Dark">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock Text="&#xE708;" FontFamily="Segoe MDL2 Assets" FontSize="20"
+                                           Foreground="{DynamicResource AccentBlue}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Border>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Appearance_ModeDark]}"
+                                   FontSize="12" Margin="2,6,0,0" Foreground="{DynamicResource TextSecondary}"/>
+                    </StackPanel>
+
+                    <!-- Follow System: half-light, half-dark, so the split itself explains the mode. -->
+                    <StackPanel Cursor="Hand">
+                        <StackPanel.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding Appearance.SelectThemeModeCommand}" CommandParameter="FollowSystem"/>
+                        </StackPanel.InputBindings>
+                        <Border Width="108" Height="64" Style="{StaticResource PreviewCardShadowWrapperStyle}">
+                            <Border x:Name="ModeFollowSystemBorder" CornerRadius="10"
+                                    BorderThickness="2" ClipToBounds="True">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Appearance.ThemeModeTag}" Value="FollowSystem">
+                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <!-- ClipToBounds on the outer Border only clips to its plain rectangular
+                                     bounds, not the rounded CornerRadius shape: it doesn't round child
+                                     content the way it looks like it should. A diagonal split can't be
+                                     rounded per-corner the way the earlier vertical split was (each
+                                     triangle touches three of the four corners, not just two), so this
+                                     clips the whole Grid to an explicit rounded-rect geometry instead:
+                                     sized to the Border's own content area (108x64 outer, minus the 2px
+                                     BorderThickness on each side, minus ~2px CornerRadius shrink). -->
+                                <Grid>
+                                    <Grid.Clip>
+                                        <RectangleGeometry Rect="0,0,104,60" RadiusX="8" RadiusY="8"/>
+                                    </Grid.Clip>
+                                    <Polygon Points="0,0 104,0 0,60" Fill="#FFFFFF"/>
+                                    <Polygon Points="104,0 104,60 0,60" Fill="#1E1E1E"/>
+                                    <Border Width="26" Height="26" CornerRadius="13"
+                                            Background="{DynamicResource AccentBlue}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="12"
+                                                   Foreground="{DynamicResource PrimaryButtonText}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </Border>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Appearance_ModeFollowSystem]}"
+                                   FontSize="12" Margin="2,6,0,0" Foreground="{DynamicResource TextSecondary}"/>
+                    </StackPanel>
+                </StackPanel>
             </Border>
 
-            <!-- Manual mode: one grid covering every theme. -->
+            <!-- Manual mode: one grid, filtered to whichever flavor (light/dark) is currently active. -->
             <StackPanel x:Name="GroupManualTheme" Visibility="{Binding Appearance.IsManualThemeEnabled, Converter={StaticResource BoolToVis}}">
                 <TextBlock Style="{StaticResource SettingsGroupTitle}"
                             Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ThemeSelect]}"/>
                 <Border Style="{StaticResource SettingsCard}">
                     <ListBox x:Name="RowThemeCards" Style="{StaticResource ThemeCardListBox}"
-                             ItemsSource="{Binding Appearance.ThemeCards}"
+                             ItemsSource="{Binding Appearance.ManualThemeCards}"
                              SelectedValue="{Binding Appearance.SelectedThemeId, Mode=TwoWay}"/>
                 </Border>
             </StackPanel>
