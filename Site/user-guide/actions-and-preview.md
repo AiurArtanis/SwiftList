@@ -31,3 +31,10 @@ are currently showing. Whatever size you set, SwiftList automatically keeps the 
 fully on-screen: if it doesn't fit beside the search window on your monitor, it docks to whichever
 side has room, and if the configured size is larger than your monitor's usable area, the window is
 scaled down to fit rather than running off the edge.
+
+If the file being previewed needs its own native handler to show a popup of its own — most
+commonly Word or Excel asking for a password on an encrypted document — both the quick window and
+the preview pane hide themselves for as long as that popup is open, since it would otherwise sit
+unreachable behind them. This isn't SwiftList closing or crashing: resolve the popup (enter the
+password, dismiss it, whatever it's asking) and both windows come back exactly as you left them,
+search text and selection included.

@@ -11,7 +11,7 @@ here. See [Settings → Hotkeys page](./settings/hotkeys-page) for the settings 
 | Quick switch | `Ctrl+G` | Switches between the inline (embedded-in-Explorer) search bar and the main window. |
 | Select next item | `Ctrl+N` | Also works as the literal Down arrow. |
 | Select previous item | `Ctrl+P` | Also works as the literal Up arrow. |
-| Jump to result 1–9 | `Ctrl` + digit | The modifier is configurable; the digit is always 1–9. |
+| Jump to result 1–9 | `Ctrl` + digit | The modifier is configurable; the digit is always 1–9. The quick window shows each visible result's shortcut as a small badge next to it, so you don't have to count rows. |
 | Open actions menu | `Ctrl+O` | Also works as the literal Right arrow on a selected result. |
 | Complete from selection | `Ctrl+Tab` | In the quick window, fills the search box with the selected result's name/path. |
 | QuickLook preview | `Alt+P` | Toggles the preview pane for the selected result. |
@@ -51,6 +51,7 @@ These always behave the same way regardless of your hotkey settings:
 | `Ctrl+Shift+Enter` | Result list | Opens the result elevated (Run as administrator). |
 | `Left` / `Right` arrow | Actions menu | Go back a menu level / enter a submenu. |
 | `Backspace` | Actions menu | Exits the actions menu when the search box is already empty. |
+| `Alt+Space` / `Alt+F4` | Quick, main, and settings windows | Both are suppressed on these windows — no Windows system menu pops up, and `Alt+F4` doesn't close them. |
 
 ## Plugin action hotkeys
 
