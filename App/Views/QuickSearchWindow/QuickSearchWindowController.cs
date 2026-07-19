@@ -160,7 +160,7 @@ public class QuickSearchWindowController
         else
         {
             _window.Left = (workingArea.Width * dpiScaleX - windowWidth) / 2 + workingArea.Left * dpiScaleX;
-            _window.Top = workingArea.Height * dpiScaleY * 0.235 + workingArea.Top * dpiScaleY;
+            _window.Top = workingArea.Height * dpiScaleY * 0.22 + workingArea.Top * dpiScaleY;
         }
     }
 
