@@ -60,7 +60,9 @@
     <SolidColorBrush x:Key="StatusBarBg" Color="#E5E9F0"/>
     <SolidColorBrush x:Key="IconMutedBrush" Color="#4C566A"/>
     <SolidColorBrush x:Key="SuccessBrush" Color="#A3BE8C"/>
-    <SolidColorBrush x:Key="WarningBrush" Color="#EBCB8B"/>
+    <!-- Nord's actual nord13 (#EBCB8B) is barely darker than WarningBackground below (#FDF6E2),
+         so warning text was nearly unreadable; darkened to a legible gold while staying in-palette. -->
+    <SolidColorBrush x:Key="WarningBrush" Color="#A8791E"/>
     <SolidColorBrush x:Key="WarningBackground" Color="#FDF6E2"/>
     <SolidColorBrush x:Key="WarningBorderBrush" Color="#F5E0B3"/>
     <SolidColorBrush x:Key="BadgeBackground" Color="#E5E9F0"/>

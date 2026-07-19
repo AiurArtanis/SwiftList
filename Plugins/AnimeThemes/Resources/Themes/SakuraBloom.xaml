@@ -209,7 +209,9 @@
     
     <SolidColorBrush x:Key="IconMutedBrush" Color="#8C536B"/>
     <SolidColorBrush x:Key="SuccessBrush" Color="#FF6B8B"/>
-    <SolidColorBrush x:Key="WarningBrush" Color="#FFA07A"/>
+    <!-- #FFA07A was nearly as light as WarningBackground below (#FFF5EE), making warning text
+         hard to read; darkened toward the theme's own coral while keeping the warm hue. -->
+    <SolidColorBrush x:Key="WarningBrush" Color="#D9754F"/>
     <SolidColorBrush x:Key="WarningBackground" Color="#FFF5EE"/>
     <SolidColorBrush x:Key="WarningBorderBrush" Color="#FFE4E1"/>
     <SolidColorBrush x:Key="BadgeBackground" Color="#FFE5EC"/>
