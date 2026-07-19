@@ -140,7 +140,7 @@
                                     </StackPanel>
 
                                     <!-- Plugin Description Info button (!) -->
-                                    <Border Grid.Column="2" Width="14" Height="14" CornerRadius="7" 
+                                    <Border Grid.Column="3" Width="14" Height="14" CornerRadius="7"
                                             Background="{DynamicResource HoverBackground}" 
                                             BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="1"
                                             Margin="8,0" VerticalAlignment="Center" Cursor="Help">
@@ -168,7 +168,7 @@
                                     </Border>
 
                                     <!-- Configure Button -->
-                                    <Button Grid.Column="3" 
+                                    <Button Grid.Column="2"
                                             Command="{Binding DataContext.ConfigurePluginCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             CommandParameter="{Binding}"
                                             Visibility="{Binding HasConfigFields, Converter={StaticResource BoolToVis}}"
@@ -265,6 +265,7 @@
                                                                         <TextBlock Grid.Column="0"
                                                                                    Text="{Binding DisplayName}"
                                                                                    FontSize="12"
+                                                                                   TextWrapping="Wrap"
                                                                                    Foreground="{DynamicResource TextPrimary}"
                                                                                    VerticalAlignment="Center"/>
 
