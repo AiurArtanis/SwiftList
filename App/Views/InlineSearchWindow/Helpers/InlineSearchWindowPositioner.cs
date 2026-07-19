@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -6,6 +7,21 @@ namespace SwiftList.App.Views.InlineSearchWindow.Helpers;
 
 public class InlineSearchWindowPositioner
 {
+    [DllImport("Shcore.dll")]
+    private static extern int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int X; public int Y; }
+
+    private const int MDT_EFFECTIVE_DPI = 0;
+    private const uint MONITOR_DEFAULTTONEAREST = 2;
+
     private readonly SwiftList.App.InlineSearchWindow _window;
     private int _positionUpdateQueued;
 
@@ -24,30 +40,38 @@ public class InlineSearchWindowPositioner
         }), DispatcherPriority.Render);
     }
 
+    // Runs the same placement logic synchronously, before the window is ever shown -- called once from
+    // InlineSearchManager.EnsureWindowCreated, right before Show(). PositionWindow() above always defers
+    // to a later Render-priority dispatcher pass, which is fine for repositioning an already-visible
+    // window (resize, active-window moved, ...) but means the very first paint happens at whatever
+    // Left/Top this brand-new Window instance defaulted to -- Show() renders it there first, and only
+    // the queued pass afterward snaps it to the real target. That's an unconditional flash-then-jump on
+    // every single open, not just while ExplorerTracker's state happens to be wrong (see
+    // ExplorerTracker.PublishCurrentState's own comment for that separate, now-fixed bug) -- computing
+    // the real position up front and calling this before Show() eliminates it outright.
+    public void PositionWindowImmediate() => PositionWindowCore();
+
     private void PositionWindowCore()
     {
         _window.UpdateLayout();
-        var dpiScaleX = 1.0;
-        var dpiScaleY = 1.0;
-        var source = PresentationSource.FromVisual(_window);
-        if (source != null && source.CompositionTarget != null)
-        {
-            dpiScaleX = source.CompositionTarget.TransformFromDevice.M11;
-            dpiScaleY = source.CompositionTarget.TransformFromDevice.M22;
-        }
-        else
-        {
-            try
-            {
-                var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(_window);
-                dpiScaleX = 1.0 / dpi.DpiScaleX;
-                dpiScaleY = 1.0 / dpi.DpiScaleY;
-            }
-            catch
-            {
-                // Fallback
-            }
-        }
+        var tracker = _window.Manager.ExplorerTracker;
+
+        // DPI must come from the monitor this window is about to be placed ON (the Desktop's cursor
+        // monitor, or the active window's monitor) -- NOT from wherever this window itself currently
+        // happens to sit (PresentationSource.FromVisual(_window)'s own CompositionTarget, the old
+        // source here). Those only agree when every monitor shares the same scale, or once the window
+        // has already been correctly placed once. PositionWindowImmediate calls this before Show(),
+        // when the window is sitting at whatever default position Windows picked for a brand-new HWND
+        // -- on a mixed-DPI multi-monitor setup that default position's monitor has no relationship to
+        // the actual target, so sourcing the scale from it computes a position wrong by exactly the
+        // ratio between the two monitors' scales (e.g. summoning on a 150% secondary screen while this
+        // window's own HWND landed on a 100% primary one).
+        var targetMonitor = tracker.IsDesktop
+            ? MonitorFromPoint(ToPoint(System.Windows.Forms.Control.MousePosition), MONITOR_DEFAULTTONEAREST)
+            : tracker.ActiveHwnd != IntPtr.Zero
+                ? MonitorFromWindow(tracker.ActiveHwnd, MONITOR_DEFAULTTONEAREST)
+                : IntPtr.Zero;
+        var (dpiScaleX, dpiScaleY) = GetMonitorDpiScale(targetMonitor);
 
         // Window height is fixed at 550 logical pixels to allow content to grow upwards/downwards internally
         var windowHeight = double.IsNaN(_window.Height) || _window.Height <= 0
@@ -65,7 +89,6 @@ public class InlineSearchWindowPositioner
         const double xamlMargin = 12;
         const double visibleMargin = 0;
 
-        var tracker = _window.Manager.ExplorerTracker;
         var isResultsVisible = _window.ResultsPanelControl.Visibility == Visibility.Visible;
 
         var useDialogMode = false;
@@ -217,5 +240,17 @@ public class InlineSearchWindowPositioner
                 if (Math.Abs(_window.Top - targetTop) > 0.5) _window.Top = targetTop;
             }
         }
+    }
+
+    private static POINT ToPoint(System.Drawing.Point p) => new() { X = p.X, Y = p.Y };
+
+    // Falls back to 1.0 (96 DPI, unscaled) if the monitor handle is invalid or the query fails --
+    // GetDpiForMonitor has been available since Windows 8.1, so this should only trip on some
+    // unexpected edge case, not any supported OS version.
+    private static (double x, double y) GetMonitorDpiScale(IntPtr hMonitor)
+    {
+        if (hMonitor != IntPtr.Zero && GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, out var dpiX, out var dpiY) == 0 && dpiX > 0 && dpiY > 0)
+            return (96.0 / dpiX, 96.0 / dpiY);
+        return (1.0, 1.0);
     }
 }

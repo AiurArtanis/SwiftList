@@ -159,6 +159,16 @@ public class InlineSearchManager : IDisposable
         _keyboardHook.IsInlineSearchVisible = true;
         _mouseHook.Start();
 
+        // Force the native HWND into existence now (still invisible -- EnsureHandle doesn't set
+        // WS_VISIBLE) rather than letting Show() create it implicitly. PositionWindowImmediate needs a
+        // real PresentationSource to read the correct per-monitor DPI from; called any earlier, it falls
+        // back to VisualTreeHelper.GetDpi on a windowless visual, which isn't reliably the DPI of
+        // whatever monitor this window is actually about to land on (especially across monitors with
+        // different scaling) -- computing the right logical position with the wrong DPI still produces a
+        // visibly wrong physical-pixel position, just a different wrong one than leaving Left/Top
+        // untouched entirely.
+        new System.Windows.Interop.WindowInteropHelper(_window).EnsureHandle();
+        _window.Positioner.PositionWindowImmediate();
         _window.Show();
         _window.ViewModel.EnsureServiceMonitoringActive();
 
