@@ -19,10 +19,18 @@ public class QuickSearchWindowController
     [DllImport("user32.dll")] private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)] private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+    [DllImport("Shcore.dll")] private static extern int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);
+    [DllImport("user32.dll")] private static extern IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
+    [DllImport("user32.dll")] private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int X; public int Y; }
 
     private const int SW_RESTORE = 9;
     private const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
     private const uint WINEVENT_OUTOFCONTEXT = 0;
+    private const int MDT_EFFECTIVE_DPI = 0;
+    private const uint MONITOR_DEFAULTTONEAREST = 2;
 
     private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
     private WinEventDelegate? _foregroundHookDelegate;
@@ -121,13 +129,17 @@ public class QuickSearchWindowController
 
     public void PositionWindow()
     {
-        double dpiScaleX = 1.0, dpiScaleY = 1.0;
-        var source = PresentationSource.FromVisual(_window);
-        if (source?.CompositionTarget != null)
-        {
-            dpiScaleX = source.CompositionTarget.TransformFromDevice.M11;
-            dpiScaleY = source.CompositionTarget.TransformFromDevice.M22;
-        }
+        // DPI must come from the monitor this window is about to be placed ON, not from wherever it
+        // currently happens to sit (PresentationSource.FromVisual(_window)'s own CompositionTarget, the
+        // old source here) -- see InlineSearchWindowPositioner's identical fix for the full writeup.
+        // This window persists for the whole app session (only ever Hidden, never Closed), so it can be
+        // sitting on whatever monitor it was last shown on when ShowWindow() runs again for a different
+        // (differently-scaled) monitor; on a mixed-DPI multi-monitor setup that stale source computes a
+        // position wrong by exactly the ratio between the two monitors' scales.
+        var targetMonitor = _lastActiveHwnd != IntPtr.Zero
+            ? MonitorFromWindow(_lastActiveHwnd, MONITOR_DEFAULTTONEAREST)
+            : MonitorFromPoint(new POINT { X = Control.MousePosition.X, Y = Control.MousePosition.Y }, MONITOR_DEFAULTTONEAREST);
+        var (dpiScaleX, dpiScaleY) = GetMonitorDpiScale(targetMonitor);
 
         var screen = _lastActiveHwnd != IntPtr.Zero
             ? Screen.FromHandle(_lastActiveHwnd)
@@ -162,6 +174,16 @@ public class QuickSearchWindowController
         settings.SearchWindow.Top = null;
         settings.Save();
         PositionWindow();
+    }
+
+    // Falls back to 1.0 (96 DPI, unscaled) if the monitor handle is invalid or the query fails --
+    // GetDpiForMonitor has been available since Windows 8.1, so this should only trip on some
+    // unexpected edge case, not any supported OS version.
+    private static (double x, double y) GetMonitorDpiScale(IntPtr hMonitor)
+    {
+        if (hMonitor != IntPtr.Zero && GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, out var dpiX, out var dpiY) == 0 && dpiX > 0 && dpiY > 0)
+            return (96.0 / dpiX, 96.0 / dpiY);
+        return (1.0, 1.0);
     }
 
     // Saved Left/Top are DIP; Screen work areas are physical (system-DPI space), so scale them to DIP
@@ -215,9 +237,17 @@ public class QuickSearchWindowController
         _window.UpdateLayout();
         _window.Topmost = false;
         _window.Topmost = true;
+        // Position before Show() (not after, as before) so the window's first painted frame already
+        // lands at the real target -- Show()-then-PositionWindow() used to render one frame at wherever
+        // this persistent window was last left (a different monitor entirely, if that's where the user
+        // last summoned it) before snapping to the correct spot, an unconditional flash-then-jump on
+        // every summon rather than just while on a single monitor. PositionWindow() itself doesn't need
+        // the window's actual layout/HWND for anything (its width comes from settings, not ActualWidth,
+        // and its DPI now comes from the target monitor, not this window's own CompositionTarget), so
+        // moving it earlier is safe.
+        PositionWindow();
         _window.Show();
         _window.WindowState = WindowState.Normal;
-        PositionWindow();
 
         StartForegroundHook();
 
