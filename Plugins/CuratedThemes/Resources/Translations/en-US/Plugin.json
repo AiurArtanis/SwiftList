@@ -1,6 +1,6 @@
 {
   "CuratedThemes_PluginName": "Curated Themes",
-  "CuratedThemes_PluginDesc": "Adds nine polished light/dark theme pairs — Glacier, Terracotta, Forest, Amethyst, Crimson, Graphite, Indigo, Mint and Champagne — designed for everyday, practical use.",
+  "CuratedThemes_PluginDesc": "Adds ten polished light/dark theme pairs — Glacier, Terracotta, Forest, Amethyst, Crimson, Graphite, Indigo, Mint, Champagne and Amber — designed for everyday, practical use.",
   "Theme_GlacierLight": "Glacier Light",
   "Theme_GlacierDark": "Glacier Dark",
   "Theme_TerracottaLight": "Terracotta Light",
@@ -19,6 +19,8 @@
   "Theme_MintDark": "Mint Dark",
   "Theme_ChampagneLight": "Champagne Light",
   "Theme_ChampagneDark": "Champagne Dark",
-  "Plugin_Comp_Desc_CuratedThemeProvider": "Provides the Glacier, Terracotta, Forest, Amethyst, Crimson, Graphite, Indigo, Mint and Champagne light/dark theme pairs.",
+  "Theme_AmberLight": "Amber Light",
+  "Theme_AmberDark": "Amber Dark",
+  "Plugin_Comp_Desc_CuratedThemeProvider": "Provides the Glacier, Terracotta, Forest, Amethyst, Crimson, Graphite, Indigo, Mint, Champagne and Amber light/dark theme pairs.",
   "Plugin_Comp_Desc_CuratedTranslationProvider": "Provides UI localization for the Curated Themes plugin."
 }

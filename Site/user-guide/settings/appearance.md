@@ -26,7 +26,7 @@ Built-in and bundled theme plugins:
 
 - **CoreExtensions** (built-in) — Light, Dark, Nord, Sakura, Cyberpunk.
 - **AnimeThemes** (bundled, if installed and enabled) — Neon Genesis, Sakura Bloom, Weathering Blue.
-- **Curated Themes** (bundled, if installed and enabled) — nine light/dark pairs: Glacier,
-  Terracotta, Forest, Amethyst, Crimson, Graphite, Indigo, Mint, and Champagne.
+- **Curated Themes** (bundled, if installed and enabled) — ten light/dark pairs: Glacier,
+  Terracotta, Forest, Amethyst, Crimson, Graphite, Indigo, Mint, Champagne, and Amber.
 
 Any other theme plugin can add more cards to the grid the same way.

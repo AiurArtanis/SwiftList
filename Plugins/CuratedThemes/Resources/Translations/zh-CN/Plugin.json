@@ -1,6 +1,6 @@
 {
   "CuratedThemes_PluginName": "臻选主题",
-  "CuratedThemes_PluginDesc": "新增九组精心设计的浅色/深色成对主题——冰川蓝、陶土棕、森林绿、紫水晶、绯红、石墨灰、靛蓝夜、薄荷青、香槟金，兼顾实用与美观，适合日常使用。",
+  "CuratedThemes_PluginDesc": "新增十组精心设计的浅色/深色成对主题——冰川蓝、陶土棕、森林绿、紫水晶、绯红、石墨灰、靛蓝夜、薄荷青、香槟金、琥珀金，兼顾实用与美观，适合日常使用。",
   "Theme_GlacierLight": "冰川蓝 · 浅色",
   "Theme_GlacierDark": "冰川蓝 · 深色",
   "Theme_TerracottaLight": "陶土棕 · 浅色",
@@ -19,6 +19,8 @@
   "Theme_MintDark": "薄荷青 · 深色",
   "Theme_ChampagneLight": "香槟金 · 浅色",
   "Theme_ChampagneDark": "香槟金 · 深色",
-  "Plugin_Comp_Desc_CuratedThemeProvider": "提供冰川蓝、陶土棕、森林绿、紫水晶、绯红、石墨灰、靛蓝夜、薄荷青、香槟金九组浅色/深色成对主题。",
+  "Theme_AmberLight": "琥珀金 · 浅色",
+  "Theme_AmberDark": "琥珀金 · 深色",
+  "Plugin_Comp_Desc_CuratedThemeProvider": "提供冰川蓝、陶土棕、森林绿、紫水晶、绯红、石墨灰、靛蓝夜、薄荷青、香槟金、琥珀金十组浅色/深色成对主题。",
   "Plugin_Comp_Desc_CuratedTranslationProvider": "为臻选主题插件提供界面元素的多语言翻译支持。"
 }
