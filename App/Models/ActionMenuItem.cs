@@ -33,7 +33,7 @@ public class ActionMenuItem
     // the quick window so its action list scales with the configured search box height.
     private const double BaseIconSize = 16;
     private const double BaseTextFontSize = 13;
-    private const double BaseSectionFontSize = 10;
+    private const double BaseSectionFontSize = 12;
     private const double BaseShortcutFontSize = 11;
 
     // Shares AppSearchResult's own row-height formula (UiMetrics.ScaledNormalRowHeight), not ItemHeight
