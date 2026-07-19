@@ -6,6 +6,7 @@
         Title="SwiftList Inline"
         Width="465" Height="550" SizeToContent="Manual"
         WindowStyle="None"
+        ResizeMode="NoResize"
         AllowsTransparency="True"
         Background="Transparent"
         ShowInTaskbar="False"
