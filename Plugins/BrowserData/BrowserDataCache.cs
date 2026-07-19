@@ -109,33 +109,41 @@ internal static class BrowserDataCache
         var result = new List<ProfileEntries>();
         foreach (var profile in profiles)
         {
-            if (string.IsNullOrWhiteSpace(profile.Path) || !Directory.Exists(profile.Path))
+            if (string.IsNullOrWhiteSpace(profile.Path))
+                continue;
+
+            // %LOCALAPPDATA%-style Windows env vars, expanded here (not stored expanded) so the schema
+            // default in BrowserDataPlugin.cs can point at a fixed browser install location without
+            // baking in a specific username, and so the settings UI keeps showing the readable
+            // "%LOCALAPPDATA%\..." form rather than one particular machine's resolved absolute path.
+            var expandedPath = Environment.ExpandEnvironmentVariables(profile.Path);
+            if (!Directory.Exists(expandedPath))
                 continue;
 
             try
             {
-                var family = BrowserFamilyDetector.Detect(profile.Path);
+                var family = BrowserFamilyDetector.Detect(expandedPath);
                 var entries = new ProfileEntries { Profile = profile };
                 switch (family)
                 {
                     case BrowserFamily.Chromium:
-                        entries.Bookmarks.AddRange(ChromiumBookmarksReader.Read(profile.Path));
-                        entries.History.AddRange(ChromiumHistoryReader.Read(profile.Path));
+                        entries.Bookmarks.AddRange(ChromiumBookmarksReader.Read(expandedPath));
+                        entries.History.AddRange(ChromiumHistoryReader.Read(expandedPath));
                         break;
                     case BrowserFamily.Firefox:
-                        var (bookmarks, history) = FirefoxPlacesReader.Read(profile.Path);
+                        var (bookmarks, history) = FirefoxPlacesReader.Read(expandedPath);
                         entries.Bookmarks.AddRange(bookmarks);
                         entries.History.AddRange(history);
                         break;
                     default:
-                        PluginSdk.Logger.Log($"[BrowserData] '{profile.Path}' doesn't look like a Chrome/Firefox profile folder (no Bookmarks/History/places.sqlite found), skipping.", PluginSdk.LogLevel.Warn);
+                        PluginSdk.Logger.Log($"[BrowserData] '{expandedPath}' doesn't look like a Chrome/Firefox profile folder (no Bookmarks/History/places.sqlite found), skipping.", PluginSdk.LogLevel.Warn);
                         continue;
                 }
                 result.Add(entries);
             }
             catch (Exception ex)
             {
-                PluginSdk.Logger.Log($"[BrowserData] Failed to load profile '{profile.Path}': {ex.Message}", PluginSdk.LogLevel.Error);
+                PluginSdk.Logger.Log($"[BrowserData] Failed to load profile '{expandedPath}': {ex.Message}", PluginSdk.LogLevel.Error);
             }
         }
         return result;

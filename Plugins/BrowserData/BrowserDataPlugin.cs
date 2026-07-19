@@ -4,10 +4,11 @@ using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.BrowserData;
 
-// One user-configured browser profile directory to index (bookmarks + history). Added manually in
-// plugin settings rather than auto-discovered -- profile locations/naming vary too much across browser
-// versions, channels (stable/beta/dev), and multi-profile setups to guess reliably, and auto-enumerating
-// would silently start indexing browsing history the user never opted into.
+// One configured browser profile directory to index (bookmarks + history). Path supports Windows
+// environment variables (e.g. %LOCALAPPDATA%), expanded at load time in BrowserDataCache -- lets the
+// schema default below point at Edge/Chrome's fixed default-profile location without baking in a specific
+// username, while still reading as an ordinary, visible, user-editable setting (not something silently
+// detected/injected at runtime): open Settings and it's just there, pre-filled, like any other default.
 public class BrowserProfileConfig
 {
     public string Name { get; set; } = string.Empty;
@@ -41,7 +42,19 @@ public class BrowserDataPlugin : IPlugin, IConfigurable
                 LabelKey = "BrowserData_Config_ProfilesLabel",
                 DescriptionKey = "BrowserData_Config_ProfilesDesc",
                 FieldType = ConfigFieldType.Array,
-                DefaultValue = new List<object>(),
+                // Chromium's profile folder name is fixed ("Default") regardless of who's logged in or
+                // when it was installed, so %LOCALAPPDATA%\...\User Data\Default is a safe default to ship
+                // -- unlike Firefox, whose profile folder name is randomized per-profile specifically so it
+                // can't be guessed this way (not worth the added complexity of parsing profiles.ini here).
+                // A user on whose machine these don't apply (no such browser, a non-default profile) just
+                // sees these two rows and edits/removes them like any other default value; nothing is
+                // probed or injected behind their back, and BrowserDataCache.LoadAll already skips a path
+                // that doesn't exist without any special-casing needed for that here.
+                DefaultValue = new List<object>
+                {
+                    new Dictionary<string, object> { { "Name", "Edge" }, { "Icon", "" }, { "Path", @"%LOCALAPPDATA%\Microsoft\Edge\User Data\Default" } },
+                    new Dictionary<string, object> { { "Name", "Chrome" }, { "Icon", "" }, { "Path", @"%LOCALAPPDATA%\Google\Chrome\User Data\Default" } }
+                },
                 SubFields = new List<PluginConfigField>
                 {
                     new PluginConfigField
