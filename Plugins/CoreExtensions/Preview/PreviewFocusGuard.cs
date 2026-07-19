@@ -33,6 +33,10 @@ internal sealed class PreviewFocusGuard
     // window: a handler can show one of these at any point in its session, not just right after cold start
     // (e.g. also while the user is actively interacting with a live Excel/Word preview).
     private const uint EVENT_SYSTEM_DIALOGSTART = 0x0016;
+    // Fires when any window (not just dialogs) is destroyed -- scoped to the handler's own PID and
+    // further filtered to the exact tracked dialog hwnd in the callback below, so an unrelated window
+    // closing in that same process doesn't falsely signal "the dialog is gone".
+    private const uint EVENT_OBJECT_DESTROY = 0x8001;
     private const uint WINEVENT_OUTOFCONTEXT = 0;
 
     private WinEventDelegate? _focusHookDelegate;
@@ -41,6 +45,10 @@ internal sealed class PreviewFocusGuard
 
     private WinEventDelegate? _dialogHookDelegate;
     private IntPtr _hDialogHook;
+
+    private WinEventDelegate? _dialogCloseHookDelegate;
+    private IntPtr _hDialogCloseHook;
+    private IntPtr _trackedDialogHwnd;
 
     // Called on WM_PARENTNOTIFY(WM_CREATE) for the host window -- the earliest reliable signal that the
     // handler's rendering window (possibly cross-process) has been attached as our child, so its PID is
@@ -78,6 +86,8 @@ internal sealed class PreviewFocusGuard
             PreviewHandlerInterop.GetWindowThreadProcessId(hwnd, out var dialogPid);
             if (dialogPid != pid) return;
             try { PreviewHandlerInterop.SetForegroundWindow(hwnd); } catch { }
+            PreviewDialogSignal.NotifyDialogOpened();
+            ArmDialogCloseWatcher(hwnd, pid);
         };
         _hDialogHook = SetWinEventHook(EVENT_SYSTEM_DIALOGSTART, EVENT_SYSTEM_DIALOGSTART, IntPtr.Zero, _dialogHookDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
     }
@@ -90,6 +100,32 @@ internal sealed class PreviewFocusGuard
             _hDialogHook = IntPtr.Zero;
         }
         _dialogHookDelegate = null;
+    }
+
+    // Tracks the specific dialog hwnd SetForegroundWindow was just called on, so the app's own
+    // hidden-for-dialog windows come back the moment THAT window closes, not some unrelated one.
+    private void ArmDialogCloseWatcher(IntPtr dialogHwnd, uint pid)
+    {
+        DisarmDialogCloseWatcher();
+        _trackedDialogHwnd = dialogHwnd;
+        _dialogCloseHookDelegate = (h, evt, hwnd, idObject, idChild, thread, time) =>
+        {
+            if (hwnd != _trackedDialogHwnd) return;
+            DisarmDialogCloseWatcher();
+            PreviewDialogSignal.NotifyDialogClosed();
+        };
+        _hDialogCloseHook = SetWinEventHook(EVENT_OBJECT_DESTROY, EVENT_OBJECT_DESTROY, IntPtr.Zero, _dialogCloseHookDelegate, pid, 0, WINEVENT_OUTOFCONTEXT);
+    }
+
+    private void DisarmDialogCloseWatcher()
+    {
+        if (_hDialogCloseHook != IntPtr.Zero)
+        {
+            UnhookWinEvent(_hDialogCloseHook);
+            _hDialogCloseHook = IntPtr.Zero;
+        }
+        _dialogCloseHookDelegate = null;
+        _trackedDialogHwnd = IntPtr.Zero;
     }
 
     // Some handlers (Excel especially) can still grab focus asynchronously, on their own schedule --
@@ -133,5 +169,14 @@ internal sealed class PreviewFocusGuard
     {
         DisarmFallbackDetector();
         DisarmDialogWatcher();
+
+        // A dialog was still up (and the app's windows hidden for it) when this guard's own session
+        // ended (e.g. the preview host itself was torn down) -- notify closed anyway so those windows
+        // don't stay hidden forever with nothing left to ever signal their return.
+        if (_hDialogCloseHook != IntPtr.Zero)
+        {
+            DisarmDialogCloseWatcher();
+            PreviewDialogSignal.NotifyDialogClosed();
+        }
     }
 }

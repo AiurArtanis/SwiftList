@@ -17,12 +17,52 @@ public class QuickLookManager
     private Views.QuickLook.QuickLookWindow? _window;
     private Window? _owner;
     private bool _userWantsPreview;
+    // Set while both windows are hidden for a preview handler's own popup dialog (see
+    // PreviewDialogSignal) -- distinguishes that from every other reason _window/_owner might be
+    // hidden, so DialogClosed only ever re-shows what this specific mechanism hid.
+    private bool _hiddenForDialog;
 
     // Owners whose Closed we've hooked (once each) to end the preview session — release pooled native
     // preview handlers and their prevhost surrogates when the search window that used them goes away.
     private readonly HashSet<Window> _sessionOwners = new();
 
-    private QuickLookManager() => PreviewActivationSignal.FocusStolen += OnPreviewFocusStolen;
+    private QuickLookManager()
+    {
+        PreviewActivationSignal.FocusStolen += OnPreviewFocusStolen;
+        PreviewDialogSignal.DialogOpened += OnPreviewDialogOpened;
+        PreviewDialogSignal.DialogClosed += OnPreviewDialogClosed;
+    }
+
+    // A preview handler's own popup (e.g. Word's "Enter password" prompt) just got the OS foreground --
+    // see PreviewFocusGuard's own comment. Left floating on top of it, the quick window and its preview
+    // window make that dialog unreachable, so both hide for as long as it's up. Runs on whatever thread
+    // the plugin's WinEvent hook fires on, not necessarily this app's UI thread, so both handlers marshal
+    // onto the owner's Dispatcher before touching either Window.
+    private void OnPreviewDialogOpened()
+    {
+        if (_owner == null || _window == null) return;
+        _owner.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (_owner == null || _window == null) return;
+            _hiddenForDialog = true;
+            _window.Hide();
+            _owner.Hide();
+        }));
+    }
+
+    private void OnPreviewDialogClosed()
+    {
+        if (!_hiddenForDialog) return;
+        var owner = _owner;
+        var window = _window;
+        if (owner == null || window == null) { _hiddenForDialog = false; return; }
+        owner.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _hiddenForDialog = false;
+            owner.Show();
+            window.Show();
+        }));
+    }
 
     // A native (HwndHost) preview handler's own out-of-process window just grabbed OS keyboard focus for
     // itself (see PreviewFocusGuard) -- reclaim it back onto the search box the preview is attached to.
@@ -36,6 +76,12 @@ public class QuickLookManager
     }
 
     public bool IsVisible => _window != null && _window.IsVisible;
+
+    // Checked by QuickSearchWindow.Window_Deactivated so its own delayed auto-hide-on-deactivate logic
+    // doesn't fight this: without it, that handler would see the window we just Hide()'d as "deactivated"
+    // and run the FULL HideWindow() (resets the search query, stops the foreground hook, ...) a moment
+    // later, undoing the purely-visual, preserve-everything hide this is meant to be.
+    public bool IsHiddenForDialog => _hiddenForDialog;
 
     public void Reset()
     {

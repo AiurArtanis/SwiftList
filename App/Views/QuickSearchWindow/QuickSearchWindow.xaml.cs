@@ -313,6 +313,9 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         {
             timer.Stop();
             if (IsActive) return;
+            // QuickLookManager just Hide()'d this window itself, for a preview handler's own popup
+            // dialog (see its own comment) -- not a real deactivation to react to.
+            if (Services.QuickLookManager.Instance.IsHiddenForDialog) return;
             // Do not hide if there are visible owned windows (e.g. a crash MessageBox dialog).
             foreach (Window owned in OwnedWindows)
                 if (owned.IsVisible) return;
