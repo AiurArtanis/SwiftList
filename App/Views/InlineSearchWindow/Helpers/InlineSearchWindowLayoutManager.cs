@@ -26,7 +26,6 @@ public sealed class InlineSearchWindowLayoutManager
             var count = _window.ViewModel.Results.Count;
             double resultsHeight = 0;
             var foundSelectable = 0;
-            var headerCount = 0;
             for (var i = 0; i < count; i++)
             {
                 var item = _window.ViewModel.Results[i];
@@ -44,14 +43,6 @@ public sealed class InlineSearchWindowLayoutManager
                 resultsHeight += GetItemHeight(item);
                 if (isSelectable)
                     foundSelectable++;
-                // A section header ("当前文件夹"/"全局搜索") is neither selectable nor skipped -- its
-                // height still goes into resultsHeight above, but it doesn't count toward foundSelectable
-                // reaching 9. maxAvailableHeight below needs to budget for it too, or a query that spans
-                // two sections eats a whole selectable row's worth of height per header it shows,
-                // clamping off real results the "current folder"-only or "global search"-only case never
-                // loses (issue: two-section queries topped out at 8 visible rows, one-section at 9).
-                else if (item.IsSearchSectionHeader)
-                    headerCount++;
             }
             var pathPreviewHeight = 0.0;
             if (_window.PathPreviewBorder != null &&
@@ -64,10 +55,8 @@ public sealed class InlineSearchWindowLayoutManager
             // Was a stale literal 489.0, left over from before inline rows were scaled to 0.7x --
             // UpdateActionsLayout below already derives its own "9 compact rows" cap from
             // SearchResultItemHeight (line ~103); this now matches it instead of allowing ~165px of
-            // slack past what 9 real rows can ever actually sum to. Extended by headerCount rows (see
-            // above) so a query with N section headers gets N extra rows' worth of budget for them, on
-            // top of the 9 selectable rows they don't count against.
-            var maxAvailableHeight = (9 + headerCount) * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7) - pathPreviewHeight;
+            // slack past what 9 real rows can ever actually sum to.
+            var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7) - pathPreviewHeight;
             var actualResultsHeight = Math.Max(0.0, Math.Min(resultsHeight, maxAvailableHeight));
             var totalResultsHeight = actualResultsHeight + pathPreviewHeight;
             var heightChanged = !AreClose(_lastResultsHeight, totalResultsHeight);

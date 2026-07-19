@@ -229,15 +229,10 @@
             </Grid>
             <!-- Keyboard shortcut hint: same pill badge as the quick window's SearchResultTemplate
                  (DataTemplates.xaml), which was left as bare text here: the one surface that never got
-                 the Flow Launcher badge treatment. Tighter padding/font than the quick window's own
-                 badge (7,3,7,3 / 12): InlineItemHeight's 36px row budget was already tight around the
-                 name/path text stack even before this badge existed, and the wider quick-window sizing
-                 pushed the row's real rendered height past that budget, silently costing a whole row out
-                 of the "9 rows visible" cap in InlineSearchWindowLayoutManager (which assumes exactly
-                 36px/row, not whatever the content actually measures). -->
+                 the Flow Launcher badge treatment. -->
             <Border Grid.Column="2"
                     Margin="14,0,0,0"
-                    Padding="5,1,5,1"
+                    Padding="7,3,7,3"
                     CornerRadius="4"
                     BorderThickness="1"
                     VerticalAlignment="Center">
@@ -264,7 +259,7 @@
                            VerticalAlignment="Center">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="FontSize" Value="10"/>
+                            <Setter Property="FontSize" Value="12"/>
                             <Setter Property="Foreground" Value="{DynamicResource ShortcutColor}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
