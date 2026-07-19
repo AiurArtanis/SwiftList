@@ -24,21 +24,25 @@ public sealed class InlineSearchWindowLayoutManager
             if (!_window.IsVisible) return;
 
             var count = _window.ViewModel.Results.Count;
-            var selectableCount = CountSelectableResults();
             double resultsHeight = 0;
             var foundSelectable = 0;
             for (var i = 0; i < count; i++)
             {
                 var item = _window.ViewModel.Results[i];
+                // Must match CountSelectableResults' definition of "selectable", not the looser
+                // !IsEmptyResult && !IsSearchSectionHeader check this used to have: that looser check
+                // let the "show more"/jump-to-explorer row count as one of the 9, so depending on
+                // exactly which row landed on the 9th slot, the sum either stopped one row short of
+                // what's actually rendered or (via a stale 489px cap below, wide enough to never
+                // clamp a merely-9-rows-tall list) let a taller-than-real sum through unclamped --
+                // either way LstResults.Height stopped matching the real content height.
+                var isSelectable = !item.IsEmptyResult && !item.IsSearchSectionHeader
+                                    && item.FullPath != "__SHOW_MORE__" && !item.IsJumpToExplorerPath;
+                if (isSelectable && foundSelectable == 9)
+                    break;
                 resultsHeight += GetItemHeight(item);
-                if (!item.IsEmptyResult && !item.IsSearchSectionHeader)
-                {
+                if (isSelectable)
                     foundSelectable++;
-                    if (foundSelectable == 9)
-                    {
-                        break;
-                    }
-                }
             }
             var pathPreviewHeight = 0.0;
             if (_window.PathPreviewBorder != null &&
@@ -48,7 +52,11 @@ public sealed class InlineSearchWindowLayoutManager
                 pathPreviewHeight = _window.PathPreviewBorder.DesiredSize.Height;
             }
 
-            var maxAvailableHeight = 489.0 - pathPreviewHeight;
+            // Was a stale literal 489.0, left over from before inline rows were scaled to 0.7x --
+            // UpdateActionsLayout below already derives its own "9 compact rows" cap from
+            // SearchResultItemHeight (line ~103); this now matches it instead of allowing ~165px of
+            // slack past what 9 real rows can ever actually sum to.
+            var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7) - pathPreviewHeight;
             var actualResultsHeight = Math.Max(0.0, Math.Min(resultsHeight, maxAvailableHeight));
             var totalResultsHeight = actualResultsHeight + pathPreviewHeight;
             var heightChanged = !AreClose(_lastResultsHeight, totalResultsHeight);
@@ -139,17 +147,6 @@ public sealed class InlineSearchWindowLayoutManager
             if (result != null) return result;
         }
         return null;
-    }
-
-    private int CountSelectableResults()
-    {
-        var count = 0;
-        foreach (var item in _window.ViewModel.Results)
-        {
-            if (!item.IsEmptyResult && !item.IsSearchSectionHeader && item.FullPath != "__SHOW_MORE__" && !item.IsJumpToExplorerPath)
-                count++;
-        }
-        return count;
     }
 
     private static bool AreClose(double left, double right)
