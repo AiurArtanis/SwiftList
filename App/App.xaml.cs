@@ -159,6 +159,11 @@ public partial class App : Application
                     }
                 }));
             PluginSdk.Services.IconService.GetIconFunc = (path, isDir) => ShellIconHelper.GetIconForPath(path, isDir);
+            PluginSdk.Services.IconService.GetIconCacheOnlyFunc = (path, isDir) =>
+            {
+                var icon = ShellIconHelper.GetIconFromCacheOnly(path, isDir, out var needsLoad);
+                return (icon, needsLoad);
+            };
             PluginSdk.Services.IconService.GetThumbnailFunc = (path, size) => ShellImageListInterop.TryGetPreviewThumbnail(path, size);
             PluginSdk.Services.FileMetadataService.BatchLookupFunc = FileMetadataBridge.GetMetadataBatchAsync;
             PluginSdk.Logger.LogAction = (msg, lvl) => Logger.Log(msg, (LogLevel)(int)lvl);

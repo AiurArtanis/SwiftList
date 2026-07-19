@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using SwiftList.PluginSdk.Abstractions.Plugins;
@@ -128,7 +129,25 @@ public partial class QuickLookWindow : Window
         if (string.IsNullOrEmpty(TxtFileName.Text) && isDir) TxtFileName.Text = path;
 
         TxtFilePath.Text = path;
-        ImgFileIcon.Source = ShellIconHelper.GetIconForPath(path, isDir);
+
+        // Cache-only fast path first (matches AppSearchResult.Icon's pattern) -- a network-drive video
+        // file's real thumbnail requires the shell to actually read/decode frame data over the network,
+        // which can take seconds; calling GetIconForPath directly here blocked this whole window (and the
+        // owning search window, since QuickLook rides its message loop) until that finished. A cached hit
+        // or generic placeholder shows instantly; needsLoad only fires the slow fetch in the background.
+        var icon = ShellIconHelper.GetIconFromCacheOnly(path, isDir, out var needsLoad);
+        ImgFileIcon.Source = icon;
+        if (needsLoad)
+        {
+            Task.Run(() => ShellIconHelper.GetIconForPath(path, isDir)).ContinueWith(t =>
+            {
+                if (t.Status != TaskStatus.RanToCompletion || t.Result == null) return;
+                // The user may have already navigated to a different file by the time this resolves --
+                // _currentFilePath is updated synchronously at the top of SetTarget before this method
+                // even runs, so comparing against it here is the same staleness check, just applied late.
+                if (_currentFilePath == path) ImgFileIcon.Source = t.Result;
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
 
         if (isDir)
         {

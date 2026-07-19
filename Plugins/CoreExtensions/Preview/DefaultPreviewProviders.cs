@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -15,73 +16,118 @@ public class FolderPreviewProvider : IFilePreviewProvider
     public string Name => TranslationService.Get("QuickLook_FolderProviderName");
     public int Priority => 10;
     public bool CanPreview(string path, bool isDir) => isDir;
+    private readonly record struct FolderRowData(string Name, string FullPath, bool IsDir, ImageSource? Icon, bool NeedsIconLoad);
+
     public UIElement CreatePreview(string path, bool isDir)
     {
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         var panel = new StackPanel { Margin = new Thickness(4) };
         scroll.Content = panel;
-        try
+
+        // EnumerateFileSystemInfos hits the disk/network per call -- over a network drive with many
+        // entries this blocked the whole window until it finished (same class of bug as the thumbnail one
+        // above). Data gathering (no WPF elements -- those are thread-affine and can't be created off the
+        // UI thread) happens in the background; the rows themselves are only ever built on the UI thread,
+        // once, from that data. Each row's icon starts as whatever's already cached (instant, see
+        // GetIconFromCacheOnly) and upgrades itself in place once the real one loads (see BuildRow) --
+        // same cache-first-then-upgrade pattern AppSearchResult.Icon already uses for the results grid.
+        Task.Run(() => CollectRows(path)).ContinueWith(t =>
         {
-            var dirInfo = new DirectoryInfo(path);
-            var items = dirInfo.EnumerateFileSystemInfos().Take(31).ToList();
-            if (items.Count == 0)
+            if (t.Status != TaskStatus.RanToCompletion)
+            {
+                panel.Children.Add(BuildMessageRow($"{TranslationService.Get("QuickLook_Error")}: {t.Exception?.GetBaseException().Message}", isError: true));
+                return;
+            }
+
+            var (rows, truncatedCount) = t.Result;
+            if (rows.Count == 0)
+            {
+                panel.Children.Add(BuildMessageRow(TranslationService.Get("QuickLook_FolderEmpty"), isError: false));
+                return;
+            }
+
+            foreach (var row in rows)
+                panel.Children.Add(BuildRow(row));
+
+            if (truncatedCount > 0)
             {
                 panel.Children.Add(new TextBlock
                 {
-                    Text = TranslationService.Get("QuickLook_FolderEmpty"),
-                    FontStyle = FontStyles.Italic,
+                    Text = TranslationService.Get("QuickLook_MoreItems"),
                     Foreground = Application.Current?.TryFindResource("TextSecondary") as Brush ?? Brushes.Gray,
-                    Margin = new Thickness(8)
+                    Margin = new Thickness(24, 4, 0, 0),
+                    FontSize = 11,
+                    FontStyle = FontStyles.Italic
                 });
             }
-            else
-            {
-                var displayCount = Math.Min(items.Count, 30);
-                for (var idx = 0; idx < displayCount; idx++)
-                {
-                    var item = items[idx];
-                    var isItemDir = (item.Attributes & FileAttributes.Directory) != 0;
-                    var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 2) };
-                    row.Children.Add(new Image
-                    {
-                        Source = IconService.GetIcon(item.FullName, isItemDir),
-                        Width = 16,
-                        Height = 16,
-                        Margin = new Thickness(0, 0, 8, 0)
-                    });
-                    row.Children.Add(new TextBlock
-                    {
-                        Text = item.Name,
-                        Foreground = Application.Current?.TryFindResource("TextPrimary") as Brush ?? Brushes.White,
-                        FontSize = 12
-                    });
-                    panel.Children.Add(row);
-                }
-                if (items.Count > 30)
-                {
-                    panel.Children.Add(new TextBlock
-                    {
-                        Text = TranslationService.Get("QuickLook_MoreItems"),
-                        Foreground = Application.Current?.TryFindResource("TextSecondary") as Brush ?? Brushes.Gray,
-                        Margin = new Thickness(24, 4, 0, 0),
-                        FontSize = 11,
-                        FontStyle = FontStyles.Italic
-                    });
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            panel.Children.Add(new TextBlock
-            {
-                Text = $"{TranslationService.Get("QuickLook_Error")}: {ex.Message}",
-                Foreground = Brushes.Red,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(8)
-            });
-        }
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+
         return scroll;
     }
+
+    // Runs entirely off the UI thread -- returns plain data (icons are already-frozen ImageSources, safe
+    // to hand across threads) for the UI-thread continuation above to turn into rows. Icons use the
+    // cache-only fast path (no disk/shell access) so a folder full of not-yet-cached items (videos
+    // especially) doesn't just move the same blocking cost from "before any row appears" to "before this
+    // one Task.Run resolves" -- BuildRow below kicks off the real per-item fetch afterward instead.
+    private static (List<FolderRowData> Rows, int TruncatedCount) CollectRows(string path)
+    {
+        var dirInfo = new DirectoryInfo(path);
+        var items = dirInfo.EnumerateFileSystemInfos().Take(31).ToList();
+        var displayCount = Math.Min(items.Count, 30);
+        var rows = new List<FolderRowData>(displayCount);
+        for (var idx = 0; idx < displayCount; idx++)
+        {
+            var item = items[idx];
+            var isItemDir = (item.Attributes & FileAttributes.Directory) != 0;
+            var icon = IconService.GetIconFromCacheOnly(item.FullName, isItemDir, out var needsLoad);
+            rows.Add(new FolderRowData(item.Name, item.FullName, isItemDir, icon, needsLoad));
+        }
+        return (rows, items.Count > 30 ? items.Count - 30 : 0);
+    }
+
+    // Builds one row with whatever icon CollectRows already had cached, and -- only if that was just a
+    // placeholder -- fetches the real one in the background and swaps it in once ready. No staleness guard
+    // needed: img belongs only to this row's own Image control, which is either still showing (correct) or
+    // long gone from the visual tree (harmless no-op) by the time the fetch resolves.
+    private static UIElement BuildRow(FolderRowData row)
+    {
+        var rowPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 2) };
+        var img = new Image
+        {
+            Source = row.Icon,
+            Width = 16,
+            Height = 16,
+            Margin = new Thickness(0, 0, 8, 0)
+        };
+        rowPanel.Children.Add(img);
+        rowPanel.Children.Add(new TextBlock
+        {
+            Text = row.Name,
+            Foreground = Application.Current?.TryFindResource("TextPrimary") as Brush ?? Brushes.White,
+            FontSize = 12
+        });
+
+        if (row.NeedsIconLoad)
+        {
+            Task.Run(() => IconService.GetIcon(row.FullPath, row.IsDir)).ContinueWith(t =>
+            {
+                if (t.Status == TaskStatus.RanToCompletion && t.Result != null)
+                    img.Source = t.Result;
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        return rowPanel;
+    }
+
+    private static TextBlock BuildMessageRow(string text, bool isError) => new()
+    {
+        Text = text,
+        FontStyle = isError ? FontStyles.Normal : FontStyles.Italic,
+        Foreground = isError ? Brushes.Red : Application.Current?.TryFindResource("TextSecondary") as Brush ?? Brushes.Gray,
+        TextWrapping = TextWrapping.Wrap,
+        Margin = new Thickness(8)
+    };
 }
 // 2. Image Preview Provider
 public class ImagePreviewProvider : IFilePreviewProvider
@@ -258,6 +304,13 @@ public class PePreviewProvider : IFilePreviewProvider
         return "Unknown Architecture";
     }
     public static UIElement BuildMetadataControl(string path, string? title, string? details, ImageSource? image = null)
+        => BuildMetadataControl(path, title, details, image, out _);
+
+    // imageElement: the actual Image control used for the icon/thumbnail slot, so a caller that built this
+    // with image=null (a placeholder) can restyle it into the "real thumbnail" layout later once one loads
+    // asynchronously, instead of only being able to swap Source (which would leave a large thumbnail stuck
+    // rendering at the small placeholder icon's fixed 64x64 box).
+    public static UIElement BuildMetadataControl(string path, string? title, string? details, ImageSource? image, out Image imageElement)
     {
         var grid = new Grid { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(16) };
         var panel = new StackPanel();
@@ -288,6 +341,7 @@ public class PePreviewProvider : IFilePreviewProvider
             };
         }
         RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+        imageElement = img;
         panel.Children.Add(img);
         if (!string.IsNullOrEmpty(title))
         {
@@ -324,7 +378,26 @@ public class DefaultMetadataPreviewProvider : IFilePreviewProvider
     {
         // Filename and size/date already live in the QuickLook header and footer, so this fallback shows
         // just a large real thumbnail (video frame / document page / image), or a small shell icon if none.
-        var thumb = IconService.GetThumbnail(path, 512);
-        return PePreviewProvider.BuildMetadataControl(path, null, null, thumb);
+        //
+        // GetThumbnail is a synchronous shell COM call -- for a video file on a network drive, the shell
+        // has to actually read/decode frame data over the network to produce it, which can take seconds
+        // and, called here, blocked the whole window (and the search window under it) until it returned.
+        // Show the small-icon placeholder layout immediately instead, then fetch the real thumbnail in the
+        // background and restyle the same Image element into the "real thumbnail" layout once it arrives.
+        var control = PePreviewProvider.BuildMetadataControl(path, null, null, null, out var img);
+        Task.Run(() => IconService.GetThumbnail(path, 512)).ContinueWith(t =>
+        {
+            if (t.Status != TaskStatus.RanToCompletion || t.Result == null) return;
+            // No staleness check needed: img belongs only to this specific control instance. If the user
+            // has since navigated away, this control (and img) is simply no longer in the visual tree, and
+            // restyling it is a harmless no-op rather than something that could show a stale result.
+            img.Source = t.Result;
+            img.Stretch = Stretch.Uniform;
+            img.HorizontalAlignment = HorizontalAlignment.Stretch;
+            img.MaxHeight = 420;
+            img.Width = double.NaN;
+            img.Height = double.NaN;
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+        return control;
     }
 }
