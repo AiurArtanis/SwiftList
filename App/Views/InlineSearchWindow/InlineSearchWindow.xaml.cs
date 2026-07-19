@@ -43,6 +43,7 @@ public partial class InlineSearchWindow : Window, ISearchWindow
     {
         InitializeComponent();
         ThemedWindowIconHelper.Apply(this);
+        Helpers.SystemMenuBlocker.Attach(this);
         _viewModel = viewModel;
         _manager = manager;
         this.DataContext = _viewModel;
