@@ -26,6 +26,26 @@ internal static class BrowserDataCache
     private static DateTime _lastLoadUtc = DateTime.MinValue;
     private static bool _loading;
 
+    // SqliteCopyReader's own snapshot copies are meant to live only for the duration of a single
+    // ReadCopy call and delete themselves in a finally block -- but that delete is best-effort (a
+    // locked file, e.g. still held by an antivirus scan, silently leaves the copy behind), and each
+    // one gets a fresh GUID name, so a failed delete orphans it permanently with nothing else to ever
+    // clean it up. Swept on every reload (not just once at process start) since this cache reloads
+    // every RefreshInterval for as long as SwiftList keeps running -- waiting for the next app restart
+    // could otherwise be days, during which orphans from failed deletes keep piling up unattended (see
+    // issue: multi-MB browser History/places.sqlite copies filling up the temp drive over time).
+    private static void CleanupOrphanedTempFiles()
+    {
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(Path.GetTempPath(), "swiftlist_browserdata_*"))
+            {
+                try { File.Delete(file); } catch { }
+            }
+        }
+        catch { }
+    }
+
     public static IReadOnlyList<ProfileEntries> GetSnapshot()
     {
         MaybeTriggerReload();
@@ -63,6 +83,7 @@ internal static class BrowserDataCache
         {
             try
             {
+                CleanupOrphanedTempFiles();
                 var loaded = LoadAll(configured ?? new List<BrowserProfileConfig>());
                 lock (Lock)
                 {

@@ -20,7 +20,11 @@ internal static class ChromiumHistoryReader
         return SqliteCopyReader.ReadCopy(sourcePath, tempPath =>
         {
             var results = new List<BrowserEntry>();
-            using var conn = new SqliteConnection($"Data Source={tempPath};Mode=ReadOnly");
+            // Pooling=false: Microsoft.Data.Sqlite's default connection pool keeps the native file
+            // handle open after Dispose() in case the same connection string gets reused -- it never
+            // does here (tempPath is a fresh GUID every call), so pooling only left the temp file
+            // locked open by this very process, making SqliteCopyReader's own delete-after-use fail.
+            using var conn = new SqliteConnection($"Data Source={tempPath};Mode=ReadOnly;Pooling=false");
             conn.Open();
             using var cmd = conn.CreateCommand();
             // Filtered in SQL (not just after reading) so the LIMIT budget -- the most-recent MaxEntries
