@@ -17,11 +17,10 @@
     <SolidColorBrush x:Key="TextSecondary" Color="#9D9D9D"/>
     <!-- Was the same cyan as TextPrimary, which made the search-result match highlight (bound to
          AccentBlue) invisible against normal result text. Reassigned to this theme's own established
-         "selection" magenta (already used for SelectedBackground/ItemSelected/AccentBarColor below)
+         "selection" magenta (already used for ItemSelected/AccentBarColor below)
          instead of introducing a new color. -->
     <SolidColorBrush x:Key="AccentBlue" Color="#FF007F"/>
     <SolidColorBrush x:Key="HoverBackground" Color="#1D123A"/>
-    <SolidColorBrush x:Key="SelectedBackground" Color="#FF007F"/>
     <SolidColorBrush x:Key="SeparatorBrush" Color="#2A1B4E"/>
     <SolidColorBrush x:Key="FolderIconColor" Color="#FFFF00"/>
     <SolidColorBrush x:Key="FileIconColor" Color="#00FFFF"/>

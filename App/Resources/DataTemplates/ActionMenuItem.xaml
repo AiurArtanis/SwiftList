@@ -80,30 +80,65 @@
 					</TextBlock.Style>
 				</TextBlock>
 
-				<!-- Keyboard shortcut hint -->
-				<TextBlock Grid.Column="2"
-                           Text="{Binding ShortcutHint}"
-                           Foreground="{DynamicResource ShortcutColor}"
-                           VerticalAlignment="Center"
-                           Margin="14,0,0,0">
-					<TextBlock.Style>
-						<Style TargetType="TextBlock">
+				<!-- Keyboard shortcut hint: same pill badge as SearchResultTemplate (DataTemplates.xaml),
+				     reusing HoverBackground/ShortcutColor/AccentBlue rather than new themed resources.
+				     Selected/highlighted switches to an AccentBlue border + text instead of an outline in
+				     SeparatorBrush (see that template's own comment: SeparatorBrush and the row's own
+				     selected background are nearly the same color in the Light theme, so that outline
+				     barely showed). This template renders in two containers with no shared ancestor type,
+				     so both are wired: ListBoxItem.IsSelected for the plain actions list, MenuItem.IsHighlighted
+				     for the ActionFlyoutMenuItemStyle popup below (right-click context menu): whichever
+				     ancestor doesn't exist for a given container just never fires, harmlessly. -->
+				<Border Grid.Column="2"
+                        Margin="14,0,0,0"
+                        Padding="7,3,7,3"
+                        CornerRadius="4"
+                        BorderThickness="1"
+                        VerticalAlignment="Center">
+					<Border.Style>
+						<Style TargetType="Border">
 							<Setter Property="Visibility" Value="Visible"/>
-							<Setter Property="FontSize" Value="11"/>
+							<Setter Property="Background" Value="{DynamicResource HoverBackground}"/>
+							<Setter Property="BorderBrush" Value="Transparent"/>
 							<Style.Triggers>
-								<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList">
-									<Setter Property="FontSize" Value="{Binding ScaledShortcutFontSize}"/>
+								<DataTrigger Binding="{Binding ShortcutHint}" Value="">
+									<Setter Property="Visibility" Value="Collapsed"/>
 								</DataTrigger>
-								<Trigger Property="Text" Value="">
+								<DataTrigger Binding="{Binding ShortcutHint}" Value="{x:Null}">
 									<Setter Property="Visibility" Value="Collapsed"/>
-								</Trigger>
-								<Trigger Property="Text" Value="{x:Null}">
-									<Setter Property="Visibility" Value="Collapsed"/>
-								</Trigger>
+								</DataTrigger>
+								<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+									<Setter Property="Background" Value="Transparent"/>
+									<Setter Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
+								</DataTrigger>
+								<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type MenuItem}}, Path=IsHighlighted}" Value="True">
+									<Setter Property="Background" Value="Transparent"/>
+									<Setter Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
+								</DataTrigger>
 							</Style.Triggers>
 						</Style>
-					</TextBlock.Style>
-				</TextBlock>
+					</Border.Style>
+					<TextBlock Text="{Binding ShortcutHint}"
+                               VerticalAlignment="Center">
+						<TextBlock.Style>
+							<Style TargetType="TextBlock">
+								<Setter Property="FontSize" Value="11"/>
+								<Setter Property="Foreground" Value="{DynamicResource ShortcutColor}"/>
+								<Style.Triggers>
+									<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList">
+										<Setter Property="FontSize" Value="{Binding ScaledShortcutFontSize}"/>
+									</DataTrigger>
+									<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+										<Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+									</DataTrigger>
+									<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type MenuItem}}, Path=IsHighlighted}" Value="True">
+										<Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+									</DataTrigger>
+								</Style.Triggers>
+							</Style>
+						</TextBlock.Style>
+					</TextBlock>
+				</Border>
 
 				<!-- Submenu indicator -->
 				<Path Grid.Column="3" Data="M0,0 L5,4 L0,8 Z" Fill="{DynamicResource ShortcutColor}" Width="5" Height="8" Stretch="Uniform" VerticalAlignment="Center" Margin="10,0,0,0"
@@ -115,7 +150,11 @@
 	<!-- ═══════════ Flyout MenuItem that renders identically to the actions list row ═══════════ -->
 	<!-- Used by the quick-nav right-click menu (PluginContextMenuHelper) so its rows are pixel-identical
 	     to the self-drawn actions list: same ActionMenuItemTemplate content + same container chrome as
-	     ActionItemStyle (rounded highlight, margins, height), while keeping MenuItem submenu/keyboard. -->
+	     ActionItemStyle (rounded highlight, margins, height, AccentBar), while keeping MenuItem
+	     submenu/keyboard. Highlight color used to be SelectedBackground (a themed blue tint distinct
+	     from the plain actions list's gray HoverBackground): same action, two different highlight
+	     colors depending on which surface showed it. Unified to HoverBackground + the same left accent
+	     bar ActionItemStyle uses, so the flyout and the plain list read as the exact same control. -->
 	<Style x:Key="ActionFlyoutMenuItemStyle" TargetType="{x:Type MenuItem}">
 		<Setter Property="HeaderTemplate" Value="{StaticResource ActionMenuItemTemplate}"/>
 		<Setter Property="Cursor" Value="Hand"/>
@@ -124,6 +163,8 @@
 			<Setter.Value>
 				<ControlTemplate TargetType="{x:Type MenuItem}">
 					<Grid>
+						<Rectangle x:Name="AccentBar" Width="3" HorizontalAlignment="Left"
+						           RadiusX="1.5" RadiusY="1.5" Fill="Transparent" Margin="0,2"/>
 						<Border x:Name="ItemBorder" Background="Transparent" CornerRadius="6" Margin="6,2,6,2" Padding="12,0,12,0" VerticalAlignment="Stretch">
 							<ContentPresenter ContentSource="Header" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
 						</Border>
@@ -153,7 +194,8 @@
 						     IsHighlighted for both), matching the classic shell menu; avoids the flicker a
 						     separate IsMouseOver trigger caused when mouse-move events are swallowed. -->
 						<Trigger Property="IsHighlighted" Value="True">
-							<Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SelectedBackground}"/>
+							<Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource HoverBackground}"/>
+							<Setter TargetName="AccentBar" Property="Fill" Value="{DynamicResource AccentBarColor}"/>
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>

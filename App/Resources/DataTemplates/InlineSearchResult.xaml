@@ -227,16 +227,20 @@
                     </TextBlock.Style>
                 </TextBlock>
             </Grid>
-            <!-- Keyboard shortcut hint -->
-            <TextBlock Grid.Column="2"
-                       Text="{Binding ShortcutHint}"
-                       FontSize="12"
-                       Foreground="{DynamicResource ShortcutColor}"
-                       VerticalAlignment="Center"
-                       Margin="14,0,0,0">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
+            <!-- Keyboard shortcut hint: same pill badge as the quick window's SearchResultTemplate
+                 (DataTemplates.xaml), which was left as bare text here: the one surface that never got
+                 the Flow Launcher badge treatment. -->
+            <Border Grid.Column="2"
+                    Margin="14,0,0,0"
+                    Padding="7,3,7,3"
+                    CornerRadius="4"
+                    BorderThickness="1"
+                    VerticalAlignment="Center">
+                <Border.Style>
+                    <Style TargetType="Border">
                         <Setter Property="Visibility" Value="{Binding ShortcutVisibility}"/>
+                        <Setter Property="Background" Value="{DynamicResource HoverBackground}"/>
+                        <Setter Property="BorderBrush" Value="Transparent"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -244,10 +248,28 @@
                             <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
+                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </TextBlock.Style>
-            </TextBlock>
+                </Border.Style>
+                <TextBlock Text="{Binding ShortcutHint}"
+                           VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontSize" Value="12"/>
+                            <Setter Property="Foreground" Value="{DynamicResource ShortcutColor}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Border>
         </Grid>
     </DataTemplate>
 </ResourceDictionary>

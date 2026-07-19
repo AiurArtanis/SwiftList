@@ -98,13 +98,12 @@
     <SolidColorBrush x:Key="TextSecondary" Color="#9D9D9D"/>
     <!-- Was the same green as TextPrimary, which made the search-result match highlight (bound to
          AccentBlue) invisible against normal result text. Reassigned to this theme's own established
-         "selection" purple (already used for SelectedBackground/ItemSelected/AccentBarColor below)
+         "selection" purple (already used for ItemSelected/AccentBarColor below)
          instead of introducing a new color. -->
     <SolidColorBrush x:Key="AccentBlue" Color="#FF6725C0"/>
     <!-- Translucent (not opaque) to match this theme's glass/neon aesthetic: a fully opaque hover
          fill reads as a flat slab against the glowing grid/scanline backdrop everywhere else. -->
     <SolidColorBrush x:Key="HoverBackground" Color="#AA311966"/>
-    <SolidColorBrush x:Key="SelectedBackground" Color="#FF6725C0"/>
     <!-- Dedicated accent-bar color: this theme's row-selection tint is already high-contrast against
          its hover fill, so the bar reuses it as-is. -->
     <SolidColorBrush x:Key="AccentBarColor" Color="#FF6725C0"/>

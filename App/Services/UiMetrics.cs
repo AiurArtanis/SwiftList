@@ -36,6 +36,19 @@ public static class UiMetrics
     public const double BaseResultPathFontSize = 12.8;
     public const double BaseResultIconSize = 42; // fixed size for the main window
 
+    // Flow Launcher's own literal result-row metrics (32px icon, 16px title, 13px subtitle, 58px row) --
+    // the quick window's Scaled* properties below return these directly now instead of deriving them
+    // from the user-configurable icon-size setting/search-bar-height Scale. A deliberate, temporary
+    // simplification (approved by the user) to get pixel-for-pixel parity with the reference screenshot
+    // first; reconciling this with the icon-size setting/Scale is follow-up work, not done here.
+    public const double FlowResultIconSize = 32;
+    public const double FlowResultNameFontSize = 16;
+    public const double FlowResultPathFontSize = 13;
+    public const double FlowResultItemHeight = 58;
+
+    // Retained only as IconRelativeFontScale's reference point (see FlowResultIconSize above).
+    public const double IconFontRatioReferenceSize = 32;
+
     // Floor for the quick window's icon-relative font scaling (see ScaledResultNameFontSize etc.) --
     // at the smallest configurable icon size, the raw ratio would shrink text well past legible.
     public const double MinScaledResultNameFontSize = 14;
@@ -172,28 +185,27 @@ public static class UiMetrics
 
     // ── Scaled metrics — consumed ONLY by the quick window (opted in via window title),
     //    so the inline/full windows never scale with the search-bar height. ──
-    public static double ScaledSearchResultItemHeight => Math.Round(BaseSearchResultItemHeight * _scale);
+    //    Icon/font/row-height below are pinned to Flow Launcher's own literal values rather than derived
+    //    from the search-bar-height Scale or the user-configurable icon-size setting (see
+    //    FlowResultIconSize etc.'s own comment) -- ScaledListItemHeight/ScaledSearchSectionHeaderHeight
+    //    are unrelated rows (list items, section headers) and still scale normally.
+    public static double ScaledSearchResultItemHeight => FlowResultItemHeight;
     public static double ScaledListItemHeight => Math.Round(BaseListItemHeight * _scale);
     public static double ScaledSearchSectionHeaderHeight => Math.Round(BaseSearchSectionHeaderHeight * _scale);
 
-    public static double ScaledResultIconSize => Math.Round(_quickResultIconSize * _scale);
+    public static double ScaledResultIconSize => FlowResultIconSize;
 
     // The actual rendered height of a normal (icon+text) row once the icon-size-driven floor is
     // applied -- shared by AppSearchResult (results list) and ActionMenuItem (actions list) so their
     // rows come out pixel-identical instead of one accounting for icon overflow and the other not.
     public static double ScaledNormalRowHeight => Math.Max(ScaledSearchResultItemHeight, ScaledResultIconSize + ResultRowVerticalMargin + IconRowBreathingRoom);
 
-    // Name/path font size tracks the ACTUAL rendered icon size (not just the search-bar-height scale),
-    // so bumping the icon-size setting directly grows the text too, not only bumping the search bar
-    // height. At the default icon size (BaseResultIconSize) with no search-bar scaling this ratio is
-    // exactly 1, so it's a no-op in the common case; floored so a small configured icon never shrinks
-    // text past legible. Public so ActionMenuItem's own font/icon scaling can share it too (see its
-    // ScaledTextFontSize etc.) -- using raw Scale there instead left action text visibly smaller than
-    // result text even after row heights were unified, since Scale and this ratio only coincide when
-    // the configured icon size happens to equal BaseResultIconSize.
-    public static double IconRelativeFontScale => ScaledResultIconSize / BaseResultIconSize;
+    // Kept only so ActionMenuItem's own icon/font scaling (ScaledIconSize etc., which multiplies its OWN
+    // base sizes by this) comes out as 1.0 -- i.e. also pinned to ITS base sizes -- while both share one
+    // formula instead of ActionMenuItem needing its own separate "pinned to Flow" special case.
+    public static double IconRelativeFontScale => ScaledResultIconSize / IconFontRatioReferenceSize;
 
-    public static double ScaledResultNameFontSize => Math.Max(MinScaledResultNameFontSize, Math.Round(BaseResultNameFontSize * IconRelativeFontScale));
+    public static double ScaledResultNameFontSize => FlowResultNameFontSize;
     public static double ScaledResultNameFontSizeSingleLine => ScaledResultNameFontSize;
-    public static double ScaledResultPathFontSize => Math.Max(MinScaledResultPathFontSize, Math.Round(BaseResultPathFontSize * IconRelativeFontScale));
+    public static double ScaledResultPathFontSize => FlowResultPathFontSize;
 }

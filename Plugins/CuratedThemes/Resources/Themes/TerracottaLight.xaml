@@ -13,7 +13,6 @@
     <SolidColorBrush x:Key="TextSecondary" Color="#8A7360"/>
     <SolidColorBrush x:Key="AccentBlue" Color="#C2622D"/>
     <SolidColorBrush x:Key="HoverBackground" Color="#F2E4D4"/>
-    <SolidColorBrush x:Key="SelectedBackground" Color="#F0D3B8"/>
     <SolidColorBrush x:Key="SeparatorBrush" Color="#EDE0D0"/>
     <SolidColorBrush x:Key="FolderIconColor" Color="#B8860B"/>
     <SolidColorBrush x:Key="FileIconColor" Color="#8A7360"/>

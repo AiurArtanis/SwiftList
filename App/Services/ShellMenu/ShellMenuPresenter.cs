@@ -39,6 +39,7 @@ public class ShellMenuPresenter : IDisposable
         _navigator = new ActionsMenuNavigator(view, LoadMenuItems, ExitActionsMode);
         _executor = new ActionsMenuExecutor(view, _commandToProviderMap, _navigator, ExitActionsMode);
         _mouseHandler = new ShellMenuMouseInputHandler(this, view);
+        _view.LstActions.MouseMove += _mouseHandler.HandleActionsMouseMove;
         _view.SearchTextBox.TextChanged += (s, e) =>
         {
             if (_isInActionsMode)
@@ -215,6 +216,10 @@ public class ShellMenuPresenter : IDisposable
             _view.LstActions.SelectedIndex = firstSelectable >= 0 ? firstSelectable : 0;
             _view.LstActions.ScrollIntoView(_view.LstActions.SelectedItem);
         }
+
+        // See HandleActionsMouseMove's own comment: reseed so the synthetic MouseMove WPF fires once
+        // these rows finish relaying out under a stationary cursor doesn't steal selection back.
+        _mouseHandler.ReseedHoverBaseline();
     }
 
     public void NavigateActionsList(int direction) => _navigator.NavigateActionsList(direction);

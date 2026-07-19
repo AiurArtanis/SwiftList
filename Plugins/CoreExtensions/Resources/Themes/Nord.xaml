@@ -15,7 +15,6 @@
     <!-- #ECEFF4 duplicated ContentBg exactly (zero contrast on hover); using the theme's own
          BorderColor tone instead so a hovered row is actually visible. -->
     <SolidColorBrush x:Key="HoverBackground" Color="#D8DEE9"/>
-    <SolidColorBrush x:Key="SelectedBackground" Color="#81A1C1"/>
     <SolidColorBrush x:Key="SeparatorBrush" Color="#D8DEE9"/>
     <SolidColorBrush x:Key="FolderIconColor" Color="#D08770"/>
     <SolidColorBrush x:Key="FileIconColor" Color="#4C566A"/>
