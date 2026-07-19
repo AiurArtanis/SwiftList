@@ -8,18 +8,19 @@ so same-named settings under different tabs stay distinguishable. Selecting a re
 Up/Down to highlight and Enter) switches to the right section and tab, scrolls the exact control
 into view, and briefly flashes a highlight border around it.
 
-The Settings window has nine sections in its left sidebar:
+The Settings window has ten sections in its left sidebar:
 
 | Section | Covers |
 |---|---|
 | [Service Status](./service-status) | Background service install, and the App/Hook/Service log viewer. |
 | [Index](./index-drives) | Local drives, network drives, WSL distributions (once detected), folder indexes, and exclusion rules. |
-| [General](./general) | Startup behavior, updates, theme, language, search bar layout, and preview window size. |
+| [General](./general) | Startup behavior, updates, language, search bar layout, and preview window size. |
 | [Hotkeys](./hotkeys-page) | Global hotkeys, per-plugin action hotkeys, and the process blacklist. |
 | [Plugins](./plugins) | Installed plugins and per-component enable/disable toggles. |
 | [Favorites](./favorites) | Custom-named shortcuts to folders, files, and URLs. |
 | [History](./history) | Search history and quick-window keyword history. |
 | [Startup Panel](./startup-panel) | The empty-search-box tab strip: Recent Files, Last Directory, and reopening closed plugin tabs. |
+| [Appearance](./appearance) | Theme picker (with a preview card per theme) and "follow system light/dark" mode. Pinned above About. |
 | [About](./about) | Version info and update checking. |
 
 Each page below documents every option on that section, in order, with its default value and any
