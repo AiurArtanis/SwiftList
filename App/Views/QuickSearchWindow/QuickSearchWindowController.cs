@@ -299,6 +299,12 @@ public class QuickSearchWindowController
 
         _window.ViewModel.Monitor.StopStatusTimer();
 
+        // Must happen before the SearchQuery reset below: clearing the query resets SelectedResult to
+        // the startup panel's first item, which synchronously fires LstResults.SelectionChanged and
+        // (with _userWantsPreview still true) would make QuickLookManager jump the still-open preview
+        // window to that unrelated file instead of closing alongside this window.
+        QuickLookManager.Instance.Reset();
+
         try { KeywordHistoryStore.Record(_window.ViewModel.SearchQuery); } catch { }
         _window.KeywordHistoryController.Reset();
 
