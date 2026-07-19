@@ -243,9 +243,38 @@ public class InlineSearchManager : IDisposable
         timer.Start();
     }
 
-    public void CloseInlineSearch(string reason = "Unknown")
+    public void CloseInlineSearch(string reason = "Unknown") => CloseInlineSearch(reason, null);
+
+    // deferUntil: null on the initial (outermost) call -- set to a real deadline the first time this
+    // has to defer, so the recursive BeginInvoke retries below share one bounded wait instead of each
+    // starting a fresh 500ms clock (which could stall the close indefinitely as long as SOMETHING
+    // keeps looking "active").
+    private void CloseInlineSearch(string reason, DateTime? deferUntil)
     {
         if (_window == null) return;
+
+        var dragActive = SwiftList.App.Views.Controls.ResultsDragDropHelper.IsDragActive;
+        var pendingMouseDown = _window.HasPendingMouseDown;
+
+        if (dragActive || pendingMouseDown)
+        {
+            // Several callers of CloseInlineSearch (the "click outside" mouse hook in particular)
+            // arrive asynchronously via Dispatcher.BeginInvoke -- and DoDragDrop's own nested OLE
+            // message loop pumps this app's dispatcher queue too, so this can run REENTRANTLY while a
+            // drag from the results list is still in flight, or while a left-button press elsewhere in
+            // this window hasn't been matched by a release yet. Destroying this window's HWND (Hide()+
+            // Close() below) in either case leaves WPF's mouse button state or the OS drag cursor stuck
+            // (see ResultsDragDropHelper.IsDragActive's and InlineSearchWindow.HasPendingMouseDown's own
+            // comments). Retry until whichever condition triggered this resolves naturally -- bounded to
+            // 500ms so a press whose release genuinely never reaches this app (it went to some other
+            // window entirely) doesn't leave the inline window permanently stuck open instead.
+            var deadline = deferUntil ?? DateTime.UtcNow.AddMilliseconds(500);
+            if (DateTime.UtcNow < deadline)
+            {
+                Application.Current?.Dispatcher.BeginInvoke(new Action(() => CloseInlineSearch(reason, deadline)), DispatcherPriority.Background);
+                return;
+            }
+        }
 
         if (_explorerTracker.ActiveInlineAdapter != null && _explorerTracker.ActiveHwnd != IntPtr.Zero)
         {

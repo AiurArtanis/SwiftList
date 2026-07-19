@@ -11,6 +11,15 @@ public static class ResultsDragDropHelper
     private static System.Windows.Point _dragStartPoint;
     private static bool _dragEndedInside;
 
+    // True for the entire duration of the synchronous DoDragDrop call below (its own nested OLE
+    // message loop). Checked by InlineSearchManager.CloseInlineSearch: that method can run
+    // reentrantly from OTHER dispatcher-queued callbacks (e.g. the "click outside" mouse hook, which
+    // arrives async via IPC from the separate Hook.exe process) that get pumped by OLE's loop while a
+    // drag is still in flight -- destroying a window's HWND out from under a live DoDragDrop call
+    // leaves the OS drag cursor permanently stuck (usually on "no-drop") because OLE never gets a
+    // clean return through its own loop. See CloseInlineSearch's own comment for the retry side.
+    public static bool IsDragActive { get; private set; }
+
     // When pressing on an item that's already part of a multi-selection, we suppress the list's
     // default "collapse to one" so a drag can carry all selected items. These remember the press
     // so a plain click (no drag) still collapses to the single item on button-up.
@@ -25,6 +34,11 @@ public static class ResultsDragDropHelper
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(System.IntPtr hWnd, out uint lpdwProcessId);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    private const int VK_LBUTTON = 0x01;
 
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     private struct POINT
@@ -111,6 +125,16 @@ public static class ResultsDragDropHelper
         if (e.LeftButton != MouseButtonState.Pressed)
             return;
 
+        // e.LeftButton (WPF's own tracked button state) can end up stuck reporting Pressed during a
+        // plain hover with no real down/up on this list at all -- when a press elsewhere in the inline
+        // window has its window destroyed (CloseInlineSearch) before the matching release reaches any
+        // SwiftList-owned window, WPF's state never resyncs, and the next hover starts a real, phantom
+        // DoDragDrop with no hand left to ever release it. GetAsyncKeyState queries the actual live
+        // hardware button state directly, bypassing WPF's possibly-stale derived state, as an
+        // authoritative final check before ever starting a drag.
+        if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0)
+            return;
+
         var mousePos = e.GetPosition(null);
         var diff = _dragStartPoint - mousePos;
 
@@ -140,6 +164,7 @@ public static class ResultsDragDropHelper
                                     _pendingItem = null;
                                     _pendingList = null;
                                     _dragEndedInside = false;
+                                    IsDragActive = true;
                                     try
                                     {
                                         // Perform UI-thread synchronous drag
@@ -147,6 +172,7 @@ public static class ResultsDragDropHelper
                                     }
                                     finally
                                     {
+                                        IsDragActive = false;
                                         // ponytail: hide the search window immediately after the synchronous drag loop finishes, unless it ended inside the window
                                         if (!_dragEndedInside)
                                         {

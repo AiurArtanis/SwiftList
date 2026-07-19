@@ -29,6 +29,16 @@ public partial class InlineSearchWindow : Window, ISearchWindow
     public InlineSearchWindowInputHandler InputHandler => _inputHandler;
     public InlineSearchWindowPositioner Positioner => _positioner;
 
+    // Window-wide (not just the results ListBox -- see ResultsDragDropHelper's own down/up tracking,
+    // which is scoped to just that control) record of "a left-button press landed somewhere in this
+    // window and hasn't been matched by a release yet". WPF's mouse button state can end up reporting
+    // Pressed during a later plain hover with NO down/up ever observed on the results list at all --
+    // meaning the press landed on some OTHER part of this window (a margin, the search box, etc.),
+    // and this window was then torn down (CloseInlineSearch) before the
+    // matching release ever reached any SwiftList-owned window to clear it, leaving it stuck on the
+    // next window's hover. CloseInlineSearch checks this before destroying the window.
+    public bool HasPendingMouseDown { get; private set; }
+
     public InlineSearchWindow(QuickSearchViewModel viewModel, InlineSearchManager manager)
     {
         InitializeComponent();
@@ -39,6 +49,8 @@ public partial class InlineSearchWindow : Window, ISearchWindow
         _menuPresenter = new ShellMenuPresenter(this);
         _inputHandler = new InlineSearchWindowInputHandler(this);
         _positioner = new InlineSearchWindowPositioner(this);
+        PreviewMouseLeftButtonDown += (_, _) => HasPendingMouseDown = true;
+        PreviewMouseLeftButtonUp += (_, _) => HasPendingMouseDown = false;
         _activeTimer = new DispatcherTimer(DispatcherPriority.Background);
         _activeTimer.Interval = TimeSpan.FromMilliseconds(100);
 
