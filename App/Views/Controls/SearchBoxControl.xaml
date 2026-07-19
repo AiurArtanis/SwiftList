@@ -35,20 +35,42 @@
                         </Style.Triggers>
                     </Style>
                 </Grid.Style>
-                <!-- Monochrome logo icon -->
+                <!-- Monochrome logo icon: the ONE element, at all times: while a search is in flight it
+                     just breathes its own opacity (accent-colored) in place, rather than a separate
+                     spinner/glow shape popping in over it (see issue #132: the old hard Collapsed/Visible
+                     swap between the logo and a detached spinner flickered on nearly every keystroke). -->
                 <Border Width="{Binding LeftIconSize, ElementName=root}" Height="{Binding LeftIconSize, ElementName=root}" SnapsToDevicePixels="True" UseLayoutRounding="True" RenderOptions.BitmapScalingMode="HighQuality">
                     <Border.Style>
                         <Style TargetType="Border">
-                            <Setter Property="Visibility" Value="Visible"/>
                             <Setter Property="Background" Value="{DynamicResource TextSecondary}"/>
                             <Setter Property="Opacity" Value="0.5"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsSearching}" Value="True">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
                                 <DataTrigger Binding="{Binding IsServiceRunning, ElementName=root}" Value="False">
                                     <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
                                     <Setter Property="Opacity" Value="0.8"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsSearching}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard x:Name="LeftLogoBreathe">
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                 From="0.25" To="1" Duration="0:0:0.6"
+                                                                 AutoReverse="True" RepeatBehavior="Forever">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <SineEase EasingMode="EaseInOut"/>
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <StopStoryboard BeginStoryboardName="LeftLogoBreathe"/>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.2"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -58,20 +80,6 @@
                                     RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border.OpacityMask>
                 </Border>
-                <!-- Loading spinner -->
-                <Control Width="{Binding LeftIconSize, ElementName=root}" Height="{Binding LeftIconSize, ElementName=root}" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Control.Style>
-                        <Style TargetType="Control" BasedOn="{StaticResource ModernSpinnerStyle}">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Setter Property="Tag" Value="{DynamicResource AccentBlue}"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsSearching}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Control.Style>
-                </Control>
             </Grid>
 
             <!-- Actions Label -->
@@ -157,20 +165,40 @@
                         </Style.Triggers>
                     </Style>
                 </Grid.Style>
-                <!-- Monochrome logo icon -->
+                <!-- Monochrome logo icon: the ONE element, at all times: see the left-icon block's own
+                     comment for why (issue #132). -->
                 <Border Width="{Binding RightIconSize, ElementName=root}" Height="{Binding RightIconSize, ElementName=root}" SnapsToDevicePixels="True" UseLayoutRounding="True" RenderOptions.BitmapScalingMode="HighQuality">
                     <Border.Style>
                         <Style TargetType="Border">
-                            <Setter Property="Visibility" Value="Visible"/>
                             <Setter Property="Background" Value="{DynamicResource TextSecondary}"/>
                             <Setter Property="Opacity" Value="0.6"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsSearching}" Value="True">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
                                 <DataTrigger Binding="{Binding IsServiceRunning, ElementName=root}" Value="False">
                                     <Setter Property="Background" Value="{DynamicResource WarningBrush}"/>
                                     <Setter Property="Opacity" Value="0.8"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsSearching}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard x:Name="RightLogoBreathe">
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                 From="0.25" To="1" Duration="0:0:0.6"
+                                                                 AutoReverse="True" RepeatBehavior="Forever">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <SineEase EasingMode="EaseInOut"/>
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <StopStoryboard BeginStoryboardName="RightLogoBreathe"/>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0.6" Duration="0:0:0.2"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -180,21 +208,6 @@
                                     RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border.OpacityMask>
                 </Border>
-     
-                <!-- Loading spinner -->
-                <Control Width="{Binding RightIconSize, ElementName=root}" Height="{Binding RightIconSize, ElementName=root}">
-                    <Control.Style>
-                        <Style TargetType="Control" BasedOn="{StaticResource ModernSpinnerStyle}">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Setter Property="Tag" Value="{DynamicResource AccentBlue}"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsSearching}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Control.Style>
-                </Control>
             </Grid>
         </Grid>
 </UserControl>
