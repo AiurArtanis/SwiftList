@@ -20,20 +20,7 @@ public static class SearchResultMapper
         // is consumed before reaching here for every other purpose (file search, highlighting, ...).
         PluginSearchResultMapper.AddInstantResults(uiResults, rawQuery ?? query, query, isInlineWindow);
 
-        if (fileResults != null && !string.IsNullOrWhiteSpace(query))
-        {
-            try
-            {
-                var trimmed = query.Trim();
-                var endsWithSeparator = trimmed.EndsWith("\\") || trimmed.EndsWith("/");
-                if (trimmed.EndsWith(":\\") || trimmed.EndsWith(":/") || (endsWithSeparator && Directory.Exists(trimmed)))
-                {
-                    var normalizedQuery = SearchResultHelper.NormalizePath(trimmed);
-                    fileResults.RemoveAll(x => string.Equals(SearchResultHelper.NormalizePath(x.Path), normalizedQuery, StringComparison.OrdinalIgnoreCase));
-                }
-            }
-            catch { }
-        }
+        RemoveQueriedDirectoryItself(fileResults, query);
 
         // If a directory scope is provided, keep only file/folder results that reside inside the scoped path.
         if (!string.IsNullOrEmpty(scope) && fileResults != null)
@@ -196,4 +183,26 @@ public static class SearchResultMapper
 
     public static void AddSectionHeader(List<AppSearchResult> uiResults, string title, string query)
         => SearchResultHelper.AddSectionHeader(uiResults, title, query);
+
+    // A query that's an exact directory path ("c:\", "c:\Users\") is a request to browse INTO that
+    // directory, not a request to find it -- the index still returns the directory itself as a matching
+    // record (hence the synthetic all-zero modified date some callers render for it), so every caller
+    // that lists a directory's contents by path needs this same strip, not just the quick/inline windows.
+    public static void RemoveQueriedDirectoryItself(List<SearchResult>? fileResults, string query)
+    {
+        if (fileResults == null || string.IsNullOrWhiteSpace(query))
+            return;
+
+        try
+        {
+            var trimmed = query.Trim();
+            var endsWithSeparator = trimmed.EndsWith("\\") || trimmed.EndsWith("/");
+            if (trimmed.EndsWith(":\\") || trimmed.EndsWith(":/") || (endsWithSeparator && Directory.Exists(trimmed)))
+            {
+                var normalizedQuery = SearchResultHelper.NormalizePath(trimmed);
+                fileResults.RemoveAll(x => string.Equals(SearchResultHelper.NormalizePath(x.Path), normalizedQuery, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+        catch { }
+    }
 }

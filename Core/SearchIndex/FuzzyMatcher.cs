@@ -18,6 +18,17 @@ public static class FuzzyMatcher
             return false;
 
         var fzf = FzfPattern.Parse(pattern);
+
+        // A pattern that's entirely a drive spec ("d:\") parses down to zero real search terms once
+        // Parse strips the prefix into TargetDrive -- meaningful for the index/path searchers (IndexV2,
+        // LiveDirectorySearcher), which track TargetDrive themselves and treat "no terms" as "list
+        // everything on that drive". This seam has no such drive-scoped listing mode: it matches
+        // free-standing text (app names, bookmark titles, ...) with no concept of a drive, so an empty
+        // term set has nothing left to compare against and must not fall into FzfPattern.TryMatchSingle's
+        // own "no term sets to check" -> true shortcut, which would otherwise match every candidate.
+        if (fzf.IsEmpty)
+            return false;
+
         if (fzf.TryMatch(text, out _, FzfScoringScheme.Default))
             return true;
 

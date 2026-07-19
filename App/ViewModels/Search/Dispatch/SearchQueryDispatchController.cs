@@ -61,6 +61,7 @@ internal sealed class SearchQueryDispatchController
             resultMapper: (fileResults, _) =>
             {
                 var results = new List<AppSearchResult>();
+                SearchResultMapper.RemoveQueriedDirectoryItself(fileResults, cleanQuery);
                 if (fileResults != null)
                 {
                     // Local (USN-indexed) and network-drive results stream in from separate,
