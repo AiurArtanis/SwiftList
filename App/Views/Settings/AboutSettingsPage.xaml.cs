@@ -73,6 +73,31 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
         }
     }
 
+    public string CliVersion
+    {
+        get
+        {
+            var dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "slf.dll");
+            if (File.Exists(dllPath))
+            {
+                try
+                {
+                    var assemblyName = System.Reflection.AssemblyName.GetAssemblyName(dllPath);
+                    var version = assemblyName.Version;
+                    if (version != null)
+                    {
+                        return string.Format(TranslationManager.Instance["About_CliVersion"], version.ToString(3));
+                    }
+                }
+                catch
+                {
+                    // Fallback
+                }
+            }
+            return string.Format(TranslationManager.Instance["About_CliVersion"], "Unknown");
+        }
+    }
+
     // The user manual link's target differs per locale (/zh-CN/ prefix), so it's derived from the
     // same translated URL string the link displays rather than a single hardcoded Uri like the
     // (locale-independent) homepage link above it.
@@ -91,6 +116,7 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
             OnPropertyChanged(nameof(AppVersion));
             OnPropertyChanged(nameof(CoreVersion));
             OnPropertyChanged(nameof(ServiceVersion));
+            OnPropertyChanged(nameof(CliVersion));
             OnPropertyChanged(nameof(UserGuideUri));
         };
     }
