@@ -64,6 +64,26 @@ public class ExplorerTracker : IDisposable
             RaiseExplorerActivated(hwnd, windowTitle.ToString(), sbClass.ToString(), false);
         }
     }
+    // Re-broadcasts whatever this tracker already believes is currently active, without re-deriving
+    // anything -- used to bring a freshly (re)connected IPC client up to date. Needed because Start()'s
+    // very first activation check runs synchronously at Hook-process startup, which routinely completes
+    // before the App has finished connecting over the pipe; that one-time startup snapshot was the only
+    // chance the App had to learn the true initial state, and HookIpcServer discards anything queued
+    // before a connection completes (see its own comment), so silently missing it left the App's mirror
+    // stuck at its all-zero/all-false defaults (e.g. IsDesktop stuck false) until the next real
+    // foreground change corrected it -- see InlineSearchWindowPositioner, whose IsDesktop branch never
+    // ran in that window, leaving the inline search window wherever it last happened to be.
+    public void PublishCurrentState()
+    {
+        if (_activeHwnd == IntPtr.Zero) return;
+        var windowTitle = new StringBuilder(256);
+        ExplorerNativeHooks.GetWindowText(_activeHwnd, windowTitle, windowTitle.Capacity);
+        var sbClass = new StringBuilder(256);
+        ExplorerNativeHooks.GetClassName(_activeHwnd, sbClass, sbClass.Capacity);
+        RaiseExplorerActivated(_activeHwnd, windowTitle.ToString(), sbClass.ToString(), IsDesktop);
+        if (!string.IsNullOrEmpty(LastPath))
+            RaisePathCaptured(LastPath, IsDesktop);
+    }
     public string? ActivePath => LastPath;
     public uint AppProcessId { get; set; }
     public event Action<IntPtr, string, string, bool>? OnExplorerActivated;

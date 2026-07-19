@@ -67,6 +67,10 @@ public sealed class HookProcess : IDisposable
 
         _ipcServer.OnStopRequested += () => Stop();
         _ipcServer.OnCommandReceived += _commandHandler.HandleAppCommand;
+        // See ExplorerTracker.PublishCurrentState's own comment: Start()'s one-time startup activation
+        // check almost always loses the race against the App actually connecting over the pipe, and
+        // that lost snapshot was the App's only chance to learn the true initial state otherwise.
+        _ipcServer.OnConnected += () => _explorerTracker?.PublishCurrentState();
     }
 
     public void RunMessageLoop()

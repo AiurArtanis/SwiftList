@@ -23,6 +23,12 @@ public sealed class HookIpcServer : IDisposable
 
     public event Action<IpcMessage>? OnCommandReceived;
 
+    // Fired once both pipes finish connecting (first connection AND every reconnect) -- after the
+    // stale-backlog drain below, so a handler's own SendMessage calls land in the channel where
+    // ProcessWriteQueueAsync will actually pick them up instead of getting wiped by that same drain.
+
+    public event Action? OnConnected;
+
     public HookIpcServer() => _sendChannel = Channel.CreateUnbounded<IpcMessage>(new UnboundedChannelOptions
     {
         SingleWriter = false,
@@ -127,6 +133,7 @@ public sealed class HookIpcServer : IDisposable
                 _eventPipe = eventPipe;
                 _cmdPipe = cmdPipe;
                 while (_sendChannel.Reader.TryRead(out _)) { }
+                OnConnected?.Invoke();
                 using var writeCts = CancellationTokenSource.CreateLinkedTokenSource(token);
 
                 var writeTask = ProcessWriteQueueAsync(eventPipe, writeCts.Token);
