@@ -54,10 +54,6 @@ public static class UiMetrics
     public const double MinScaledResultNameFontSize = 14;
     public const double MinScaledResultPathFontSize = 9;
 
-    // Fixed icon size for the inline window's own (more compact) row template
-    // (App/Resources/DataTemplates/InlineSearchResult.xaml binds its Image to this, so the two never
-    // drift apart the way the quick window's icon size and row height once did).
-    public const double BaseInlineResultIconSize = 30;
 
     // Range for the user-configurable quick-window icon size setting (General settings page). 64 stays
     // well under the 96px IShellItemImageFactory fetch size real file icons use, so it's still crisp.
@@ -178,7 +174,14 @@ public static class UiMetrics
     public static double ResultNameFontSizeSingleLine => BaseResultNameFontSize;
     public static double ResultPathFontSize => BaseResultPathFontSize;
     public static double ResultIconSize => BaseResultIconSize;
-    public static double InlineResultIconSize => BaseInlineResultIconSize;
+
+    // Fixed icon size for the inline window's own (more compact) row template
+    // (App/Resources/DataTemplates/InlineSearchResult.xaml binds its Image to this). Was a flat 30 --
+    // only 6px of slack in BaseInlineItemHeight's 36px row, versus the main window's own 42px icon
+    // getting a full 9px of slack in its 51px row. Derived with the exact same slack-budget formula
+    // (ResultRowVerticalMargin + IconRowBreathingRoom) the main window's own icon uses instead of an
+    // arbitrary constant, so the two are proportioned the same way -- font sizes untouched.
+    public static double InlineResultIconSize => BaseInlineItemHeight - ResultRowVerticalMargin - IconRowBreathingRoom;
 
     // Design height for a compact inline row before accounting for its icon (see AppSearchResult.InlineItemHeight).
     public static double BaseInlineItemHeight => Math.Round(BaseSearchResultItemHeight * 0.7);
