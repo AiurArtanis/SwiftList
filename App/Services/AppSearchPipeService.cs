@@ -154,6 +154,9 @@ public static class AppSearchPipeService
             null,
             r =>
             {
+                if (SearchResultMapper.IsQueriedDirectoryItself(r.Path, query))
+                    return;
+
                 var ranges = SearchResultWithHighlightBinarySerializer.FlattenMask(FuzzyMatcher.ComputeHighlightMask(r.Name, query));
                 writeLock.Wait();
                 try
@@ -191,6 +194,7 @@ public static class AppSearchPipeService
             null,
             bypassExclusions);
 
+        SearchResultMapper.RemoveQueriedDirectoryItself(raw, query);
         raw.Sort(new SearchResultRankComparer(SearchHistoryStore.Snapshot()));
 
         var byPath = new Dictionary<string, SearchResult>(StringComparer.OrdinalIgnoreCase);

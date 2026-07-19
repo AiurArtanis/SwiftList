@@ -190,19 +190,39 @@ public static class SearchResultMapper
     // that lists a directory's contents by path needs this same strip, not just the quick/inline windows.
     public static void RemoveQueriedDirectoryItself(List<SearchResult>? fileResults, string query)
     {
-        if (fileResults == null || string.IsNullOrWhiteSpace(query))
+        if (fileResults == null)
             return;
+
+        var normalizedQuery = GetQueriedDirectoryNormalized(query);
+        if (normalizedQuery == null)
+            return;
+
+        fileResults.RemoveAll(x => string.Equals(SearchResultHelper.NormalizePath(x.Path), normalizedQuery, StringComparison.OrdinalIgnoreCase));
+    }
+
+    // Single-result variant for streaming callers (e.g. AppSearchPipeService's per-item pipe callback)
+    // that can't buffer into a list to RemoveAll from -- same rule, applied inline before a result is
+    // ever handed to the caller.
+    public static bool IsQueriedDirectoryItself(string path, string query)
+    {
+        var normalizedQuery = GetQueriedDirectoryNormalized(query);
+        return normalizedQuery != null && string.Equals(SearchResultHelper.NormalizePath(path), normalizedQuery, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? GetQueriedDirectoryNormalized(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return null;
 
         try
         {
             var trimmed = query.Trim();
             var endsWithSeparator = trimmed.EndsWith("\\") || trimmed.EndsWith("/");
             if (trimmed.EndsWith(":\\") || trimmed.EndsWith(":/") || (endsWithSeparator && Directory.Exists(trimmed)))
-            {
-                var normalizedQuery = SearchResultHelper.NormalizePath(trimmed);
-                fileResults.RemoveAll(x => string.Equals(SearchResultHelper.NormalizePath(x.Path), normalizedQuery, StringComparison.OrdinalIgnoreCase));
-            }
+                return SearchResultHelper.NormalizePath(trimmed);
         }
         catch { }
+
+        return null;
     }
 }
