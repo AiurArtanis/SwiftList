@@ -27,11 +27,20 @@ internal sealed class PreviewFocusGuard
     [DllImport("user32.dll")] private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
 
     private const uint EVENT_OBJECT_FOCUS = 0x8005;
+    // Fires specifically when a dialog box is about to be shown -- e.g. Word's own "Enter password"
+    // prompt for an encrypted file it's asked to preview. Far more precise than inferring one from generic
+    // window-creation traffic, and (unlike EVENT_OBJECT_FOCUS below) not scoped to a short post-load grace
+    // window: a handler can show one of these at any point in its session, not just right after cold start
+    // (e.g. also while the user is actively interacting with a live Excel/Word preview).
+    private const uint EVENT_SYSTEM_DIALOGSTART = 0x0016;
     private const uint WINEVENT_OUTOFCONTEXT = 0;
 
     private WinEventDelegate? _focusHookDelegate;
     private IntPtr _hFocusHook;
     private DispatcherTimer? _focusGraceTimer;
+
+    private WinEventDelegate? _dialogHookDelegate;
+    private IntPtr _hDialogHook;
 
     // Called on WM_PARENTNOTIFY(WM_CREATE) for the host window -- the earliest reliable signal that the
     // handler's rendering window (possibly cross-process) has been attached as our child, so its PID is
@@ -43,9 +52,44 @@ internal sealed class PreviewFocusGuard
         try
         {
             PreviewHandlerInterop.GetWindowThreadProcessId(childHwnd, out var pid);
-            if (pid != 0) ArmFallbackDetector(pid);
+            if (pid == 0) return;
+            ArmFallbackDetector(pid);
+            ArmDialogWatcher(pid);
         }
         catch { }
+    }
+
+    // A handler's own popup (a password prompt, a "file in use" notice, ...) is a real top-level window of
+    // its process, not reparented under our host -- it never gets the OS foreground/focus it would in a
+    // normal standalone launch, since the process hosting it isn't the one the user is actively working in.
+    // Left alone, it just sits there invisible behind everything else, and the whole app looks hung waiting
+    // on it (issue #133) rather than showing what's actually blocking. This brings it to the front the
+    // instant it appears instead. Scoped to the handler's own PID so an unrelated app's dialog is never
+    // touched, and armed for the guard's whole lifetime (not the shorter focus-steal grace window) since a
+    // dialog can appear at any point in the session, not just right after load. The quick window's own
+    // foreground-loss hide already tolerates this process holding focus for as long as this preview host is
+    // alive (see PreviewActivationSignal), so bringing the dialog forward doesn't risk it closing itself.
+    private void ArmDialogWatcher(uint pid)
+    {
+        DisarmDialogWatcher();
+        _dialogHookDelegate = (h, evt, hwnd, idObject, idChild, thread, time) =>
+        {
+            if (hwnd == IntPtr.Zero) return;
+            PreviewHandlerInterop.GetWindowThreadProcessId(hwnd, out var dialogPid);
+            if (dialogPid != pid) return;
+            try { PreviewHandlerInterop.SetForegroundWindow(hwnd); } catch { }
+        };
+        _hDialogHook = SetWinEventHook(EVENT_SYSTEM_DIALOGSTART, EVENT_SYSTEM_DIALOGSTART, IntPtr.Zero, _dialogHookDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
+    }
+
+    private void DisarmDialogWatcher()
+    {
+        if (_hDialogHook != IntPtr.Zero)
+        {
+            UnhookWinEvent(_hDialogHook);
+            _hDialogHook = IntPtr.Zero;
+        }
+        _dialogHookDelegate = null;
     }
 
     // Some handlers (Excel especially) can still grab focus asynchronously, on their own schedule --
@@ -85,5 +129,9 @@ internal sealed class PreviewFocusGuard
         _focusGraceTimer = null;
     }
 
-    public void Dispose() => DisarmFallbackDetector();
+    public void Dispose()
+    {
+        DisarmFallbackDetector();
+        DisarmDialogWatcher();
+    }
 }
