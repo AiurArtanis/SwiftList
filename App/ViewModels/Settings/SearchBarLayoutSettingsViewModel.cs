@@ -13,7 +13,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
     private double _searchBarWidth;
     private double _searchBarHeight;
     private double _cornerRadius;
-    private double _resultIconSize;
     private bool _showClock;
     // Reset() clears the quick window's remembered screen position -- there's no bound field for it
     // (the window itself owns Left/Top), so this just stages the intent for Save() to commit.
@@ -25,7 +24,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
         _searchBarWidth = userSettings.SearchWindow.SearchBarWidth;
         _searchBarHeight = userSettings.SearchWindow.SearchBarHeight;
         _cornerRadius = userSettings.SearchWindow.CornerRadius;
-        _resultIconSize = userSettings.SearchWindow.ResultIconSize;
         _showClock = userSettings.SearchWindow.ShowClock;
     }
 
@@ -68,20 +66,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
         }
     }
 
-    public double ResultIconSize
-    {
-        get => _resultIconSize;
-        set
-        {
-            if (value < UiMetrics.MinQuickResultIconSize || value > UiMetrics.MaxQuickResultIconSize)
-            {
-                throw new ArgumentOutOfRangeException(nameof(value),
-                    $"Icon size must be between {UiMetrics.MinQuickResultIconSize} and {UiMetrics.MaxQuickResultIconSize}.");
-            }
-            SetProperty(ref _resultIconSize, value);
-        }
-    }
-
     public bool ShowClock
     {
         get => _showClock;
@@ -95,7 +79,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
         SearchBarWidth = 570;
         SearchBarHeight = 60;
         CornerRadius = 8;
-        ResultIconSize = 50;
         ShowClock = false;
         _resetPosition = true;
     }
@@ -105,7 +88,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
         _userSettings.SearchWindow.SearchBarWidth = _searchBarWidth;
         _userSettings.SearchWindow.SearchBarHeight = _searchBarHeight;
         _userSettings.SearchWindow.CornerRadius = _cornerRadius;
-        _userSettings.SearchWindow.ResultIconSize = _resultIconSize;
         _userSettings.SearchWindow.ShowClock = _showClock;
         if (_resetPosition)
         {

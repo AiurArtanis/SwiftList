@@ -6,6 +6,15 @@ public static class UiMetrics
 {
     // ── Base (design) metrics, calibrated for the default search bar height ──
     public const double DefaultSearchBarHeight = 70;
+
+    // Reference search bar height at which the Flow-pinned row metrics (icon/font/row-height, see
+    // FlowResultIconSize etc.) render at their exact literal values -- matches
+    // SearchWindowSettings.SearchBarHeight's own default (60), NOT DefaultSearchBarHeight (70, used by
+    // Scale for list items/section headers): the two constants diverged when the row metrics were
+    // pinned to Flow's literals, and reusing DefaultSearchBarHeight here would either break Flow pixel
+    // parity at the actual default settings or require also changing how list items/section headers
+    // scale, which is a separate concern.
+    public const double FlowRowReferenceSearchBarHeight = 60;
     public const double BaseSearchResultItemHeight = 51;
     public const double BaseListItemHeight = 34;
     public const double BaseSearchSectionHeaderHeight = 28;
@@ -37,10 +46,10 @@ public static class UiMetrics
     public const double BaseResultIconSize = 42; // fixed size for the main window
 
     // Flow Launcher's own literal result-row metrics (32px icon, 16px title, 13px subtitle, 58px row) --
-    // the quick window's Scaled* properties below return these directly now instead of deriving them
-    // from the user-configurable icon-size setting/search-bar-height Scale. A deliberate, temporary
-    // simplification (approved by the user) to get pixel-for-pixel parity with the reference screenshot
-    // first; reconciling this with the icon-size setting/Scale is follow-up work, not done here.
+    // the quick window's Scaled* properties below apply _flowRowScale to these (see its own comment)
+    // instead of deriving them from a separately configurable icon-size setting, so the row always keeps
+    // Flow's exact proportions at any search-bar height instead of the icon and text drifting out of
+    // ratio the way they could under the old (pre-#132) independent icon-size/Scale formulas.
     public const double FlowResultIconSize = 32;
     public const double FlowResultNameFontSize = 16;
     public const double FlowResultPathFontSize = 13;
@@ -49,16 +58,11 @@ public static class UiMetrics
     // Retained only as IconRelativeFontScale's reference point (see FlowResultIconSize above).
     public const double IconFontRatioReferenceSize = 32;
 
-    // Floor for the quick window's icon-relative font scaling (see ScaledResultNameFontSize etc.) --
-    // at the smallest configurable icon size, the raw ratio would shrink text well past legible.
+    // Floor for the quick window's Flow-pinned row text (see ScaledResultNameFontSize etc.) -- at the
+    // smallest configurable search bar height, straight proportional scaling would shrink text well
+    // past legible.
     public const double MinScaledResultNameFontSize = 14;
     public const double MinScaledResultPathFontSize = 9;
-
-
-    // Range for the user-configurable quick-window icon size setting (General settings page). 64 stays
-    // well under the 96px IShellItemImageFactory fetch size real file icons use, so it's still crisp.
-    public const double MinQuickResultIconSize = 16;
-    public const double MaxQuickResultIconSize = 64;
 
     // Range for the user-configurable QuickLook preview window size (General settings page).
     public const double MinPreviewWindowWidth = 250;
@@ -76,7 +80,7 @@ public static class UiMetrics
     public const double MaxMainWindowHeight = 1400;
 
     private static double _scale = 1.0;
-    private static double _quickResultIconSize = BaseResultIconSize;
+    private static double _flowRowScale = 1.0;
     private static double _previewWindowWidth = 400;
     private static double _previewWindowHeight = 529;
     private static double _mainWindowWidth = DefaultMainWindowWidth;
@@ -100,15 +104,10 @@ public static class UiMetrics
     public static void UpdateScaleFromSearchBarHeight(double searchBarHeight)
     {
         if (searchBarHeight > 0)
+        {
             Scale = searchBarHeight / DefaultSearchBarHeight;
-    }
-
-    /// <summary>Base icon size for the quick window's ScaledResultIconSize, before the search-bar-height
-    /// scale is applied. User-configurable (General settings page); clamped to a sane display range.</summary>
-    public static double QuickResultIconSize
-    {
-        get => _quickResultIconSize;
-        set => _quickResultIconSize = Math.Clamp(value, MinQuickResultIconSize, MaxQuickResultIconSize);
+            _flowRowScale = searchBarHeight / FlowRowReferenceSearchBarHeight;
+        }
     }
 
     /// <summary>QuickLook preview window size. User-configurable (General settings page); fixed rather
@@ -148,8 +147,6 @@ public static class UiMetrics
         var settings = UserSettings.Load();
         try { UpdateScaleFromSearchBarHeight(settings.SearchWindow.SearchBarHeight); }
         catch { /* fall back to current scale */ }
-        try { QuickResultIconSize = settings.SearchWindow.ResultIconSize; }
-        catch { /* fall back to current icon size */ }
         try { PreviewWindowWidth = settings.PreviewWindow.Width; }
         catch { /* fall back to current preview width */ }
         try { PreviewWindowHeight = settings.PreviewWindow.Height; }
@@ -188,27 +185,29 @@ public static class UiMetrics
 
     // ── Scaled metrics — consumed ONLY by the quick window (opted in via window title),
     //    so the inline/full windows never scale with the search-bar height. ──
-    //    Icon/font/row-height below are pinned to Flow Launcher's own literal values rather than derived
-    //    from the search-bar-height Scale or the user-configurable icon-size setting (see
-    //    FlowResultIconSize etc.'s own comment) -- ScaledListItemHeight/ScaledSearchSectionHeaderHeight
-    //    are unrelated rows (list items, section headers) and still scale normally.
-    public static double ScaledSearchResultItemHeight => FlowResultItemHeight;
+    //    Icon/font/row-height below all multiply Flow Launcher's own literal values (see
+    //    FlowResultIconSize etc.'s own comment) by _flowRowScale, so the whole row grows/shrinks
+    //    together as one unit -- keeping Flow's exact proportions at every search-bar height instead of
+    //    just at the default -- rather than each metric scaling off its own independent setting.
+    //    ScaledListItemHeight/ScaledSearchSectionHeaderHeight are unrelated rows (list items, section
+    //    headers) and still scale off the separate Scale factor.
+    public static double ScaledSearchResultItemHeight => Math.Round(FlowResultItemHeight * _flowRowScale);
     public static double ScaledListItemHeight => Math.Round(BaseListItemHeight * _scale);
     public static double ScaledSearchSectionHeaderHeight => Math.Round(BaseSearchSectionHeaderHeight * _scale);
 
-    public static double ScaledResultIconSize => FlowResultIconSize;
+    public static double ScaledResultIconSize => Math.Round(FlowResultIconSize * _flowRowScale);
 
     // The actual rendered height of a normal (icon+text) row once the icon-size-driven floor is
     // applied -- shared by AppSearchResult (results list) and ActionMenuItem (actions list) so their
     // rows come out pixel-identical instead of one accounting for icon overflow and the other not.
     public static double ScaledNormalRowHeight => Math.Max(ScaledSearchResultItemHeight, ScaledResultIconSize + ResultRowVerticalMargin + IconRowBreathingRoom);
 
-    // Kept only so ActionMenuItem's own icon/font scaling (ScaledIconSize etc., which multiplies its OWN
-    // base sizes by this) comes out as 1.0 -- i.e. also pinned to ITS base sizes -- while both share one
-    // formula instead of ActionMenuItem needing its own separate "pinned to Flow" special case.
+    // Kept so ActionMenuItem's own icon/font scaling (ScaledIconSize etc., which multiplies its OWN
+    // base sizes by this) tracks the same _flowRowScale-derived factor as the results row, while both
+    // share one formula instead of ActionMenuItem needing its own separate scaling logic.
     public static double IconRelativeFontScale => ScaledResultIconSize / IconFontRatioReferenceSize;
 
-    public static double ScaledResultNameFontSize => FlowResultNameFontSize;
+    public static double ScaledResultNameFontSize => Math.Max(MinScaledResultNameFontSize, FlowResultNameFontSize * _flowRowScale);
     public static double ScaledResultNameFontSizeSingleLine => ScaledResultNameFontSize;
-    public static double ScaledResultPathFontSize => FlowResultPathFontSize;
+    public static double ScaledResultPathFontSize => Math.Max(MinScaledResultPathFontSize, FlowResultPathFontSize * _flowRowScale);
 }
