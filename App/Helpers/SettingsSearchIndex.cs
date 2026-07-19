@@ -72,13 +72,6 @@ public static class SettingsSearchIndex
         new("General_HideTrayIcon", "General", vm => vm.General.SelectedTab = "System", "RowHideTrayIcon", "General_SysTitle"),
         new("General_LogLevel", "General", vm => vm.General.SelectedTab = "System", "RowLogLevel", "General_SysTitle"),
         new("General_LangSelect", "General", vm => vm.General.SelectedTab = "System", "RowLangSelect", "General_SysTitle"),
-        new("General_ThemeSelect", "General", vm => vm.General.SelectedTab = "System", "RowThemeSelect", "General_SysTitle",
-            IsVisible: vm => vm.General.Theme.IsManualThemeEnabled),
-        new("General_ThemeFollowSystem", "General", vm => vm.General.SelectedTab = "System", "RowThemeFollowSystem", "General_SysTitle"),
-        new("General_ThemeLightSelect", "General", vm => vm.General.SelectedTab = "System", "RowThemeLightSelect", "General_SysTitle",
-            IsVisible: vm => vm.General.Theme.FollowSystem),
-        new("General_ThemeDarkSelect", "General", vm => vm.General.SelectedTab = "System", "RowThemeDarkSelect", "General_SysTitle",
-            IsVisible: vm => vm.General.Theme.FollowSystem),
         new("General_LayoutTitle", "General", vm => vm.General.SelectedTab = "Layout", "TabLayout"),
         new("General_LayoutWidth", "General", vm => vm.General.SelectedTab = "Layout", "RowLayoutWidth", "General_LayoutTitle"),
         new("General_LayoutHeight", "General", vm => vm.General.SelectedTab = "Layout", "RowLayoutHeight", "General_LayoutTitle"),
@@ -94,6 +87,17 @@ public static class SettingsSearchIndex
         new("General_SearchWindowWidth", "General", vm => vm.General.SelectedTab = "SearchWindow", "RowSearchWindowWidth", "General_SearchWindowTitle"),
         new("General_SearchWindowHeight", "General", vm => vm.General.SelectedTab = "SearchWindow", "RowSearchWindowHeight", "General_SearchWindowTitle"),
         new("General_SearchWindowReset", "General", vm => vm.General.SelectedTab = "SearchWindow", "RowSearchWindowReset", "General_SearchWindowTitle"),
+
+        // Appearance
+        new("Settings_Appearance", "Appearance"),
+        new("Appearance_ModeGroupTitle", "Appearance"),
+        new("General_ThemeFollowSystem", "Appearance", TargetElementName: "RowThemeFollowSystem"),
+        new("General_ThemeSelect", "Appearance", TargetElementName: "RowThemeCards",
+            IsVisible: vm => vm.Appearance.IsManualThemeEnabled),
+        new("General_ThemeLightSelect", "Appearance", TargetElementName: "RowThemeLightCards",
+            IsVisible: vm => vm.Appearance.FollowSystem),
+        new("General_ThemeDarkSelect", "Appearance", TargetElementName: "RowThemeDarkCards",
+            IsVisible: vm => vm.Appearance.FollowSystem),
 
         // Hotkeys
         new("Settings_Hotkeys", "Hotkeys"),

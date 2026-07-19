@@ -16,6 +16,7 @@ public class ThemeSettingsViewModel : ViewModelBase
     private IReadOnlyList<ThemeOption>? _themeOptions;
     private IReadOnlyList<ThemeOption>? _lightThemeOptions;
     private IReadOnlyList<ThemeOption>? _darkThemeOptions;
+    private IReadOnlyList<ThemeCardOption>? _themeCards;
 
     public ThemeSettingsViewModel(UserSettings userSettings)
     {
@@ -39,9 +40,15 @@ public class ThemeSettingsViewModel : ViewModelBase
             _themeOptions = null;
             _lightThemeOptions = null;
             _darkThemeOptions = null;
+            // ThemeCardOption.DisplayName is also a TranslationService lookup, so the card grid needs
+            // the same invalidate-and-rebuild treatment as the combobox option lists above.
+            _themeCards = null;
             OnPropertyChanged(nameof(ThemeOptions));
             OnPropertyChanged(nameof(LightThemeOptions));
             OnPropertyChanged(nameof(DarkThemeOptions));
+            OnPropertyChanged(nameof(ThemeCards));
+            OnPropertyChanged(nameof(LightThemeCards));
+            OnPropertyChanged(nameof(DarkThemeCards));
 
             System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -64,7 +71,34 @@ public class ThemeSettingsViewModel : ViewModelBase
     public IReadOnlyList<ThemeOption> LightThemeOptions => _lightThemeOptions ??= SettingsOptionGenerator.GetThemeOptions(isDark: false);
     public IReadOnlyList<ThemeOption> DarkThemeOptions => _darkThemeOptions ??= SettingsOptionGenerator.GetThemeOptions(isDark: true);
 
+    // Card-preview equivalents of the three option lists above, for the Appearance page's card grid.
+    public IReadOnlyList<ThemeCardOption> ThemeCards => _themeCards ??= ThemeManager.Instance.GetAvailableThemes()
+        .Select(t => new ThemeCardOption(t)).OrderBy(c => c.Id).ToList();
+    public IReadOnlyList<ThemeCardOption> LightThemeCards => ThemeCards.Where(c => !c.IsDark).ToList();
+    public IReadOnlyList<ThemeCardOption> DarkThemeCards => ThemeCards.Where(c => c.IsDark).ToList();
+
     public string PreferredTheme => _userSettings.Theme;
+
+    // String-keyed mirrors of SelectedTheme/SelectedLightTheme/SelectedDarkTheme so the card grid's
+    // ListBox can two-way bind via SelectedValue/SelectedValuePath (ThemeOption is an immutable record
+    // with no settable Value, so binding straight into ".Value" isn't an option).
+    public string? SelectedThemeId
+    {
+        get => SelectedTheme?.Value;
+        set => SelectedTheme = ThemeOptions.FirstOrDefault(o => o.Value == value) ?? SelectedTheme;
+    }
+
+    public string? SelectedLightThemeId
+    {
+        get => SelectedLightTheme?.Value;
+        set => SelectedLightTheme = LightThemeOptions.FirstOrDefault(o => o.Value == value) ?? SelectedLightTheme;
+    }
+
+    public string? SelectedDarkThemeId
+    {
+        get => SelectedDarkTheme?.Value;
+        set => SelectedDarkTheme = DarkThemeOptions.FirstOrDefault(o => o.Value == value) ?? SelectedDarkTheme;
+    }
 
     // The manual theme picker only makes sense when "follow system" is off -- hidden (not just
     // greyed out) the rest of the time, since the light/dark pair takes over that role.
@@ -88,6 +122,7 @@ public class ThemeSettingsViewModel : ViewModelBase
                 }
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(PreferredTheme));
+                OnPropertyChanged(nameof(SelectedThemeId));
             }
         }
     }
@@ -137,6 +172,7 @@ public class ThemeSettingsViewModel : ViewModelBase
                 _userSettings.LightThemeId = value.Value;
                 _userSettings.Save();
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(SelectedLightThemeId));
                 if (isThemeIdChanged && _followSystem && SystemThemeWatcher.IsSystemLight)
                 {
                     ThemeManager.Instance.ApplyTheme(value.Value, saveSettings: false);
@@ -158,6 +194,7 @@ public class ThemeSettingsViewModel : ViewModelBase
                 _userSettings.DarkThemeId = value.Value;
                 _userSettings.Save();
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(SelectedDarkThemeId));
                 if (isThemeIdChanged && _followSystem && !SystemThemeWatcher.IsSystemLight)
                 {
                     ThemeManager.Instance.ApplyTheme(value.Value, saveSettings: false);

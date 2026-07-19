@@ -38,6 +38,7 @@ public class SettingsViewModel : ViewModelBase
 
         NetworkDrive = new NetworkDriveSettingsViewModel(_searchService, RefreshLists);
         General = new GeneralSettingsViewModel(_userSettings);
+        Appearance = new ThemeSettingsViewModel(_userSettings);
         Exclusions = new ExclusionSettingsViewModel(_userSettings);
         Plugins = new PluginManagementViewModel(_userSettings);
         Blacklist = new BlacklistSettingsViewModel(_userSettings);
@@ -67,6 +68,7 @@ public class SettingsViewModel : ViewModelBase
     public LocalDriveSettingsViewModel LocalDrive { get; }
     public NetworkDriveSettingsViewModel NetworkDrive { get; }
     public GeneralSettingsViewModel General { get; }
+    public ThemeSettingsViewModel Appearance { get; }
     public ExclusionSettingsViewModel Exclusions { get; }
     public PluginManagementViewModel Plugins { get; }
     public HotkeySettingsViewModel Hotkeys { get; }

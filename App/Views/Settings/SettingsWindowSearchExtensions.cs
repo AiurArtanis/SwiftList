@@ -266,6 +266,7 @@ internal static class SettingsWindowSearchExtensions
         "Service" => window.PageService,
         "Index" => window.PageIndex,
         "General" => window.PageGeneral,
+        "Appearance" => window.PageAppearance,
         "Hotkeys" => window.PageHotkeys,
         "Plugins" => window.PagePlugins,
         "History" => window.PageHistory,

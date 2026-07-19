@@ -225,52 +225,6 @@
                                   SelectedValuePath="Value"
                                   SelectedValue="{Binding General.PreferredLanguage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </Grid>
-
-                    <Grid x:Name="RowThemeSelect" Margin="0,12,0,0"
-                          Visibility="{Binding General.Theme.IsManualThemeEnabled, Converter={StaticResource BoolToVis}}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="Auto" MinWidth="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ThemeSelect]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <ComboBox Grid.Column="1"
-                                  Style="{StaticResource SettingsComboBox}"
-                                  ItemsSource="{Binding General.Theme.ThemeOptions}"
-                                  DisplayMemberPath="Label"
-                                  SelectedItem="{Binding General.Theme.SelectedTheme, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    </Grid>
-
-                    <CheckBox x:Name="RowThemeFollowSystem" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ThemeFollowSystem]}"
-                               IsChecked="{Binding General.Theme.FollowSystem, Mode=TwoWay}"
-                               Margin="0,12,0,0"/>
-
-                    <Grid x:Name="RowThemeLightSelect" Margin="0,8,0,0"
-                          Visibility="{Binding General.Theme.FollowSystem, Converter={StaticResource BoolToVis}}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="Auto" MinWidth="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ThemeLightSelect]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <ComboBox Grid.Column="1"
-                                  Style="{StaticResource SettingsComboBox}"
-                                  ItemsSource="{Binding General.Theme.LightThemeOptions}"
-                                  DisplayMemberPath="Label"
-                                  SelectedItem="{Binding General.Theme.SelectedLightTheme, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    </Grid>
-
-                    <Grid x:Name="RowThemeDarkSelect" Margin="0,8,0,0"
-                          Visibility="{Binding General.Theme.FollowSystem, Converter={StaticResource BoolToVis}}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="Auto" MinWidth="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ThemeDarkSelect]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <ComboBox Grid.Column="1"
-                                  Style="{StaticResource SettingsComboBox}"
-                                  ItemsSource="{Binding General.Theme.DarkThemeOptions}"
-                                  DisplayMemberPath="Label"
-                                  SelectedItem="{Binding General.Theme.SelectedDarkTheme, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    </Grid>
                 </StackPanel>
             </Border>
             </StackPanel>

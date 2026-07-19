@@ -156,6 +156,12 @@
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      ScrollViewer.VerticalScrollBarVisibility="Disabled"
                                      SelectionChanged="LstSectionsBottom_SelectionChanged">
+                                <ListBoxItem Tag="Appearance">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE790;" FontFamily="Segoe MDL2 Assets" Margin="0,0,12,0"/>
+                                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Appearance]}"/>
+                                    </StackPanel>
+                                </ListBoxItem>
                                 <ListBoxItem Tag="About">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" Margin="0,0,12,0"/>
@@ -229,6 +235,7 @@
                         <settings:ServiceSettingsPage x:Name="PageService" Visibility="Collapsed"/>
                         <settings:IndexSettingsPage x:Name="PageIndex"/>
                         <settings:GeneralSettingsPage x:Name="PageGeneral" Visibility="Collapsed"/>
+                        <settings:AppearanceSettingsPage x:Name="PageAppearance" Visibility="Collapsed"/>
                         <settings:HotkeySettingsPage x:Name="PageHotkeys" Visibility="Collapsed"
                                                       DataContext="{Binding Hotkeys}"/>
                         <plugins:PluginManagementSettingsPage x:Name="PagePlugins" Visibility="Collapsed"

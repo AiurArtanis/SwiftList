@@ -37,7 +37,6 @@ public class GeneralSettingsViewModel : ViewModelBase
         Layout = new SearchBarLayoutSettingsViewModel(userSettings);
         PreviewWindow = new PreviewWindowSettingsViewModel(userSettings);
         MainWindow = new MainWindowSettingsViewModel(userSettings);
-        Theme = new ThemeSettingsViewModel(userSettings);
 
         _startWithWindows = userSettings.StartWithWindows;
         _autoCheckUpdates = userSettings.AutoCheckUpdates;
@@ -197,5 +196,4 @@ public class GeneralSettingsViewModel : ViewModelBase
     public SearchBarLayoutSettingsViewModel Layout { get; }
     public PreviewWindowSettingsViewModel PreviewWindow { get; }
     public MainWindowSettingsViewModel MainWindow { get; }
-    public ThemeSettingsViewModel Theme { get; }
 }

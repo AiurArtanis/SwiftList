@@ -140,6 +140,7 @@ public partial class SettingsWindow : Window
 
         PageIndex.Visibility = tag == "Index" ? Visibility.Visible : Visibility.Collapsed;
         PageGeneral.Visibility = tag == "General" ? Visibility.Visible : Visibility.Collapsed;
+        PageAppearance.Visibility = tag == "Appearance" ? Visibility.Visible : Visibility.Collapsed;
         PageHotkeys.Visibility = tag == "Hotkeys" ? Visibility.Visible : Visibility.Collapsed;
         PagePlugins.Visibility = tag == "Plugins" ? Visibility.Visible : Visibility.Collapsed;
         PageHistory.Visibility = tag == "History" ? Visibility.Visible : Visibility.Collapsed;
