@@ -30,11 +30,11 @@ picker and the "follow system light/dark setting" option.
 Customizes the size, corner rounding, and on-screen position of the quick search bar:
 
 - **Search Bar Width (px)** — range 300–1200px, default 570px.
-- **Search Bar Height (px)** — range 45–120px, default 55px. This one number also drives the
+- **Search Bar Height (px)** — range 45–120px, default 60px. This one number also drives the
   overall UI scale factor (`height / 70`) for result-row icons and fonts, so a taller search bar
   scales the whole result list up with it.
 - **Corner Radius (px)** — range 0–50px, default 8px.
-- **Result Icon Size (px)** — range 16–64px, default 55px. Result name/path font size scales with
+- **Result Icon Size (px)** — range 16–64px, default 50px. Result name/path font size scales with
   this (with a legibility floor), independent of the search bar height above.
 - **Show clock in search box** — checkbox, off by default. While the search box is empty, replaces
   the usual "Type to search..." placeholder text with the current date, day of week, and time

@@ -87,10 +87,10 @@ public class FavoriteItemSetting
 public class SearchWindowSettings
 {
     public double SearchBarWidth { get; set; } = 570;
-    public double SearchBarHeight { get; set; } = 55;
+    public double SearchBarHeight { get; set; } = 60;
     public double CornerRadius { get; set; } = 8;
     // Base result-icon size for the quick window only (see UiMetrics); other windows use a fixed size.
-    public double ResultIconSize { get; set; } = 55;
+    public double ResultIconSize { get; set; } = 50;
     public double? Left { get; set; }
     public double? Top { get; set; }
     // Replaces the quick window's empty-state placeholder text with date/time/day-of-week (see #101).
