@@ -136,7 +136,7 @@
                          it sizes to its full natural width) and MarqueeBehavior slides it left/right
                          whenever that natural width overflows the available column: same pattern as
                          the result rows' own name text below. -->
-                    <ScrollViewer Grid.Column="1" Background="Transparent" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False"
+                    <ScrollViewer Grid.Column="1" Margin="0,0,12,0" Background="Transparent" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False"
                                   local:ScrollViewerHelper.BubbleMouseWheel="True">
                         <TextBlock x:Name="TxtActionsTarget" Text="" Foreground="{DynamicResource TextPrimary}" FontSize="12" VerticalAlignment="Center"
                                    helpers:MarqueeBehavior.EnableMarquee="True"/>
