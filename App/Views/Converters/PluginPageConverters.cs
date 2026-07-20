@@ -138,14 +138,3 @@ public class ReferenceEqualsConverter : IMultiValueConverter
     public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
         => throw new NotImplementedException();
 }
-
-/// <summary>True if any bound value is a bool true, used to OR together multiple conditions that
-/// should independently keep a single DataTrigger active (e.g. "mouse over OR menu open").</summary>
-public class BooleanOrConverter : IMultiValueConverter
-{
-    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
-        => values.Any(v => v is bool b && b);
-
-    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-        => throw new NotImplementedException();
-}

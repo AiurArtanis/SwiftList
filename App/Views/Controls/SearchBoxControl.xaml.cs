@@ -18,6 +18,11 @@ public partial class SearchBoxControl : UserControl
     // meaningful when IsIconClickable is set -- see that property's own comment.
     public event Action<int, int>? IconLeftClicked;
 
+    // Screen-space (not element-relative) so a real drag's own re-layout of this control underneath the
+    // cursor can't skew the distance measurement mid-gesture.
+    private System.Windows.Point? _iconPressScreenPoint;
+    private bool _iconDragStarted;
+
     private void Icon_MouseRightButtonUp(object sender, MouseButtonEventArgs e) => IconRightClicked?.Invoke();
 
     // Marks the press handled so it never bubbles up to a hosting window's own MouseLeftButtonDown
@@ -26,13 +31,57 @@ public partial class SearchBoxControl : UserControl
     // it ever reaches this control -- so without this, a plain click on a clickable icon just silently
     // starts (and instantly ends) a drag instead of registering as a click. Left alone when the icon
     // isn't clickable, so windows that never opted in keep whatever click-to-drag behavior they had.
+    //
+    // When IsIconDraggable is ALSO set (the quick window: its logo still drags the window, same as
+    // before it was clickable at all), capture the mouse and wait to see whether the gesture turns into
+    // a real drag before deciding -- see Icon_MouseMove.
     private void Icon_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (IsIconClickable) e.Handled = true;
+        if (!IsIconClickable) return;
+        e.Handled = true;
+
+        if (IsIconDraggable && sender is IInputElement el)
+        {
+            _iconDragStarted = false;
+            _iconPressScreenPoint = el is System.Windows.Media.Visual v ? v.PointToScreen(e.GetPosition(el)) : (System.Windows.Point?)null;
+            Mouse.Capture(el);
+        }
+    }
+
+    private void Icon_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!IsIconDraggable || _iconDragStarted || _iconPressScreenPoint == null || e.LeftButton != MouseButtonState.Pressed)
+            return;
+        if (sender is not System.Windows.Media.Visual visual) return;
+
+        var current = visual.PointToScreen(e.GetPosition((IInputElement)sender));
+        var delta = current - _iconPressScreenPoint.Value;
+        if (Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        // Real drag: hand off to the window's own move loop. DragMove owns mouse capture itself (and
+        // blocks until the button comes up), so this control's own capture has to be released first --
+        // otherwise the two fight over who's tracking the mouse and the window either doesn't move at all
+        // or stops following partway through.
+        // Left _iconDragStarted true rather than resetting here: DragMove blocks until the button comes
+        // up but doesn't reliably deliver a MouseLeftButtonUp back to this element afterward, so
+        // Icon_MouseLeftButtonUp can't always be trusted to see this and suppress the click that would
+        // otherwise fire right after a drag. Icon_MouseLeftButtonDown already resets this at the start of
+        // the NEXT press, which is the only place a stale value could otherwise leak into.
+        _iconDragStarted = true;
+        if (sender is IInputElement el) el.ReleaseMouseCapture();
+        Window.GetWindow(this)?.DragMove();
     }
 
     private void Icon_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        if (sender is IInputElement el) el.ReleaseMouseCapture();
+        var wasDrag = _iconDragStarted;
+        _iconDragStarted = false;
+        _iconPressScreenPoint = null;
+        if (wasDrag) return;
+
         if (!IsIconClickable || IconLeftClicked == null) return;
         var screenPoint = ((System.Windows.Media.Visual)sender).PointToScreen(e.GetPosition((IInputElement)sender));
         IconLeftClicked.Invoke((int)screenPoint.X, (int)screenPoint.Y);
@@ -134,6 +183,20 @@ public partial class SearchBoxControl : UserControl
     {
         get => (string?)GetValue(IconClickHintProperty);
         set => SetValue(IconClickHintProperty, value);
+    }
+
+    // IsIconDraggable DependencyProperty: only the quick window sets this -- its logo already moves the
+    // window on a plain drag, and this lets that keep working alongside IconLeftClicked (a real drag vs.
+    // a click that opens a menu are told apart by movement distance; see Icon_MouseMove). Windows with no
+    // drag behavior on their icon (the inline window) leave this false, so a press-release always reads
+    // as a click with no distance-threshold wait.
+    public static readonly DependencyProperty IsIconDraggableProperty = DependencyProperty.Register(
+        nameof(IsIconDraggable), typeof(bool), typeof(SearchBoxControl), new PropertyMetadata(false));
+
+    public bool IsIconDraggable
+    {
+        get => (bool)GetValue(IsIconDraggableProperty);
+        set => SetValue(IsIconDraggableProperty, value);
     }
 
     // SearchText DependencyProperty

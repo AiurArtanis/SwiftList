@@ -23,7 +23,7 @@
             <!-- Left Icon Grid (Visible only when IsIconOnLeft is True) -->
             <Grid Grid.Column="0" Margin="0,0,11,0" VerticalAlignment="Center"
                   MouseRightButtonUp="Icon_MouseRightButtonUp"
-                  MouseLeftButtonDown="Icon_MouseLeftButtonDown" MouseLeftButtonUp="Icon_MouseLeftButtonUp"
+                  MouseLeftButtonDown="Icon_MouseLeftButtonDown" MouseLeftButtonUp="Icon_MouseLeftButtonUp" MouseMove="Icon_MouseMove"
                   ToolTip="{Binding IconClickHint, ElementName=root}">
                 <Grid.Style>
                     <Style TargetType="Grid">
@@ -74,7 +74,11 @@
                                         <StopStoryboard BeginStoryboardName="LeftLogoBreathe"/>
                                         <BeginStoryboard>
                                             <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.2"/>
+                                                <!-- FillBehavior="Stop": the default (HoldEnd) would keep this animation
+                                                     locking Opacity at 0.5 forever once it finishes, permanently masking
+                                                     the hover-highlight trigger below (Setter-based values never win over
+                                                     a still-holding animation) even after the mouse is back over the icon. -->
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0.5" Duration="0:0:0.2" FillBehavior="Stop"/>
                                             </Storyboard>
                                         </BeginStoryboard>
                                     </DataTrigger.ExitActions>
@@ -174,7 +178,7 @@
             <!-- Right Icon Grid (Visible only when IsIconOnLeft is False) -->
             <Grid Grid.Column="3" Margin="11,0,0,0" VerticalAlignment="Center"
                   MouseRightButtonUp="Icon_MouseRightButtonUp"
-                  MouseLeftButtonDown="Icon_MouseLeftButtonDown" MouseLeftButtonUp="Icon_MouseLeftButtonUp"
+                  MouseLeftButtonDown="Icon_MouseLeftButtonDown" MouseLeftButtonUp="Icon_MouseLeftButtonUp" MouseMove="Icon_MouseMove"
                   ToolTip="{Binding IconClickHint, ElementName=root}">
                 <Grid.Style>
                     <Style TargetType="Grid">
@@ -223,7 +227,8 @@
                                         <StopStoryboard BeginStoryboardName="RightLogoBreathe"/>
                                         <BeginStoryboard>
                                             <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0.6" Duration="0:0:0.2"/>
+                                                <!-- FillBehavior="Stop": see the left-icon block's identical fix. -->
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0.6" Duration="0:0:0.2" FillBehavior="Stop"/>
                                             </Storyboard>
                                         </BeginStoryboard>
                                     </DataTrigger.ExitActions>

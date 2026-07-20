@@ -4,7 +4,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:SwiftList.App"
         xmlns:services="clr-namespace:SwiftList.App.Services"
-        xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"
         Title="SwiftList"
         SizeToContent="WidthAndHeight"
         WindowStyle="None"
@@ -19,89 +18,6 @@
         Deactivated="Window_Deactivated"
         PreviewKeyDown="Window_PreviewKeyDown">
 
-    <Window.Resources>
-        <conv:BooleanOrConverter x:Key="BooleanOrConverter"/>
-        <!-- Floating circle button style with hover & press states + premium shadow. Fill/border use
-             Card* so the button blends with the panel it floats next to instead of reading as its own
-             separate colored dot (tried BadgeBackground first: even the built-in themes' neutral gray
-             badge is noticeably darker than a white Light-theme panel and still stood out). The icon
-             uses TextSecondary rather than IconMutedBrush: IconMutedBrush is deliberately a
-             low-contrast/de-emphasized tone in some themes (e.g. Cyberpunk's is nearly invisible
-             against its own near-black CardBackground), while TextSecondary is guaranteed legible
-             against that theme's own background since it's the same color used for body text
-             everywhere else. Accent color still shows up, just only as the hover-state border. -->
-        <Style x:Key="FloatingCircleButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource CardBackground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <!-- Hidden until the pointer is somewhere over the window's visible surface (RootGrid's
-                 IsMouseOver only turns true over hit-testable descendants, namely the card and this
-                 button itself, since the Grid has no Background of its own, so the transparent margin
-                 around the card is correctly excluded without any extra hit-test region bookkeeping).
-                 Starts non-hit-testable so the hidden button can't swallow clicks meant for the card
-                 underneath it before the pointer has actually arrived; the trigger below re-enables it
-                 together with the fade so it's only clickable once actually visible. -->
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="IsHitTestVisible" Value="False"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Border"
-                                CornerRadius="14.5"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                SnapsToDevicePixels="True">
-                            <Border.Effect>
-                                <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.15" Color="{DynamicResource ShadowColor}"/>
-                            </Border.Effect>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource HoverBackground}"/>
-                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.7"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <!-- Visible once the pointer has stayed over the window for IsMenuButtonHoverActive's
-                     debounce delay (see QuickSearchWindow.xaml.cs), or this button's own menu is open:
-                     the latter keeps BtnMenu from fading out from under an open menu once the pointer
-                     leaves the window's surface to click one of the popup's items (see QuickSearchWindow's
-                     IsMenuOpen property, set around ShowMenuAt). -->
-                <DataTrigger Value="True">
-                    <DataTrigger.Binding>
-                        <MultiBinding Converter="{StaticResource BooleanOrConverter}">
-                            <Binding ElementName="RootWindow" Path="IsMenuButtonHoverActive"/>
-                            <Binding ElementName="RootWindow" Path="IsMenuOpen"/>
-                        </MultiBinding>
-                    </DataTrigger.Binding>
-                    <Setter Property="IsHitTestVisible" Value="True"/>
-                    <DataTrigger.EnterActions>
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.15"/>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </DataTrigger.EnterActions>
-                    <DataTrigger.ExitActions>
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15"/>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </DataTrigger.ExitActions>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-    </Window.Resources>
 
     <Grid x:Name="RootGrid">
         <Border Margin="24,40,24,24" CornerRadius="{Binding WindowCornerRadius}" Background="{DynamicResource CardBackground}"
@@ -242,26 +158,5 @@
         </Grid>
             </Border>
         </Border>
-
-    <!-- Floating menu button: same menu the tray icon's right-click shows (Show Main Window/Settings/
-         etc.), anchored to this button instead of the tray icon's dummy-window+mouse-point placement.
-         "Show Main Window" from here additionally carries over whatever query is currently typed:
-         see BtnMenu_Click / TrayIconService.ShowMenuAt. -->
-    <Button x:Name="BtnMenu"
-            Style="{StaticResource FloatingCircleButtonStyle}"
-            Width="29"
-            Height="29"
-            Margin="0,32,16,0"
-            Padding="0"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Top"
-            ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[QuickSearch_TrayMenu]}">
-        <Viewbox Width="16" Height="16" Opacity="0.85">
-            <Canvas Width="24" Height="24">
-                <Path Data="M4 5h16v2H4V5zM4 11h16v2H4v-2zM4 17h16v2H4v-2z"
-                      Fill="{DynamicResource TextSecondary}"/>
-            </Canvas>
-        </Viewbox>
-    </Button>
 </Grid>
 </Window>

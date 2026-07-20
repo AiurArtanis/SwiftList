@@ -31,36 +31,6 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     // Must match QuickSearchWindow.xaml's root Border Margin ("24,40,24,24").
     public Thickness VisibleContentInset => new(24, 40, 24, 24);
 
-    // Backs FloatingCircleButtonStyle's visibility trigger alongside RootGrid.IsMouseOver, so BtnMenu
-    // stays visible for as long as its own menu is open even after the pointer leaves the window's
-    // surface to click an item in the popup (which would otherwise read as RootGrid.IsMouseOver
-    // going false and fade the button out from under an open menu).
-    public static readonly DependencyProperty IsMenuOpenProperty =
-        DependencyProperty.Register(nameof(IsMenuOpen), typeof(bool), typeof(QuickSearchWindow), new PropertyMetadata(false));
-
-    public bool IsMenuOpen
-    {
-        get => (bool)GetValue(IsMenuOpenProperty);
-        set => SetValue(IsMenuOpenProperty, value);
-    }
-
-    // Gates FloatingCircleButtonStyle's visibility trigger instead of RootGrid.IsMouseOver directly:
-    // only flips true once the pointer has stayed over the window for MenuButtonHoverDelay, so a quick
-    // pass-through (mouse crossing the window on its way somewhere else) never shows the button at all,
-    // rather than flashing it in and immediately back out. Leaving still clears it -- and cancels any
-    // still-pending timer -- immediately, so hiding is never delayed, only showing.
-    public static readonly DependencyProperty IsMenuButtonHoverActiveProperty =
-        DependencyProperty.Register(nameof(IsMenuButtonHoverActive), typeof(bool), typeof(QuickSearchWindow), new PropertyMetadata(false));
-
-    public bool IsMenuButtonHoverActive
-    {
-        get => (bool)GetValue(IsMenuButtonHoverActiveProperty);
-        set => SetValue(IsMenuButtonHoverActiveProperty, value);
-    }
-
-    private static readonly TimeSpan MenuButtonHoverDelay = TimeSpan.FromMilliseconds(200);
-    private DispatcherTimer? _menuButtonHoverTimer;
-
     public QuickSearchWindow()
     {
         InitializeComponent();
@@ -130,50 +100,16 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     {
         _menuPresenter = new ShellMenuPresenter(this);
         _trayService = new TrayIconService(_viewModel, ShowWindow, ToggleVisibility);
-        _trayService.MenuClosed += () =>
-        {
-            IsMenuOpen = false;
-
-            // The popup that just closed is its own top-level window; while it covered BtnMenu's
-            // screen position, the pointer never actually left this window's surface but Windows still
-            // delivered a real MouseLeave/MouseEnter pair to it anyway, which restarted the hover-intent
-            // timer above independently of this menu-close event. If that timer hasn't finished yet
-            // when the menu closes (e.g. the user closed it by clicking straight into the search box,
-            // which both dismisses the menu and re-enters this window's surface at nearly the same
-            // moment), IsMenuButtonHoverActive is still false here: the OR condition drops the button
-            // out for an instant, then the still-ticking timer flips it back true a moment later -- a
-            // spurious vanish-then-reappear right as the menu closes. Resolve it synchronously against
-            // the pointer's real current position instead of leaving the outcome to that race.
-            _menuButtonHoverTimer?.Stop();
-            _menuButtonHoverTimer = null;
-            IsMenuButtonHoverActive = RootGrid.IsMouseOver;
-        };
 
         // Wire up event handlers to subcontrols
 
-        BtnMenu.Click += BtnMenu_Click;
-        RootGrid.MouseEnter += (s, e) =>
-        {
-            _menuButtonHoverTimer?.Stop();
-            _menuButtonHoverTimer = new DispatcherTimer { Interval = MenuButtonHoverDelay };
-            _menuButtonHoverTimer.Tick += (s2, e2) =>
-            {
-                _menuButtonHoverTimer!.Stop();
-                IsMenuButtonHoverActive = true;
-            };
-            _menuButtonHoverTimer.Start();
-        };
-        RootGrid.MouseLeave += (s, e) =>
-        {
-            _menuButtonHoverTimer?.Stop();
-            _menuButtonHoverTimer = null;
-            IsMenuButtonHoverActive = false;
-        };
         SearchBox.IconRightClicked += _controller.ResetPosition;
-        // Not IsIconClickable: the logo already has a job here (left-click drags the window, via
-        // Border_MouseLeftButtonDown/DragMove below), so it can't also open the tray menu on left-click
-        // without the two fighting over the same gesture. Tooltip-only hint, no hover highlight/hand
-        // cursor -- those would imply a click does something beyond what it already does.
+        // IsIconDraggable keeps the logo's existing "drag moves the window" behavior working alongside
+        // IconLeftClicked: SearchBoxControl tells a real drag apart from a plain click by movement
+        // distance (see its own Icon_MouseMove), so this needs BOTH flags rather than picking one.
+        SearchBox.IconLeftClicked += (_, _) => ShowTrayMenu();
+        SearchBox.IsIconClickable = true;
+        SearchBox.IsIconDraggable = true;
         SearchBox.IconClickHint = TranslationManager.Instance["QuickSearch_LogoDragResetHint"];
         LstResults.PreviewMouseLeftButtonUp += (s, e) => _resultExecutor.HandlePreviewMouseLeftButtonUp(e);
         LstResults.PreviewMouseRightButtonUp += (s, e) => _resultExecutor.HandlePreviewMouseRightButtonUp(e);
@@ -282,8 +218,9 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     // ==========================================
 
     // Called by GeneralSettingsViewModel.Apply() when the "hide tray icon" setting changes, so the
-    // real NotifyIcon updates live without needing a restart. BtnMenu itself is unaffected by this
-    // setting -- it's a permanent, always-visible entry point regardless of the tray icon's state.
+    // real NotifyIcon updates live without needing a restart. The search box logo's own menu (see
+    // ShowTrayMenu) is unaffected by this setting -- it's a permanent, always-visible entry point
+    // regardless of the tray icon's state.
     public void ApplyTrayIconVisibility(bool hideTrayIcon) => _trayService?.SetTrayIconVisible(!hideTrayIcon);
 
     public void ShowWindow() => _controller.ShowWindow(null);
@@ -314,10 +251,10 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
             foreach (Window owned in OwnedWindows)
                 if (owned.IsVisible) return;
 
-            // If activation moved to one of our own other windows (e.g. Settings/About opened via
-            // BtnMenu's menu), restoring foreground to whatever was active before this window was
-            // shown would immediately steal it right back off that window. Only restore focus when
-            // the user has actually left the app entirely.
+            // If activation moved to one of our own other windows (e.g. Settings/About opened via the
+            // search box logo's own menu), restoring foreground to whatever was active before this
+            // window was shown would immediately steal it right back off that window. Only restore focus
+            // when the user has actually left the app entirely.
             var movedToOwnWindow = false;
             foreach (Window w in System.Windows.Application.Current.Windows)
                 if (w != this && w.IsActive) { movedToOwnWindow = true; break; }
@@ -341,17 +278,14 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e) => _inputHandler.HandleWindowPreviewKeyDown(e);
 
-    private void BtnMenu_Click(object sender, RoutedEventArgs e) => ShowTrayMenu();
-
-    // Shared by the floating menu button and the search box logo's own left-click (see SearchBox.
-    // IconLeftClicked wiring in the constructor) -- both open the exact same tray menu, anchored at
-    // BtnMenu's own position regardless of which one triggered it, so the menu doesn't jump around
-    // depending on how it was opened.
+    // The search box logo's own left-click (see SearchBox.IconLeftClicked wiring in the constructor)
+    // opens the same menu the tray icon's right-click shows, anchored at the cursor rather than the tray
+    // icon's dummy-window+mouse-point placement. "Show Main Window" from here additionally carries over
+    // whatever query is currently typed.
     private void ShowTrayMenu()
     {
         var queryText = (IsInActionsMode && _menuPresenter != null) ? _menuPresenter.SavedSearchQuery : TxtSearch.Text;
-        IsMenuOpen = true;
-        _trayService?.ShowMenuAt(BtnMenu, () => FileExecutor.OpenFileOrFolder("__SHOW_MORE__", queryText, HideWindowNoRestore));
+        _trayService?.ShowMenuAt(RootGrid, () => FileExecutor.OpenFileOrFolder("__SHOW_MORE__", queryText, HideWindowNoRestore));
     }
 
     private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
