@@ -76,14 +76,33 @@ public static class InlineSearchNavigator
         if (!asAdmin && isDir.HasValue && path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero && App.HookClient?.IsConnected == true)
         {
             window.Manager.IsExecuting = true;
-            if (InlineAdapterIpcCoordinator.ExecuteItem(tracker.ActiveHwnd, path, isDir.Value, window.SearchText, App.HookClient.SendMessage))
+            if (InlineAdapterIpcCoordinator.ExecuteItem(tracker.ActiveHwnd, path, isDir.Value, window.SearchText, App.HookClient.SendMessage, out var lateResult))
             {
                 window.HideWindow();
                 return;
             }
 
-            window.Manager.IsExecuting = false;
+            // Timed out without a confirmed result -- some adapters make blocking calls with no timeout of
+            // their own (e.g. Total Commander's SendMessage), so the Hook-side call can still legitimately
+            // be in flight rather than genuinely dead. Falling straight into the fallback chain below used
+            // to be able to race that: for a file, the fallback launches/opens it directly, and the adapter
+            // call can then finish a moment later and ALSO navigate-and-select it in the host app. See
+            // InlineAdapterIpcCoordinator.RunAfterLateResultAsync -- also used by the Quick Navigation menu
+            // for the identical race -- for why waiting on the same in-flight call a bit longer, off the UI
+            // thread, closes that window without blocking the caller. Its continuations resume back on this
+            // UI thread automatically via WPF's SynchronizationContext, so touching window/UI state here is safe.
+            _ = InlineAdapterIpcCoordinator.RunAfterLateResultAsync(lateResult,
+                onSuccess: () => { window.Manager.IsExecuting = false; window.HideWindow(); },
+                onFallback: () => { window.Manager.IsExecuting = false; window.RunFallbackChain(path, asAdmin, isDir); });
+            return;
         }
+
+        window.RunFallbackChain(path, asAdmin, isDir);
+    }
+
+    private static void RunFallbackChain(this SwiftList.App.InlineSearchWindow window, string path, bool asAdmin, bool? isDir)
+    {
+        var tracker = window.Manager.ExplorerTracker;
 
         if (path != "__SHOW_MORE__" && tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
         {

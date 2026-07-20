@@ -77,37 +77,54 @@ public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
             var isDesktop = className.Equals("Progman", StringComparison.OrdinalIgnoreCase) ||
 
                              className.Equals("WorkerW", StringComparison.OrdinalIgnoreCase);
-            if (isDir && !isDesktop)
+
+            // Land on the item -- navigate into a folder, or navigate to a file's parent and select it --
+            // rather than running it, matching every other file-manager adapter (Total Commander, Directory
+            // Opus, XYplorer, ...), none of which ever launch a file here either. TryLocateInExistingExplorer
+            // already handles both cases identically (targetFolder = path for a folder, its parent for a file).
+            if (!isDesktop && TryLocateInExistingExplorer(cleanPath, isDir, hwnd))
             {
-                if (TryLocateInExistingExplorer(cleanPath, isDir, hwnd))
-                {
-                    return true;
-                }
+                return true;
             }
 
-            var startInfo = new ProcessStartInfo
+            if (isDir)
             {
-                FileName = cleanPath,
-                UseShellExecute = true
-
-            };
-            if (!isDir)
-            {
-                var workingDirectory = Path.GetDirectoryName(cleanPath);
-                if (!string.IsNullOrWhiteSpace(workingDirectory))
-                {
-                    startInfo.WorkingDirectory = workingDirectory;
-                }
+                // No existing window to reuse (or it's the desktop) -- ShellExecute on a folder just opens/
+                // navigates into it, same net effect as the locate call above would have had.
+                Process.Start(new ProcessStartInfo { FileName = cleanPath, UseShellExecute = true });
+                return true;
             }
 
-            Process.Start(startInfo);
-            return true;
+            // A file must never be launched here -- fall back to the shell's own "open/reuse an Explorer
+            // window with this item selected" instead of ProcessStartInfo, which would run it.
+            return LocateViaShell(cleanPath);
         }
 
         catch { }
 
         return false;
     }
+
+    private static bool LocateViaShell(string path)
+    {
+        try
+        {
+            if (SHParseDisplayName(path, IntPtr.Zero, out var pidl, 0, out _) == 0)
+            {
+                SHOpenFolderAndSelectItems(pidl, 0, null, 0);
+                Marshal.FreeCoTaskMem(pidl);
+                return true;
+            }
+        }
+        catch { }
+        return false;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern int SHParseDisplayName(string name, IntPtr bindingContext, out IntPtr pidl, uint sfgaoIn, out uint psfgaoOut);
+
+    [DllImport("shell32.dll")]
+    private static extern int SHOpenFolderAndSelectItems(IntPtr pidlFolder, uint cidl, IntPtr[]? apidl, uint dwFlags);
 
     public void OnSelectionChanged(IntPtr hwnd, string path)
     {

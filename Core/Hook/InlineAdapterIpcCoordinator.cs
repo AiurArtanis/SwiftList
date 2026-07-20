@@ -25,13 +25,20 @@ public static class InlineAdapterIpcCoordinator
     // exist" from inside the Hook. Baked into the path itself (a trailing separator marks a directory,
     // matching Path.EndsInDirectorySeparator) rather than a new IpcMessage field, since every adapter reads
     // path as a plain string already and this needs no protocol/interface change.
-    public static bool ExecuteItem(IntPtr hwnd, string path, bool isDir, string searchInput, Action<IpcMessage> sendMsg)
+    //
+    // A `false` return here means "no confirmed success within the 1s UI-facing wait", not "confirmed
+    // failure" -- some adapters make blocking calls with no timeout of their own (e.g. Total Commander's
+    // SendMessage, see InlineAdapterCommandHandler), so the Hook-side call can legitimately still be in
+    // flight when this gives up. <paramref name="lateResult"/> lets a caller that's about to treat a
+    // timeout as a real failure (e.g. falling back to Process.Start) wait a bit longer off the UI thread
+    // first, so a slow-but-eventually-successful call and that fallback can't both fire for the same item.
+    public static bool ExecuteItem(IntPtr hwnd, string path, bool isDir, string searchInput, Action<IpcMessage> sendMsg, out Task<bool> lateResult)
     {
         var normalizedPath = NormalizePath(path, isDir);
 
         lock (_lock)
         {
-            using var evt = new AutoResetEvent(false);
+            var evt = new AutoResetEvent(false);
             var requestId = ++_nextRequestId;
             _pendingRequestId = requestId;
             _executeItemEvent = evt;
@@ -39,7 +46,27 @@ public static class InlineAdapterIpcCoordinator
 
             sendMsg(new IpcMessage { Id = IpcMessageId.ExecuteInlineItem, Hwnd = hwnd.ToInt64(), StringVal1 = normalizedPath, StringVal2 = searchInput, IntVal = requestId });
 
-            return evt.WaitOne(1000) && _executeItemResult;
+            if (evt.WaitOne(1000))
+            {
+                lateResult = Task.FromResult(_executeItemResult);
+                evt.Dispose();
+                return _executeItemResult;
+            }
+
+            // Handed off to a background wait rather than disposed here -- SetExecuteItemResult may still
+            // set it from the IPC receive thread once the slow call actually finishes.
+            lateResult = Task.Run(() =>
+            {
+                try
+                {
+                    return evt.WaitOne(4000) && requestId == _pendingRequestId && _executeItemResult;
+                }
+                finally
+                {
+                    evt.Dispose();
+                }
+            });
+            return false;
         }
     }
 
@@ -58,5 +85,17 @@ public static class InlineAdapterIpcCoordinator
         if (requestId != _pendingRequestId) return; // stale reply for a call we already gave up on
         _executeItemResult = result;
         try { _executeItemEvent?.Set(); } catch { }
+    }
+
+    /// <summary>
+    /// Waits on the <paramref name="lateResult"/> task from a timed-out <see cref="ExecuteItem"/> call and
+    /// runs exactly one of the two continuations depending on whether the in-flight Hook-side call
+    /// eventually confirmed success -- shared by every caller (Quick Navigation menu, inline search's own
+    /// Enter-to-execute) that would otherwise need its own copy of "wait a bit longer, off the UI thread,
+    /// before treating a timeout as a real failure and running some other fallback".
+    /// </summary>
+    public static async Task RunAfterLateResultAsync(Task<bool> lateResult, Action onSuccess, Action onFallback)
+    {
+        if (await lateResult) onSuccess(); else onFallback();
     }
 }

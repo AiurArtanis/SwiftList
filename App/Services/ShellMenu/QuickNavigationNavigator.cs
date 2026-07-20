@@ -48,20 +48,46 @@ public static class QuickNavigationNavigator
         // Total Commander, ...) so a folder navigates that window and a file opens/selects there -- the
         // same adapter inline search already uses to execute a result.
         var tracker = InlineSearchManager.Instance.ExplorerTracker;
-        if (tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero && App.HookClient?.IsConnected == true
-            && InlineAdapterIpcCoordinator.ExecuteItem(tracker.ActiveHwnd, path, isDir, string.Empty, App.HookClient.SendMessage))
+        if (tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero && App.HookClient?.IsConnected == true)
         {
+            if (InlineAdapterIpcCoordinator.ExecuteItem(tracker.ActiveHwnd, path, isDir, string.Empty, App.HookClient.SendMessage, out var lateResult))
+                return;
+
+            // Timed out without a confirmed result -- some adapters make blocking calls with no timeout of
+            // their own (e.g. Total Commander's SendMessage), so the Hook-side call can still legitimately
+            // be in flight rather than genuinely dead. Falling back to Process.Start right here used to be
+            // able to race that: the file gets launched/opened by the fallback AND separately
+            // navigated-to-and-selected by the adapter call finishing a moment later. See
+            // InlineAdapterIpcCoordinator.RunAfterLateResultAsync -- also used by inline search's own
+            // Enter-to-execute for the identical race -- for why waiting on the same in-flight call a bit
+            // longer, off the UI thread, closes that window without blocking the caller.
+            _ = InlineAdapterIpcCoordinator.RunAfterLateResultAsync(lateResult, onSuccess: () => { }, onFallback: () => OpenDirectly(path, isDir));
+            return;
+        }
+
+        OpenDirectly(path, isDir);
+    }
+
+    // This is a NAVIGATION menu -- picking a file here should land on it (selected, in its folder), never
+    // launch it. A directory still opens/navigates into it via ShellExecute (that already just changes
+    // Explorer's own location, no different from "navigating" there); a file instead goes through
+    // FileExecutor.LocateInExplorer, the same "select this item" routine LocateInExplorerExternal uses,
+    // which opens/reuses an Explorer window at the file's parent folder with the file selected rather than
+    // running its associated program.
+    private static void OpenDirectly(string path, bool isDir)
+    {
+        if (!isDir)
+        {
+            FileExecutor.LocateInExplorer(path);
             return;
         }
 
         try
         {
-            var workingDir = Path.GetDirectoryName(path);
             Process.Start(new ProcessStartInfo
             {
                 FileName = path,
-                UseShellExecute = true,
-                WorkingDirectory = string.IsNullOrEmpty(workingDir) ? "" : workingDir
+                UseShellExecute = true
             });
         }
         catch { }
