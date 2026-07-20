@@ -18,7 +18,7 @@ here. See [Settings → Hotkeys page](./settings/hotkeys-page) for the settings 
 | Previous keyword history | `Alt+Up` | Cycles backward through your recently typed queries. |
 | Next keyword history | `Alt+Down` | Cycles forward through your recently typed queries. |
 | Delete keyword history entry | `Shift+Delete` | |
-| Open full window | *(none)* | Opens the full window directly, carrying over the current query — same effect as clicking the Quick Window's own menu button (☰) and choosing Show Main Window, without that extra step. Not bound by default; set one from **Settings → Hotkeys**. |
+| Open full window | *(none)* | Opens the full window directly, carrying over the current query — same effect as left-clicking the Quick Window's own logo and choosing Show Main Window from the menu that opens, without that extra step. Not bound by default; set one from **Settings → Hotkeys**. |
 | Next Startup Panel tab | `Ctrl+Right` | Wraps from the last tab back to the first. Only active while the [Startup Panel](./settings/startup-panel) is showing — otherwise the key does its normal job (e.g. moving the caret while typing a query). |
 | Previous Startup Panel tab | `Ctrl+Left` | Wraps from the first tab back to the last. Same active-only-while-showing rule as above. |
 

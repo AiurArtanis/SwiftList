@@ -14,9 +14,12 @@ Four tabs: **System**, **Search Bar Layout**, **Preview**, and **Search Window**
   affected, not the whole app). Requires restarting SwiftList to take effect.
 - **Hide tray icon** — checkbox, off by default. Applies immediately, no restart needed. The same
   menu the tray icon's right-click shows (Show Main Window, Toggle Hotkeys, Settings, About, Clean
-  Exit, Exit) is always available from a button (☰) in the Quick window's corner regardless of this
-  setting, so hiding the tray icon never strands you without a way back into Settings or Exit. That
-  menu's Show Main Window item also carries over whatever query you currently have typed.
+  Exit, Exit) is always available from the Quick window's own logo regardless of this setting, so
+  hiding the tray icon never strands you without a way back into Settings or Exit. That menu's Show
+  Main Window item also carries over whatever query you currently have typed. The logo does triple
+  duty — left-click (no movement) opens this menu anchored at the cursor, click-and-drag moves the
+  window, and right-click resets it to its default position — with a hover tooltip spelling out all
+  three.
 - **Log level** — dropdown: Error / Warn / Info (default) / Debug. Controls verbosity across the
   App, Service, and Hook logs (see [Service Status](./service-status)).
 - **Interface language** — dropdown, populated from every installed translation provider (built-in

@@ -21,8 +21,8 @@ UI itself.
   with digits 1–9), Open Actions Menu (`Ctrl+O`), Complete from Selection (`Ctrl+Tab`), QuickLook
   (`Alt+P`), Previous/Next Keyword History (`Alt+Up` / `Alt+Down`), Delete Keyword History Entry
   (`Shift+Delete`), Open Full Window (no default — opens the full window directly, carrying over
-  the current query; same effect as the Quick Window's own menu button → Show Main Window, without
-  that extra click).
+  the current query; same effect as left-clicking the Quick Window's own logo and choosing Show
+  Main Window, without that extra click).
 - Every recorder here accepts any key or combo you press — including keys like a bare `Tab` — and
   that binding takes priority over any hardcoded default meaning that key might otherwise have.
 
