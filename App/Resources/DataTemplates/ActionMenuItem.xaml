@@ -48,7 +48,7 @@
 				</Grid.ColumnDefinitions>
 
 				<!-- Item Icon -->
-				<Image Grid.Column="0" Source="{Binding Icon}" Stretch="Uniform" Margin="8,0,8,0" VerticalAlignment="Center"
+				<Image Grid.Column="0" Source="{Binding Icon}" Stretch="Uniform" Margin="4,0,4,0" VerticalAlignment="Center"
                        Visibility="{Binding IconVisibility}" RenderOptions.BitmapScalingMode="HighQuality">
 					<Image.Style>
 						<Style TargetType="Image">
@@ -65,7 +65,7 @@
 				</Image>
 
 				<!-- Placeholder bullet when no icon -->
-				<Ellipse Grid.Column="0" Width="4" Height="4" Fill="{DynamicResource FileIconColor}" Margin="14,0,14,0" VerticalAlignment="Center"
+				<Ellipse Grid.Column="0" Width="4" Height="4" Fill="{DynamicResource FileIconColor}" Margin="10,0,10,0" VerticalAlignment="Center"
                          Visibility="{Binding PlaceholderVisibility}"/>
 
 				<TextBlock Grid.Column="1" VerticalAlignment="Center"
@@ -188,7 +188,7 @@
 					<Grid>
 						<Rectangle x:Name="AccentBar" Width="3" HorizontalAlignment="Left"
 						           RadiusX="1.5" RadiusY="1.5" Fill="Transparent" Margin="0,2"/>
-						<Border x:Name="ItemBorder" Background="Transparent" CornerRadius="6" Margin="6,2,6,2" Padding="12,0,12,0" VerticalAlignment="Stretch">
+						<Border x:Name="ItemBorder" Background="Transparent" CornerRadius="6" Margin="6,2,6,2" Padding="8,0,8,0" VerticalAlignment="Stretch">
 							<ContentPresenter ContentSource="Header" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
 						</Border>
 						<Popup x:Name="PART_Popup"

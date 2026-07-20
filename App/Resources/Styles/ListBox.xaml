@@ -124,7 +124,7 @@
                                 Background="Transparent"
                                 CornerRadius="{StaticResource CornerRadiusControl}"
                                 Margin="6,2,6,2"
-                                Padding="12,0,12,0"
+                                Padding="8,0,8,0"
                                 VerticalAlignment="Stretch"
                                 Cursor="Hand">
                             <!-- Stretch (not Center): every row inside ActionMenuItemTemplate already

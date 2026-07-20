@@ -61,21 +61,31 @@ public static class MarqueeBehavior
     {
         CleanupMarquee(element);
 
+        // No containing ListBoxItem (e.g. a standalone header banner rather than a list row): there's
+        // no hover/select gesture to reserve the effect for, so it just animates whenever it overflows.
+        // A row inside a list still gates on IsMouseOver/IsSelected so every overflowing row doesn't
+        // scroll at once.
         var listBoxItem = FindVisualAncestor<ListBoxItem>(element);
-        if (listBoxItem == null) return;
 
         if (element.RenderTransform is not TranslateTransform)
         {
             element.RenderTransform = new TranslateTransform();
         }
 
-        var isMouseOverDescriptor = DependencyPropertyDescriptor.FromProperty(UIElement.IsMouseOverProperty, typeof(ListBoxItem));
-        var isSelectedDescriptor = DependencyPropertyDescriptor.FromProperty(ListBoxItem.IsSelectedProperty, typeof(ListBoxItem));
+        DependencyPropertyDescriptor? isMouseOverDescriptor = null;
+        DependencyPropertyDescriptor? isSelectedDescriptor = null;
+        EventHandler? handler = null;
 
-        EventHandler handler = (s, e) => UpdateMarqueeAnimation(element, listBoxItem);
+        if (listBoxItem != null)
+        {
+            isMouseOverDescriptor = DependencyPropertyDescriptor.FromProperty(UIElement.IsMouseOverProperty, typeof(ListBoxItem));
+            isSelectedDescriptor = DependencyPropertyDescriptor.FromProperty(ListBoxItem.IsSelectedProperty, typeof(ListBoxItem));
 
-        isMouseOverDescriptor?.AddValueChanged(listBoxItem, handler);
-        isSelectedDescriptor?.AddValueChanged(listBoxItem, handler);
+            handler = (s, e) => UpdateMarqueeAnimation(element, listBoxItem);
+
+            isMouseOverDescriptor?.AddValueChanged(listBoxItem, handler);
+            isSelectedDescriptor?.AddValueChanged(listBoxItem, handler);
+        }
 
         element.SizeChanged += (s, e) => UpdateMarqueeAnimation(element, listBoxItem);
 
@@ -116,7 +126,7 @@ public static class MarqueeBehavior
         }
     }
 
-    private static void UpdateMarqueeAnimation(FrameworkElement element, ListBoxItem listBoxItem)
+    private static void UpdateMarqueeAnimation(FrameworkElement element, ListBoxItem? listBoxItem)
     {
         if (element.RenderTransform is not TranslateTransform translate) return;
 
@@ -128,7 +138,7 @@ public static class MarqueeBehavior
         if (availableWidth <= 0 || elementWidth <= 0) return;
 
         var overflow = elementWidth - availableWidth;
-        var shouldAnimate = overflow > 0 && (listBoxItem.IsMouseOver || listBoxItem.IsSelected);
+        var shouldAnimate = overflow > 0 && (listBoxItem == null || listBoxItem.IsMouseOver || listBoxItem.IsSelected);
 
         if (shouldAnimate)
         {

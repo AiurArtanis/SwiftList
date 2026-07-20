@@ -166,10 +166,20 @@
                                  keeps this a no-op in SearchWindow, whose DataContext (SearchViewModel)
                                  doesn't expose ClockVisibility at all; InlineSearchWindow DOES share
                                  QuickSearchViewModel, so it needs ClockVisibility's own IsInlineSearchContext
-                                 check instead to stay excluded. -->
-                            <DataTrigger Binding="{Binding ClockVisibility, FallbackValue=Collapsed}" Value="Visible">
+                                 check instead to stay excluded.
+
+                                 IsInActionsMode=False is an explicit second condition (not just relying on
+                                 this trigger being declared after the IsInActionsMode one above) because
+                                 both conditions can be true at once: the box reads empty while browsing
+                                 actions the same as while idle, and a later plain Setter always wins a
+                                 tie over an earlier one regardless of which state feels more "current". -->
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding ClockVisibility, FallbackValue=Collapsed}" Value="Visible"/>
+                                    <Condition Binding="{Binding IsInActionsMode, ElementName=root}" Value="False"/>
+                                </MultiDataTrigger.Conditions>
                                 <Setter Property="Text" Value="{Binding ClockText}"/>
-                            </DataTrigger>
+                            </MultiDataTrigger>
                         </Style.Triggers>
                     </Style>
                 </TextBlock.Style>

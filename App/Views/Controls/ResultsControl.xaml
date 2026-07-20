@@ -132,7 +132,15 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_ActionsTargetTitle]}" Foreground="{DynamicResource AccentBlue}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock x:Name="TxtActionsTarget" Grid.Column="1" Text="" Foreground="{DynamicResource TextPrimary}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                    <!-- ScrollViewer clips the TextBlock (which is left unwrapped, no TextTrimming, so
+                         it sizes to its full natural width) and MarqueeBehavior slides it left/right
+                         whenever that natural width overflows the available column: same pattern as
+                         the result rows' own name text below. -->
+                    <ScrollViewer Grid.Column="1" Background="Transparent" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False"
+                                  local:ScrollViewerHelper.BubbleMouseWheel="True">
+                        <TextBlock x:Name="TxtActionsTarget" Text="" Foreground="{DynamicResource TextPrimary}" FontSize="12" VerticalAlignment="Center"
+                                   helpers:MarqueeBehavior.EnableMarquee="True"/>
+                    </ScrollViewer>
                     <TextBlock Grid.Column="2" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_EscBack]}" Foreground="{DynamicResource TextSecondary}" FontSize="11" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
