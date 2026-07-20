@@ -18,6 +18,8 @@ This manual covers everything a day-to-day user needs:
   Translation, Browser Data, and Web Search.
 - **[Command-Line Search (slf)](./cli)** — the fzf-style CLI companion for searching from a
   terminal.
+- **[Supported File Managers](./file-manager-support)** — which file managers and file-picker
+  dialogs SwiftList can dock into, trigger Quick Navigation from, or detect the current folder of.
 - **[Settings Reference](./settings/)** — every settings page, tab, and option, itemized.
 - **[Troubleshooting](./troubleshooting)** — common problems and how to fix them.
 - **[Donate](./donate)** — if SwiftList has been useful to you.

@@ -13,13 +13,9 @@ Four tabs: **System**, **Search Bar Layout**, **Preview**, and **Search Window**
   Advanced Optimus refusing to hot-switch GPUs while SwiftList is running (only the quick window is
   affected, not the whole app). Requires restarting SwiftList to take effect.
 - **Hide tray icon** — checkbox, off by default. Applies immediately, no restart needed. The same
-  menu the tray icon's right-click shows (Show Main Window, Toggle Hotkeys, Settings, About, Clean
-  Exit, Exit) is always available from the Quick window's own logo regardless of this setting, so
-  hiding the tray icon never strands you without a way back into Settings or Exit. That menu's Show
-  Main Window item also carries over whatever query you currently have typed. The logo does triple
-  duty — left-click (no movement) opens this menu anchored at the cursor, click-and-drag moves the
-  window, and right-click resets it to its default position — with a hover tooltip spelling out all
-  three.
+  menu the tray icon's right-click shows is always available from the
+  [Quick window's own logo](../hotkeys#search-box-logo-icon) regardless of this setting, so hiding
+  the tray icon never strands you without a way back into Settings or Exit.
 - **Log level** — dropdown: Error / Warn / Info (default) / Debug. Controls verbosity across the
   App, Service, and Hook logs (see [Service Status](./service-status)).
 - **Interface language** — dropdown, populated from every installed translation provider (built-in
@@ -44,7 +40,7 @@ Customizes the size, corner rounding, and on-screen position of the quick search
   only — the inline window always keeps its normal placeholder, even with this on.
 - **Reset Layout Settings** button — restores all four values above to their defaults.
 
-Right-clicking the status icon inside the quick window's search box resets just its on-screen
+Right-clicking the [quick window's logo](../hotkeys#search-box-logo-icon) resets just its on-screen
 position (not size), re-centering it the same way it centers on first launch.
 
 ## Preview

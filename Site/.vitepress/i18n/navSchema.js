@@ -12,6 +12,7 @@ export const navSchema = [
       { id: 'ugActionsPreview', slug: 'user-guide/actions-and-preview' },
       { id: 'ugInstantAnswers', slug: 'user-guide/instant-answers' },
       { id: 'ugCli', slug: 'user-guide/cli' },
+      { id: 'ugFileManagerSupport', slug: 'user-guide/file-manager-support' },
       {
         id: 'ugSettingsGroup',
         children: [

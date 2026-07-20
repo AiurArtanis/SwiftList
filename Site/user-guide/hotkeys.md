@@ -18,9 +18,27 @@ here. See [Settings → Hotkeys page](./settings/hotkeys-page) for the settings 
 | Previous keyword history | `Alt+Up` | Cycles backward through your recently typed queries. |
 | Next keyword history | `Alt+Down` | Cycles forward through your recently typed queries. |
 | Delete keyword history entry | `Shift+Delete` | |
-| Open full window | *(none)* | Opens the full window directly, carrying over the current query — same effect as left-clicking the Quick Window's own logo and choosing Show Main Window from the menu that opens, without that extra step. Not bound by default; set one from **Settings → Hotkeys**. |
+| Open full window | *(none)* | Opens the full window directly, carrying over the current query — same effect as left-clicking the [Quick Window's own logo](#search-box-logo-icon) and choosing Show Main Window from the menu that opens, without that extra step. Not bound by default; set one from **Settings → Hotkeys**. |
 | Next Startup Panel tab | `Ctrl+Right` | Wraps from the last tab back to the first. Only active while the [Startup Panel](./settings/startup-panel) is showing — otherwise the key does its normal job (e.g. moving the caret while typing a query). |
 | Previous Startup Panel tab | `Ctrl+Left` | Wraps from the first tab back to the last. Same active-only-while-showing rule as above. |
+
+## Search box logo icon
+
+The small logo icon in the search box (left or right side, depending on the window) does something
+different in each of the [three windows](./getting-started#the-three-windows):
+
+- **Quick window** — left-click (no movement) opens the same menu the tray icon's right-click shows
+  (Show Main Window, Toggle Hotkeys, Settings, About, Clean Exit, Exit), anchored at the cursor; that
+  menu's Show Main Window item also carries over whatever query you currently have typed. Click-and-drag
+  moves the window, same as dragging any other part of the search bar. Right-click resets the window to
+  its default on-screen position (not size) — the same one it centers to on first launch. A hover
+  tooltip spells out all three behaviors.
+- **Inline window** — only clickable when the window is docked to a native Open/Save/Browse-for-folder
+  dialog: left-click opens [quick navigation](#quick-navigation-mouse), same as the dedicated trigger
+  below. Not clickable when docked to a plain Explorer window or the desktop, since there's nothing
+  useful to navigate to in that case — no hover highlight or tooltip appears either, so it stays quiet
+  rather than looking clickable and doing nothing.
+- **Main window** — the logo is purely decorative there; clicking it does nothing.
 
 ## Quick navigation (mouse)
 
@@ -31,11 +49,9 @@ Enabled by default, toggled per-trigger in settings:
   supported third-party file manager (Directory Opus, Total Commander, XYplorer, Files, ...), or a
   native Open/Save/Browse-for-folder dialog — to trigger quick navigation. Those other windows only
   respond to middle-click: double-clicking there already means "open this," so double-click isn't
-  repurposed.
-- When the inline search window is docked to a native Open/Save/Browse-for-folder dialog, **left-click
-  its own logo** (top-left of the search box) to trigger quick navigation too — a hover tooltip
-  reminds you it's there. Not shown when the inline window is docked to a plain Explorer window or the
-  desktop, since there's nothing useful to navigate to in that case.
+  repurposed. See [Supported File Managers](./file-manager-support) for what each integration covers.
+- When the inline search window is docked to a native Open/Save/Browse-for-folder dialog, its own
+  logo triggers quick navigation too — see [Search box logo icon](#search-box-logo-icon) above.
 
 Any of these triggers pops a cascading menu of your Favorites, History, and configured quick-access folders
 (see [Settings → Favorites](./settings/favorites) and [Settings → History](./settings/history)) —
