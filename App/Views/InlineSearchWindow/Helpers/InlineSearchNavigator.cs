@@ -24,9 +24,14 @@ public static class InlineSearchNavigator
         FileExecutor.LocateInExplorer(path);
     }
 
-    public static void OpenFileOrFolderExternal(this SwiftList.App.InlineSearchWindow window, string path) => window.OpenPathFromInline(path, asAdmin: false, ResolveIsDir(path));
+    // forceRealOpen: true -- this is the explicit "Open"/"Open (Admin)" action, reached by the user
+    // deliberately choosing it from the actions menu rather than Enter's own "do the fastest sensible
+    // thing" shortcut on a plain result (see ExecuteSearchResult, forceRealOpen: false there). Explicitly
+    // choosing "Open" should always mean a real open -- launch the file, or a fresh Explorer window at the
+    // folder -- never silently redirect into navigating whatever's currently docked/already open instead.
+    public static void OpenFileOrFolderExternal(this SwiftList.App.InlineSearchWindow window, string path) => window.OpenPathFromInline(path, asAdmin: false, ResolveIsDir(path), forceRealOpen: true);
 
-    public static void OpenFileOrFolderAsAdminExternal(this SwiftList.App.InlineSearchWindow window, string path) => window.OpenPathFromInline(path, asAdmin: true, ResolveIsDir(path));
+    public static void OpenFileOrFolderAsAdminExternal(this SwiftList.App.InlineSearchWindow window, string path) => window.OpenPathFromInline(path, asAdmin: true, ResolveIsDir(path), forceRealOpen: true);
 
     // null means "doesn't exist" -- distinct from false ("is a file"), so OpenPathFromInline can skip
     // ExecuteItem entirely for a path that no longer exists rather than asking an adapter to navigate a
@@ -70,10 +75,16 @@ public static class InlineSearchNavigator
     // below); otherwise the caller's already-known answer for file vs directory -- see
     // InlineAdapterIpcCoordinator.ExecuteItem for why the Hook process must never be asked to re-derive
     // this itself via Directory.Exists/File.Exists.
-    private static void OpenPathFromInline(this SwiftList.App.InlineSearchWindow window, string path, bool asAdmin, bool? isDir)
+    // forceRealOpen: skips every "control some OTHER already-open window instead" shortcut below (adapter
+    // navigate, dialog navigate, reuse-an-existing-Explorer locate) so the explicit "Open" action always
+    // does what it says -- launch the file, or a fresh Explorer window at the folder -- rather than
+    // silently redirecting into navigating whatever's currently docked/open. Enter's own quick-execute
+    // shortcut (ExecuteSearchResult) leaves this false, keeping its current "fastest sensible thing"
+    // behavior unchanged.
+    private static void OpenPathFromInline(this SwiftList.App.InlineSearchWindow window, string path, bool asAdmin, bool? isDir, bool forceRealOpen = false)
     {
         var tracker = window.Manager.ExplorerTracker;
-        if (!asAdmin && isDir.HasValue && path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero && App.HookClient?.IsConnected == true)
+        if (!forceRealOpen && !asAdmin && isDir.HasValue && path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero && App.HookClient?.IsConnected == true)
         {
             window.Manager.IsExecuting = true;
             if (InlineAdapterIpcCoordinator.ExecuteItem(tracker.ActiveHwnd, path, isDir.Value, window.SearchText, App.HookClient.SendMessage, out var lateResult))
@@ -93,18 +104,18 @@ public static class InlineSearchNavigator
             // UI thread automatically via WPF's SynchronizationContext, so touching window/UI state here is safe.
             _ = InlineAdapterIpcCoordinator.RunAfterLateResultAsync(lateResult,
                 onSuccess: () => { window.Manager.IsExecuting = false; window.HideWindow(); },
-                onFallback: () => { window.Manager.IsExecuting = false; window.RunFallbackChain(path, asAdmin, isDir); });
+                onFallback: () => { window.Manager.IsExecuting = false; window.RunFallbackChain(path, asAdmin, isDir, forceRealOpen); });
             return;
         }
 
-        window.RunFallbackChain(path, asAdmin, isDir);
+        window.RunFallbackChain(path, asAdmin, isDir, forceRealOpen);
     }
 
-    private static void RunFallbackChain(this SwiftList.App.InlineSearchWindow window, string path, bool asAdmin, bool? isDir)
+    private static void RunFallbackChain(this SwiftList.App.InlineSearchWindow window, string path, bool asAdmin, bool? isDir, bool forceRealOpen = false)
     {
         var tracker = window.Manager.ExplorerTracker;
 
-        if (path != "__SHOW_MORE__" && tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
+        if (!forceRealOpen && path != "__SHOW_MORE__" && tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
         {
             App.HookClient?.SendMessage(new IpcMessage
             {
@@ -119,7 +130,8 @@ public static class InlineSearchNavigator
             return;
         }
 
-        if (isDir == true
+        if (!forceRealOpen
+            && isDir == true
             && tracker.IsExplorerOrDesktopActive
 
             && !tracker.IsDesktop
