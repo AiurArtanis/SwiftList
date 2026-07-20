@@ -78,19 +78,30 @@ public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
 
                              className.Equals("WorkerW", StringComparison.OrdinalIgnoreCase);
 
-            // Land on the item -- navigate into a folder, or navigate to a file's parent and select it --
-            // rather than running it, matching every other file-manager adapter (Total Commander, Directory
-            // Opus, XYplorer, ...), none of which ever launch a file here either. TryLocateInExistingExplorer
-            // already handles both cases identically (targetFolder = path for a folder, its parent for a file).
-            if (!isDesktop && TryLocateInExistingExplorer(cleanPath, isDir, hwnd))
+            // The desktop isn't an Explorer pane to navigate within -- there's no "reuse this window,
+            // navigate it, select the item" concept when you're already looking at the desktop, so acting
+            // on an item from there means opening it directly: a folder opens/navigates into it, a file
+            // runs it, same as double-clicking either would on the desktop itself.
+            if (isDesktop)
+            {
+                Process.Start(new ProcessStartInfo { FileName = cleanPath, UseShellExecute = true });
+                return true;
+            }
+
+            // Land on the item in an existing Explorer window -- navigate into a folder, or navigate to a
+            // file's parent and select it -- rather than running it, matching every other file-manager
+            // adapter (Total Commander, Directory Opus, XYplorer, ...), none of which ever launch a file
+            // here either. TryLocateInExistingExplorer already handles both cases identically (targetFolder
+            // = path for a folder, its parent for a file).
+            if (TryLocateInExistingExplorer(cleanPath, isDir, hwnd))
             {
                 return true;
             }
 
             if (isDir)
             {
-                // No existing window to reuse (or it's the desktop) -- ShellExecute on a folder just opens/
-                // navigates into it, same net effect as the locate call above would have had.
+                // No existing window to reuse -- ShellExecute on a folder just opens/navigates into it,
+                // same net effect as the locate call above would have had.
                 Process.Start(new ProcessStartInfo { FileName = cleanPath, UseShellExecute = true });
                 return true;
             }
@@ -109,7 +120,9 @@ public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
     {
         try
         {
-            if (SHParseDisplayName(path, IntPtr.Zero, out var pidl, 0, out _) == 0)
+            // Reuses the SHParseDisplayName p/invoke already declared in Shell/ShellContextMenuNativeMethods.cs
+            // (same project) instead of a second copy here.
+            if (Shell.ShellContextMenuNativeMethods.SHParseDisplayName(path, IntPtr.Zero, out var pidl, 0, out _) == 0)
             {
                 SHOpenFolderAndSelectItems(pidl, 0, null, 0);
                 Marshal.FreeCoTaskMem(pidl);
@@ -119,9 +132,6 @@ public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
         catch { }
         return false;
     }
-
-    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-    private static extern int SHParseDisplayName(string name, IntPtr bindingContext, out IntPtr pidl, uint sfgaoIn, out uint psfgaoOut);
 
     [DllImport("shell32.dll")]
     private static extern int SHOpenFolderAndSelectItems(IntPtr pidlFolder, uint cidl, IntPtr[]? apidl, uint dwFlags);

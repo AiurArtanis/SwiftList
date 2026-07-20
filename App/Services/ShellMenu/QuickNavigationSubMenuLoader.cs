@@ -18,7 +18,7 @@ internal static class QuickNavigationSubMenuLoader
     // task instead, so the app stays responsive; the tradeoff is this specific submenu keeps showing
     // the "Loading..." placeholder (added in QuickNavigationMenu.CreateMenuItem) for that same
     // duration, rather than popping open instantly with stale/incomplete data.
-    public static void EnsureLoaded(MenuItem menuItem, ISearchResult result, DynamicMenuItem item, IQuickNavigationProvider provider, ContextMenu contextMenu, IntPtr dialogHwndAtTrigger)
+    public static void EnsureLoaded(MenuItem menuItem, ISearchResult result, DynamicMenuItem item, IQuickNavigationProvider provider, ContextMenu contextMenu, QuickNavTriggerContext trigger)
     {
         // MouseEnter/GotKeyboardFocus/SubmenuOpened can all fire for the same item in quick succession;
         // Tag doubles as a synchronous "already loading or already loaded" guard so only the first one
@@ -43,7 +43,7 @@ internal static class QuickNavigationSubMenuLoader
                     // missing here meant a separator nested inside any submenu rendered as a real
                     // MenuItem with an empty Header instead of an actual divider line, showing up as a
                     // blank row.
-                    menuItem.Items.Add(subItem.IsSeparator ? new Separator() : QuickNavigationMenu.CreateMenuItem(subItem, result, provider, contextMenu, dialogHwndAtTrigger));
+                    menuItem.Items.Add(subItem.IsSeparator ? new Separator() : QuickNavigationMenu.CreateMenuItem(subItem, result, provider, contextMenu, trigger));
 
                 // A provider can legitimately return nothing here -- e.g. its backing data (favorites, a
                 // plugin's own cache) hasn't finished loading yet this soon after app startup, not just

@@ -105,9 +105,16 @@ internal static class ExplorerAdapterHelpers
         return null;
     }
 
-    public static async void SelectItemInExplorerLater(string path, IntPtr explorerHwnd)
+    // Synchronous (Thread.Sleep, not await Task.Delay) and meant to be called from the same dedicated STA
+    // thread InlineAdapterCommandHandler.RunOnSta already spins up per call -- these Shell.Application COM
+    // objects are STA-affine, and that thread never pumps a message loop (no Application.Run/Dispatcher.Run
+    // on it), so a Task.Delay continuation would silently resume on a ThreadPool thread instead of the
+    // original STA thread, and every call on `window`/`folder`/`item` after that await would then be a
+    // cross-apartment call with no proxy to marshal it -- which fails and gets swallowed by the catch below,
+    // so navigation would visibly work while selection silently never happened.
+    public static void SelectItemInExplorerLater(string path, IntPtr explorerHwnd)
     {
-        await Task.Delay(250);
+        Thread.Sleep(250);
         try
         {
             dynamic? window = FindExplorerWindow(explorerHwnd);

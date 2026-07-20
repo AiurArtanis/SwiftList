@@ -31,12 +31,13 @@ public static class QuickNavigationMenu
         var tracker = InlineSearchManager.Instance.ExplorerTracker;
 
         // Captured now, before anything below (the helper window grabbing foreground, the popup sitting
-        // open while the user browses it) has a chance to perturb ExplorerTracker's state -- see the note
-        // on QuickNavigationNavigator.NavigateOrOpen's dialogHwndAtTrigger parameter for why re-reading the
-        // tracker live at click time is not safe.
-        var dialogHwndAtTrigger = tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog
-            ? tracker.ActiveHwnd
-            : IntPtr.Zero;
+        // open while the user browses it) has a chance to perturb ExplorerTracker's state -- see
+        // QuickNavTriggerContext's own comment for why re-reading the tracker live at click time is not safe.
+        var trigger = new QuickNavTriggerContext(
+            DialogHwnd: tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog ? tracker.ActiveHwnd : IntPtr.Zero,
+            ActiveHwnd: tracker.ActiveHwnd,
+            ActiveAdapter: tracker.ActiveInlineAdapter,
+            IsDesktop: tracker.IsDesktop);
 
         var path = tracker.ActivePath;
         if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
@@ -54,7 +55,7 @@ public static class QuickNavigationMenu
                 // Root entries are navigation categories (Favorites/History/configured folders/drives), so
                 // don't attach the right-click action flyout here, and clicking/Enter must not execute or
                 // navigate anywhere either -- only real files/folders in deeper levels do that.
-                contextMenu.Items.Add(item.IsSeparator ? new Separator() : CreateMenuItem(item, dummyResult, provider, contextMenu, dialogHwndAtTrigger, enableRightClick: false, isRootItem: true));
+                contextMenu.Items.Add(item.IsSeparator ? new Separator() : CreateMenuItem(item, dummyResult, provider, contextMenu, trigger, enableRightClick: false, isRootItem: true));
         }
 
         if (contextMenu.Items.Count == 0) return;
@@ -138,7 +139,7 @@ public static class QuickNavigationMenu
         contextMenu.IsOpen = true;
     }
 
-    internal static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, IntPtr dialogHwndAtTrigger, bool enableRightClick = true, bool isRootItem = false)
+    internal static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, QuickNavTriggerContext trigger, bool enableRightClick = true, bool isRootItem = false)
     {
         var menuItem = new MenuItem { Header = item.Text, IsEnabled = !item.IsDisabled, Focusable = !item.IsDisabled };
 
@@ -165,11 +166,11 @@ public static class QuickNavigationMenu
             menuItem.Items.Add(new MenuItem { Header = TranslationService.Get("QuickNav_Loading"), IsEnabled = false });
             menuItem.GotKeyboardFocus += (s, e) =>
             {
-                QuickNavigationSubMenuLoader.EnsureLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger);
+                QuickNavigationSubMenuLoader.EnsureLoaded(menuItem, result, item, provider, contextMenu, trigger);
                 Application.Current.Dispatcher.BeginInvoke(new Action(() => { if (menuItem.IsKeyboardFocusWithin || menuItem.IsFocused) menuItem.IsSubmenuOpen = true; }));
             };
-            menuItem.MouseEnter += (s, e) => QuickNavigationSubMenuLoader.EnsureLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger);
-            menuItem.SubmenuOpened += (s, e) => { if (e.OriginalSource == menuItem) QuickNavigationSubMenuLoader.EnsureLoaded(menuItem, result, item, provider, contextMenu, dialogHwndAtTrigger); };
+            menuItem.MouseEnter += (s, e) => QuickNavigationSubMenuLoader.EnsureLoaded(menuItem, result, item, provider, contextMenu, trigger);
+            menuItem.SubmenuOpened += (s, e) => { if (e.OriginalSource == menuItem) QuickNavigationSubMenuLoader.EnsureLoaded(menuItem, result, item, provider, contextMenu, trigger); };
         }
         else
         {
@@ -219,7 +220,7 @@ public static class QuickNavigationMenu
             {
                 if (item.HasSubMenu)
                 {
-                    if (canNavigate) QuickNavigationNavigator.NavigateOrOpen(itemPath!, isDir: true, dialogHwndAtTrigger);
+                    if (canNavigate) QuickNavigationNavigator.NavigateOrOpen(itemPath!, isDir: true, trigger);
                 }
                 else
                 {
@@ -227,7 +228,7 @@ public static class QuickNavigationMenu
                     if (item.OnExecute != null)
                         item.OnExecute();
                     else if (!string.IsNullOrEmpty(itemPath))
-                        QuickNavigationNavigator.NavigateOrOpen(itemPath, isDir: false, dialogHwndAtTrigger);
+                        QuickNavigationNavigator.NavigateOrOpen(itemPath, isDir: false, trigger);
                     else
                         provider.ExecuteCommand(result, item.CommandId, IntPtr.Zero);
                 }
