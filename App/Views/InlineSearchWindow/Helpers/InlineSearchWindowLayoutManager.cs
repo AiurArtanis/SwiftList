@@ -9,7 +9,6 @@ public sealed class InlineSearchWindowLayoutManager
 {
     private readonly SwiftList.App.InlineSearchWindow _window;
     private int _layoutUpdateQueued;
-    private double _lastResultsHeight = double.NaN;
 
     public InlineSearchWindowLayoutManager(SwiftList.App.InlineSearchWindow window) => _window = window ?? throw new ArgumentNullException(nameof(window));
 
@@ -23,49 +22,27 @@ public sealed class InlineSearchWindowLayoutManager
             Interlocked.Exchange(ref _layoutUpdateQueued, 0);
             if (!_window.IsVisible) return;
 
+            // Every prior version of this (summing selectable rows only, giving headers their own extra
+            // budget, lazily dropping a dangling header, matching the quick window's flat "first 9 items"
+            // sum) was still a hand-computed PREDICTION of what WPF would render, kept in a separate
+            // formula that had to stay perfectly in sync with the template/container styling by hand --
+            // and every round, something about a header, a badge, or a banner made the two disagree by
+            // exactly one row's worth. Measuring the real ListBox instead removes the prediction
+            // entirely: there's no separate number to drift out of sync with, because this IS what WPF
+            // is about to render.
             var count = _window.ViewModel.Results.Count;
-            double resultsHeight = 0;
-            var foundSelectable = 0;
-            for (var i = 0; i < count; i++)
-            {
-                var item = _window.ViewModel.Results[i];
-                // Must match CountSelectableResults' definition of "selectable", not the looser
-                // !IsEmptyResult && !IsSearchSectionHeader check this used to have: that looser check
-                // let the "show more"/jump-to-explorer row count as one of the 9, so depending on
-                // exactly which row landed on the 9th slot, the sum either stopped one row short of
-                // what's actually rendered or (via a stale 489px cap below, wide enough to never
-                // clamp a merely-9-rows-tall list) let a taller-than-real sum through unclamped --
-                // either way LstResults.Height stopped matching the real content height.
-                var isSelectable = !item.IsEmptyResult && !item.IsSearchSectionHeader
-                                    && item.FullPath != "__SHOW_MORE__" && !item.IsJumpToExplorerPath;
-                if (isSelectable && foundSelectable == 9)
-                    break;
-                resultsHeight += GetItemHeight(item);
-                if (isSelectable)
-                    foundSelectable++;
-            }
-            var pathPreviewHeight = 0.0;
-            if (_window.PathPreviewBorder != null &&
-                _window.PathPreviewBorder.Visibility == Visibility.Visible)
-            {
-                _window.PathPreviewBorder.Measure(new System.Windows.Size(_window.ResultsPanelControl.ActualWidth > 0 ? _window.ResultsPanelControl.ActualWidth : 437, double.PositiveInfinity));
-                pathPreviewHeight = _window.PathPreviewBorder.DesiredSize.Height;
-            }
-
-            // Was a stale literal 489.0, left over from before inline rows were scaled to 0.7x --
-            // UpdateActionsLayout below already derives its own "9 compact rows" cap from
-            // SearchResultItemHeight (line ~103); this now matches it instead of allowing ~165px of
-            // slack past what 9 real rows can ever actually sum to.
-            var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7) - pathPreviewHeight;
-            var actualResultsHeight = Math.Max(0.0, Math.Min(resultsHeight, maxAvailableHeight));
-            var totalResultsHeight = actualResultsHeight + pathPreviewHeight;
-            var heightChanged = !AreClose(_lastResultsHeight, totalResultsHeight);
-            if (heightChanged)
-            {
-                _lastResultsHeight = totalResultsHeight;
-                _window.LstResults.Height = actualResultsHeight;
-                _window.ResultsPanelControl.Height = actualResultsHeight;
-            }
+            var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7);
+            var measureWidth = _window.ResultsPanelControl.ActualWidth > 0 ? _window.ResultsPanelControl.ActualWidth : 437;
+            _window.LstResults.Height = double.NaN;
+            _window.LstResults.Measure(new System.Windows.Size(measureWidth, maxAvailableHeight));
+            var resultsHeight = Math.Min(_window.LstResults.DesiredSize.Height, maxAvailableHeight);
+            _window.LstResults.Height = resultsHeight;
+            _window.ResultsPanelControl.Height = resultsHeight;
+            // Forces layout to actually run right now, synchronously, instead of leaving WPF free to
+            // repaint the ListBox with whatever's now bound to ItemsSource at its next opportunity
+            // (which could win the race against this callback and render new content at the stale
+            // Height briefly) -- mirrors what the quick window's own SizeToContent toggle achieves.
+            _window.UpdateLayout();
 
             if (count == 0)
             {
@@ -73,9 +50,8 @@ public sealed class InlineSearchWindowLayoutManager
             }
 
             UpdateShortcutHints();
-            if (heightChanged)
-                _window.Positioner.PositionWindow();
-        }), DispatcherPriority.Background);
+            _window.Positioner.PositionWindow();
+        }), DispatcherPriority.Render);
     }
 
     public void UpdateActionsLayout()
@@ -108,8 +84,13 @@ public sealed class InlineSearchWindowLayoutManager
                 }
                 else
                 {
+                    // Not reduced by actionsHeaderHeight: that's the panel's own top banner (its target
+                    // filename), additional content stacked above the action rows, not something sharing
+                    // a fixed total budget with them -- see QueueResultsLayoutUpdate's own comment on the
+                    // exact same fix for the results list's path-preview banner. Subtracting it here left
+                    // the actions list unable to ever reach the same 9-row height the results list gets.
                     var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7);
-                    actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight - actionsHeaderHeight));
+                    actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight));
                 }
                 _window.LstActions.Height = double.NaN;
                 _window.ResultsPanelControl.Height = actualActionsHeight + actionsHeaderHeight;
@@ -123,7 +104,6 @@ public sealed class InlineSearchWindowLayoutManager
         else
         {
             _window.LstActions.Height = double.NaN;
-            _lastResultsHeight = double.NaN;
             UpdatePathPreviewVisibility();
             QueueResultsLayoutUpdate();
         }
@@ -149,14 +129,6 @@ public sealed class InlineSearchWindowLayoutManager
         return null;
     }
 
-    private static bool AreClose(double left, double right)
-    {
-        if (double.IsNaN(left) || double.IsNaN(right))
-            return false;
-
-        return Math.Abs(left - right) < 0.5;
-    }
-
     public static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
     {
         while (child != null)
@@ -174,8 +146,6 @@ public sealed class InlineSearchWindowLayoutManager
         }
         return null;
     }
-    private double GetItemHeight(AppSearchResult item) => item.InlineItemHeight;
-
     // Hovering a result now selects it (see ResultsControl.xaml.cs), so SelectedItem alone is already
     // the "active" result -- no separate hover-tracking state needed here anymore.
     public void UpdatePathPreviewVisibility() => _window.Dispatcher.BeginInvoke(new Action(() =>

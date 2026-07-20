@@ -49,9 +49,13 @@ internal sealed class QuickSearchWindowLayoutManager
                     // ScaledNormalRowHeight (not ScaledSearchResultItemHeight) matches what the results
                     // list's own rows actually render at once the icon-size floor kicks in -- using the
                     // unfloored value here would cap the actions panel shorter than 9 real result rows.
+                    // Not reduced by actionsHeaderHeight: that's the panel's own top banner (target
+                    // filename), additional content stacked above the action rows rather than something
+                    // sharing a fixed total budget with them -- subtracting it here capped the actions
+                    // list shorter than the 9 rows the results list itself gets to use.
                     var maxAvailableHeight = 9 * UiMetrics.ScaledNormalRowHeight;
                     // Let the height naturally fit the items count (free size dynamic resize)
-                    actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight - actionsHeaderHeight));
+                    actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight));
                 }
                 _window.LstActions.Height = double.NaN;
                 _window.ResultsPanelControl.Height = actualActionsHeight + actionsHeaderHeight;

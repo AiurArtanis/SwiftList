@@ -13,21 +13,44 @@
 			<Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SeparatorBrush}" Height="1" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="0,4"
                     Visibility="{Binding IsSeparator, Converter={StaticResource BoolToVis}}"/>
 
-			<TextBlock Text="{Binding SectionTitle}" FontWeight="SemiBold"
-                       Foreground="{DynamicResource AccentBlue}" VerticalAlignment="Center"
-                       Margin="0"
-                       Visibility="{Binding SectionHeaderVisibility}">
-				<TextBlock.Style>
-					<Style TargetType="TextBlock">
-						<Setter Property="FontSize" Value="12"/>
+			<!-- Height explicitly matches a normal row's own ItemHeight/ScaledItemHeight: this template
+			     root Grid is VerticalAlignment="Center" (not the default Stretch), so when everything
+			     else is collapsed (a header shows only this text), the row sizes to this element's own
+			     height rather than stretching to fill whatever the container's MinHeight provides.
+			     ActionMenuBuilder now also sets a header ActionMenuItem's own ItemHeight equal to a
+			     normal item's (previously a shorter, independently-derived value), so both the data and
+			     this explicit binding agree on the same number. Height lives on this wrapping Border
+			     rather than the TextBlock itself: a TextBlock given an explicit Height taller than its
+			     own text renders that text top-aligned regardless of its own VerticalAlignment (that
+			     property positions the TextBlock's own box within ITS parent, not the text within the
+			     box): wrapping it is what lets VerticalAlignment="Center" on the TextBlock actually
+			     center the text within the now-taller row. -->
+			<Border Visibility="{Binding SectionHeaderVisibility}">
+				<Border.Style>
+					<Style TargetType="Border">
+						<Setter Property="Height" Value="{Binding ItemHeight}"/>
 						<Style.Triggers>
 							<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList">
-								<Setter Property="FontSize" Value="{Binding ScaledSectionFontSize}"/>
+								<Setter Property="Height" Value="{Binding ScaledItemHeight}"/>
 							</DataTrigger>
 						</Style.Triggers>
 					</Style>
-				</TextBlock.Style>
-			</TextBlock>
+				</Border.Style>
+				<TextBlock Text="{Binding SectionTitle}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource AccentBlue}" VerticalAlignment="Center"
+                       Margin="0">
+					<TextBlock.Style>
+						<Style TargetType="TextBlock">
+							<Setter Property="FontSize" Value="12"/>
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList">
+									<Setter Property="FontSize" Value="{Binding ScaledSectionFontSize}"/>
+								</DataTrigger>
+							</Style.Triggers>
+						</Style>
+					</TextBlock.Style>
+				</TextBlock>
+			</Border>
 
 			<!-- Menu item view -->
 			<Grid Visibility="{Binding IsNormalItem, Converter={StaticResource BoolToVis}}">
