@@ -23,12 +23,10 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border CornerRadius="10" Background="{DynamicResource ContentBg}"
-            BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" Margin="8">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="20" ShadowDepth="2" Opacity="0.2" Color="{DynamicResource ShadowColor}"/>
-        </Border.Effect>
-        <Border CornerRadius="10" ClipToBounds="True">
+    <Border CornerRadius="{StaticResource CornerRadiusWindow}" Background="{DynamicResource ContentBg}"
+            BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" Margin="8"
+            Effect="{StaticResource Elevation2}">
+        <Border CornerRadius="{StaticResource CornerRadiusWindow}" ClipToBounds="True">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="44"/>
@@ -37,7 +35,7 @@
                 </Grid.RowDefinitions>
 
                 <Border Grid.Row="0" Background="{DynamicResource HeaderBg}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1"
-                        CornerRadius="9,9,0,0"
+                        CornerRadius="{StaticResource CornerRadiusWindowTop}"
                         MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -56,7 +54,7 @@
                         <!-- Centered in the remaining space between the title and the window buttons,
                              not the sidebar, so the sidebar stays full-width and the search box lives
                              in the title bar as requested. -->
-                        <Border x:Name="SearchBoxBorder" Grid.Column="1" Width="320" Height="28" CornerRadius="6"
+                        <Border x:Name="SearchBoxBorder" Grid.Column="1" Width="320" Height="28" CornerRadius="{StaticResource CornerRadiusControl}"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                 Background="{DynamicResource ControlBackground}"
                                 BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1">
@@ -109,10 +107,8 @@
                        Placement="Bottom" Width="320" VerticalOffset="4" StaysOpen="True" AllowsTransparency="True"
                        PopupAnimation="Fade">
                     <Border Background="{DynamicResource ContentBg}" BorderBrush="{DynamicResource WindowBorderBrush}"
-                            BorderThickness="1" CornerRadius="8" Padding="0,4">
-                        <Border.Effect>
-                            <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.25" Color="{DynamicResource ShadowColor}"/>
-                        </Border.Effect>
+                            BorderThickness="1" CornerRadius="{StaticResource CornerRadiusPopover}" Padding="0,4"
+                            Effect="{StaticResource Elevation1}">
                         <StackPanel>
                             <ListBox x:Name="LstSearchResults" MaxHeight="400"
                                      BorderThickness="0" Background="Transparent"
@@ -252,7 +248,7 @@
                 </Grid>
 
                 <Border Grid.Row="2" Background="{DynamicResource StatusBarBg}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0"
-                        CornerRadius="0,0,9,9">
+                        CornerRadius="{StaticResource CornerRadiusWindowBottom}">
                     <Grid Margin="16,0">
                         <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_SaveTip]}" 
                                    Foreground="{DynamicResource TextSecondary2}" VerticalAlignment="Center"/>

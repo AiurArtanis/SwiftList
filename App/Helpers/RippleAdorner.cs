@@ -35,17 +35,23 @@ public class RippleAdorner : Adorner
         _center = center;
         IsHitTestVisible = false;
 
+        var rippleDuration = System.Windows.Application.Current?.TryFindResource("DurationRipple") is Duration d
+            ? d.TimeSpan
+            : TimeSpan.FromMilliseconds(400);
+
         // Animate Radius
         var targetRadius = Math.Max(adornedElement.RenderSize.Width, adornedElement.RenderSize.Height) * 1.5;
-        var radiusAnimation = new DoubleAnimation(0.0, targetRadius, TimeSpan.FromMilliseconds(400))
+        var radiusAnimation = new DoubleAnimation(0.0, targetRadius, rippleDuration)
         {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            EasingFunction = System.Windows.Application.Current?.TryFindResource("EaseOutCubic") as IEasingFunction
+                              ?? new CubicEase { EasingMode = EasingMode.EaseOut }
         };
 
         // Animate Opacity
-        var opacityAnimation = new DoubleAnimation(0.4, 0.0, TimeSpan.FromMilliseconds(400))
+        var opacityAnimation = new DoubleAnimation(0.4, 0.0, rippleDuration)
         {
-            EasingFunction = new ExponentialEase { EasingMode = EasingMode.EaseOut }
+            EasingFunction = System.Windows.Application.Current?.TryFindResource("EaseOutExponential") as IEasingFunction
+                              ?? new ExponentialEase { EasingMode = EasingMode.EaseOut }
         };
 
         opacityAnimation.Completed += (s, e) =>

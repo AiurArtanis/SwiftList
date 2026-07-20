@@ -20,10 +20,8 @@
         <Border x:Name="MainBorder" Margin="12" CornerRadius="8"
                 Background="{DynamicResource ContentBg}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
                 ClipToBounds="True"
-                VerticalAlignment="Bottom">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.22" Color="{DynamicResource ShadowColor}"/>
-            </Border.Effect>
+                VerticalAlignment="Bottom"
+                Effect="{StaticResource Elevation3}">
             <Grid>
                 <Grid.RowDefinitions>
                     <!-- Results list & preview container (grows upward) -->

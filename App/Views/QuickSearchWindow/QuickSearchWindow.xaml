@@ -22,10 +22,8 @@
     <Grid x:Name="RootGrid">
         <Border Margin="24,40,24,24" CornerRadius="{Binding WindowCornerRadius}" Background="{DynamicResource CardBackground}"
                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
-                MouseLeftButtonDown="Border_MouseLeftButtonDown">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="32" ShadowDepth="4" Opacity="0.25" Color="{DynamicResource ShadowColor}"/>
-            </Border.Effect>
+                MouseLeftButtonDown="Border_MouseLeftButtonDown"
+                Effect="{StaticResource Elevation3}">
 
             <Border CornerRadius="{Binding InnerCornerRadius}" ClipToBounds="True">
                 <Grid Width="{Binding SearchBarWidth}">

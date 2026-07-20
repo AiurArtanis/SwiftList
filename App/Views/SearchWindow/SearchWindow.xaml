@@ -20,12 +20,10 @@
         </ResourceDictionary>
     </Window.Resources>
     <!-- Main border with shadow -->
-    <Border x:Name="MainBorder" CornerRadius="10" Background="{DynamicResource ContentBg}"
-            BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" Margin="8">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="20" ShadowDepth="2" Opacity="0.2" Color="{DynamicResource ShadowColor}"/>
-        </Border.Effect>
-        <Border x:Name="ClippingBorder" CornerRadius="10" ClipToBounds="True">
+    <Border x:Name="MainBorder" CornerRadius="{StaticResource CornerRadiusWindow}" Background="{DynamicResource ContentBg}"
+            BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" Margin="8"
+            Effect="{StaticResource Elevation2}">
+        <Border x:Name="ClippingBorder" CornerRadius="{StaticResource CornerRadiusWindow}" ClipToBounds="True">
             <Grid>
                 <Grid.RowDefinitions>
                     <!-- Title Bar / Search Bar -->
@@ -38,7 +36,7 @@
                 <!-- ═══════════ 1. Title Bar + Search ═══════════ -->
                 <Border Grid.Row="0" Background="{DynamicResource HeaderBg}"
                         BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1"
-                        CornerRadius="9,9,0,0">
+                        CornerRadius="{StaticResource CornerRadiusWindowTop}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -171,7 +169,7 @@
                 <!-- ═══════════ 3. Status Bar ═══════════ -->
                 <Border Grid.Row="2" Background="{DynamicResource StatusBarBg}"
                         BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0"
-                        CornerRadius="0,0,9,9"
+                        CornerRadius="{StaticResource CornerRadiusWindowBottom}"
                         Padding="16,8,16,8">
                     <Border.Style>
                         <Style TargetType="Border">

@@ -115,17 +115,10 @@ public static class ActionFlyout
             Background = (System.Windows.Media.Brush)Application.Current.FindResource("MenuBackground"),
             BorderBrush = (System.Windows.Media.Brush)Application.Current.FindResource("MenuBorderBrush"),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = (CornerRadius)Application.Current.FindResource("CornerRadiusPopover"),
             Padding = new Thickness(6),
-            Child = menu
-        };
-        border.Effect = new System.Windows.Media.Effects.DropShadowEffect
-        {
-            BlurRadius = 12,
-            ShadowDepth = 2,
-            Direction = 270,
-            Color = (System.Windows.Media.Color)Application.Current.FindResource("ShadowColor"),
-            Opacity = 0.08
+            Child = menu,
+            Effect = (System.Windows.Media.Effects.DropShadowEffect)Application.Current.FindResource("Elevation1")
         };
 
         _popup = new Popup
