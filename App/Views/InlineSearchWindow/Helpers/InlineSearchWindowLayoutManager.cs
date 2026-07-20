@@ -33,6 +33,16 @@ public sealed class InlineSearchWindowLayoutManager
             var count = _window.ViewModel.Results.Count;
             var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7);
             var measureWidth = _window.ResultsPanelControl.ActualWidth > 0 ? _window.ResultsPanelControl.ActualWidth : 437;
+            // A result-set change (e.g. ReconcileTo mutating item 0 in place and RemoveAt-ing the rest, see
+            // SearchResultsReconciler) can leave the ListBox's own item-container generator not yet caught up
+            // by the time this callback runs -- a directly-called Measure() below reuses whatever containers
+            // the generator currently has, so measuring before that catches up could still count a container
+            // that's about to be recycled away, adding a stray row's worth of height. Forcing a real layout
+            // pass first (against the STILL-current Height, purely to flush any pending container generation)
+            // guarantees the generator is caught up with ItemsSource before the actual measurement below
+            // reads anything from it.
+            _window.LstResults.InvalidateMeasure();
+            _window.UpdateLayout();
             _window.LstResults.Height = double.NaN;
             _window.LstResults.Measure(new System.Windows.Size(measureWidth, maxAvailableHeight));
             var resultsHeight = Math.Min(_window.LstResults.DesiredSize.Height, maxAvailableHeight);
