@@ -3,6 +3,7 @@
   <Project Path="Plugins/PinyinAlias/PinyinAlias.csproj" />
   <Project Path="Plugins/DirectoryOpus/DirectoryOpus.csproj" />
   <Project Path="Plugins/TotalCommander/TotalCommander.csproj" />
+  <Project Path="Plugins/Xyplorer/Xyplorer.csproj" />
   <Project Path="Plugins/OneCommander/OneCommander.csproj" />
   <Project Path="Plugins/Translation/Translation.csproj" />
   <Project Path="Plugins/WebSearch/WebSearch.csproj" />
