@@ -253,15 +253,15 @@
                         <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_SaveTip]}" 
                                    Foreground="{DynamicResource TextSecondary2}" VerticalAlignment="Center"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                            <Button Style="{StaticResource SettingsButton}" 
-                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Cancel]}" 
-                                    Click="BtnClose_Click"/>
-                            <Button Style="{StaticResource SettingsButton}" 
-                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Apply]}" 
-                                    Command="{Binding ApplyCommand}" IsEnabled="{Binding CanApply}"/>
-                            <Button Style="{StaticResource PrimarySettingsButton}" 
-                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_OK]}" 
+                            <Button Style="{StaticResource PrimarySettingsButton}"
+                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_OK]}"
                                     Command="{Binding ApplyCommand}" IsEnabled="{Binding CanApply}" Click="BtnClose_Click"/>
+                            <Button Style="{StaticResource SettingsButton}"
+                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Cancel]}"
+                                    Click="BtnClose_Click"/>
+                            <Button Style="{StaticResource SettingsButton}"
+                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Apply]}"
+                                    Command="{Binding ApplyCommand}" IsEnabled="{Binding CanApply}"/>
                         </StackPanel>
                     </Grid>
                 </Border>
