@@ -68,9 +68,16 @@
                                 </BeginStoryboard>
                             </Trigger.ExitActions>
                         </Trigger>
+                        <!-- Visibility=Collapsed, not just Opacity=0: a running "selected" animation's
+                             held value outranks a plain Setter on the SAME property (Opacity) regardless
+                             of trigger order or which condition changed last, so an Opacity Setter here
+                             can lose that fight. Visibility is a different property the animation never
+                             touches, so Collapsed hides the bar/overlay unconditionally no matter what
+                             the animation is doing underneath. -->
                         <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="Transparent"/>
-                            <Setter TargetName="AccentBar" Property="Opacity" Value="0"/>
+                            <Setter TargetName="AccentBar" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="SelectionOverlay" Property="Visibility" Value="Collapsed"/>
                             <Setter Property="IsHitTestVisible" Value="False"/>
                             <Setter Property="Focusable" Value="False"/>
                         </DataTrigger>
@@ -80,7 +87,8 @@
                         <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
                             <Setter TargetName="ItemBorder" Property="Background" Value="Transparent"/>
                             <Setter TargetName="ItemBorder" Property="Cursor" Value="Arrow"/>
-                            <Setter TargetName="AccentBar" Property="Opacity" Value="0"/>
+                            <Setter TargetName="AccentBar" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="SelectionOverlay" Property="Visibility" Value="Collapsed"/>
                             <Setter Property="IsHitTestVisible" Value="False"/>
                             <Setter Property="Focusable" Value="False"/>
                         </DataTrigger>
