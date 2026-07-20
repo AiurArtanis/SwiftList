@@ -108,6 +108,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         // IconLeftClicked: SearchBoxControl tells a real drag apart from a plain click by movement
         // distance (see its own Icon_MouseMove), so this needs BOTH flags rather than picking one.
         SearchBox.IconLeftClicked += (_, _) => ShowTrayMenu();
+        SearchBox.IconDragCompleted += SaveWindowPosition;
         SearchBox.IsIconClickable = true;
         SearchBox.IsIconDraggable = true;
         SearchBox.IconClickHint = TranslationManager.Instance["QuickSearch_LogoDragResetHint"];
@@ -269,11 +270,16 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         if (e.ChangedButton == MouseButton.Left)
         {
             this.DragMove();
-            var settings = UserSettings.Load();
-            settings.SearchWindow.Left = this.Left;
-            settings.SearchWindow.Top = this.Top;
-            settings.Save();
+            SaveWindowPosition();
         }
+    }
+
+    private void SaveWindowPosition()
+    {
+        var settings = UserSettings.Load();
+        settings.SearchWindow.Left = this.Left;
+        settings.SearchWindow.Top = this.Top;
+        settings.Save();
     }
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e) => _inputHandler.HandleWindowPreviewKeyDown(e);

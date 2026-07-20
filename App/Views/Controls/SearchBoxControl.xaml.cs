@@ -18,6 +18,11 @@ public partial class SearchBoxControl : UserControl
     // meaningful when IsIconClickable is set -- see that property's own comment.
     public event Action<int, int>? IconLeftClicked;
 
+    // Raised right after a real icon-initiated drag finishes moving the window (see Icon_MouseMove).
+    // Only meaningful when IsIconDraggable is set -- lets the host window persist its new position the
+    // same way it does after a drag started elsewhere on its own chrome.
+    public event Action? IconDragCompleted;
+
     // Screen-space (not element-relative) so a real drag's own re-layout of this control underneath the
     // cursor can't skew the distance measurement mid-gesture.
     private System.Windows.Point? _iconPressScreenPoint;
@@ -72,6 +77,7 @@ public partial class SearchBoxControl : UserControl
         _iconDragStarted = true;
         if (sender is IInputElement el) el.ReleaseMouseCapture();
         Window.GetWindow(this)?.DragMove();
+        IconDragCompleted?.Invoke();
     }
 
     private void Icon_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
