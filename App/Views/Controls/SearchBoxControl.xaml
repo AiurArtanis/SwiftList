@@ -21,16 +21,23 @@
             </Grid.ColumnDefinitions>
 
             <!-- Left Icon Grid (Visible only when IsIconOnLeft is True) -->
-            <Grid Grid.Column="0" Margin="0,0,11,0" VerticalAlignment="Center" MouseRightButtonUp="Icon_MouseRightButtonUp">
+            <Grid Grid.Column="0" Margin="0,0,11,0" VerticalAlignment="Center"
+                  MouseRightButtonUp="Icon_MouseRightButtonUp"
+                  MouseLeftButtonDown="Icon_MouseLeftButtonDown" MouseLeftButtonUp="Icon_MouseLeftButtonUp"
+                  ToolTip="{Binding IconClickHint, ElementName=root}">
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="Visibility" Value="Collapsed"/>
+                        <Setter Property="Cursor" Value="Arrow"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsIconOnLeft, ElementName=root}" Value="True">
                                 <Setter Property="Visibility" Value="Visible"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding IsInActionsMode, ElementName=root}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsIconClickable, ElementName=root}" Value="True">
+                                <Setter Property="Cursor" Value="Hand"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -72,6 +79,16 @@
                                         </BeginStoryboard>
                                     </DataTrigger.ExitActions>
                                 </DataTrigger>
+                                <!-- Hover highlight: only when this window has actually wired up
+                                     IconLeftClicked (IsIconClickable): otherwise hovering would light
+                                     up an icon that does nothing when clicked. -->
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Grid}}" Value="True"/>
+                                        <Condition Binding="{Binding IsIconClickable, ElementName=root}" Value="True"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Opacity" Value="1"/>
+                                </MultiDataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
@@ -155,16 +172,23 @@
             </TextBlock>
 
             <!-- Right Icon Grid (Visible only when IsIconOnLeft is False) -->
-            <Grid Grid.Column="3" Margin="11,0,0,0" VerticalAlignment="Center" MouseRightButtonUp="Icon_MouseRightButtonUp">
+            <Grid Grid.Column="3" Margin="11,0,0,0" VerticalAlignment="Center"
+                  MouseRightButtonUp="Icon_MouseRightButtonUp"
+                  MouseLeftButtonDown="Icon_MouseLeftButtonDown" MouseLeftButtonUp="Icon_MouseLeftButtonUp"
+                  ToolTip="{Binding IconClickHint, ElementName=root}">
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="Visibility" Value="Visible"/>
+                        <Setter Property="Cursor" Value="Arrow"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsIconOnLeft, ElementName=root}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding IsInActionsMode, ElementName=root}" Value="True">
                                 <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsIconClickable, ElementName=root}" Value="True">
+                                <Setter Property="Cursor" Value="Hand"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -204,6 +228,16 @@
                                         </BeginStoryboard>
                                     </DataTrigger.ExitActions>
                                 </DataTrigger>
+                                <!-- Hover highlight: only when this window has actually wired up
+                                     IconLeftClicked (IsIconClickable): otherwise hovering would light
+                                     up an icon that does nothing when clicked. -->
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Grid}}" Value="True"/>
+                                        <Condition Binding="{Binding IsIconClickable, ElementName=root}" Value="True"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Opacity" Value="1"/>
+                                </MultiDataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Border.Style>

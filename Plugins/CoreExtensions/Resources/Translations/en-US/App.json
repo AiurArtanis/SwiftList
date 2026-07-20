@@ -342,6 +342,8 @@
   "Plugins_NoComponents": "This plugin has no registered components.",
   "QuickNav_EmptySubmenu": "(Empty)",
   "QuickNav_Loading": "(Loading...)",
+  "InlineSearch_QuickNavTooltip": "Quick Navigation",
+  "QuickSearch_LogoDragResetHint": "Left-click drag · Right-click to reset position",
   "Theme_Light": "Light",
   "Theme_Dark": "Dark",
   "Theme_Nord": "Nord",

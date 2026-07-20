@@ -13,7 +13,30 @@ public partial class SearchBoxControl : UserControl
     // window currently wires this up, to reset its own saved position).
     public event Action? IconRightClicked;
 
+    // Raised when the icon is left-clicked, with the click's screen coordinates (physical pixels, same
+    // convention QuickNavigationMenu.Show expects) for callers that need to anchor a popup there. Only
+    // meaningful when IsIconClickable is set -- see that property's own comment.
+    public event Action<int, int>? IconLeftClicked;
+
     private void Icon_MouseRightButtonUp(object sender, MouseButtonEventArgs e) => IconRightClicked?.Invoke();
+
+    // Marks the press handled so it never bubbles up to a hosting window's own MouseLeftButtonDown
+    // (e.g. the quick window's Border_MouseLeftButtonDown, which calls DragMove()): DragMove captures
+    // the mouse for the rest of the gesture, which swallows the matching MouseLeftButtonUp below before
+    // it ever reaches this control -- so without this, a plain click on a clickable icon just silently
+    // starts (and instantly ends) a drag instead of registering as a click. Left alone when the icon
+    // isn't clickable, so windows that never opted in keep whatever click-to-drag behavior they had.
+    private void Icon_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (IsIconClickable) e.Handled = true;
+    }
+
+    private void Icon_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!IsIconClickable || IconLeftClicked == null) return;
+        var screenPoint = ((System.Windows.Media.Visual)sender).PointToScreen(e.GetPosition((IInputElement)sender));
+        IconLeftClicked.Invoke((int)screenPoint.X, (int)screenPoint.Y);
+    }
 
     static SearchBoxControl()
     {
@@ -88,6 +111,29 @@ public partial class SearchBoxControl : UserControl
     {
         get => (double)GetValue(RightIconSizeProperty);
         set => SetValue(RightIconSizeProperty, value);
+    }
+
+    // IsIconClickable DependencyProperty: false by default, so windows that never wire up
+    // IconLeftClicked (the main search window, and the inline window when it isn't docked to a file
+    // picker) get no hover highlight, no hand cursor, and no tooltip on an icon that would otherwise
+    // silently do nothing if clicked.
+    public static readonly DependencyProperty IsIconClickableProperty = DependencyProperty.Register(
+        nameof(IsIconClickable), typeof(bool), typeof(SearchBoxControl), new PropertyMetadata(false));
+
+    public bool IsIconClickable
+    {
+        get => (bool)GetValue(IsIconClickableProperty);
+        set => SetValue(IsIconClickableProperty, value);
+    }
+
+    // IconClickHint DependencyProperty: tooltip text shown on hover, only when IsIconClickable is set.
+    public static readonly DependencyProperty IconClickHintProperty = DependencyProperty.Register(
+        nameof(IconClickHint), typeof(string), typeof(SearchBoxControl), new PropertyMetadata(null));
+
+    public string? IconClickHint
+    {
+        get => (string?)GetValue(IconClickHintProperty);
+        set => SetValue(IconClickHintProperty, value);
     }
 
     // SearchText DependencyProperty

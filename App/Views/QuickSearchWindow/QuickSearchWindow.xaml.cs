@@ -170,6 +170,11 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
             IsMenuButtonHoverActive = false;
         };
         SearchBox.IconRightClicked += _controller.ResetPosition;
+        // Not IsIconClickable: the logo already has a job here (left-click drags the window, via
+        // Border_MouseLeftButtonDown/DragMove below), so it can't also open the tray menu on left-click
+        // without the two fighting over the same gesture. Tooltip-only hint, no hover highlight/hand
+        // cursor -- those would imply a click does something beyond what it already does.
+        SearchBox.IconClickHint = TranslationManager.Instance["QuickSearch_LogoDragResetHint"];
         LstResults.PreviewMouseLeftButtonUp += (s, e) => _resultExecutor.HandlePreviewMouseLeftButtonUp(e);
         LstResults.PreviewMouseRightButtonUp += (s, e) => _resultExecutor.HandlePreviewMouseRightButtonUp(e);
         LstResults.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler(OnResultsScrollChanged));
@@ -336,7 +341,13 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e) => _inputHandler.HandleWindowPreviewKeyDown(e);
 
-    private void BtnMenu_Click(object sender, RoutedEventArgs e)
+    private void BtnMenu_Click(object sender, RoutedEventArgs e) => ShowTrayMenu();
+
+    // Shared by the floating menu button and the search box logo's own left-click (see SearchBox.
+    // IconLeftClicked wiring in the constructor) -- both open the exact same tray menu, anchored at
+    // BtnMenu's own position regardless of which one triggered it, so the menu doesn't jump around
+    // depending on how it was opened.
+    private void ShowTrayMenu()
     {
         var queryText = (IsInActionsMode && _menuPresenter != null) ? _menuPresenter.SavedSearchQuery : TxtSearch.Text;
         IsMenuOpen = true;
