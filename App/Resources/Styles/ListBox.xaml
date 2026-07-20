@@ -89,7 +89,13 @@
                                 Padding="12,0,12,0"
                                 VerticalAlignment="Stretch"
                                 Cursor="Hand">
-                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                            <!-- Stretch (not Center): every row inside ActionMenuItemTemplate already
+                                 centers its own content within whatever height it's given, so this only
+                                 needs to hand over the row's real, final height rather than centering the
+                                 template's own independently-computed natural size within it: two
+                                 separately-rounded numbers landing a pixel apart was what made a section
+                                 header read as not quite vertically centered. -->
+                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
                         </Border>
                     </Grid>
                     <ControlTemplate.Triggers>

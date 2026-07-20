@@ -8,35 +8,21 @@
 
 	<!-- ═══════════ Self-Drawn Action Context Menu Item Template ═══════════ -->
 	<DataTemplate x:Key="ActionMenuItemTemplate" DataType="{x:Type app:ActionMenuItem}">
-		<Grid VerticalAlignment="Center">
+		<Grid>
 			<!-- Separator view -->
 			<Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SeparatorBrush}" Height="1" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="0,4"
                     Visibility="{Binding IsSeparator, Converter={StaticResource BoolToVis}}"/>
 
-			<!-- Height explicitly matches a normal row's own ItemHeight/ScaledItemHeight: this template
-			     root Grid is VerticalAlignment="Center" (not the default Stretch), so when everything
-			     else is collapsed (a header shows only this text), the row sizes to this element's own
-			     height rather than stretching to fill whatever the container's MinHeight provides.
-			     ActionMenuBuilder now also sets a header ActionMenuItem's own ItemHeight equal to a
-			     normal item's (previously a shorter, independently-derived value), so both the data and
-			     this explicit binding agree on the same number. Height lives on this wrapping Border
-			     rather than the TextBlock itself: a TextBlock given an explicit Height taller than its
-			     own text renders that text top-aligned regardless of its own VerticalAlignment (that
-			     property positions the TextBlock's own box within ITS parent, not the text within the
-			     box): wrapping it is what lets VerticalAlignment="Center" on the TextBlock actually
-			     center the text within the now-taller row. -->
-			<Border Visibility="{Binding SectionHeaderVisibility}">
-				<Border.Style>
-					<Style TargetType="Border">
-						<Setter Property="Height" Value="{Binding ItemHeight}"/>
-						<Style.Triggers>
-							<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList">
-								<Setter Property="Height" Value="{Binding ScaledItemHeight}"/>
-							</DataTrigger>
-						</Style.Triggers>
-					</Style>
-				</Border.Style>
-				<TextBlock Text="{Binding SectionTitle}" FontWeight="SemiBold"
+			<!-- No explicit Height here (and no VerticalAlignment="Center" on the root Grid above): the
+			     row's own height already comes from ActionItemStyle's MinHeight (bound to the exact same
+			     ItemHeight/ScaledItemHeight), so re-deriving it a second time here and then centering a
+			     fixed-height Border inside a Stretch-filled ContentPresenter was redundant: any rounding
+			     difference between the two independently-evaluated bindings showed up as the header text
+			     sitting a pixel or two off from a normal row's own vertical center. Stretching this Border
+			     to fill the row and centering only the TextBlock inside it removes that second source of
+			     truth entirely, and a section header row cannot land off-center. -->
+			<Border Visibility="{Binding SectionHeaderVisibility}" VerticalAlignment="Stretch">
+				<TextBlock Text="{Binding SectionTitle}"
                        Foreground="{DynamicResource AccentBlue}" VerticalAlignment="Center"
                        Margin="0">
 					<TextBlock.Style>
@@ -105,28 +91,32 @@
 
 				<!-- Keyboard shortcut hint: same pill badge as SearchResultTemplate (DataTemplates.xaml),
 				     reusing HoverBackground/ShortcutColor/AccentBlue rather than new themed resources.
-				     Selected/highlighted switches to an AccentBlue border + text instead of an outline in
-				     SeparatorBrush (see that template's own comment: SeparatorBrush and the row's own
-				     selected background are nearly the same color in the Light theme, so that outline
-				     barely showed).
+				     Selected/highlighted used to switch to an AccentBlue border + text, then a brighter/
+				     bolder text (see that template's own comment for the full history): both still read
+				     as too attention-grabbing next to the row's own left accent bar. Now background-only:
+				     a low-opacity AccentBlue wash behind the text via a separate element (so its Opacity
+				     doesn't also dim the text), text itself never changes color or weight.
 				     Driven by the ActionMenuItem's own IsSelected flag (plain DataContext binding, no
 				     RelativeSource) rather than ListBoxItem.IsSelected via AncestorType: that pattern
 				     works fine for the results list's own badge, but here it rendered every row as
 				     permanently selected (root cause not pinned down); IsSelected is kept in sync
 				     explicitly by LstActions.SelectionChanged (see ShellMenuPresenter). The MenuItem
 				     flyout variant (ActionFlyoutMenuItemStyle below) still reacts correctly via
-				     MenuItem.IsHighlighted, which was never broken. -->
+				     MenuItem.IsHighlighted, which was never broken. Both the base fill and the
+				     selected/highlighted tint are now low-opacity washes on separate overlay elements
+				     behind the text (so their Opacity never dims the text itself), rather than an opaque
+				     fill or a recolored border/text. Both overlays cover the OUTER border's full extent
+				     (no padding of their own, text carries the padding instead): an inset overlay would
+				     read as a smaller pill than the outer border's own edge. -->
 				<Border Grid.Column="2"
                         Margin="14,0,0,0"
-                        Padding="7,3,7,3"
                         CornerRadius="4"
                         BorderThickness="1"
-                        VerticalAlignment="Center">
+                        VerticalAlignment="Center"
+                        BorderBrush="Transparent">
 					<Border.Style>
 						<Style TargetType="Border">
 							<Setter Property="Visibility" Value="Visible"/>
-							<Setter Property="Background" Value="{DynamicResource HoverBackground}"/>
-							<Setter Property="BorderBrush" Value="Transparent"/>
 							<Style.Triggers>
 								<DataTrigger Binding="{Binding ShortcutHint}" Value="">
 									<Setter Property="Visibility" Value="Collapsed"/>
@@ -134,37 +124,43 @@
 								<DataTrigger Binding="{Binding ShortcutHint}" Value="{x:Null}">
 									<Setter Property="Visibility" Value="Collapsed"/>
 								</DataTrigger>
-								<DataTrigger Binding="{Binding IsSelected}" Value="True">
-									<Setter Property="Background" Value="Transparent"/>
-									<Setter Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
-								</DataTrigger>
-								<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type MenuItem}}, Path=IsHighlighted}" Value="True">
-									<Setter Property="Background" Value="Transparent"/>
-									<Setter Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
-								</DataTrigger>
 							</Style.Triggers>
 						</Style>
 					</Border.Style>
-					<TextBlock Text="{Binding ShortcutHint}"
-                               VerticalAlignment="Center">
-						<TextBlock.Style>
-							<Style TargetType="TextBlock">
-								<Setter Property="FontSize" Value="11"/>
-								<Setter Property="Foreground" Value="{DynamicResource ShortcutColor}"/>
-								<Style.Triggers>
-									<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList">
-										<Setter Property="FontSize" Value="{Binding ScaledShortcutFontSize}"/>
-									</DataTrigger>
-									<DataTrigger Binding="{Binding IsSelected}" Value="True">
-										<Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-									</DataTrigger>
-									<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type MenuItem}}, Path=IsHighlighted}" Value="True">
-										<Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-									</DataTrigger>
-								</Style.Triggers>
-							</Style>
-						</TextBlock.Style>
-					</TextBlock>
+					<Grid>
+						<Border CornerRadius="4" IsHitTestVisible="False" Background="{DynamicResource HoverBackground}" Opacity="0.5"/>
+						<Border CornerRadius="4" IsHitTestVisible="False">
+							<Border.Style>
+								<Style TargetType="Border">
+									<Setter Property="Background" Value="{DynamicResource AccentBlue}"/>
+									<Setter Property="Opacity" Value="0"/>
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding IsSelected}" Value="True">
+											<Setter Property="Opacity" Value="0.05"/>
+										</DataTrigger>
+										<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type MenuItem}}, Path=IsHighlighted}" Value="True">
+											<Setter Property="Opacity" Value="0.05"/>
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</Border.Style>
+						</Border>
+						<TextBlock Text="{Binding ShortcutHint}"
+                               Padding="7,3,7,3"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource ShortcutColor}">
+							<TextBlock.Style>
+								<Style TargetType="TextBlock">
+									<Setter Property="FontSize" Value="11"/>
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Title}" Value="SwiftList">
+											<Setter Property="FontSize" Value="{Binding ScaledShortcutFontSize}"/>
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</TextBlock.Style>
+						</TextBlock>
+					</Grid>
 				</Border>
 
 				<!-- Submenu indicator -->

@@ -23,8 +23,6 @@
 
             <TextBlock Grid.ColumnSpan="3"
                        FontSize="12"
-                       FontWeight="SemiBold"
-                       
                        Foreground="{DynamicResource AccentBlue}"
                        VerticalAlignment="Center"
                        Text="{Binding Name}">
@@ -163,24 +161,23 @@
             <!-- Keyboard shortcut hint: a pill-shaped badge (Flow Launcher style) rather than bare text,
                  reusing HoverBackground/ShortcutColor/AccentBlue (already defined in every theme) instead
                  of introducing new themed resources every theme file would need to add too.
-                 Filled with HoverBackground normally, but the row's OWN selected background is that same
-                 color (ResultItemStyle in ListBox.xaml): filled-on-filled made the badge disappear
-                 entirely on a selected row. An outline in SeparatorBrush was tried next, but that brush
-                 (#E5E5E5) sits almost on top of HoverBackground (#E8E8E8) in the Light theme, so it barely
-                 read as a border either: selected now switches to AccentBlue (the same color the row's
-                 own left accent bar lights up with) for both the border and the text, which reads clearly
-                 against any theme's hover/selection background. -->
+                 Used to be filled with a fully opaque HoverBackground, but the row's OWN selected
+                 background is that same color (ResultItemStyle in ListBox.xaml): filled-on-filled made
+                 the badge disappear entirely on a selected row. A saturated AccentBlue outline (border +
+                 text) and a plain brighter/bolder text were both tried next, but each still read as too
+                 attention-grabbing next to the row's own left accent bar. Now both the base fill and the
+                 selected-state tint are low-opacity washes on separate overlay elements behind the text
+                 (so their Opacity never dims the text itself), rather than an opaque fill or a recolored
+                 border/text. -->
             <Border Grid.Column="2"
                     Margin="14,0,0,0"
-                    Padding="7,3,7,3"
                     CornerRadius="4"
                     BorderThickness="1"
-                    VerticalAlignment="Center">
+                    VerticalAlignment="Center"
+                    BorderBrush="Transparent">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="{Binding ShortcutVisibility}"/>
-                        <Setter Property="Background" Value="{DynamicResource HoverBackground}"/>
-                        <Setter Property="BorderBrush" Value="Transparent"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -188,27 +185,33 @@
                             <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
-                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <TextBlock Text="{Binding ShortcutHint}"
-                           VerticalAlignment="Center">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontSize" Value="11"/>
-                            <Setter Property="Foreground" Value="{DynamicResource ShortcutColor}"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+                <!-- Both overlays cover the OUTER border's full extent (no padding of their own), and the
+                     text carries the padding instead: an inset overlay (sized to just the padded text
+                     area) would read as a smaller pill than the outer border's own edge. -->
+                <Grid>
+                    <Border CornerRadius="4" IsHitTestVisible="False" Background="{DynamicResource HoverBackground}" Opacity="0.5"/>
+                    <Border CornerRadius="4" IsHitTestVisible="False">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{DynamicResource AccentBlue}"/>
+                                <Setter Property="Opacity" Value="0"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+                                        <Setter Property="Opacity" Value="0.05"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                    <TextBlock Text="{Binding ShortcutHint}"
+                               Padding="7,3,7,3"
+                               VerticalAlignment="Center"
+                               FontSize="11"
+                               Foreground="{DynamicResource ShortcutColor}"/>
+                </Grid>
             </Border>
         </Grid>
     </DataTemplate>

@@ -42,7 +42,6 @@
                     </Style>
                 </Border.Style>
                 <TextBlock FontSize="12"
-                       FontWeight="SemiBold"
                        Foreground="{DynamicResource AccentBlue}"
                        VerticalAlignment="Center"
                        Text="{Binding Name}"/>
@@ -242,15 +241,13 @@
                  the Flow Launcher badge treatment. -->
             <Border Grid.Column="2"
                     Margin="14,0,0,0"
-                    Padding="7,3,7,3"
                     CornerRadius="4"
                     BorderThickness="1"
-                    VerticalAlignment="Center">
+                    VerticalAlignment="Center"
+                    BorderBrush="Transparent">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="{Binding ShortcutVisibility}"/>
-                        <Setter Property="Background" Value="{DynamicResource HoverBackground}"/>
-                        <Setter Property="BorderBrush" Value="Transparent"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -258,27 +255,37 @@
                             <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
-                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <TextBlock Text="{Binding ShortcutHint}"
-                           VerticalAlignment="Center">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="FontSize" Value="12"/>
-                            <Setter Property="Foreground" Value="{DynamicResource ShortcutColor}"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
+                <!-- Selected state (see DataTemplates.xaml's own copy of this badge for the full
+                     history): both the base fill and the selected-state tint are low-opacity washes
+                     on separate overlay elements behind the text (so their Opacity never dims the
+                     text itself), rather than an opaque fill or a recolored border/text. Both overlays
+                     cover the OUTER border's full extent (no padding of their own, text carries the
+                     padding instead): an inset overlay would read as a smaller pill than the outer
+                     border's own edge. -->
+                <Grid>
+                    <Border CornerRadius="4" IsHitTestVisible="False" Background="{DynamicResource HoverBackground}" Opacity="0.5"/>
+                    <Border CornerRadius="4" IsHitTestVisible="False">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{DynamicResource AccentBlue}"/>
+                                <Setter Property="Opacity" Value="0"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
+                                        <Setter Property="Opacity" Value="0.05"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                    <TextBlock Text="{Binding ShortcutHint}"
+                               Padding="7,3,7,3"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{DynamicResource ShortcutColor}"/>
+                </Grid>
             </Border>
         </Grid>
     </DataTemplate>

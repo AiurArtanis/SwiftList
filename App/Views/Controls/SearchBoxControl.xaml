@@ -94,10 +94,14 @@
                         </Style.Triggers>
                     </Style>
                 </StackPanel.Style>
-                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_ActionsTitle]}" 
-                           FontWeight="SemiBold" Foreground="{DynamicResource AccentBlue}" FontSize="{Binding FontSize, ElementName=root}"/>
-                <!-- Vertical divider line -->
-                <Border Width="1" Height="16" Margin="11,0,0,0" Background="{DynamicResource SeparatorBrush}" SnapsToDevicePixels="True"/>
+                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_ActionsTitle]}"
+                           Foreground="{DynamicResource AccentBlue}" FontSize="{Binding FontSize, ElementName=root}"
+                           VerticalAlignment="Center"/>
+                <!-- Vertical divider line: height tracks RightIconSize (already derived from the search
+                     box's own real height when IsDynamicScalingEnabled: see SearchBoxControl.xaml.cs)
+                     instead of a separate hardcoded number, so it keeps scaling with the search bar
+                     rather than drifting out of proportion on windows with a different configured height. -->
+                <Border Width="1" Height="{Binding RightIconSize, ElementName=root}" Margin="11,0,0,0" Background="{DynamicResource SeparatorBrush}" SnapsToDevicePixels="True"/>
             </StackPanel>
 
             <!-- TextBox -->
