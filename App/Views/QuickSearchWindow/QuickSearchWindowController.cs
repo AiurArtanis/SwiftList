@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using SwiftList.App.Services;
 using SwiftList.Core;
@@ -36,6 +37,12 @@ public class QuickSearchWindowController
     private WinEventDelegate? _foregroundHookDelegate;
     private IntPtr _hForegroundHook = IntPtr.Zero;
     private IntPtr _lastActiveHwnd = IntPtr.Zero;
+
+    // Bumped by every ShowWindow()/HideWindow() call. HideWindow()'s actual Hide() is deferred behind
+    // a fade-out (see its own comment), so a rapid Show() right after a Hide() needs a way to tell that
+    // deferred continuation "a newer call already superseded you" -- otherwise the pending continuation
+    // would still fire and hide the window moments after the user just re-summoned it.
+    private int _visibilityOpToken;
 
     private void StartForegroundHook()
     {
@@ -210,6 +217,8 @@ public class QuickSearchWindowController
 
     public void ShowWindow(string? initialQuery = null)
     {
+        _visibilityOpToken++;
+
         // Must run before anything below touches this window (Show()/Activate()/ForceForeground):
         // once any of those runs, GetForegroundWindow() starts reporting THIS window as foreground
         // (shell light-dismiss overlays don't compete for activation the normal way), so this is the
@@ -246,8 +255,27 @@ public class QuickSearchWindowController
         // and its DPI now comes from the target monitor, not this window's own CompositionTarget), so
         // moving it earlier is safe.
         PositionWindow();
+
+        // Fade in from 0 rather than popping in fully opaque -- same technique (and target opacity)
+        // ThemeManager already uses for its own theme-swap fade, animating window.Content rather than
+        // the Window itself so a translucent theme's WindowOpacity (see WindowEffectHelper) stays the
+        // ceiling instead of always fading to a flat 1.0.
+        var fadeContent = _window.Content as UIElement;
+        fadeContent?.BeginAnimation(UIElement.OpacityProperty, null);
+        if (fadeContent != null) fadeContent.Opacity = 0;
+
         _window.Show();
         _window.WindowState = WindowState.Normal;
+
+        if (fadeContent != null)
+        {
+            var targetOpacity = ThemeManager.Instance.ActiveTheme?.WindowOpacity ?? 1.0;
+            var fadeIn = new DoubleAnimation(targetOpacity, (Duration)System.Windows.Application.Current.FindResource("DurationWindowFadeIn"))
+            {
+                EasingFunction = System.Windows.Application.Current.TryFindResource("EaseOutCubic") as IEasingFunction
+            };
+            fadeContent.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+        }
 
         StartForegroundHook();
 
@@ -291,6 +319,8 @@ public class QuickSearchWindowController
 
     public void HideWindow(bool restoreFocus = true)
     {
+        var opToken = ++_visibilityOpToken;
+
         StopForegroundHook();
         if (_window.MenuPresenter != null && _window.MenuPresenter.IsInActionsMode)
         {
@@ -308,29 +338,61 @@ public class QuickSearchWindowController
         try { KeywordHistoryStore.Record(_window.ViewModel.SearchQuery); } catch { }
         _window.KeywordHistoryController.Reset();
 
-        // SearchQuery's own setter already runs PerformSearch("") when this actually changes the query
-        // (clearing/replacing results the normal way). Explicitly wiping Search.Results here on top of
-        // that used to erase the startup panel's own still-valid results/tabs the moment the box was
-        // already empty (nothing "changes" so the setter is a no-op) -- meaning next time the window
-        // showed, there was nothing left to display while the panel's async refetch ran, which is what
-        // produced the empty/loading flash ShowWindow's RefreshEmptyState() was supposed to avoid.
-        _window.ViewModel.SearchQuery = string.Empty;
-
-        _window.UpdateLayout();
-        _window.Hide();
-
-        InlineSearchManager.Instance.KeyboardHook.IsQuickSearchWindowVisible = false;
-        InlineSearchManager.Instance.KeyboardHook.Start();
-
-        if (restoreFocus && _lastActiveHwnd != IntPtr.Zero) SetForegroundWindow(_lastActiveHwnd);
-        _lastActiveHwnd = IntPtr.Zero;
-
-        Task.Run(async () =>
+        // Everything below this point (the SearchQuery reset onward) reads as the window's "closed"
+        // state, so it's deferred behind a fade-out of whatever is CURRENTLY on screen -- fading out
+        // first, then resetting the content, means the window dismisses showing what the user was just
+        // looking at instead of jump-cutting to the empty/startup-panel state a beat before it vanishes.
+        var fadeContent = _window.Content as UIElement;
+        void FinishHide()
         {
-            await Task.Delay(100);
-            try { ShellIconHelper.ClearCache(); } catch { }
-            try { PathCacheMaintenance.ClearAllPathCaches(); } catch { }
-            try { Win32Api.TrimWorkingSet(); } catch { }
-        });
+            // A newer ShowWindow()/HideWindow() call already superseded this one (e.g. the user
+            // re-summoned the window mid fade-out) -- don't hide out from under them.
+            if (opToken != _visibilityOpToken) return;
+
+            // SearchQuery's own setter already runs PerformSearch("") when this actually changes the query
+            // (clearing/replacing results the normal way). Explicitly wiping Search.Results here on top of
+            // that used to erase the startup panel's own still-valid results/tabs the moment the box was
+            // already empty (nothing "changes" so the setter is a no-op) -- meaning next time the window
+            // showed, there was nothing left to display while the panel's async refetch ran, which is what
+            // produced the empty/loading flash ShowWindow's RefreshEmptyState() was supposed to avoid.
+            _window.ViewModel.SearchQuery = string.Empty;
+
+            _window.UpdateLayout();
+            _window.Hide();
+
+            InlineSearchManager.Instance.KeyboardHook.IsQuickSearchWindowVisible = false;
+            InlineSearchManager.Instance.KeyboardHook.Start();
+
+            if (restoreFocus && _lastActiveHwnd != IntPtr.Zero) SetForegroundWindow(_lastActiveHwnd);
+            _lastActiveHwnd = IntPtr.Zero;
+
+            Task.Run(async () =>
+            {
+                await Task.Delay(100);
+                try { ShellIconHelper.ClearCache(); } catch { }
+                try { PathCacheMaintenance.ClearAllPathCaches(); } catch { }
+                try { Win32Api.TrimWorkingSet(); } catch { }
+            });
+        }
+
+        if (fadeContent != null)
+        {
+            var fadeOutDuration = (Duration)System.Windows.Application.Current.FindResource("DurationFast");
+            var fadeOut = new DoubleAnimation(0.0, fadeOutDuration)
+            {
+                EasingFunction = System.Windows.Application.Current.TryFindResource("EaseOutCubic") as IEasingFunction
+            };
+            fadeContent.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+
+            Task.Run(async () =>
+            {
+                await Task.Delay(fadeOutDuration.TimeSpan);
+                _window.Dispatcher.Invoke(FinishHide);
+            });
+        }
+        else
+        {
+            FinishHide();
+        }
     }
 }

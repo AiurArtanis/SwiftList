@@ -10,6 +10,9 @@
     <Duration x:Key="DurationHover">0:0:0.15</Duration>
     <!-- Matches RippleAdorner's existing hardcoded 400ms click ripple. -->
     <Duration x:Key="DurationRipple">0:0:0.4</Duration>
+    <!-- Window summon/dismiss fade, same 120ms-out/180ms-in asymmetry as ThemeManager's own
+         theme-swap fade: DurationFast doubles as the fade-out leg. -->
+    <Duration x:Key="DurationWindowFadeIn">0:0:0.18</Duration>
 
     <CubicEase x:Key="EaseOutCubic" EasingMode="EaseOut"/>
     <ExponentialEase x:Key="EaseOutExponential" EasingMode="EaseOut"/>

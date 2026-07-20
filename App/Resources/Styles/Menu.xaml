@@ -44,8 +44,16 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type MenuItem}">
                     <Grid>
+                        <!-- HighlightOverlay carries the hover background as its own Opacity fade
+                             (same reasoning as ResultItemStyle's SelectionOverlay in ListBox.xaml):
+                             Bg's own Background never becomes {DynamicResource HoverBackground} directly,
+                             since animating that shared brush's Color would mutate it for every other
+                             menu item using it too. AccentBar's Fill likewise stays permanently
+                             AccentBarColor with only its Opacity toggling. -->
                         <Rectangle x:Name="AccentBar" Width="3" HorizontalAlignment="Left"
-                                   RadiusX="1.5" RadiusY="1.5" Fill="Transparent" Margin="0,2"/>
+                                   RadiusX="1.5" RadiusY="1.5" Fill="{DynamicResource AccentBarColor}" Opacity="0" Margin="0,2"/>
+                        <Border x:Name="HighlightOverlay" CornerRadius="{StaticResource CornerRadiusControl}"
+                                Background="{DynamicResource HoverBackground}" Margin="2,1" Opacity="0"/>
                         <Border x:Name="Bg" CornerRadius="{StaticResource CornerRadiusControl}" Background="Transparent" Margin="2,1">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -121,9 +129,27 @@
                              surface's HoverBackground): unified so this menu (quick-nav cascader, tray
                              icon menu) highlights the same way as the actions list/flyout. -->
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource HoverBackground}"/>
-                            <Setter TargetName="AccentBar" Property="Fill" Value="{DynamicResource AccentBarColor}"/>
                             <Setter Property="Foreground" Value="{DynamicResource MenuText}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HighlightOverlay" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="{StaticResource DurationHover}" EasingFunction="{StaticResource EaseOutCubic}"/>
+                                        <DoubleAnimation Storyboard.TargetName="AccentBar" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="{StaticResource DurationHover}" EasingFunction="{StaticResource EaseOutCubic}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HighlightOverlay" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="{StaticResource DurationHover}" EasingFunction="{StaticResource EaseOutCubic}"/>
+                                        <DoubleAnimation Storyboard.TargetName="AccentBar" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="{StaticResource DurationHover}" EasingFunction="{StaticResource EaseOutCubic}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{DynamicResource MenuDisabledText}"/>
