@@ -218,14 +218,44 @@ public static class Win32Helper
     /// (fire-and-forget -- no reply is needed, so no receiver window is created). For a file path, XYplorer's
     /// own <c>goto</c> opens the containing folder and selects the item, matching Total Commander adapter's
     /// "place cursor on item" behavior without needing a separate flag.
+    ///
+    /// <paramref name="stealFocus"/> defaults to true (ExecuteItem's existing behavior: the user is
+    /// switching to XYplorer, so taking foreground is correct). Live selection-mirroring
+    /// (OnSelectionChanged) passes false instead -- unverified whether XYplorer's WM_COPYDATA handler
+    /// actually requires being foreground the way Total Commander's does, but calling SetForegroundWindow
+    /// on every arrow-key move while the user is still typing in SwiftList's own search box would steal
+    /// keyboard focus away from it regardless, so it's skipped unless the caller actually wants to switch
+    /// windows.
     /// </summary>
-    public static bool Navigate(IntPtr xyHwnd, string path)
+    public static bool Navigate(IntPtr xyHwnd, string path, bool stealFocus = true)
     {
         if (xyHwnd == IntPtr.Zero || string.IsNullOrEmpty(path)) return false;
 
-        SetForegroundWindow(xyHwnd);
+        if (stealFocus) SetForegroundWindow(xyHwnd);
         var escaped = path.Replace("\"", "\"\"");
-        var script = $"::goto \"{escaped}\";";
+        return RunScript(xyHwnd, $"::goto \"{escaped}\";");
+    }
+
+    /// <summary>
+    /// Selects <paramref name="path"/> (a full path, not a bare name) in whatever folder XYplorer's active
+    /// pane already has open, via the <c>SelectItems</c> script command -- confirmed (XYplorer's own forum,
+    /// "Open folders and select files in both panes from command line") as <c>selectitems 'FullFileName'</c>,
+    /// single-quoted rather than the double-quoted style every other command here uses. Unlike <c>goto</c>,
+    /// this never navigates, so it's the right verb for a directory result during live selection-mirroring
+    /// (OnSelectionChanged): <c>goto</c> on a folder path enters it, which a live "just highlight it as the
+    /// user arrows past" preview must not do. Never steals foreground (see OnSelectionChanged's own
+    /// comment) -- there is no ExecuteItem-equivalent caller for this that would want a window switch.
+    /// </summary>
+    public static bool SelectItem(IntPtr xyHwnd, string path)
+    {
+        if (xyHwnd == IntPtr.Zero || string.IsNullOrEmpty(path)) return false;
+
+        var escaped = path.Replace("'", "''");
+        return RunScript(xyHwnd, $"::selectitems '{escaped}';");
+    }
+
+    private static bool RunScript(IntPtr xyHwnd, string script)
+    {
         var bytes = Encoding.Unicode.GetBytes(script);
         var pin = GCHandle.Alloc(bytes, GCHandleType.Pinned);
         try

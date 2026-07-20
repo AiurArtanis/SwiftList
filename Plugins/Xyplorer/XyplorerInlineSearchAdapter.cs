@@ -95,6 +95,46 @@ public class XyplorerInlineSearchAdapter : IInlineSearchAdapter
         }
     }
 
+    public void OnSelectionChanged(IntPtr hwnd, string path)
+    {
+        if (hwnd == IntPtr.Zero || string.IsNullOrEmpty(path)) return;
+
+        // Trailing separator marks a directory (see InlineSearchWindowInputHandler.SyncExplorerSelection,
+        // the sender of this path) -- can't re-derive this with Directory.Exists here instead: this runs
+        // in the Hook process, which silently can't see a mapped network drive when running elevated.
+        var isDir = Path.EndsInDirectorySeparator(path);
+        var cleanPath = isDir ? Path.TrimEndingDirectorySeparator(path) : path;
+
+        // goto is a real navigation command, not a pure "select" verb -- calling it unconditionally on
+        // every arrow-key move while browsing global search results (which can span many unrelated
+        // folders) would make XYplorer's pane jump around constantly. Scoped to the folder XYplorer's pane
+        // already has open, same as Directory Opus's and Total Commander's own OnSelectionChanged.
+        var scope = GetSearchScope(hwnd);
+        var parent = Path.GetDirectoryName(cleanPath);
+        var isInCurrentFolder = !string.IsNullOrEmpty(scope) && string.Equals(parent?.TrimEnd('\\'), scope.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+        if (!isInCurrentFolder) return;
+
+        try
+        {
+            if (isDir)
+            {
+                // goto on a folder path enters it -- wrong for a live preview highlight while browsing
+                // search results. SelectItems operates on the folder already open (verified above) instead
+                // of navigating into the target.
+                Win32Helper.SelectItem(hwnd, cleanPath);
+            }
+            else
+            {
+                // stealFocus: false -- see Win32Helper.Navigate's own comment on why live-mirroring must
+                // not steal foreground/keyboard focus away from the search box the user is still typing in.
+                Win32Helper.Navigate(hwnd, cleanPath, stealFocus: false);
+            }
+        }
+        catch
+        {
+        }
+    }
+
     public bool GetDockBounds(IntPtr hwnd, out AdapterRect rect)
     {
         rect = default;

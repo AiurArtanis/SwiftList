@@ -185,11 +185,17 @@ public class InlineSearchWindowInputHandler
         var tracker = _window.Manager.ExplorerTracker;
         if (tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero)
         {
+            // Trailing separator marks a directory, same convention ExecuteItem's own IPC call already
+            // uses (see InlineAdapterIpcCoordinator.NormalizePath) -- an adapter's OnSelectionChanged runs
+            // in the Hook process, which can't reliably re-derive this itself (Directory.Exists on a
+            // mapped network drive silently fails when the Hook is elevated into a different logon
+            // session), so it has to travel with the path instead of being recomputed on the other end.
+            var path = result.IsDir && !result.FullPath.EndsWith('\\') ? result.FullPath + "\\" : result.FullPath;
             App.HookClient?.SendMessage(new IpcMessage
             {
                 Id = IpcMessageId.InlineSelectionChanged,
                 Hwnd = tracker.ActiveHwnd.ToInt64(),
-                StringVal1 = result.FullPath
+                StringVal1 = path
             });
         }
     }
