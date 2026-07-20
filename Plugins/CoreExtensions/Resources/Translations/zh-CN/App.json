@@ -58,6 +58,8 @@
   "Search_ResultFavorite": "收藏",
   "Settings_History_Hint": "管理与过滤您在 SwiftList 中的搜索历史和最近打开项，对它们进行删除或清空。",
   "Settings_History_KeywordHint": "管理与过滤您在快速窗口中输入过的搜索关键字，对它们进行删除或清空。",
+  "Settings_History_SearchPlaceholder": "搜索历史记录…",
+  "Settings_History_KeywordPlaceholder": "搜索关键字记录…",
   "Settings_History_Tab_Search": "搜索记录",
   "Settings_History_Tab_Keyword": "关键字记录",
   "Settings_History_Enable": "启用历史记录",

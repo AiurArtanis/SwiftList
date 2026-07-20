@@ -100,7 +100,8 @@
         </StackPanel>
 
         <!-- Tab: Search History -->
-        <ctrl:HistoryListControl x:Name="TabSearchHistory" Grid.Row="1" DataContext="{Binding SearchHistory}">
+        <ctrl:HistoryListControl x:Name="TabSearchHistory" Grid.Row="1" DataContext="{Binding SearchHistory}"
+                                  PlaceholderText="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_History_SearchPlaceholder]}">
             <ctrl:HistoryListControl.Style>
                 <Style TargetType="ctrl:HistoryListControl">
                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -114,7 +115,8 @@
         </ctrl:HistoryListControl>
 
         <!-- Tab: Keyword History -->
-        <ctrl:HistoryListControl x:Name="TabKeywordHistory" Grid.Row="1" DataContext="{Binding KeywordHistory}">
+        <ctrl:HistoryListControl x:Name="TabKeywordHistory" Grid.Row="1" DataContext="{Binding KeywordHistory}"
+                                  PlaceholderText="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_History_KeywordPlaceholder]}">
             <ctrl:HistoryListControl.Style>
                 <Style TargetType="ctrl:HistoryListControl">
                     <Setter Property="Visibility" Value="Collapsed"/>

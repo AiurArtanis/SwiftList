@@ -58,6 +58,8 @@
   "Search_ResultFavorite": "Favorite",
   "Settings_History_Hint": "Manage and filter your search history and recently opened items in SwiftList, delete or clear them.",
   "Settings_History_KeywordHint": "Manage and filter the search keywords you've typed in the quick window, delete or clear them.",
+  "Settings_History_SearchPlaceholder": "Search history…",
+  "Settings_History_KeywordPlaceholder": "Search keyword history…",
   "Settings_History_Tab_Search": "Search History",
   "Settings_History_Tab_Keyword": "Keyword History",
   "Settings_History_Enable": "Enable History",

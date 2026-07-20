@@ -109,8 +109,31 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBox Grid.Row="0" Style="{StaticResource HistorySearchTextBox}" Margin="0,0,0,8"
+                <TextBox x:Name="TxtHistorySearch" Grid.Row="0" Style="{StaticResource HistorySearchTextBox}" Margin="0,0,0,8"
                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <!-- Placeholder: same overlaid-TextBlock technique SearchBoxControl already uses for its
+                     own placeholder, since WPF's TextBox has no built-in watermark: this is the
+                     established pattern rather than a new one. PlaceholderText comes from the
+                     UserControl's own DP (see code-behind), not DataContext, since the Search/Keyword
+                     tabs share this one control with different History DataContexts. -->
+                <TextBlock Grid.Row="0" Margin="11,0,0,8"
+                           Foreground="{DynamicResource TextSecondary}"
+                           FontSize="13"
+                           VerticalAlignment="Center" HorizontalAlignment="Left"
+                           IsHitTestVisible="False"
+                           Text="{Binding PlaceholderText, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Text, ElementName=TxtHistorySearch}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
 
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="320">
                     <ItemsControl ItemsSource="{Binding FilteredItems}" ItemTemplate="{StaticResource HistoryEntryTemplate}"/>
