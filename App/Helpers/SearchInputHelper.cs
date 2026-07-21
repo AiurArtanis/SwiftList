@@ -122,11 +122,19 @@ public static class SearchInputHelper
     /// Fires an action hotkey (e.g. Ctrl+C copy, Ctrl+Enter locate) on the selected result without
     /// opening any menu — the always-available behavior the quick window has. Only runs when a modifier
     /// is held and the actions menu is allowed for the selection, so plain typing pays no cost and
-    /// suppressed rows (apps / plugin results / ...) suppress the hotkeys too.
+    /// suppressed rows (apps / plugin results / ...) suppress the hotkeys too. A bare key (no modifier)
+    /// is exempt from that requirement when it's actually bound to something (checked against the real
+    /// configured hotkeys, default or user-overridden, via HotkeyActionTrigger.HasBareKeyActionHotkey
+    /// -- not hardcoded to e.g. Delete, so rebinding DeleteFileAction to a different bare key still
+    /// works here) and, like the Right-arrow-opens-Actions check below, only when the caret is already
+    /// at the end of the query -- otherwise the key keeps its normal text-editing meaning while editing
+    /// earlier in the text. A modified key (e.g. Shift+Delete) never needs this: any modifier already
+    /// implies "this is a command, not typing" on its own.
     /// </summary>
     public static bool TryActionHotkey(System.Windows.Input.KeyEventArgs e, ISearchWindow window, ShellMenuPresenter? menuPresenter)
     {
-        if (Keyboard.Modifiers != ModifierKeys.None
+        var bareKeyBound = Keyboard.Modifiers == ModifierKeys.None && IsSearchCaretAtEnd(window) && HotkeyActionTrigger.HasBareKeyActionHotkey(e.Key);
+        if ((Keyboard.Modifiers != ModifierKeys.None || bareKeyBound)
             && window.LstResults.SelectedItem is AppSearchResult selectedResult
             && menuPresenter != null
             && menuPresenter.CanShowActionsMenu(new[] { selectedResult }))

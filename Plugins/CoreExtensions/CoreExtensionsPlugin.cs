@@ -18,6 +18,8 @@ public class CoreExtensionsPlugin : IPlugin, IActionProvider, IConfigurable
             new CopyPathAction(),
             new CopyFileAction(),
             new CutFileAction(),
+            new DeleteFileAction(),
+            new PermanentDeleteFileAction(),
             new OpenCommandPromptAction(),
             new OpenAdminCommandPromptAction(),
             new TouchAction(),

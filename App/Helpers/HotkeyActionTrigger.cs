@@ -3,6 +3,7 @@ using SwiftList.App.Services;
 using SwiftList.App.Services.PluginManagerCore;
 using SwiftList.Core;
 using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
 namespace SwiftList.App.Helpers;
 
 public static class HotkeyActionTrigger
@@ -46,14 +47,7 @@ public static class HotkeyActionTrigger
         foreach (var registration in PluginManager.Instance.Actions)
         {
             var action = registration.Action;
-            var effectiveHotkey = action.Hotkey;
-            // Matches the plugin ID convention used by PluginSettings: the DLL file name without its extension.
-            var pluginId = System.IO.Path.GetFileNameWithoutExtension(ComponentFilter.GetDllName(registration.Plugin));
-            if (pluginActionHotkeys.TryGetValue(pluginId, out var overrides)
-                && overrides.TryGetValue(action.GetType().Name, out var overrideHotkey))
-            {
-                effectiveHotkey = overrideHotkey;
-            }
+            var effectiveHotkey = ResolveEffectiveHotkey(action, registration.Plugin, pluginActionHotkeys);
 
             if (string.IsNullOrWhiteSpace(effectiveHotkey))
                 continue;
@@ -88,6 +82,42 @@ public static class HotkeyActionTrigger
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Whether any registered action's effective hotkey (its own default, or a user override via
+    /// PluginActionHotkeys) is bound to this key with no modifier held. Lets a caller (see
+    /// SearchInputHelper.TryActionHotkey) decide whether a bare key should get a chance at the
+    /// dispatch above at all, driven by whatever is actually configured -- not by hardcoding which
+    /// key a specific built-in action happens to default to, so a user who rebinds e.g.
+    /// DeleteFileAction to a different bare key still gets that override recognized here too.
+    /// </summary>
+    public static bool HasBareKeyActionHotkey(Key key)
+    {
+        var pluginActionHotkeys = UserSettings.Load().Hotkeys.PluginActionHotkeys;
+        foreach (var registration in PluginManager.Instance.Actions)
+        {
+            var effectiveHotkey = ResolveEffectiveHotkey(registration.Action, registration.Plugin, pluginActionHotkeys);
+            if (string.IsNullOrWhiteSpace(effectiveHotkey))
+                continue;
+
+            if (ParseHotkey(effectiveHotkey, out var hotkeyKey, out var hotkeyMods) && hotkeyMods == ModifierKeys.None && hotkeyKey == key)
+                return true;
+        }
+        return false;
+    }
+
+    private static string ResolveEffectiveHotkey(ISearchResultAction action, IPlugin plugin, Dictionary<string, Dictionary<string, string>> pluginActionHotkeys)
+    {
+        var effectiveHotkey = action.Hotkey;
+        // Matches the plugin ID convention used by PluginSettings: the DLL file name without its extension.
+        var pluginId = System.IO.Path.GetFileNameWithoutExtension(ComponentFilter.GetDllName(plugin));
+        if (pluginActionHotkeys.TryGetValue(pluginId, out var overrides)
+            && overrides.TryGetValue(action.GetType().Name, out var overrideHotkey))
+        {
+            effectiveHotkey = overrideHotkey;
+        }
+        return effectiveHotkey;
     }
 
     private static SearchWindowType GetWindowType(ISearchWindow window)

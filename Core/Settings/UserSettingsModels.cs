@@ -58,7 +58,7 @@ public class HotkeyPageSettings
     // Deletes the keyword history entry currently shown in the search box (only while navigating
     // history via the two hotkeys above). A middle-click on the search box does the same thing and
     // isn't user-configurable, matching the always-on scroll-to-navigate gesture.
-    public string KeywordHistoryDeleteHotkey { get; set; } = "Shift+Delete";
+    public string KeywordHistoryDeleteHotkey { get; set; } = "Ctrl+Delete";
 
     // Cycles (wraps at both ends) through the Startup Panel's own tab strip -- see
     // StartupPanelController.SelectNextTab/SelectPreviousTab.
