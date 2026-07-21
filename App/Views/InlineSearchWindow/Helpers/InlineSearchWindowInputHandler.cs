@@ -197,7 +197,34 @@ public class InlineSearchWindowInputHandler
                 Hwnd = tracker.ActiveHwnd.ToInt64(),
                 StringVal1 = path
             });
+
+            ScheduleFocusReclaim();
         }
+    }
+
+    private DispatcherTimer? _reclaimFocusTimer;
+
+    // Some inline-search adapters' selection-mirroring (currently XYplorer's OnSelectionChanged -- see
+    // its own comment on the goto/SelectItems script commands) can activate the host file manager as a
+    // side effect of running its script command, even though we never call SetForegroundWindow ourselves
+    // for this path -- reported as XYplorer stealing keyboard focus mid-typing, eating even Backspace.
+    // Reclaim it a beat after everything downstream should have settled (the Hook's own
+    // SelectionDebounceMs is 120ms; this adds slack for the IPC round trip and whatever the adapter does)
+    // rather than trying to race whatever XYplorer does internally. Reset (not just started) on every
+    // call so rapid typing only reclaims once, after the last selection change actually settles.
+    private void ScheduleFocusReclaim()
+    {
+        if (_reclaimFocusTimer == null)
+        {
+            _reclaimFocusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            _reclaimFocusTimer.Tick += (s, e) =>
+            {
+                _reclaimFocusTimer!.Stop();
+                if (_window.IsVisible) _window.FocusSearch();
+            };
+        }
+        _reclaimFocusTimer.Stop();
+        _reclaimFocusTimer.Start();
     }
 
     public void SuppressExplorerSelectionSyncForResultRefresh()
