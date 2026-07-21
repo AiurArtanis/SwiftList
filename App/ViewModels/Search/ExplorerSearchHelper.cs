@@ -49,15 +49,32 @@ public static class ExplorerSearchHelper
                     normalizedDir,
                     StringComparison.OrdinalIgnoreCase));
 
-            var sorted = localMatches
-                .OrderBy(x =>
-                {
-                    var parent = Path.GetDirectoryName(x.FullPath);
-                    var normalizedParent = parent?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                    return string.Equals(normalizedParent, normalizedDir, StringComparison.OrdinalIgnoreCase) ? 0 : 1;
-                })
-                .ThenBy(x => x.FullPath.Length)
-                .ToList();
+            // Same ranking SearchResultMapper.BuildQuickResults uses for its own "Global Search" tier
+            // (favorites/history first, then match weight, then shorter path) -- a file scores the
+            // same way regardless of which of the inline window's two sections it lands in, rather
+            // than this "Current Folder" section using its own folder-depth-first rule.
+            var historySnapshot = SearchHistoryStore.Snapshot();
+            var favoritePaths = new HashSet<string>(
+                UserSettings.Load().Favorites.Select(f => SearchResultHelper.NormalizePath(
+                    f.Path.Length > 3 && f.Path[^1] == '\\' ? f.Path.TrimEnd('\\') : f.Path)),
+                StringComparer.OrdinalIgnoreCase);
+
+            var candidates = new List<SearchResultMapper.RankedCandidate>(localMatches.Count);
+            foreach (var match in localMatches)
+            {
+                var lookupPath = match.FullPath.Length > 3 && match.FullPath[^1] == '\\' ? match.FullPath.TrimEnd('\\') : match.FullPath;
+                var normalizedPath = SearchResultHelper.NormalizePath(match.FullPath);
+                var hasHistory = historySnapshot.TryGetValue(lookupPath, out var priority);
+                var isFavorite = favoritePaths.Contains(normalizedPath);
+                candidates.Add(new SearchResultMapper.RankedCandidate(
+                    match,
+                    IsCurated: hasHistory || isFavorite,
+                    hasHistory ? priority : int.MaxValue,
+                    FuzzyMatcher.ComputeMatchWeight(match.Name, query),
+                    normalizedPath));
+            }
+
+            var sorted = SearchResultMapper.RankAndDedupe(candidates);
 
             localMatches.Clear();
             localMatches.AddRange(sorted.Take(50));

@@ -104,28 +104,7 @@ public static class SearchResultMapper
             }
         }
 
-        var usedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var ranked = new List<AppSearchResult>();
-        foreach (var candidate in candidates
-                     // Favorites and history-matched files (an explicit "you use/opened this" signal)
-                     // outrank everything else, applications included -- a coincidentally tighter text
-                     // match on some unrelated app shouldn't bump a favorite or recently-used file.
-                     .OrderByDescending(c => c.IsCurated)
-                     .ThenBy(c => c.Priority)
-                     // Within the same curated-ness tier, applications get their own priority over
-                     // settings/files -- a launcher's primary use case is opening apps, and a
-                     // coincidentally tighter text match on some unrelated file (e.g. a
-                     // "visualstudio.py" build script fully containing "visual stu" contiguously)
-                     // shouldn't outrank the actual "Visual Studio" application just because its own
-                     // name has a space breaking up the match.
-                     .ThenByDescending(c => c.Result.ResultKind == "Application")
-                     .ThenByDescending(c => c.Weight)
-                     .ThenBy(c => c.NormalizedPath.Length)
-                     .ThenBy(c => c.NormalizedPath, StringComparer.OrdinalIgnoreCase))
-        {
-            if (usedPaths.Add(candidate.NormalizedPath))
-                ranked.Add(candidate.Result);
-        }
+        var ranked = RankAndDedupe(candidates);
 
         // Capped here (not deferred to the caller) because this display cap has to respect whatever
         // header/grouping layout the caller (or InlineListSearchHelper.MergeLocalMatches, downstream)
@@ -170,7 +149,29 @@ public static class SearchResultMapper
         return uiResults;
     }
 
-    private readonly record struct RankedCandidate(AppSearchResult Result, bool IsCurated, int Priority, double Weight, string NormalizedPath);
+    internal readonly record struct RankedCandidate(AppSearchResult Result, bool IsCurated, int Priority, double Weight, string NormalizedPath);
+
+    // Shared by both search groups the inline window shows (its own "Current Folder" matches via
+    // ExplorerSearchHelper, and this "Global Search" tier below) so a file scores the same way
+    // regardless of which of the two it happens to land in: favorites/history-matched entries (an
+    // explicit "you use/opened this" signal) outrank everything else, then match-quality weight,
+    // then shorter path, then alphabetically.
+    internal static List<AppSearchResult> RankAndDedupe(List<RankedCandidate> candidates)
+    {
+        var usedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var ranked = new List<AppSearchResult>();
+        foreach (var candidate in candidates
+                     .OrderByDescending(c => c.IsCurated)
+                     .ThenBy(c => c.Priority)
+                     .ThenByDescending(c => c.Weight)
+                     .ThenBy(c => c.NormalizedPath.Length)
+                     .ThenBy(c => c.NormalizedPath, StringComparer.OrdinalIgnoreCase))
+        {
+            if (usedPaths.Add(candidate.NormalizedPath))
+                ranked.Add(candidate.Result);
+        }
+        return ranked;
+    }
 
     public static AppSearchResult CreateUiResult(SearchResult item, string query, int index, bool isApplication, string? scope)
         => SearchResultHelper.CreateUiResult(item, query, index, isApplication, scope);

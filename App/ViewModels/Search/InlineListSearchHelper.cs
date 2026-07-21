@@ -51,6 +51,14 @@ internal static class InlineListSearchHelper
             combinedResults.AddRange(localMatches);
         }
 
+        // Global Search runs unscoped (see SearchDispatchController's inline-context null scope), so
+        // it can legitimately re-match a file that's already shown above under Current Folder -- drop
+        // those rather than showing the same result twice.
+        var localPaths = new HashSet<string>(
+            localMatches.Select(x => SearchResultHelper.NormalizePath(x.FullPath)),
+            StringComparer.OrdinalIgnoreCase);
+        globalItems.RemoveAll(x => localPaths.Contains(SearchResultHelper.NormalizePath(x.FullPath)));
+
         if (globalItems.Count > 0)
         {
             SearchResultMapper.AddSectionHeader(combinedResults, TranslationManager.Instance["Search_GlobalSearchHeader"], query);
