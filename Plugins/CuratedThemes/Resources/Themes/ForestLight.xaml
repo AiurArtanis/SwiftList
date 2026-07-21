@@ -36,7 +36,7 @@
     <SolidColorBrush x:Key="SettingsRowBorderBrush" Color="#E9F0E6"/>
     <SolidColorBrush x:Key="HeaderColumnBg" Color="#EDF4EA"/>
     <SolidColorBrush x:Key="HeaderColumnText" Color="#5C7355"/>
-    <SolidColorBrush x:Key="WindowBorderBrush" Color="#E1EBDD"/>
+    <SolidColorBrush x:Key="WindowBorderBrush" Color="#DCE8D8"/>
     <SolidColorBrush x:Key="SidebarBg" Color="#EDF4EA"/>
     <SolidColorBrush x:Key="SidebarHover" Color="#DFEBD9"/>
     <SolidColorBrush x:Key="SidebarSelected" Color="#CBE8C4"/>
@@ -48,7 +48,7 @@
     <SolidColorBrush x:Key="ItemHover" Color="#E7F0E3"/>
     <SolidColorBrush x:Key="ItemSelected" Color="#CBE8C4"/>
     <SolidColorBrush x:Key="AccentBarColor" Color="#2E7D32"/>
-    <SolidColorBrush x:Key="BorderColor" Color="#E1EBDD"/>
+    <SolidColorBrush x:Key="BorderColor" Color="#DCE8D8"/>
     <SolidColorBrush x:Key="AccentColor" Color="#2E7D32"/>
     <SolidColorBrush x:Key="TextPrimary2" Color="#1F2E1A"/>
     <SolidColorBrush x:Key="TextSecondary2" Color="#5C7355"/>

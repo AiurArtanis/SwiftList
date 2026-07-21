@@ -48,7 +48,10 @@
     <SolidColorBrush x:Key="SettingsRowBorderBrush" Color="#EEEEEE"/>
     <SolidColorBrush x:Key="HeaderColumnBg" Color="#F3F3F3"/>
     <SolidColorBrush x:Key="HeaderColumnText" Color="#717171"/>
-    <SolidColorBrush x:Key="WindowBorderBrush" Color="#E5E5E5"/>
+    <!-- Matches CardBorderBrush rather than staying a step lighter: at #E5E5E5 the window's outer
+         edge barely registered against neighboring light-gray surfaces (settings panels, other
+         windows), reading as almost borderless. -->
+    <SolidColorBrush x:Key="WindowBorderBrush" Color="#D4D4D4"/>
     <SolidColorBrush x:Key="SidebarBg" Color="#F3F3F3"/>
     <SolidColorBrush x:Key="SidebarHover" Color="#E8E8E8"/>
     <SolidColorBrush x:Key="SidebarSelected" Color="#CDE8FA"/>
@@ -60,7 +63,7 @@
     <SolidColorBrush x:Key="ItemHover" Color="#E8E8E8"/>
     <SolidColorBrush x:Key="ItemSelected" Color="#CDE8FA"/>
     <SolidColorBrush x:Key="AccentBarColor" Color="#007ACC"/>
-    <SolidColorBrush x:Key="BorderColor" Color="#E5E5E5"/>
+    <SolidColorBrush x:Key="BorderColor" Color="#D4D4D4"/>
     <SolidColorBrush x:Key="AccentColor" Color="#007ACC"/>
     <SolidColorBrush x:Key="TextPrimary2" Color="#3B3B3B"/>
     <SolidColorBrush x:Key="TextSecondary2" Color="#717171"/>
