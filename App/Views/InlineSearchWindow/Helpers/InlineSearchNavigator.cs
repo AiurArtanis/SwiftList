@@ -86,6 +86,13 @@ public static class InlineSearchNavigator
         var tracker = window.Manager.ExplorerTracker;
         if (!forceRealOpen && !asAdmin && isDir.HasValue && path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero && App.HookClient?.IsConnected == true)
         {
+            // Captured once here, before HideWindow(), and reused below instead of reading
+            // tracker.ActiveHwnd again afterward: hiding the window can itself cause the tracker to
+            // re-evaluate what's active on another thread, and re-reading raced that -- confirmed by
+            // diagnostic logging sending Hwnd=0 to the Hook, which silently drops a zero-hwnd message
+            // with no response, so the caller always burned the full ~5s wait before falling back.
+            var targetHwnd = tracker.ActiveHwnd;
+
             // Hide before the actual navigate call, not after: ExecuteItem below blocks the UI thread for
             // up to 1s waiting for the Hook process to confirm the third-party adapter's own native call
             // finished (some, like Total Commander's SendMessage with its own internal 150ms sleep, are
@@ -95,7 +102,7 @@ public static class InlineSearchNavigator
             window.Manager.IsExecuting = true;
             window.HideWindow();
 
-            if (InlineAdapterIpcCoordinator.ExecuteItem(tracker.ActiveHwnd, path, isDir.Value, window.SearchText, App.HookClient.SendMessage, out var lateResult))
+            if (InlineAdapterIpcCoordinator.ExecuteItem(targetHwnd, path, isDir.Value, window.SearchText, App.HookClient.SendMessage, out var lateResult))
             {
                 return;
             }
