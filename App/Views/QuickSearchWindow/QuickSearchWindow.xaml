@@ -51,6 +51,12 @@
                        Fill="{DynamicResource SeparatorBrush}"
                        Visibility="{Binding ResultsSeparatorVisibility}"/>
 
+            <!-- Recessed content tier behind the startup panel/results rows, matching SearchWindow's own
+                 "Main Results Grid" (Background=ContentBg, a shade back from the outer CardBackground
+                 chrome/search bar) so every window's results area reads the same instead of being flat
+                 CardBackground everywhere with no depth. -->
+            <Border Grid.Row="2" Grid.RowSpan="2" Background="{DynamicResource ContentBg}"/>
+
             <!-- ═══════════ 3. Startup Panel Tab Strip ("初始面板") ═══════════ -->
             <ItemsControl x:Name="StartupPanelTabStrip" Grid.Row="2"
                           ItemsSource="{Binding StartupPanelTabs}"

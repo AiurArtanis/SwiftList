@@ -47,8 +47,10 @@
             <!-- Separator -->
             <Border Grid.Row="0" VerticalAlignment="Bottom" Height="1" Background="{DynamicResource SeparatorBrush}" Margin="0,0,0,0"/>
 
-            <!-- Content Panel -->
-            <Grid Grid.Row="1" Margin="0,12,0,12">
+            <!-- Content Panel: ContentBg, a shade back from the outer CardBackground chrome, matching
+                 the same recessed-content convention SearchWindow/QuickSearchWindow use for their own
+                 results area, instead of this preview panel sitting flush with the card's own tone. -->
+            <Grid Grid.Row="1" Margin="0,12,0,12" Background="{DynamicResource ContentBg}">
                 <ContentControl x:Name="ContentArea" Focusable="False" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
             </Grid>
 

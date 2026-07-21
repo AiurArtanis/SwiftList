@@ -125,6 +125,11 @@ public class InlineSearchWindowPositioner
             _window.PathPreviewBorder.BorderThickness = new Thickness(0, 1, 0, 0);
             _window.PathPreviewBorder.CornerRadius = new CornerRadius(0, 0, 7, 7);
             _window.MainBorder.CornerRadius = new CornerRadius(0, 0, 8, 8);
+            // ClippingBorder must track MainBorder's own CornerRadius exactly: it's what actually clips
+            // content to the visible shape (see InlineSearchWindow.xaml's own comment on why ClipToBounds
+            // moved off MainBorder), so if the two ever disagree, content clips to a different shape than
+            // the chrome is drawn with -- square corners peeking past a rounded edge, or vice versa.
+            _window.ClippingBorder.CornerRadius = new CornerRadius(0, 0, 8, 8);
             _window.SearchBoxBorder.CornerRadius = isResultsVisible ? new CornerRadius(0) : new CornerRadius(0, 0, 7, 7);
         }
         else
@@ -141,6 +146,7 @@ public class InlineSearchWindowPositioner
             _window.PathPreviewBorder.BorderThickness = new Thickness(0, 0, 0, 1);
             _window.PathPreviewBorder.CornerRadius = new CornerRadius(7, 7, 0, 0);
             _window.MainBorder.CornerRadius = new CornerRadius(8);
+            _window.ClippingBorder.CornerRadius = new CornerRadius(8);
             _window.SearchBoxBorder.CornerRadius = isResultsVisible ? new CornerRadius(0, 0, 7, 7) : new CornerRadius(7);
         }
 

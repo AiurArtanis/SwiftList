@@ -16,7 +16,10 @@
          tint than VS Code's own punchy #0060C0 fill, since VS Code also swaps selected-row text to
          white and this app doesn't recolor text on selection: a full-strength fill would fail
          contrast against the existing dark text instead. -->
-    <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF"/>
+    <!-- A faint tint of the same neutral family as ContentBg (#EAEAEA), not flat #FFFFFF: keeps the
+         search bar/card chrome visually unified with the recessed content tier instead of reading as
+         a disconnected pure-white patch next to it. -->
+    <SolidColorBrush x:Key="CardBackground" Color="#F5F5F5"/>
     <SolidColorBrush x:Key="CardBorderBrush" Color="#D4D4D4"/>
     <SolidColorBrush x:Key="TextPrimary" Color="#3B3B3B"/>
     <SolidColorBrush x:Key="TextSecondary" Color="#717171"/>
@@ -26,21 +29,21 @@
     <SolidColorBrush x:Key="FolderIconColor" Color="#D97706"/>
     <SolidColorBrush x:Key="FileIconColor" Color="#717171"/>
     <SolidColorBrush x:Key="ShortcutColor" Color="#717171"/>
-    <SolidColorBrush x:Key="ControlBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ControlBackground" Color="#F5F5F5"/>
     <SolidColorBrush x:Key="ControlBorderBrush" Color="#CECECE"/>
     <SolidColorBrush x:Key="ControlHoverBackground" Color="#E8E8E8"/>
     <SolidColorBrush x:Key="ControlDisabledBackground" Color="#F3F3F3"/>
     <SolidColorBrush x:Key="ControlDisabledBorderBrush" Color="#E5E5E5"/>
     <SolidColorBrush x:Key="ControlDisabledForeground" Color="#A5A5A5"/>
     <SolidColorBrush x:Key="SpinnerTrackBrush" Color="#E5E5E5"/>
-    <SolidColorBrush x:Key="MenuBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="MenuBackground" Color="#F5F5F5"/>
     <SolidColorBrush x:Key="MenuBorderBrush" Color="#D4D4D4"/>
     <SolidColorBrush x:Key="MenuText" Color="#3B3B3B"/>
     <SolidColorBrush x:Key="MenuDisabledText" Color="#A5A5A5"/>
     <SolidColorBrush x:Key="WindowChromeText" Color="#717171"/>
     <SolidColorBrush x:Key="WindowControlHover" Color="#E5E5E5"/>
-    <SolidColorBrush x:Key="ActionsHeaderBg" Color="#F3F3F3"/>
-    <SolidColorBrush x:Key="SettingsCardBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ActionsHeaderBg" Color="#EAEAEA"/>
+    <SolidColorBrush x:Key="SettingsCardBackground" Color="#F5F5F5"/>
     <SolidColorBrush x:Key="SettingsCardBorderBrush" Color="#D4D4D4"/>
     <SolidColorBrush x:Key="SettingsRowBorderBrush" Color="#EEEEEE"/>
     <SolidColorBrush x:Key="HeaderColumnBg" Color="#F3F3F3"/>
@@ -52,8 +55,8 @@
     <SolidColorBrush x:Key="SidebarText" Color="#3B3B3B"/>
     <SolidColorBrush x:Key="SidebarTextActive" Color="#000000"/>
     <SolidColorBrush x:Key="SidebarAccent" Color="#007ACC"/>
-    <SolidColorBrush x:Key="ContentBg" Color="#F3F3F3"/>
-    <SolidColorBrush x:Key="HeaderBg" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ContentBg" Color="#EAEAEA"/>
+    <SolidColorBrush x:Key="HeaderBg" Color="#F5F5F5"/>
     <SolidColorBrush x:Key="ItemHover" Color="#E8E8E8"/>
     <SolidColorBrush x:Key="ItemSelected" Color="#CDE8FA"/>
     <SolidColorBrush x:Key="AccentBarColor" Color="#007ACC"/>
@@ -61,7 +64,7 @@
     <SolidColorBrush x:Key="AccentColor" Color="#007ACC"/>
     <SolidColorBrush x:Key="TextPrimary2" Color="#3B3B3B"/>
     <SolidColorBrush x:Key="TextSecondary2" Color="#717171"/>
-    <SolidColorBrush x:Key="StatusBarBg" Color="#F3F3F3"/>
+    <SolidColorBrush x:Key="StatusBarBg" Color="#EAEAEA"/>
     <SolidColorBrush x:Key="IconMutedBrush" Color="#717171"/>
     <SolidColorBrush x:Key="SuccessBrush" Color="#388A34"/>
     <SolidColorBrush x:Key="WarningBrush" Color="#BF8803"/>

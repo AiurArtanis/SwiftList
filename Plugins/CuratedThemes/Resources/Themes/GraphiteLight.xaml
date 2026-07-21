@@ -7,7 +7,7 @@
     <sys:Boolean x:Key="IsDark">False</sys:Boolean>
     <sys:Double x:Key="WindowOpacity">1.0</sys:Double>
 
-    <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="CardBackground" Color="#FAFAFA"/>
     <SolidColorBrush x:Key="CardBorderBrush" Color="#DCDCDC"/>
     <SolidColorBrush x:Key="TextPrimary" Color="#2B2B2B"/>
     <SolidColorBrush x:Key="TextSecondary" Color="#6E6E6E"/>
@@ -17,21 +17,21 @@
     <SolidColorBrush x:Key="FolderIconColor" Color="#B8860B"/>
     <SolidColorBrush x:Key="FileIconColor" Color="#6E6E6E"/>
     <SolidColorBrush x:Key="ShortcutColor" Color="#6E6E6E"/>
-    <SolidColorBrush x:Key="ControlBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ControlBackground" Color="#FAFAFA"/>
     <SolidColorBrush x:Key="ControlBorderBrush" Color="#D0D0D0"/>
     <SolidColorBrush x:Key="ControlHoverBackground" Color="#EBEBEB"/>
     <SolidColorBrush x:Key="ControlDisabledBackground" Color="#F0F0F0"/>
     <SolidColorBrush x:Key="ControlDisabledBorderBrush" Color="#E3E3E3"/>
     <SolidColorBrush x:Key="ControlDisabledForeground" Color="#A0A0A0"/>
     <SolidColorBrush x:Key="SpinnerTrackBrush" Color="#E3E3E3"/>
-    <SolidColorBrush x:Key="MenuBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="MenuBackground" Color="#FAFAFA"/>
     <SolidColorBrush x:Key="MenuBorderBrush" Color="#DCDCDC"/>
     <SolidColorBrush x:Key="MenuText" Color="#2B2B2B"/>
     <SolidColorBrush x:Key="MenuDisabledText" Color="#A0A0A0"/>
     <SolidColorBrush x:Key="WindowChromeText" Color="#6E6E6E"/>
     <SolidColorBrush x:Key="WindowControlHover" Color="#E3E3E3"/>
     <SolidColorBrush x:Key="ActionsHeaderBg" Color="#EFEFEF"/>
-    <SolidColorBrush x:Key="SettingsCardBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="SettingsCardBackground" Color="#FAFAFA"/>
     <SolidColorBrush x:Key="SettingsCardBorderBrush" Color="#DCDCDC"/>
     <SolidColorBrush x:Key="SettingsRowBorderBrush" Color="#EAEAEA"/>
     <SolidColorBrush x:Key="HeaderColumnBg" Color="#EFEFEF"/>
@@ -44,7 +44,7 @@
     <SolidColorBrush x:Key="SidebarTextActive" Color="#14181B"/>
     <SolidColorBrush x:Key="SidebarAccent" Color="#5B7285"/>
     <SolidColorBrush x:Key="ContentBg" Color="#F5F5F5"/>
-    <SolidColorBrush x:Key="HeaderBg" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="HeaderBg" Color="#FAFAFA"/>
     <SolidColorBrush x:Key="ItemHover" Color="#EBEBEB"/>
     <SolidColorBrush x:Key="ItemSelected" Color="#DADFE3"/>
     <SolidColorBrush x:Key="AccentBarColor" Color="#5B7285"/>

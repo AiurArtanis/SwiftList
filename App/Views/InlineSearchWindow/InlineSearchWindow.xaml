@@ -18,57 +18,65 @@
     <Grid x:Name="RootGrid" VerticalAlignment="Bottom">
         <!-- Main card - inverted layout: results on top, search box at bottom -->
         <Border x:Name="MainBorder" Margin="12" CornerRadius="8"
-                Background="{DynamicResource ContentBg}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
-                ClipToBounds="True"
+                Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1"
                 VerticalAlignment="Bottom"
                 Effect="{StaticResource Elevation3}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <!-- Results list & preview container (grows upward) -->
-                    <RowDefinition Height="Auto"/>
-                    <!-- Separator -->
-                    <RowDefinition Height="Auto"/>
-                    <!-- Search box (anchored at bottom) -->
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <!-- ═══════════ 1. Results Container (Wraps path banner and results list) ═══════════ -->
-                <Grid x:Name="ResultsContainerWrapper" Grid.Row="0">
+            <!-- ClipToBounds lives on this separate inner Border, not MainBorder itself: putting it on
+                 the same element as Effect clips the drop shadow's own soft blur to a plain rectangle,
+                 leaving a hard square remnant right at the rounded corners instead of a smooth fade. Same
+                 split SearchWindow/SettingsWindow already use for the identical reason. -->
+            <Border x:Name="ClippingBorder" CornerRadius="8" ClipToBounds="True">
+                <Grid>
                     <Grid.RowDefinitions>
+                        <!-- Results list & preview container (grows upward) -->
                         <RowDefinition Height="Auto"/>
+                        <!-- Separator -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- Search box (anchored at bottom) -->
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    
-                    <!-- Top Path Preview Banner -->
-                    <Border x:Name="PathPreviewBorder" Grid.Row="0" Background="{DynamicResource ActionsHeaderBg}" 
-                            BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,0,0,1" 
-                            CornerRadius="7,7,0,0"
-                            Padding="14,8,14,8"
-                            Visibility="Collapsed">
-                        <TextBlock x:Name="PathPreviewTextBlock" 
-                                   Foreground="{DynamicResource TextSecondary2}" 
-                                   FontSize="12" 
-                                   TextWrapping="Wrap"
-                                   LineHeight="16"/>
-                    </Border>
+                    <!-- ═══════════ 1. Results Container (Wraps path banner and results list) ═══════════ -->
+                    <!-- ContentBg: a shade back from the outer CardBackground chrome/search box, matching
+                         the same recessed-content convention SearchWindow/QuickSearchWindow/QuickLookWindow
+                         use for their own results/preview area. -->
+                    <Grid x:Name="ResultsContainerWrapper" Grid.Row="0" Background="{DynamicResource ContentBg}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                    <local:ResultsControl x:Name="ResultsPanelControl" Grid.Row="1"
-                                          ItemsSource="{Binding Results}"
-                                          SelectedItem="{Binding SelectedResult, Mode=TwoWay}"
-                                          ViewMode="List"
-                                          Visibility="{Binding ResultsPanelVisibility}"/>
+                        <!-- Top Path Preview Banner -->
+                        <Border x:Name="PathPreviewBorder" Grid.Row="0" Background="{DynamicResource ActionsHeaderBg}"
+                                BorderBrush="{DynamicResource SeparatorBrush}" BorderThickness="0,0,0,1"
+                                CornerRadius="7,7,0,0"
+                                Padding="14,8,14,8"
+                                Visibility="Collapsed">
+                            <TextBlock x:Name="PathPreviewTextBlock"
+                                       Foreground="{DynamicResource TextSecondary2}"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       LineHeight="16"/>
+                        </Border>
+
+                        <local:ResultsControl x:Name="ResultsPanelControl" Grid.Row="1"
+                                              ItemsSource="{Binding Results}"
+                                              SelectedItem="{Binding SelectedResult, Mode=TwoWay}"
+                                              ViewMode="List"
+                                              Visibility="{Binding ResultsPanelVisibility}"/>
+                    </Grid>
+                    <!-- ═══════════ 2. Separator ═══════════ -->
+                    <Rectangle x:Name="ResultsSeparator" Grid.Row="1" Height="1" Fill="{DynamicResource SeparatorBrush}"
+                               Margin="12,0,12,0"
+                               Visibility="{Binding ResultsSeparatorVisibility}"/>
+                    <!-- ═══════════ 3. Search Box (Bottom Anchored) ═══════════ -->
+                    <Border x:Name="SearchBoxBorder" Grid.Row="2" Background="{DynamicResource CardBackground}"
+                            CornerRadius="0,0,7,7"
+                            Padding="12,8,12,8">
+                        <local:SearchBoxControl x:Name="SearchBox" FontSize="14" Padding="0" IsIconOnLeft="False"
+                                                SearchText="{Binding SearchQuery, Mode=TwoWay}" IsServiceRunning="{Binding IsServiceConnected}"/>
+                    </Border>
                 </Grid>
-                <!-- ═══════════ 2. Separator ═══════════ -->
-                <Rectangle x:Name="ResultsSeparator" Grid.Row="1" Height="1" Fill="{DynamicResource SeparatorBrush}"
-                           Margin="12,0,12,0"
-                           Visibility="{Binding ResultsSeparatorVisibility}"/>
-                <!-- ═══════════ 3. Search Box (Bottom Anchored) ═══════════ -->
-                <Border x:Name="SearchBoxBorder" Grid.Row="2" Background="{DynamicResource HeaderBg}" 
-                        CornerRadius="0,0,7,7"
-                        Padding="12,8,12,8">
-                    <local:SearchBoxControl x:Name="SearchBox" FontSize="14" Padding="0" IsIconOnLeft="False"
-                                            SearchText="{Binding SearchQuery, Mode=TwoWay}" IsServiceRunning="{Binding IsServiceConnected}"/>
-                </Border>
-            </Grid>
+            </Border>
         </Border>
     </Grid>
 </Window>
