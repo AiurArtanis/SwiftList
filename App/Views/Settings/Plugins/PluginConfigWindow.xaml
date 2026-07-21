@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:services="clr-namespace:SwiftList.App.Services"
+        xmlns:helpers="clr-namespace:SwiftList.App.Helpers"
         mc:Ignorable="d"
         MinWidth="480" MinHeight="220" MaxWidth="900" MaxHeight="800"
         SizeToContent="WidthAndHeight"
@@ -31,7 +32,10 @@
         <Border.Effect>
             <DropShadowEffect BlurRadius="20" ShadowDepth="2" Opacity="0.2" Color="{DynamicResource ShadowColor}"/>
         </Border.Effect>
-        <Border CornerRadius="10" ClipToBounds="True">
+        <!-- ClipToBounds ignores CornerRadius (a WPF limitation, not a bug here): helpers:RoundedClip
+             builds a real rounded-rect Clip instead: child content flush to the edge would otherwise show
+             square corners poking past this Border's own rounded paint. -->
+        <Border CornerRadius="10" helpers:RoundedClip.IsEnabled="True">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="44"/>

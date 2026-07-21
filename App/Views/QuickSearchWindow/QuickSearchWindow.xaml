@@ -4,6 +4,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:SwiftList.App"
         xmlns:services="clr-namespace:SwiftList.App.Services"
+        xmlns:helpers="clr-namespace:SwiftList.App.Helpers"
         Title="SwiftList"
         SizeToContent="WidthAndHeight"
         WindowStyle="None"
@@ -25,7 +26,10 @@
                 MouseLeftButtonDown="Border_MouseLeftButtonDown"
                 Effect="{StaticResource Elevation3}">
 
-            <Border CornerRadius="{Binding InnerCornerRadius}" ClipToBounds="True">
+            <!-- ClipToBounds ignores CornerRadius (a WPF limitation, not a bug here): helpers:RoundedClip
+                 builds a real rounded-rect Clip instead: child content flush to the edge would otherwise show
+                 square corners poking past this Border's own rounded paint. -->
+            <Border CornerRadius="{Binding InnerCornerRadius}" helpers:RoundedClip.IsEnabled="True">
                 <Grid Width="{Binding SearchBarWidth}">
             <Grid.RowDefinitions>
                 <!-- Search bar -->

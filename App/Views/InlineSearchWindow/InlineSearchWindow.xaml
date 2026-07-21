@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:SwiftList.App"
         xmlns:services="clr-namespace:SwiftList.App.Services"
+        xmlns:helpers="clr-namespace:SwiftList.App.Helpers"
         Title="SwiftList Inline"
         Width="465" Height="550" SizeToContent="Manual"
         WindowStyle="None"
@@ -24,8 +25,11 @@
             <!-- ClipToBounds lives on this separate inner Border, not MainBorder itself: putting it on
                  the same element as Effect clips the drop shadow's own soft blur to a plain rectangle,
                  leaving a hard square remnant right at the rounded corners instead of a smooth fade. Same
-                 split SearchWindow/SettingsWindow already use for the identical reason. -->
-            <Border x:Name="ClippingBorder" CornerRadius="8" ClipToBounds="True">
+                 split SearchWindow/SettingsWindow already use for the identical reason.
+                 helpers:RoundedClip.IsEnabled replaces plain ClipToBounds: ClipToBounds ignores
+                 CornerRadius entirely (a WPF limitation), so child content flush to the edge (e.g. the
+                 ContentBg row below) showed square corners poking past this Border's own rounded paint. -->
+            <Border x:Name="ClippingBorder" CornerRadius="8" helpers:RoundedClip.IsEnabled="True">
                 <Grid>
                     <Grid.RowDefinitions>
                         <!-- Results list & preview container (grows upward) -->
