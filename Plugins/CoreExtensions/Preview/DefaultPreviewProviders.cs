@@ -51,14 +51,15 @@ public class FolderPreviewProvider : IFilePreviewProvider
 
             if (truncatedCount > 0)
             {
-                panel.Children.Add(new TextBlock
+                var moreItemsText = new TextBlock
                 {
                     Text = TranslationService.Get("QuickLook_MoreItems"),
-                    Foreground = Application.Current?.TryFindResource("TextSecondary") as Brush ?? Brushes.Gray,
                     Margin = new Thickness(24, 4, 0, 0),
                     FontSize = 11,
                     FontStyle = FontStyles.Italic
-                });
+                };
+                moreItemsText.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondary");
+                panel.Children.Add(moreItemsText);
             }
         }, TaskScheduler.FromCurrentSynchronizationContext());
 
@@ -101,12 +102,13 @@ public class FolderPreviewProvider : IFilePreviewProvider
             Margin = new Thickness(0, 0, 8, 0)
         };
         rowPanel.Children.Add(img);
-        rowPanel.Children.Add(new TextBlock
+        var nameText = new TextBlock
         {
             Text = row.Name,
-            Foreground = Application.Current?.TryFindResource("TextPrimary") as Brush ?? Brushes.White,
             FontSize = 12
-        });
+        };
+        nameText.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimary");
+        rowPanel.Children.Add(nameText);
 
         if (row.NeedsIconLoad)
         {
@@ -120,14 +122,19 @@ public class FolderPreviewProvider : IFilePreviewProvider
         return rowPanel;
     }
 
-    private static TextBlock BuildMessageRow(string text, bool isError) => new()
+    private static TextBlock BuildMessageRow(string text, bool isError)
     {
-        Text = text,
-        FontStyle = isError ? FontStyles.Normal : FontStyles.Italic,
-        Foreground = isError ? Brushes.Red : Application.Current?.TryFindResource("TextSecondary") as Brush ?? Brushes.Gray,
-        TextWrapping = TextWrapping.Wrap,
-        Margin = new Thickness(8)
-    };
+        var row = new TextBlock
+        {
+            Text = text,
+            FontStyle = isError ? FontStyles.Normal : FontStyles.Italic,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(8)
+        };
+        if (isError) row.Foreground = Brushes.Red;
+        else row.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondary");
+        return row;
+    }
 }
 // 2. Image Preview Provider
 public class ImagePreviewProvider : IFilePreviewProvider
@@ -147,10 +154,10 @@ public class ImagePreviewProvider : IFilePreviewProvider
         var border = new Border
         {
             BorderThickness = new Thickness(1),
-            BorderBrush = Application.Current?.TryFindResource("SeparatorBrush") as Brush ?? Brushes.Gray,
             CornerRadius = new CornerRadius(8),
             ClipToBounds = true
         };
+        border.SetResourceReference(Border.BorderBrushProperty, "SeparatorBrush");
         grid.Children.Add(border);
         var img = new Image { Stretch = Stretch.Uniform, RenderTransformOrigin = new Point(0.5, 0.5) };
         RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
@@ -213,10 +220,10 @@ public class TextPreviewProvider : IFilePreviewProvider
         {
             FontFamily = new FontFamily("Consolas, Courier New, monospace"),
             FontSize = 12.5,
-            Foreground = Application.Current?.TryFindResource("TextPrimary") as Brush ?? Brushes.White,
             Margin = new Thickness(4),
             TextWrapping = TextWrapping.Wrap
         };
+        txt.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimary");
         scroll.Content = txt;
         try
         {
@@ -345,25 +352,27 @@ public class PePreviewProvider : IFilePreviewProvider
         panel.Children.Add(img);
         if (!string.IsNullOrEmpty(title))
         {
-            panel.Children.Add(new TextBlock
+            var titleText = new TextBlock
             {
                 Text = title,
                 TextAlignment = TextAlignment.Center,
                 FontSize = 13,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = Application.Current?.TryFindResource("TextPrimary") as Brush ?? Brushes.White,
                 Margin = new Thickness(0, 0, 0, 4)
-            });
+            };
+            titleText.SetResourceReference(TextBlock.ForegroundProperty, "TextPrimary");
+            panel.Children.Add(titleText);
         }
         if (!string.IsNullOrEmpty(details))
         {
-            panel.Children.Add(new TextBlock
+            var detailsText = new TextBlock
             {
                 Text = details,
                 TextAlignment = TextAlignment.Center,
-                FontSize = 12,
-                Foreground = Application.Current?.TryFindResource("TextSecondary") as Brush ?? Brushes.Gray
-            });
+                FontSize = 12
+            };
+            detailsText.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondary");
+            panel.Children.Add(detailsText);
         }
         return grid;
     }

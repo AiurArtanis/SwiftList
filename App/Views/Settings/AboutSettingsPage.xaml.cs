@@ -16,6 +16,11 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
+    // Tracks which brush key is currently showing, since ServiceStatusBrush is a plain bound CLR
+    // property (not a DependencyProperty) -- unlike SetResourceReference on a UI element, its value
+    // never re-resolves on its own when the theme changes, so ThemeChanged below re-runs this lookup
+    // manually against whatever status was last determined.
+    private string? _serviceStatusBrushKey;
     private Brush _serviceStatusBrush = Brushes.Gray;
     public Brush ServiceStatusBrush
     {
@@ -119,6 +124,9 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
             OnPropertyChanged(nameof(CliVersion));
             OnPropertyChanged(nameof(UserGuideUri));
         };
+
+        ThemeManager.Instance.ThemeChanged += UpdateServiceStatusBrush;
+        Unloaded += (_, _) => ThemeManager.Instance.ThemeChanged -= UpdateServiceStatusBrush;
     }
 
     private void AboutSettingsPage_Loaded(object sender, RoutedEventArgs e) => CheckServiceStatus();
@@ -129,19 +137,20 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
         {
             using var searchService = new SearchService();
             var status = await searchService.GetStatusAsync();
-            if (status != null && status.State != "error")
-            {
-                ServiceStatusBrush = System.Windows.Application.Current.TryFindResource("SuccessBadgeText") as Brush ?? Brushes.Green;
-            }
-            else
-            {
-                ServiceStatusBrush = System.Windows.Application.Current.TryFindResource("ErrorBrush") as Brush ?? Brushes.Red;
-            }
+            _serviceStatusBrushKey = status != null && status.State != "error" ? "SuccessBadgeText" : "ErrorBrush";
         }
         catch
         {
-            ServiceStatusBrush = System.Windows.Application.Current.TryFindResource("ErrorBrush") as Brush ?? Brushes.Red;
+            _serviceStatusBrushKey = "ErrorBrush";
         }
+        UpdateServiceStatusBrush();
+    }
+
+    private void UpdateServiceStatusBrush()
+    {
+        if (_serviceStatusBrushKey == null) return;
+        var fallback = _serviceStatusBrushKey == "ErrorBrush" ? Brushes.Red : Brushes.Green;
+        ServiceStatusBrush = System.Windows.Application.Current.TryFindResource(_serviceStatusBrushKey) as Brush ?? fallback;
     }
 
     private async void BtnCheckUpdate_Click(object sender, RoutedEventArgs e)

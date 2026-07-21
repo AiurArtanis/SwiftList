@@ -132,14 +132,14 @@ public static class PluginContextMenuHelper
         {
             var border = new Border
             {
-                Background = (System.Windows.Media.Brush)Application.Current.FindResource("MenuBackground"),
-                BorderBrush = (System.Windows.Media.Brush)Application.Current.FindResource("MenuBorderBrush"),
                 BorderThickness = new Thickness(1),
-                CornerRadius = (CornerRadius)Application.Current.FindResource("CornerRadiusPopover"),
                 Padding = new Thickness(6),
-                Child = rightClickMenu,
-                Effect = (System.Windows.Media.Effects.DropShadowEffect)Application.Current.FindResource("Elevation1")
+                Child = rightClickMenu
             };
+            border.SetResourceReference(Border.BackgroundProperty, "MenuBackground");
+            border.SetResourceReference(Border.BorderBrushProperty, "MenuBorderBrush");
+            border.SetResourceReference(Border.CornerRadiusProperty, "CornerRadiusPopover");
+            border.SetResourceReference(Border.EffectProperty, "Elevation1");
 
             _currentRightClickPopup = new Popup
             {

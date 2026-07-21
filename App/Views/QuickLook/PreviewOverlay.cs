@@ -1,9 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
-using Application = System.Windows.Application;
-using Brush = System.Windows.Media.Brush;
-using Brushes = System.Windows.Media.Brushes;
 using Point = System.Windows.Point;
 
 namespace SwiftList.App.Views.QuickLook;
@@ -36,9 +33,9 @@ internal sealed class PreviewOverlay
             ResizeMode = ResizeMode.NoResize,
             ShowInTaskbar = false,
             ShowActivated = false,
-            Background = Application.Current.TryFindResource("CardBackground") as Brush ?? Brushes.White,
             Content = host,
         };
+        _overlay.SetResourceReference(Window.BackgroundProperty, "CardBackground");
 
         _owner.LocationChanged += OnChanged;
         _owner.SizeChanged += OnSizeChanged;
