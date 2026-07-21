@@ -86,10 +86,17 @@ public static class InlineSearchNavigator
         var tracker = window.Manager.ExplorerTracker;
         if (!forceRealOpen && !asAdmin && isDir.HasValue && path != "__SHOW_MORE__" && tracker.ActiveInlineAdapter != null && tracker.ActiveHwnd != IntPtr.Zero && App.HookClient?.IsConnected == true)
         {
+            // Hide before the actual navigate call, not after: ExecuteItem below blocks the UI thread for
+            // up to 1s waiting for the Hook process to confirm the third-party adapter's own native call
+            // finished (some, like Total Commander's SendMessage with its own internal 150ms sleep, are
+            // slow enough that this made the window visibly linger after the user already committed to the
+            // click). Closing the window is a UI-only concern -- whether the navigate call itself
+            // eventually succeeds or falls back below doesn't need it to still be open to decide.
             window.Manager.IsExecuting = true;
+            window.HideWindow();
+
             if (InlineAdapterIpcCoordinator.ExecuteItem(tracker.ActiveHwnd, path, isDir.Value, window.SearchText, App.HookClient.SendMessage, out var lateResult))
             {
-                window.HideWindow();
                 return;
             }
 
@@ -100,10 +107,11 @@ public static class InlineSearchNavigator
             // call can then finish a moment later and ALSO navigate-and-select it in the host app. See
             // InlineAdapterIpcCoordinator.RunAfterLateResultAsync -- also used by the Quick Navigation menu
             // for the identical race -- for why waiting on the same in-flight call a bit longer, off the UI
-            // thread, closes that window without blocking the caller. Its continuations resume back on this
-            // UI thread automatically via WPF's SynchronizationContext, so touching window/UI state here is safe.
+            // thread, resolves that without blocking the caller. Its continuations resume back on this UI
+            // thread automatically via WPF's SynchronizationContext, so touching window/UI state here is
+            // safe -- the window is already hidden by this point either way.
             _ = InlineAdapterIpcCoordinator.RunAfterLateResultAsync(lateResult,
-                onSuccess: () => { window.Manager.IsExecuting = false; window.HideWindow(); },
+                onSuccess: () => { window.Manager.IsExecuting = false; },
                 onFallback: () => { window.Manager.IsExecuting = false; window.RunFallbackChain(path, asAdmin, isDir, forceRealOpen); });
             return;
         }
