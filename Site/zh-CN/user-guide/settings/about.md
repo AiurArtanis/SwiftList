@@ -1,7 +1,7 @@
 # 关于
 
-显示 App、Core、Service 三个组件的版本号(颜色会反映服务当前是否健康)、SwiftList 的简短说明，以
-及项目主页链接。
+显示 App、Core、Service、CLI 四个组件的版本号(颜色会反映服务当前是否健康)、SwiftList 的简短说
+明，以及项目主页链接。
 
 ## 检查更新
 

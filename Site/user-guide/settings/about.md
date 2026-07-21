@@ -1,7 +1,7 @@
 # About
 
-Shows version numbers for the App, Core, and Service components (colored to reflect whether the
-service is currently healthy), a short description of SwiftList, and a link to the project
+Shows version numbers for the App, Core, Service, and CLI components (colored to reflect whether
+the service is currently healthy), a short description of SwiftList, and a link to the project
 homepage.
 
 ## Checking for updates

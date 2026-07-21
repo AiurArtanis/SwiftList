@@ -26,19 +26,18 @@ picker and the "follow system light/dark setting" option.
 
 ## Search Bar Layout
 
-Customizes the size, corner rounding, and on-screen position of the quick search bar:
+Customizes the size and on-screen position of the quick search bar:
 
 - **Search Bar Width (px)** — range 300–1200px, default 570px.
 - **Search Bar Height (px)** — range 45–120px, default 60px. This one number also drives the
   result row's icon size, name/path font size, and row height (`height / 60`), so a taller search
   bar scales the whole result list up with it, always keeping the same proportions between icon and
   text.
-- **Corner Radius (px)** — range 0–50px, default 8px.
 - **Show clock in search box** — checkbox, off by default. While the search box is empty, replaces
   the usual "Type to search..." placeholder text with the current date, day of week, and time
   instead. Disappears the moment you start typing, same as the placeholder it replaces. Quick window
   only — the inline window always keeps its normal placeholder, even with this on.
-- **Reset Layout Settings** button — restores all four values above to their defaults.
+- **Reset Layout Settings** button — restores all three values above to their defaults.
 
 Right-clicking the [quick window's logo](../hotkeys#search-box-logo-icon) resets just its on-screen
 position (not size), re-centering it the same way it centers on first launch.
