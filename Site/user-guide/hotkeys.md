@@ -17,7 +17,7 @@ here. See [Settings → Hotkeys page](./settings/hotkeys-page) for the settings 
 | QuickLook preview | `Alt+P` | Toggles the preview pane for the selected result. |
 | Previous keyword history | `Alt+Up` | Cycles backward through your recently typed queries. |
 | Next keyword history | `Alt+Down` | Cycles forward through your recently typed queries. |
-| Delete keyword history entry | `Shift+Delete` | |
+| Delete keyword history entry | `Ctrl+Delete` | |
 | Open full window | *(none)* | Opens the full window directly, carrying over the current query — same effect as left-clicking the [Quick Window's own logo](#search-box-logo-icon) and choosing Show Main Window from the menu that opens, without that extra step. Not bound by default; set one from **Settings → Hotkeys**. |
 | Next Startup Panel tab | `Ctrl+Right` | Wraps from the last tab back to the first. Only active while the [Startup Panel](./settings/startup-panel) is showing — otherwise the key does its normal job (e.g. moving the caret while typing a query). |
 | Previous Startup Panel tab | `Ctrl+Left` | Wraps from the first tab back to the last. Same active-only-while-showing rule as above. |
@@ -79,9 +79,11 @@ These always behave the same way regardless of your hotkey settings:
 
 ## Plugin action hotkeys
 
-Plugins can register their own actions with a default hotkey (e.g. copy path, run as admin). These
-show up under **Settings → Hotkeys → Plugin Actions**, grouped by the plugin that registered them,
-and can be rebound the same way as built-in hotkeys.
+Plugins can register their own actions with a default hotkey (e.g. copy path (`Ctrl+Shift+C`), run
+as admin, or the built-in file actions — Cut `Ctrl+X`, Copy `Ctrl+C`, Paste `Ctrl+V`, Delete
+`Delete`, Permanently Delete `Shift+Delete`). These show up under **Settings → Hotkeys → Plugin
+Actions**, grouped by the plugin that registered them, and can be rebound the same way as built-in
+hotkeys.
 
 ## Process blacklist
 

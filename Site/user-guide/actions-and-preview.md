@@ -3,8 +3,9 @@
 ## Actions menu
 
 Every result — file, folder, or app — has a set of actions beyond "just open it": locate in
-Explorer, copy path, run as administrator, cut/copy the file itself, and anything a plugin adds
-(for example, the full Windows shell right-click menu, cascading submenus included).
+Explorer, copy path, run as administrator, cut/copy/paste the file itself, delete it (to the
+Recycle Bin) or permanently delete it, and anything a plugin adds (for example, the full Windows
+shell right-click menu, cascading submenus included).
 
 Open it with the **Open actions menu** hotkey (`Ctrl+O` by default) or the literal Right arrow on a
 selected result. Inside the menu:
