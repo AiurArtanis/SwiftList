@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using System.Windows.Threading;
 using SwiftList.PluginSdk;
 
 namespace SwiftList.Plugins.CoreExtensions.Shell;
@@ -9,50 +8,6 @@ namespace SwiftList.Plugins.CoreExtensions.Shell;
 // still gets a single native confirmation + progress dialog, exactly like Explorer's own Delete.
 public static class ShellDeleteHelper
 {
-    // IFileOperation is STA-affine like the shell context-menu COM objects (see ShellMenuSession), but
-    // gets its own dedicated worker rather than sharing that one: PerformOperations() can legitimately
-    // sit open for a while on the native confirm/progress dialog waiting on the user, and serializing
-    // that behind the same dispatcher as quick context-menu lookups would stall those too.
-    private static Dispatcher? _staDispatcher;
-    private static readonly object _staLock = new();
-
-    [DllImport("ole32.dll")]
-    private static extern int OleInitialize(IntPtr pvReserved);
-
-    private static Dispatcher? StaDispatcher
-    {
-        get
-        {
-            if (_staDispatcher != null) return _staDispatcher;
-            lock (_staLock)
-            {
-                if (_staDispatcher != null) return _staDispatcher;
-                using var ready = new ManualResetEventSlim();
-                var thread = new Thread(() =>
-                {
-                    OleInitialize(IntPtr.Zero);
-                    _staDispatcher = Dispatcher.CurrentDispatcher;
-                    ready.Set();
-                    Dispatcher.Run();
-                })
-                {
-                    IsBackground = true,
-                    Name = "ShellDeleteStaWorker"
-                };
-                thread.SetApartmentState(ApartmentState.STA);
-                thread.Start();
-
-                if (!ready.Wait(TimeSpan.FromSeconds(5)))
-                {
-                    Logger.Log("[ShellDeleteHelper] STA worker failed to start within 5s.", LogLevel.Error);
-                    return null;
-                }
-
-                return _staDispatcher;
-            }
-        }
-    }
-
     // Fire-and-forget by design: nothing downstream needs to know when the delete actually finishes,
     // and blocking the caller (the UI thread, per HotkeyActionTrigger) for however long the native
     // confirm dialog sits open would freeze the search window for no reason.
@@ -60,7 +15,7 @@ public static class ShellDeleteHelper
     {
         if (paths.Count == 0) return;
 
-        var dispatcher = StaDispatcher;
+        var dispatcher = ShellOperationStaWorker.StaDispatcher;
         if (dispatcher == null) return;
 
         dispatcher.BeginInvoke(new Action(() => DeleteCore(paths, permanent)));

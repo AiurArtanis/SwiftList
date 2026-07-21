@@ -1,0 +1,72 @@
+using System.Runtime.InteropServices;
+using SwiftList.PluginSdk;
+
+namespace SwiftList.Plugins.CoreExtensions.Shell;
+
+// Queues every clipboard file into ONE IFileOperation batch targeting a single destination folder --
+// same "one native dialog regardless of item count" shape ShellDeleteHelper uses. Copy vs move is the
+// caller's own already-known answer (the clipboard's "Preferred DropEffect" marker, the same one
+// CutFileAction writes), matching Explorer's own Ctrl+V semantics exactly, conflict-resolution prompt
+// (file already exists?) included via IFileOperation's own default UI.
+public static class ShellPasteHelper
+{
+    // Fire-and-forget by design, same reasoning as ShellDeleteHelper.DeleteAsync: nothing downstream
+    // needs to know when the copy/move actually finishes, and blocking the caller for however long the
+    // native progress/conflict dialog sits open would freeze the search window for no reason.
+    public static void PasteAsync(IReadOnlyList<string> sourcePaths, string destinationFolder, bool move)
+    {
+        if (sourcePaths.Count == 0) return;
+
+        var dispatcher = ShellOperationStaWorker.StaDispatcher;
+        if (dispatcher == null) return;
+
+        dispatcher.BeginInvoke(new Action(() => PasteCore(sourcePaths, destinationFolder, move)));
+    }
+
+    private static void PasteCore(IReadOnlyList<string> sourcePaths, string destinationFolder, bool move)
+    {
+        object? fileOpObj = null;
+        try
+        {
+            fileOpObj = new FileOperation();
+            var fileOp = (IFileOperation)fileOpObj;
+
+            var destIid = typeof(IShellItem).GUID;
+            ShellItemInterop.SHCreateItemFromParsingName(destinationFolder, IntPtr.Zero, ref destIid, out var destItem);
+
+            var queued = 0;
+            foreach (var path in sourcePaths)
+            {
+                try
+                {
+                    var iid = typeof(IShellItem).GUID;
+                    ShellItemInterop.SHCreateItemFromParsingName(path, IntPtr.Zero, ref iid, out var item);
+                    if (move)
+                        fileOp.MoveItem(item, destItem, null, null);
+                    else
+                        fileOp.CopyItem(item, destItem, null, null);
+                    queued++;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"[ShellPasteHelper] Failed to queue {(move ? "move" : "copy")} for '{path}': {ex.Message}", LogLevel.Error);
+                }
+            }
+
+            if (queued == 0) return;
+
+            fileOp.PerformOperations();
+        }
+        catch (Exception ex)
+        {
+            // Includes the user cancelling the native confirmation -- IFileOperation surfaces that as
+            // a COMException too, not a distinct "cancelled" signal, so this stays a log rather than
+            // something surfaced to the user as an error.
+            Logger.Log($"[ShellPasteHelper] Paste operation failed or was cancelled: {ex.Message}", LogLevel.Debug);
+        }
+        finally
+        {
+            if (fileOpObj != null) Marshal.ReleaseComObject(fileOpObj);
+        }
+    }
+}
