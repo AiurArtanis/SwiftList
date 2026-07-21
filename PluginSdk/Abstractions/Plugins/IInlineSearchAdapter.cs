@@ -73,6 +73,18 @@ public interface IInlineSearchAdapter : IPluginComponent
     void OnSelectionChanged(IntPtr hwnd, string path) { }
 
     /// <summary>
+    /// How long (in ms) the search box should wait after a selection-mirror sync before reclaiming its
+    /// own keyboard focus. Some hosts' <see cref="OnSelectionChanged"/> implementation ends up activating
+    /// the host window itself -- either as a side effect of whatever native command it runs, or because
+    /// the host requires being foreground to act on that command at all -- which steals keyboard focus
+    /// away from the search box while the user may still be typing. 0 (the default) means this adapter's
+    /// OnSelectionChanged never does that, so no reclaim is scheduled. Adapters that do need it tune their
+    /// own value here rather than sharing one process-wide constant, since how long the steal takes (and
+    /// whether it happens at all) depends entirely on that specific host's own behavior.
+    /// </summary>
+    int SelectionSyncFocusReclaimDelayMs => 0;
+
+    /// <summary>
     /// Called when the search session ends.
     /// <paramref name="executed"/> is true when the user confirmed a result,
     /// false when the session was cancelled or the window was closed.

@@ -17,6 +17,11 @@ public class XyplorerInlineSearchAdapter : IInlineSearchAdapter
 
     public bool IsFileExplorer => true;
 
+    // OnSelectionChanged's goto/SelectItems script commands can activate XYplorer as a side effect even
+    // though this adapter never calls SetForegroundWindow itself -- tune independently from other
+    // adapters here rather than a shared process-wide constant.
+    public int SelectionSyncFocusReclaimDelayMs => 200;
+
     private const string MainClass = "ThunderRT6FormDC";
 
     // XYplorer's file-list panes are custom-drawn VB6 PictureBox controls; the trailing "DC67"/"DC57" varies

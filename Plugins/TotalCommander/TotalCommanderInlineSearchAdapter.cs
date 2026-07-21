@@ -102,6 +102,15 @@ public class TotalCommanderInlineSearchAdapter : IInlineSearchAdapter
         }
     }
 
+    // No OnSelectionChanged override: ChangeSourcePanelDirectory requires TC to be the foreground window
+    // to act on its CD command at all, so live-mirroring here would steal real OS keyboard focus on every
+    // selection change (every keystroke that changes the filtered results, not just arrow-key moves).
+    // Tried it with a focus-reclaim timer afterward (see git history), but that only restores focus AFTER
+    // the steal -- any characters typed during the steal itself still go to TC and are lost, with no
+    // fixed timing to reclaim around. Confirmed in practice as random dropped keystrokes while typing.
+    // Directory Opus and XYplorer don't have this problem (their own mechanisms don't require foreground),
+    // so only TC is limited to ExecuteItem's one-shot "select on jump" behavior above.
+
     public bool GetDockBounds(IntPtr hwnd, out AdapterRect rect)
     {
         rect = default;

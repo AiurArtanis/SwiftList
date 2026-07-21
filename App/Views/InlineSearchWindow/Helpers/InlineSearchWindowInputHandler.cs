@@ -198,32 +198,39 @@ public class InlineSearchWindowInputHandler
                 StringVal1 = path
             });
 
-            ScheduleFocusReclaim();
+            // Some adapters' OnSelectionChanged can activate the host file manager as a side effect
+            // (XYplorer's goto/SelectItems) or as a hard requirement (TC's CD command needs to be
+            // foreground to act at all) -- either way it steals keyboard focus mid-typing, eating even
+            // Backspace. How long that takes (or whether it happens at all) is entirely host-specific, so
+            // each adapter tunes its own SelectionSyncFocusReclaimDelayMs rather than sharing one
+            // process-wide constant; 0 (the default) means this adapter never does this, so skip
+            // scheduling entirely.
+            var reclaimDelayMs = tracker.ActiveInlineAdapter.SelectionSyncFocusReclaimDelayMs;
+            if (reclaimDelayMs > 0)
+                ScheduleFocusReclaim(reclaimDelayMs);
         }
     }
 
     private DispatcherTimer? _reclaimFocusTimer;
 
-    // Some inline-search adapters' selection-mirroring (currently XYplorer's OnSelectionChanged -- see
-    // its own comment on the goto/SelectItems script commands) can activate the host file manager as a
-    // side effect of running its script command, even though we never call SetForegroundWindow ourselves
-    // for this path -- reported as XYplorer stealing keyboard focus mid-typing, eating even Backspace.
-    // Reclaim it a beat after everything downstream should have settled (the Hook's own
-    // SelectionDebounceMs is 120ms; this adds slack for the IPC round trip and whatever the adapter does)
-    // rather than trying to race whatever XYplorer does internally. Reset (not just started) on every
-    // call so rapid typing only reclaims once, after the last selection change actually settles.
-    private void ScheduleFocusReclaim()
+    // Reset (not just started) on every call so rapid typing only reclaims once, after the last
+    // selection change actually settles. Uses ActivateAndFocusSearchBox (Activate() + AttachThreadInput),
+    // not a plain SearchTextBox.Focus() -- once another process's window has taken OS-level foreground,
+    // WPF's own focus calls alone can't pull real keyboard input back without also re-activating this
+    // window.
+    private void ScheduleFocusReclaim(int delayMs)
     {
         if (_reclaimFocusTimer == null)
         {
-            _reclaimFocusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            _reclaimFocusTimer = new DispatcherTimer();
             _reclaimFocusTimer.Tick += (s, e) =>
             {
                 _reclaimFocusTimer!.Stop();
-                if (_window.IsVisible) _window.FocusSearch();
+                if (_window.IsVisible) _window.ActivateAndFocusSearchBox();
             };
         }
         _reclaimFocusTimer.Stop();
+        _reclaimFocusTimer.Interval = TimeSpan.FromMilliseconds(delayMs);
         _reclaimFocusTimer.Start();
     }
 
