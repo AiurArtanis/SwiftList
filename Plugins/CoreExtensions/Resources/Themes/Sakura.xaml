@@ -5,7 +5,7 @@
     <!-- Theme Metadata -->
     <sys:String x:Key="ThemeId">Sakura</sys:String>
     <sys:Boolean x:Key="IsDark">False</sys:Boolean>
-    <sys:Double x:Key="WindowOpacity">0.9</sys:Double>
+    <sys:Double x:Key="WindowOpacity">0.96</sys:Double>
 
     <SolidColorBrush x:Key="CardBackground" Color="#FFF0F2"/>
     <SolidColorBrush x:Key="CardBorderBrush" Color="#FFE4E8"/>

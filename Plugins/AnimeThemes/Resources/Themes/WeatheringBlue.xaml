@@ -5,7 +5,7 @@
     <!-- Theme Metadata -->
     <sys:String x:Key="ThemeId">WeatheringBlue</sys:String>
     <sys:Boolean x:Key="IsDark">False</sys:Boolean>
-    <sys:Double x:Key="WindowOpacity">0.85</sys:Double>
+    <sys:Double x:Key="WindowOpacity">0.95</sys:Double>
 
     <!-- Animated Visual Brush for Weathering Blue (Self-Contained Cloud Triggers) -->
     <VisualBrush x:Key="ContentBg" TileMode="None" Stretch="Fill">
@@ -108,9 +108,12 @@
         <GradientStop Color="#FFD4E6F4" Offset="1.0"/>
     </LinearGradientBrush>
 
+    <!-- Alpha raised from CC (80%) to E6 (90%): keeps the soft translucent card feel while giving
+         body text a more reliably opaque backing against whatever's on the real desktop behind it
+         (this window is AllowsTransparency=True). -->
     <LinearGradientBrush x:Key="CardBackground" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#CCFFFFFF" Offset="0.0"/>
-        <GradientStop Color="#CCEDF5FA" Offset="1.0"/>
+        <GradientStop Color="#E6FFFFFF" Offset="0.0"/>
+        <GradientStop Color="#E6EDF5FA" Offset="1.0"/>
     </LinearGradientBrush>
 
     <SolidColorBrush x:Key="CardBorderBrush" Color="#808FC6EC"/>
@@ -151,8 +154,8 @@
     <SolidColorBrush x:Key="ActionsHeaderBg" Color="#FFD5E7F3"/>
     
     <LinearGradientBrush x:Key="SettingsCardBackground" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#80FFFFFF" Offset="0.0"/>
-        <GradientStop Color="#80F4F9FC" Offset="1.0"/>
+        <GradientStop Color="#D9FFFFFF" Offset="0.0"/>
+        <GradientStop Color="#D9F4F9FC" Offset="1.0"/>
     </LinearGradientBrush>
     
     <SolidColorBrush x:Key="SettingsCardBorderBrush" Color="#FFBAD7EC"/>

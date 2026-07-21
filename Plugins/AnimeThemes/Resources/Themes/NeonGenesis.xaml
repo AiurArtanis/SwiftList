@@ -5,7 +5,11 @@
     <!-- Theme Metadata -->
     <sys:String x:Key="ThemeId">NeonGenesis</sys:String>
     <sys:Boolean x:Key="IsDark">True</sys:Boolean>
-    <sys:Double x:Key="WindowOpacity">0.82</sys:Double>
+    <!-- Kept below 1.0 for the neon-glass feel, but not lower: WindowOpacity dims the whole window
+         content (ThemeManager/WindowEffectHelper), text included, and this window blends with the
+         real desktop behind it (AllowsTransparency=True): too low a floor made body text hard to
+         read over an arbitrary backdrop. -->
+    <sys:Double x:Key="WindowOpacity">0.94</sys:Double>
 
     <!-- Animated Visual Brush for Neon Genesis (Self-Contained Grid & Scanline Triggers) -->
     <VisualBrush x:Key="ContentBg" TileMode="None" Stretch="Fill">
@@ -84,9 +88,12 @@
         <GradientStop Color="#FF160B30" Offset="1.0"/>
     </LinearGradientBrush>
 
+    <!-- Alpha raised from AA (~67%) to DD (~87%): low enough to still read as translucent neon
+         glass, high enough that body text stays legible against whatever's on the real desktop
+         behind it (this window is AllowsTransparency=True). -->
     <LinearGradientBrush x:Key="CardBackground" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#AA1C0E3D" Offset="0.0"/>
-        <GradientStop Color="#AA0B0518" Offset="1.0"/>
+        <GradientStop Color="#DD1C0E3D" Offset="0.0"/>
+        <GradientStop Color="#DD0B0518" Offset="1.0"/>
     </LinearGradientBrush>
 
     <SolidColorBrush x:Key="CardBorderBrush" Color="#8039FF14"/>
@@ -137,8 +144,8 @@
     <SolidColorBrush x:Key="ActionsHeaderBg" Color="#FF23124D"/>
     
     <LinearGradientBrush x:Key="SettingsCardBackground" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#80180C34" Offset="0.0"/>
-        <GradientStop Color="#800E0620" Offset="1.0"/>
+        <GradientStop Color="#D9180C34" Offset="0.0"/>
+        <GradientStop Color="#D90E0620" Offset="1.0"/>
     </LinearGradientBrush>
     
     <SolidColorBrush x:Key="SettingsCardBorderBrush" Color="#FF4A2A80"/>

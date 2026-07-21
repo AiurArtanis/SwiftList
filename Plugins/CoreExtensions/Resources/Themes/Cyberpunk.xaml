@@ -5,7 +5,11 @@
     <!-- Theme Metadata -->
     <sys:String x:Key="ThemeId">Cyberpunk</sys:String>
     <sys:Boolean x:Key="IsDark">True</sys:Boolean>
-    <sys:Double x:Key="WindowOpacity">0.85</sys:Double>
+    <!-- Kept below 1.0 for the neon-glass feel, but not lower: WindowOpacity is applied to the
+         whole window content (ThemeManager/WindowEffectHelper), text included, and this window is
+         AllowsTransparency=True so it genuinely blends with the real desktop behind it: too low
+         a floor here made body text hard to read over an arbitrary backdrop. -->
+    <sys:Double x:Key="WindowOpacity">0.95</sys:Double>
 
     <SolidColorBrush x:Key="CardBackground" Color="#0F0C1B"/>
     <SolidColorBrush x:Key="CardBorderBrush" Color="#2A1B4E"/>
