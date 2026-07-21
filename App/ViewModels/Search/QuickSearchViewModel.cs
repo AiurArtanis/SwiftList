@@ -165,8 +165,6 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
     public void EnsureServiceMonitoringActive() => Monitor.EnsureServiceMonitoringActive();
     public void RefreshEmptyState() => Search.RefreshEmptyState();
 
-    public CornerRadius WindowCornerRadius => new(UserSettings.Load().SearchWindow.CornerRadius);
-    public CornerRadius InnerCornerRadius => new(Math.Max(0, UserSettings.Load().SearchWindow.CornerRadius - 1));
     public double SearchBarWidth => UserSettings.Load().SearchWindow.SearchBarWidth;
     public double SearchBarHeight => UserSettings.Load().SearchWindow.SearchBarHeight;
 
@@ -201,8 +199,6 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
     public void RefreshLayoutSettings()
     {
         Services.UiMetrics.ApplyScaleFromSettings();
-        OnPropertyChanged(nameof(WindowCornerRadius));
-        OnPropertyChanged(nameof(InnerCornerRadius));
         OnPropertyChanged(nameof(SearchBarWidth));
         OnPropertyChanged(nameof(SearchBarHeight));
         OnPropertyChanged(nameof(ClockVisibility));

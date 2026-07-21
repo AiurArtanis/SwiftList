@@ -12,7 +12,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
     private readonly UserSettings _userSettings;
     private double _searchBarWidth;
     private double _searchBarHeight;
-    private double _cornerRadius;
     private bool _showClock;
     // Reset() clears the quick window's remembered screen position -- there's no bound field for it
     // (the window itself owns Left/Top), so this just stages the intent for Save() to commit.
@@ -23,7 +22,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
         _userSettings = userSettings;
         _searchBarWidth = userSettings.SearchWindow.SearchBarWidth;
         _searchBarHeight = userSettings.SearchWindow.SearchBarHeight;
-        _cornerRadius = userSettings.SearchWindow.CornerRadius;
         _showClock = userSettings.SearchWindow.ShowClock;
     }
 
@@ -53,19 +51,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
         }
     }
 
-    public double CornerRadius
-    {
-        get => _cornerRadius;
-        set
-        {
-            if (value < 0.0 || value > 50.0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(value), "Corner radius must be between 0 and 50.");
-            }
-            SetProperty(ref _cornerRadius, value);
-        }
-    }
-
     public bool ShowClock
     {
         get => _showClock;
@@ -78,7 +63,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
     {
         SearchBarWidth = 570;
         SearchBarHeight = 60;
-        CornerRadius = 8;
         ShowClock = false;
         _resetPosition = true;
     }
@@ -87,7 +71,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
     {
         _userSettings.SearchWindow.SearchBarWidth = _searchBarWidth;
         _userSettings.SearchWindow.SearchBarHeight = _searchBarHeight;
-        _userSettings.SearchWindow.CornerRadius = _cornerRadius;
         _userSettings.SearchWindow.ShowClock = _showClock;
         if (_resetPosition)
         {

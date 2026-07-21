@@ -191,7 +191,6 @@
   "General_LayoutHint": "自定义快捷搜索栏的大小、圆角及屏幕显示位置。",
   "General_LayoutWidth": "搜索栏宽度 (像素)",
   "General_LayoutHeight": "搜索栏高度 (像素)",
-  "General_LayoutCornerRadius": "圆角半径 (像素)",
   "General_LayoutShowClock": "搜索框为空时，用日期、时间和星期替代提示文字",
   "General_LayoutReset": "重置布局设置",
   "General_PreviewWindowTitle": "预览窗口",

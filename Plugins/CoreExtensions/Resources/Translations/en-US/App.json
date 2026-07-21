@@ -191,7 +191,6 @@
   "General_LayoutHint": "Customize the size, corner radius, and screen position of the floating search bar.",
   "General_LayoutWidth": "Search Bar Width (px)",
   "General_LayoutHeight": "Search Bar Height (px)",
-  "General_LayoutCornerRadius": "Corner Radius (px)",
   "General_LayoutShowClock": "Replace the placeholder text with date, time, and day of week when the search box is empty",
   "General_LayoutReset": "Reset Layout Settings",
   "General_PreviewWindowTitle": "Preview Window",
