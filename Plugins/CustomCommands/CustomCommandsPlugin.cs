@@ -85,6 +85,22 @@ public class CustomCommandsPlugin : IPlugin, IConfigurable
                         LabelKey = "CustomCommands_Config_RunAsAdminLabel",
                         FieldType = ConfigFieldType.Boolean,
                         DefaultValue = false
+                    },
+                    new PluginConfigField
+                    {
+                        Key = "ShowInQuickNav",
+                        LabelKey = "CustomCommands_Config_ShowInQuickNavLabel",
+                        DescriptionKey = "CustomCommands_Config_ShowInQuickNavDesc",
+                        FieldType = ConfigFieldType.Boolean,
+                        DefaultValue = false
+                    },
+                    new PluginConfigField
+                    {
+                        Key = "SubMenu",
+                        LabelKey = "CustomCommands_Config_SubMenuLabel",
+                        DescriptionKey = "CustomCommands_Config_SubMenuDesc",
+                        FieldType = ConfigFieldType.Text,
+                        DefaultValue = ""
                     }
                 }
             }

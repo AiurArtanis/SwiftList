@@ -244,8 +244,11 @@ public static class QuickNavigationMenu
             // non-actionable node (e.g. an ini-defined submenu group with no real target of its own) are
             // pure navigation categories -- clicking/Enter must do nothing at all, not even close the menu.
             // Their contents are still reachable via submenu expansion (hover/keyboard-focus/right-arrow),
-            // which is wired independently of this action below.
-            if (isRootItem || !item.IsActionable) return;
+            // which is wired independently of this action below. Gated on HasSubMenu, not "isRootItem"
+            // alone: a provider can legitimately put a genuinely actionable LEAF at the root too (e.g.
+            // CustomCommandsQuickNavProvider's own commands with no configured submenu path), and those
+            // must still fire on click/Enter same as any nested leaf does.
+            if ((isRootItem && item.HasSubMenu) || !item.IsActionable) return;
 
             contextMenu.IsOpen = false;
             (contextMenu.PlacementTarget as Window)?.Hide();
@@ -268,7 +271,12 @@ public static class QuickNavigationMenu
             }), System.Windows.Threading.DispatcherPriority.Background);
         };
 
-        if (enableRightClick)
+        // Always intercept the right-click, even when the flyout itself is disabled (root items): WPF's
+        // own MenuItem raises Click for a right mouse-button release too, not just left, so an
+        // unhandled right-click here was falling through to the same triggerAction() a left-click uses
+        // -- right-clicking a root-level leaf command silently ran it instead of doing nothing. Swallowing
+        // it unconditionally (e.Handled = true) and only actually showing the flyout when enableRightClick
+        // is set keeps root items truly inert on right-click, same as they already are on left-click.
         {
             Action triggerRightClickAction = () => PluginContextMenuHelper.Show(canNavigate, itemPath, item.HasSubMenu, menuItem, contextMenu);
 
@@ -277,7 +285,7 @@ public static class QuickNavigationMenu
                 if (FindVisualParent<MenuItem>(e.OriginalSource as DependencyObject) == menuItem)
                 {
                     e.Handled = true;
-                    triggerRightClickAction();
+                    if (enableRightClick) triggerRightClickAction();
                 }
             }), handledEventsToo: true);
         }

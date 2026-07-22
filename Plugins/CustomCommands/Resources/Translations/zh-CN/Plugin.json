@@ -16,7 +16,12 @@
   "CustomCommands_Config_WorkingDirLabel": "工作目录",
   "CustomCommands_Config_RunSilentlyLabel": "静默执行",
   "CustomCommands_Config_RunAsAdminLabel": "以管理员身份运行",
+  "CustomCommands_Config_ShowInQuickNavLabel": "在快速导航中显示",
+  "CustomCommands_Config_ShowInQuickNavDesc": "把这条命令也作为一个条目显示在快速导航菜单里（双击/中键点击空白处弹出的那个菜单），而不只是关键字触发的搜索结果。",
+  "CustomCommands_Config_SubMenuLabel": "快速导航子菜单",
+  "CustomCommands_Config_SubMenuDesc": "把这条命令归到快速导航菜单里的某个子菜单下。用\"/\"可以嵌套多级，比如\"工具/网络\"代表两级子菜单。留空则直接显示在根层级。仅在开启\"在快速导航中显示\"时生效。",
   "CustomCommands_PluginDesc": "自定义命令插件。允许用户定义快捷指令、别名与外部命令触发器。",
   "Plugin_Comp_Desc_CustomCommandsInstantProvider": "通过在搜索框中键入自定义缩写、快捷别名，极速触发对应的命令行脚本或应用程序。",
+  "Plugin_Comp_Desc_CustomCommandsQuickNavProvider": "把标记了\"在快速导航中显示\"的自定义命令，作为条目（可选嵌套子菜单）列在快速导航菜单里。",
   "Plugin_Comp_Desc_CustomCommandsTranslationProvider": "为自定义命令行和别名控制台提供翻译转换字典。"
 }
