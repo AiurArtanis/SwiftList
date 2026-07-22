@@ -91,7 +91,14 @@ internal static class ActionFlyoutItems
             Style = flyoutStyle,
             DataContext = item,
             Header = item,
-            Height = Math.Round(item.ItemHeight * 0.8),
+            // MinHeight, not Height: a fixed Height is a hard cap that clips/squeezes content taller
+            // than it, and the separator's 1px line plus its own margin plus this template's ItemBorder
+            // margin (see ActionFlyoutMenuItemStyle) adds up to more than the compacted row height ever
+            // budgeted for -- the line was getting arranged into a space smaller than it needed and
+            // never actually painted. The plain actions list's own ActionItemStyle already uses MinHeight
+            // for exactly this reason (a row is free to grow to fit content that needs more); mirroring
+            // that here instead of special-casing the separator's arithmetic is what actually fixes it.
+            MinHeight = Math.Round(item.ItemHeight * 0.8),
             IsEnabled = false,
             IsHitTestVisible = false
         };
