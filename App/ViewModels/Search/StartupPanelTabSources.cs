@@ -13,6 +13,10 @@ internal interface ITabSource
 {
     string Label { get; }
 
+    // Stable identity for StartupPanel.TabOrder (persisted reordering) -- a synthetic
+    // "__builtin::..." string for the two built-ins, PluginTabSource.ComponentId for a plugin tab.
+    string Id { get; }
+
     // Hides this tab from the panel going forward (the x button). Deliberately distinct from a plugin
     // component being disabled -- see PluginTabSource.Close for why the two must not share storage.
     void Close();
@@ -24,11 +28,14 @@ internal interface ITabSource
 // the indexing service, neither of which fits the plugin model's "just hand back items" contract.
 internal sealed class RecentFilesTabSource : ITabSource
 {
+    public const string SourceId = "__builtin::RecentFiles";
+
     private readonly SearchService _searchService;
 
     public RecentFilesTabSource(SearchService searchService) => _searchService = searchService;
 
     public string Label => TranslationManager.Instance["StartupPanel_TabRecentFiles"];
+    public string Id => SourceId;
 
     public void Close()
     {
@@ -95,10 +102,13 @@ internal sealed class RecentFilesTabSource : ITabSource
 // tracker is already running by the time the quick window (and this tab) can exist.
 internal sealed class LastDirectoryTabSource : ITabSource
 {
+    public const string SourceId = "__builtin::LastDirectory";
+
     // A folder can have far more entries than a startup-panel tab should ever show at once.
     private const int MaxItems = 100;
 
     public string Label => TranslationManager.Instance["StartupPanel_TabLastDirectory"];
+    public string Id => SourceId;
 
     public void Close()
     {
@@ -182,6 +192,7 @@ internal sealed class PluginTabSource : ITabSource
     public PluginTabSource(PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider provider) => _provider = provider;
 
     public string Label => _provider.Name;
+    public string Id => ComponentId(_provider);
 
     // Shared with StartupPanelPluginTabViewModel, which reads/writes the same ClosedTabIds entries so
     // the Settings page's "reopen" checkboxes and this tab's x button agree on identity.

@@ -40,6 +40,8 @@
   "StartupPanel_LastDirectoryDesc": "显示 SwiftList 接管系统文件打开/保存对话框时，最后停留过的目录内容。本次运行还没有触发过、该目录已经不存在、或者就是桌面时，这个标签不会出现。",
   "StartupPanel_PluginTabsDesc": "插件提供的面板标签,在面板中通过 x 按钮关闭后可在下方重新打开。",
   "StartupPanel_PluginTabsEmpty": "当前没有可用的插件面板标签。",
+  "StartupPanel_TabOrder": "标签顺序",
+  "StartupPanel_TabOrderHint": "调整面板标签从左到右的显示顺序。这里只列出当前实际启用的标签——已禁用或已关闭的标签没有顺序可调。",
   "Favorites_Title": "收藏夹管理",
   "Favorites_Hint": "管理您常用的快捷文件夹与文件，以便在快捷导航菜单或搜索结果中快速访问。",
   "Favorites_AddCardTitle": "添加新收藏",

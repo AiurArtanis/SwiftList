@@ -40,6 +40,8 @@
   "StartupPanel_LastDirectoryDesc": "Shows the contents of whatever folder a native file open/save dialog was last navigated to, while SwiftList's dialog interception was active. Won't appear if that hasn't happened yet this session, the folder no longer exists, or it's your Desktop.",
   "StartupPanel_PluginTabsDesc": "Plugin-provided panel tabs that were closed with the x button in the panel -- reopen them below.",
   "StartupPanel_PluginTabsEmpty": "No plugin-provided panel tabs are available.",
+  "StartupPanel_TabOrder": "Tab Order",
+  "StartupPanel_TabOrderHint": "Choose which order the panel's tabs appear in, left to right. Only currently-enabled tabs are listed here -- a disabled or closed one has nothing to order.",
   "Favorites_Title": "Favorites Management",
   "Favorites_Hint": "Manage your frequently used shortcut folders and files for quick access in the quick navigation menu or search results.",
   "Favorites_AddCardTitle": "Add New Favorite",

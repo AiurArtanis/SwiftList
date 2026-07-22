@@ -32,6 +32,7 @@ public class StartupPanelSettingsViewModel : ViewModelBase
         RefreshBulkText();
 
         RefreshPluginTabs();
+        TabOrder = new StartupPanelTabOrderViewModel(userSettings);
 
         AddDirectoryCommand = new RelayCommand(AddDirectory, CanAddDirectory);
         RemoveDirectoryCommand = new RelayCommand<ExclusionRuleItem>(RemoveDirectory);
@@ -49,13 +50,24 @@ public class StartupPanelSettingsViewModel : ViewModelBase
         set => SetProperty(ref _enabled, value);
     }
 
-    // Sub-tab navigation -- "RecentFiles", "LastDirectory", and "PluginTabs" today, each mirroring one
-    // of the live panel's own tab sources.
+    // Sub-tab navigation -- "RecentFiles", "LastDirectory", "PluginTabs", and "TabOrder" today, each
+    // mirroring one of the live panel's own tab sources (TabOrder spans all three of the others).
     private string _selectedSubTab = "RecentFiles";
     public string SelectedSubTab
     {
         get => _selectedSubTab;
-        set => SetProperty(ref _selectedSubTab, value);
+        set
+        {
+            if (SetProperty(ref _selectedSubTab, value) && value == "TabOrder")
+            {
+                // Picks up any RecentFiles/LastDirectory-enabled toggle or plugin-tab reopen/close made
+                // in another sub-tab during this same Settings session -- the two enabled flags are
+                // this ViewModel's own staged (not-yet-saved) values, while ClosedTabIds writes straight
+                // to the live UserSettings object (see StartupPanelPluginTabViewModel.IsOpen) rather
+                // than staging until Save() the way this page's other fields do.
+                TabOrder.Refresh(RecentFilesEnabled, LastDirectoryEnabled);
+            }
+        }
     }
     public ICommand SelectSubTabCommand { get; }
 
@@ -80,6 +92,8 @@ public class StartupPanelSettingsViewModel : ViewModelBase
     // disable: see StartupPanelPluginTabViewModel for why the two must not share storage.
     public ObservableCollection<StartupPanelPluginGroupViewModel> PluginTabGroups { get; } = new();
     public bool HasPluginTabs => PluginTabGroups.Count > 0;
+
+    public StartupPanelTabOrderViewModel TabOrder { get; }
 
     // Called on construction, and again after Plugin Management applies an enable/disable change in the
     // same Settings window session (see SettingsViewModel.Apply, right after RefreshDisabledComponents) --
@@ -161,6 +175,8 @@ public class StartupPanelSettingsViewModel : ViewModelBase
         panel.RecentFilesCount = RecentFilesCount;
         panel.RecentFilesMaxAgeMinutes = RecentFilesMaxAgeMinutes;
         panel.LastDirectoryEnabled = LastDirectoryEnabled;
+
+        TabOrder.Save();
     }
 
     private bool CanAddDirectory() => !string.IsNullOrWhiteSpace(NewDirectory);

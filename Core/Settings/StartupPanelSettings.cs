@@ -39,4 +39,11 @@ public class StartupPanelSettings
     // "{dll}::StartupPanelTabProvider::{id}" string PluginManagementViewModel uses for that other list,
     // purely for uniqueness -- the two lists are never read or written together.
     public List<string> ClosedTabIds { get; set; } = new();
+
+    // User-chosen display order for the panel's tab strip, most-preferred first -- covers both the
+    // built-in tabs (synthetic ids "__builtin::RecentFiles"/"__builtin::LastDirectory", see
+    // ITabSource.Id) and plugin tabs (the same ComponentId ClosedTabIds above uses). A tab whose id
+    // isn't listed here yet falls back to its original built-in-then-plugin-discovery-order position,
+    // appended after every listed tab -- see StartupPanelController.BuildCandidateSources.
+    public List<string> TabOrder { get; set; } = new();
 }

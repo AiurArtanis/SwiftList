@@ -117,7 +117,20 @@ public class StartupPanelController : ViewModelBase
                 sources.Add(new PluginTabSource(provider));
         }
 
-        return sources;
+        // Reordered per StartupPanel.TabOrder (position = priority, most-preferred first), covering
+        // both built-ins and plugin tabs -- a source whose id isn't listed there yet falls back to
+        // int.MaxValue, which (List<T>.Sort/OrderBy are both stable) lands it after every listed source
+        // while preserving its built-in-then-plugin-discovery-order position relative to any OTHER
+        // unlisted source, rather than an arbitrary reshuffle. Same pattern as
+        // PluginManager.QuickNavigationProviders' own ordering.
+        var order = UserSettings.Load().StartupPanel.TabOrder;
+        return sources
+            .OrderBy(s =>
+            {
+                var rank = order.IndexOf(s.Id);
+                return rank >= 0 ? rank : int.MaxValue;
+            })
+            .ToList();
     }
 
     private static async Task<List<AppSearchResult>> FetchSafeAsync(ITabSource source)

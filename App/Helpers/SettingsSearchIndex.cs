@@ -159,6 +159,7 @@ public static class SettingsSearchIndex
         new("StartupPanel_TabLastDirectory", "StartupPanel", vm => vm.StartupPanel.SelectedSubTab = "LastDirectory", "SubTabLastDirectory"),
         new("StartupPanel_LastDirectoryEnabled", "StartupPanel", vm => vm.StartupPanel.SelectedSubTab = "LastDirectory", "RowLastDirectoryEnabled", "StartupPanel_TabLastDirectory"),
         new("StartupPanel_TabPluginTabs", "StartupPanel", vm => vm.StartupPanel.SelectedSubTab = "PluginTabs", "SubTabPluginTabs"),
+        new("StartupPanel_TabOrder", "StartupPanel", vm => vm.StartupPanel.SelectedSubTab = "TabOrder", "SubTabOrder"),
 
         // About
         new("Settings_About", "About"),
