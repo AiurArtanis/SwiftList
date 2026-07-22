@@ -1,6 +1,6 @@
 # General
 
-Five tabs: **System**, **Search Bar Layout**, **Preview**, **Search Window**, and **Quick
+Five tabs: **System**, **Quick Search Window**, **Full Search Window**, **Preview**, and **Quick
 Navigation**.
 
 ## System
@@ -25,9 +25,11 @@ Navigation**.
 Theme selection moved to its own [Appearance](./appearance) section — see that page for the theme
 picker and the "follow system light/dark setting" option.
 
-## Search Bar Layout
+## Quick Search Window
 
-Customizes the size and on-screen position of the quick search bar:
+Covers both the quick search bar's appearance and how its search results are prioritized.
+
+**Search Bar Layout** — customizes the size and on-screen position of the quick search bar:
 
 - **Search Bar Width (px)** — range 300–1200px, default 570px.
 - **Search Bar Height (px)** — range 45–120px, default 60px. This one number also drives the
@@ -40,26 +42,16 @@ Customizes the size and on-screen position of the quick search bar:
   only — the inline window always keeps its normal placeholder, even with this on.
 - **Reset Layout Settings** button — restores all three values above to their defaults.
 
+Right-clicking the [quick window's logo](../hotkeys#search-box-logo-icon) resets just its on-screen
+position (not size), re-centering it the same way it centers on first launch.
+
 **Result Type Priority** — the same up/down-arrow reorder list used for [Quick
 Navigation](#quick-navigation) below: move a result type (Applications, Settings, File Filters, any
 third-party plugin's own searchable items, or the built-in "Files" entry) up or down to make it always
 outrank the types below it in the quick window's results, regardless of which one actually matched the
 query text better. History and Favorites always come first and aren't part of this list.
 
-Right-clicking the [quick window's logo](../hotkeys#search-box-logo-icon) resets just its on-screen
-position (not size), re-centering it the same way it centers on first launch.
-
-## Preview
-
-- **Preview Width (px)** — range 250–900px.
-- **Preview Height (px)** — range 250–1200px, default sized so the pane isn't overly tall on a
-  typical display.
-- **Reset Preview Window Settings** button.
-
-The preview window ignores the current result count — it's a fixed size, not a size that grows
-with content. See [Actions Menu & Preview](../actions-and-preview) for how the pane is positioned.
-
-## Search Window
+## Full Search Window
 
 Sets the default size of the full/main search window (the larger window you get from the taskbar
 or Start Menu shortcut, as opposed to the quick popup — see
@@ -74,6 +66,16 @@ Dragging the window's edge to resize it manually is remembered automatically —
 open the window (or open a new one), it comes back at whatever size you last left it at, and this
 page's fields update to match. Resizing while maximized doesn't overwrite the remembered size; only
 resizing in the normal (non-maximized) state does.
+
+## Preview
+
+- **Preview Width (px)** — range 250–900px.
+- **Preview Height (px)** — range 250–1200px, default sized so the pane isn't overly tall on a
+  typical display.
+- **Reset Preview Window Settings** button.
+
+The preview window ignores the current result count — it's a fixed size, not a size that grows
+with content. See [Actions Menu & Preview](../actions-and-preview) for how the pane is positioned.
 
 ## Quick Navigation
 

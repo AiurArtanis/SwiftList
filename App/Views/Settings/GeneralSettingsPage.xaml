@@ -199,32 +199,6 @@
                     </Border>
                 </StackPanel>
                 <StackPanel Margin="0,0,28,0">
-                    <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowTitle]}"
-                            Command="{Binding General.SelectTabCommand}" CommandParameter="PreviewWindow">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewWindow">
-                                        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-                                        <Setter Property="FontWeight" Value="SemiBold"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                    <Border>
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewWindow">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                    </Border>
-                </StackPanel>
-                <StackPanel Margin="0,0,28,0">
                     <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SearchWindowTitle]}"
                             Command="{Binding General.SelectTabCommand}" CommandParameter="SearchWindow">
                         <Button.Style>
@@ -243,6 +217,32 @@
                             <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding General.SelectedTab}" Value="SearchWindow">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                </StackPanel>
+                <StackPanel Margin="0,0,28,0">
+                    <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowTitle]}"
+                            Command="{Binding General.SelectTabCommand}" CommandParameter="PreviewWindow">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewWindow">
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Border>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewWindow">
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -366,6 +366,11 @@
 
             <Border Style="{StaticResource SettingsCard}">
                 <StackPanel>
+                    <TextBlock x:Name="RowLayoutSectionTitle" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutSectionTitle]}"
+                               FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutSectionHint]}"
+                               Style="{StaticResource SettingsHintText}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
                     <Grid x:Name="RowLayoutWidth" Margin="0,4,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
@@ -419,56 +424,6 @@
             </Border>
             </StackPanel>
 
-            <!-- Tab: Preview Window -->
-            <StackPanel x:Name="TabPreviewWindow">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewWindow">
-                                <Setter Property="Visibility" Value="Visible"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </StackPanel.Style>
-
-                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
-                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowHint]}"/>
-
-            <Border Style="{StaticResource SettingsCard}">
-                <StackPanel>
-                    <Grid x:Name="RowPreviewWindowWidth" Margin="0,4,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowWidth]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.PreviewWindow.Width, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
-                    </Grid>
-
-                    <Grid x:Name="RowPreviewWindowHeight" Margin="0,8,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowHeight]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.PreviewWindow.Height, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
-                    </Grid>
-
-                    <Grid x:Name="RowPreviewWindowReset" Margin="0,16,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowReset]}"
-                                Command="{Binding General.PreviewWindow.ResetCommand}"
-                                Style="{StaticResource SettingsButton}"
-                                Margin="0" HorizontalAlignment="Left"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-            </StackPanel>
-
             <!-- Tab: Search Window -->
             <StackPanel x:Name="TabSearchWindow">
                 <StackPanel.Style>
@@ -512,6 +467,56 @@
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SearchWindowReset]}"
                                 Command="{Binding General.MainWindow.ResetCommand}"
+                                Style="{StaticResource SettingsButton}"
+                                Margin="0" HorizontalAlignment="Left"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            </StackPanel>
+
+            <!-- Tab: Preview Window -->
+            <StackPanel x:Name="TabPreviewWindow">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewWindow">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+
+                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
+                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowHint]}"/>
+
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <Grid x:Name="RowPreviewWindowWidth" Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowWidth]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.PreviewWindow.Width, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                    </Grid>
+
+                    <Grid x:Name="RowPreviewWindowHeight" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowHeight]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.PreviewWindow.Height, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
+                    </Grid>
+
+                    <Grid x:Name="RowPreviewWindowReset" Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowReset]}"
+                                Command="{Binding General.PreviewWindow.ResetCommand}"
                                 Style="{StaticResource SettingsButton}"
                                 Margin="0" HorizontalAlignment="Left"/>
                     </Grid>
