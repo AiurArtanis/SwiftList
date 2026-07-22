@@ -20,6 +20,7 @@ internal sealed class SearchDispatchController
     private readonly Action<Visibility> _setResultsSeparatorVisibility;
     private readonly Action<IEnumerable<AppSearchResult>> _replaceResults;
     private readonly Func<int> _getResultsCount;
+    private readonly ResultTypeTriggerHandler _resultTypeTrigger;
 
     private IReadOnlyList<string> _queryTokens = Array.Empty<string>();
     private bool _bypassExclusions;
@@ -48,6 +49,13 @@ internal sealed class SearchDispatchController
         _setResultsSeparatorVisibility = setResultsSeparatorVisibility;
         _replaceResults = replaceResults;
         _getResultsCount = getResultsCount;
+        _resultTypeTrigger = new ResultTypeTriggerHandler(
+            startupPanel,
+            getIsInlineSearchContext,
+            setIsSearching,
+            setResultsPanelVisibility,
+            setResultsSeparatorVisibility,
+            replaceResults);
     }
 
     public void DispatchSearch(string value)
@@ -56,14 +64,14 @@ internal sealed class SearchDispatchController
         _queryTokens = tokens;
         var cleanQuery = SearchQuerySortParser.StripExclusionBypass(strippedTrailing, out var bypassExclusions);
         _bypassExclusions = bypassExclusions;
-        var (strippedClean, triggeredTypeId) = StripResultTypeTrigger(value, cleanQuery);
+        var (strippedClean, triggeredTypeId) = _resultTypeTrigger.StripTrigger(value, cleanQuery);
         cleanQuery = strippedClean;
 
         if (string.IsNullOrWhiteSpace(cleanQuery))
         {
             _engine.CancelPendingSearch();
             if (triggeredTypeId != null)
-                ShowResultTypeTriggerPrompt(triggeredTypeId);
+                _resultTypeTrigger.ShowPrompt(triggeredTypeId);
             else if (string.IsNullOrWhiteSpace(value))
                 PerformSearch(string.Empty);
             else
@@ -84,7 +92,7 @@ internal sealed class SearchDispatchController
     // completed search would render (see SearchExecutionEngine's own final-empty-snapshot handling) --
     // otherwise this would show nothing at all, which reads just as wrong as showing stale history.
     // "No Search Results" would also be misleading here since no search actually ran, so this uses the
-    // generic "keep typing" prompt instead (see ShowResultTypeTriggerPrompt below for the type-named
+    // generic "keep typing" prompt instead (see ResultTypeTriggerHandler.ShowPrompt for the type-named
     // variant used when a per-type trigger is what's waiting on more input).
     private void ClearForTokenOnlyQuery()
     {
@@ -94,20 +102,6 @@ internal sealed class SearchDispatchController
         // not just have its results cleared underneath it.
         _startupPanel.Deactivate();
         _replaceResults(new[] { SearchResultMapper.CreateKeepTypingPromptResult() });
-        _setResultsPanelVisibility(Visibility.Visible);
-        _setResultsSeparatorVisibility(Visibility.Visible);
-    }
-
-    // Same "nothing to search yet" situation as ClearForTokenOnlyQuery above, but for a per-type
-    // trigger typed with no content after it -- "No Search Results" would be misleading here since no
-    // search actually ran at all, so this names the type instead ("Keep typing to search Applications
-    // only") to make clear what's being waited on.
-    private void ShowResultTypeTriggerPrompt(string typeId)
-    {
-        _setIsSearching(false);
-        _startupPanel.Deactivate();
-        var typeName = SearchResultTypePriority.GetDisplayName(typeId) ?? string.Empty;
-        _replaceResults(new[] { SearchResultMapper.CreateResultTypeTriggerPromptResult(typeName) });
         _setResultsPanelVisibility(Visibility.Visible);
         _setResultsSeparatorVisibility(Visibility.Visible);
     }
@@ -205,43 +199,19 @@ internal sealed class SearchDispatchController
         _queryTokens = tokens;
         var cleanQuery = SearchQuerySortParser.StripExclusionBypass(strippedTrailing, out var bypassExclusions);
         _bypassExclusions = bypassExclusions;
-        var (strippedClean, triggeredTypeId) = StripResultTypeTrigger(query, cleanQuery);
+        var (strippedClean, triggeredTypeId) = _resultTypeTrigger.StripTrigger(query, cleanQuery);
         cleanQuery = strippedClean;
 
         if (string.IsNullOrWhiteSpace(cleanQuery))
         {
             if (triggeredTypeId != null)
-                ShowResultTypeTriggerPrompt(triggeredTypeId);
+                _resultTypeTrigger.ShowPrompt(triggeredTypeId);
             else
                 ClearForTokenOnlyQuery();
             return;
         }
 
         RunEngineSearch(_engine.PerformSearch, query, cleanQuery);
-    }
-
-    // Quick-window-only (unlike "*"/exclusion-bypass and token syntax, which are general search
-    // syntax and apply everywhere): if `raw`'s first character matches a configured per-type trigger
-    // (UserSettings.ResultTypeTriggers), strip it from cleanQuery before it's sent to the file-index
-    // engine (RunEngineSearch's engineCall) and reaches BuildQuickResults -- so a "Files" trigger gets
-    // the same clean-text recall from the backend as every other type gets locally, instead of the
-    // backend matching against the trigger-polluted text. BuildQuickResults still independently
-    // resolves WHICH type was triggered from originalValue/rawQuery (see
-    // SearchResultTypePriority.ResolveTrigger) -- this only fixes what text gets searched with. The
-    // returned type-id (null when no trigger matched) lets the caller show a type-specific prompt
-    // instead of the generic "no results" row when stripping leaves nothing behind. The inline window
-    // shares this same DispatchSearch/PerformSearch code path (see _getIsInlineSearchContext elsewhere
-    // in this class), but has no concept of a per-type trigger at all -- BuildQuickResults' own
-    // detection already skips it for isInlineWindow, so this must too, or an inline query that
-    // happens to start with someone's configured trigger character would silently search the wrong
-    // (one-character-short) text.
-    private (string CleanQuery, string? TriggeredTypeId) StripResultTypeTrigger(string raw, string cleanQuery)
-    {
-        if (_getIsInlineSearchContext() || raw.Length == 0 || cleanQuery.Length == 0 || cleanQuery[0] != raw[0])
-            return (cleanQuery, null);
-
-        var typeId = SearchResultTypePriority.ResolveTrigger(raw[0], UserSettings.Load().ResultTypeTriggers);
-        return typeId != null ? (cleanQuery.Substring(1), typeId) : (cleanQuery, null);
     }
 
     private void HandleLocalServiceUnavailable() => _mainVm.TriggerIndexBuild();

@@ -26,6 +26,7 @@ internal sealed class PathGate
     // Score > 0 = verified (<= 0 rejects, matching the old dirScore contract); Depth 0 only for a
     // bare-root parent (parent path == SourceRoot, whose trailing separator swallows the child's own).
     private readonly ConcurrentDictionary<int, (int Score, byte Depth)> _memo = new();
+    private readonly PathGateWeighting _weighting;
 
     public PathGate(Snapshot snapshot, DeltaOverlay delta, string dirQuery)
     {
@@ -40,6 +41,7 @@ internal sealed class PathGate
             _segmentBytePatterns[i] = FzfBytePattern.From(_segmentPatterns[i]);
         }
         _rootSegments = snapshot.SourceRoot.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+        _weighting = new PathGateWeighting(_snapshot, _delta, _querySegments, _segmentPatterns, _segmentBytePatterns, _rootSegments);
     }
 
     public (int Score, byte Depth) Verify(int parentRow, SearchMatcher.Worker worker)
@@ -208,170 +210,9 @@ internal sealed class PathGate
         return false;
     }
 
-    // Ranking-only weight (percentage*consecutiveness, product across matched segments), computed
-    // separately from Verify/VerifyPath above and ONLY for path-mode's bounded post-scan refinement
-    // (PathSearchFuzzy) -- NOT memoized, NOT called during the hot scan, since it needs the same
-    // relatively expensive HighlightMask computation name mode moved out of its own hot path for the
-    // same reason (see FzfResultRank.ApplyWeight). Re-walks the same ancestor chain as Verify; safe to
-    // call only on the small headroom-bounded candidate set that survives the unweighted scan.
-    public double ComputeWeight(int parentRow, SearchMatcher.Worker worker)
-    {
-        var q = _querySegments.Length - 1;
-        var weight = 1.0;
-        var current = parentRow;
-        for (var depth = 0; depth < 512 && current >= 0 && q >= 0; depth++)
-        {
-            if (_delta.IsSuperseded(current))
-            {
-                var parentPath = _delta.GetFullPath(parentRow);
-                return weight * ComputeWeightForPath(parentPath, worker);
-            }
+    // Ranking-only weight computation lives in PathGateWeighting (composition, not a partial class,
+    // purely to keep this file under the repo's per-file line limit); these two just forward to it.
+    public double ComputeWeight(int parentRow, SearchMatcher.Worker worker) => _weighting.ComputeWeight(parentRow, worker);
 
-            var uid = (int)_snapshot.NameIds[current];
-            var nameUtf8 = _snapshot.UniqueNameUtf8(uid);
-            if (nameUtf8.Length > 0 && TryMatchSegmentRowWeight(uid, nameUtf8, q, worker, out var segWeight))
-            {
-                weight *= segWeight;
-                q--;
-            }
-
-            var parent = _snapshot.ParentIndexes[current];
-            if (parent == current)
-                break;
-            current = parent;
-        }
-
-        for (var i = _rootSegments.Length - 1; i >= 0 && q >= 0; i--)
-        {
-            if (TryMatchSegmentTextWeight(_rootSegments[i], q, worker, out var segWeight))
-            {
-                weight *= segWeight;
-                q--;
-            }
-        }
-
-        return weight;
-    }
-
-    public double ComputeWeightForPath(string path, SearchMatcher.Worker worker)
-    {
-        var pathSegments = path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
-        var qIdx = _querySegments.Length - 1;
-        var pIdx = pathSegments.Length - 1;
-        var weight = 1.0;
-
-        while (qIdx >= 0 && pIdx >= 0)
-        {
-            if (TryMatchSegmentTextWeight(pathSegments[pIdx], qIdx, worker, out var segWeight))
-            {
-                weight *= segWeight;
-                qIdx--;
-            }
-            pIdx--;
-        }
-        return weight;
-    }
-
-    // Mirrors TryMatchSegmentRow's match-finding exactly, but only needs the winning branch's
-    // weight -- re-running TryMatch here (rather than threading weight through the score-only method)
-    // keeps the hot Verify/TryMatchSegmentRow path free of any HighlightMask reference at all.
-    private bool TryMatchSegmentRowWeight(int uid, ReadOnlySpan<byte> nameUtf8, int q, SearchMatcher.Worker worker, out double weight)
-    {
-        weight = 1.0;
-        var pattern = _segmentPatterns[q];
-        if (_snapshot.IsUniqueAscii(uid))
-        {
-            if (_segmentBytePatterns[q].TryMatch(nameUtf8, out _, FzfScoringScheme.Default, worker.Slab, worker.ByteBuffers))
-            {
-                weight = FzfBytePattern.ComputeWeight(nameUtf8, pattern);
-                return true;
-            }
-        }
-        else
-        {
-            if (worker.Scratch.Length < nameUtf8.Length)
-                worker.Scratch = new char[Math.Max(nameUtf8.Length, worker.Scratch.Length * 2)];
-            var written = Encoding.UTF8.GetChars(nameUtf8, worker.Scratch);
-            var name = worker.Scratch.AsSpan(0, written);
-            if (pattern.TryMatch(name, out _, FzfScoringScheme.Default, worker.Slab))
-            {
-                weight = HighlightMask.ComputeWeight(name, pattern);
-                return true;
-            }
-        }
-
-        var disabledIds = SearchContext.DisabledAliasIds;
-        var (start, end) = _snapshot.AliasEntryRange(uid);
-        for (var e = start; e < end; e++)
-        {
-            if (disabledIds != null && disabledIds.Contains(_snapshot.AliasProviderId(e)))
-                continue;
-            var aliasUtf8 = _snapshot.AliasUtf8(e);
-            if (aliasUtf8.Length == 0)
-                continue;
-            var isMatch = Ascii.IsValid(aliasUtf8)
-                ? _segmentBytePatterns[q].TryMatchSegmented(aliasUtf8, out _, FzfScoringScheme.Default, worker.Slab, worker.ByteBuffers)
-                : MatchesAliasChars(pattern, aliasUtf8, worker);
-            if (isMatch)
-            {
-                // Weight is measured against the segment's own display name, not the alias string --
-                // mirrors HighlightMask, which maps alias-matched positions back onto the source name.
-                weight = ComputeSegmentNameWeight(uid, nameUtf8, worker, pattern);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static bool MatchesAliasChars(FzfPattern pattern, ReadOnlySpan<byte> aliasUtf8, SearchMatcher.Worker worker)
-    {
-        if (worker.AliasScratch.Length < aliasUtf8.Length)
-            worker.AliasScratch = new char[Math.Max(aliasUtf8.Length, worker.AliasScratch.Length * 2)];
-        var written = Encoding.UTF8.GetChars(aliasUtf8, worker.AliasScratch);
-        return pattern.TryMatch(worker.AliasScratch.AsSpan(0, written), out _, FzfScoringScheme.Default, worker.Slab);
-    }
-
-    private double ComputeSegmentNameWeight(int uid, ReadOnlySpan<byte> nameUtf8, SearchMatcher.Worker worker, FzfPattern pattern)
-    {
-        if (_snapshot.IsUniqueAscii(uid))
-            return FzfBytePattern.ComputeWeight(nameUtf8, pattern);
-
-        if (worker.Scratch.Length < nameUtf8.Length)
-            worker.Scratch = new char[Math.Max(nameUtf8.Length, worker.Scratch.Length * 2)];
-        var written = Encoding.UTF8.GetChars(nameUtf8, worker.Scratch);
-        return HighlightMask.ComputeWeight(worker.Scratch.AsSpan(0, written), pattern);
-    }
-
-    private bool TryMatchSegmentTextWeight(string segment, int q, SearchMatcher.Worker worker, out double weight)
-    {
-        weight = 1.0;
-        var pattern = _segmentPatterns[q];
-        if (pattern.TryMatch(segment, out _, FzfScoringScheme.Default, worker.Slab))
-        {
-            weight = pattern.IsEmpty ? 1.0 : HighlightMask.ComputeWeight(segment, pattern);
-            return true;
-        }
-        if (!AliasProviderRegistry.HasNonAscii(segment))
-            return false;
-        foreach (var provider in AliasProviderRegistry.GetActiveProviders())
-        {
-            try
-            {
-                if (!provider.CanHandle(segment))
-                    continue;
-                foreach (var alias in provider.GetAliases(segment))
-                {
-                    if (pattern.TryMatch(alias, out _, FzfScoringScheme.Default, worker.Slab))
-                    {
-                        weight = HighlightMask.ComputeWeight(segment, pattern);
-                        return true;
-                    }
-                }
-            }
-            catch
-            {
-            }
-        }
-        return false;
-    }
+    public double ComputeWeightForPath(string path, SearchMatcher.Worker worker) => _weighting.ComputeWeightForPath(path, worker);
 }

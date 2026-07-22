@@ -5,7 +5,9 @@
         <ResourceDictionary Source="Styles/Spacing.xaml"/>
         <ResourceDictionary Source="Styles/Motion.xaml"/>
         <ResourceDictionary Source="Styles/Elevation.xaml"/>
+        <ResourceDictionary Source="Styles/ScrollBar.xaml"/>
         <ResourceDictionary Source="Styles/ListBox.xaml"/>
+        <ResourceDictionary Source="Styles/Button.xaml"/>
         <ResourceDictionary Source="Styles/Controls.xaml"/>
         <ResourceDictionary Source="Styles/Menu.xaml"/>
     </ResourceDictionary.MergedDictionaries>

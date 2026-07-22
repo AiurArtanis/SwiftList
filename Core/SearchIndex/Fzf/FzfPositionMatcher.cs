@@ -1,26 +1,18 @@
-
 namespace SwiftList.Core.SearchIndex.Fzf;
 
-// Byte-path fuzzy matcher: for a pure-ASCII name matched against a pure-ASCII pattern, UTF-8 bytes ARE
-// the chars (1:1, same offsets), so the whole match can run on the raw snapshot bytes with zero
-// decode. Same algorithm as FzfFuzzyMatcher; only the text representation differs. The DP-side slab
-// arrays (bonus/first/scores/consecutive) are shared with the char path; only the normalized-text
-// buffer needs its own byte scratch.
-internal sealed class FzfByteBuffers
+// Position-tracking twin of FzfFuzzyMatcher's FuzzyMatchV2/V1 -- split into its own file purely to
+// keep FzfFuzzyMatcher.cs under the repo's per-file line limit. Never called from the hot per-candidate
+// scan (SearchMatcher/PathGate use FzfFuzzyMatcher.FuzzyMatchV2 directly) -- only HighlightMask's
+// bounded weight refinement and on-screen highlighting call this, so this extra backtrace cost never
+// touches the scan itself.
+internal static class FzfPositionMatcher
 {
-    private byte[] _norm = new byte[256];
-
-    public byte[] Norm(int length)
-    {
-        if (_norm.Length < length)
-            _norm = new byte[Math.Max(length, _norm.Length * 2)];
-        return _norm;
-    }
-}
-
-internal static class FzfByteMatcher
-{
-    public static FzfMatchResult FuzzyMatchV2(ReadOnlySpan<byte> text, byte[] pattern, bool caseSensitive, FzfScoringScheme scheme, FzfSlab slab, FzfByteBuffers buffers)
+    // Ranking/highlight-only twin of FuzzyMatchV2: same DP, but additionally recovers every matched
+    // character's position into `marks` (index-aligned to `text`) via a fuller backtrace, instead of
+    // just the match start. Replaces the old approach of re-deriving an approximate mask via a separate
+    // DP (FuzzyHighlightMatcher) after the fact -- this recovers the REAL alignment the actual match
+    // algorithm found.
+    public static FzfMatchResult FuzzyMatchV2WithPositions(ReadOnlySpan<char> text, string pattern, bool caseSensitive, FzfScoringScheme scheme, Span<bool> marks, FzfSlab? slab = null)
     {
         var m = pattern.Length;
         if (m == 0)
@@ -28,16 +20,16 @@ internal static class FzfByteMatcher
         var n = text.Length;
         if (m > n)
             return FzfMatchResult.NoMatch;
-        if (!FindFuzzyScope(text, pattern, caseSensitive, out var minIdx, out var maxIdx))
+        if (!FzfScoring.FindFuzzyScope(text, pattern, caseSensitive, out var minIdx, out var maxIdx))
             return FzfMatchResult.NoMatch;
 
         var scopedLength = maxIdx - minIdx;
         if (m > 1000 || (long)scopedLength * m > FzfAlgorithm.MaxV2Cells)
-            return FuzzyMatchV1(text, pattern, caseSensitive, scheme);
+            return FuzzyMatchV1WithPositions(text, pattern, caseSensitive, scheme, marks);
 
-        var chars = buffers.Norm(scopedLength);
-        var bonus = slab.Bonus(scopedLength);
-        var first = slab.First(m);
+        var chars = slab?.Chars(scopedLength) ?? new char[scopedLength];
+        var bonus = slab?.Bonus(scopedLength) ?? new short[scopedLength];
+        var first = slab?.First(m) ?? new int[m];
         Array.Fill(first, -1, 0, m);
 
         var patternIndex = 0;
@@ -82,16 +74,19 @@ internal static class FzfByteMatcher
                 }
             }
 
-            return bestPos >= 0
-                ? new FzfMatchResult(minIdx + bestPos, minIdx + bestPos + 1, bestScore)
-                : FzfMatchResult.NoMatch;
+            if (bestPos < 0)
+                return FzfMatchResult.NoMatch;
+
+            if (minIdx + bestPos < marks.Length)
+                marks[minIdx + bestPos] = true;
+            return new FzfMatchResult(minIdx + bestPos, minIdx + bestPos + 1, bestScore);
         }
 
         var f0 = first[0];
         var width = lastIdx - f0 + 1;
         var matrixLength = m * width;
-        var scores = slab.Scores(matrixLength);
-        var consecutive = slab.Consecutive(matrixLength);
+        var scores = slab?.Scores(matrixLength) ?? new short[matrixLength];
+        var consecutive = slab?.Consecutive(matrixLength) ?? new short[matrixLength];
 
         var inGap = false;
         short previous = 0;
@@ -181,15 +176,18 @@ internal static class FzfByteMatcher
             }
         }
 
-        var startIndex = FzfBacktrack.BacktrackStart(scores, consecutive, first, f0, width, m, maxScorePos);
+        var startIndex = FzfBacktrack.BacktrackPositions(scores, consecutive, first, f0, width, m, maxScorePos, minIdx, marks);
         return new FzfMatchResult(minIdx + startIndex, minIdx + maxScorePos + 1, maxScore);
     }
 
-    public static FzfMatchResult FuzzyMatchV1(ReadOnlySpan<byte> text, byte[] pattern, bool caseSensitive, FzfScoringScheme scheme)
+    // Rare-path twin of FuzzyMatchV1 (huge pattern, >1000 chars or enormous scope -- never reached by
+    // real launcher queries) that also fills `marks` via a simple forward-greedy earliest-occurrence
+    // walk from the shrunk window. Good enough for an edge case this size never occurs in practice.
+    public static FzfMatchResult FuzzyMatchV1WithPositions(ReadOnlySpan<char> text, string pattern, bool caseSensitive, FzfScoringScheme scheme, Span<bool> marks)
     {
         if (pattern.Length == 0)
             return new FzfMatchResult(0, 0, 0);
-        if (!FindFuzzyScope(text, pattern, caseSensitive, out var start, out var end))
+        if (!FzfScoring.FindFuzzyScope(text, pattern, caseSensitive, out var start, out var end))
             return FzfMatchResult.NoMatch;
 
         var patternIndex = pattern.Length - 1;
@@ -207,56 +205,18 @@ internal static class FzfByteMatcher
             }
         }
 
-        var score = FzfByteExactMatcher.CalculateScore(text, pattern, shrinkStart, end, caseSensitive, scheme);
-        return new FzfMatchResult(shrinkStart, end, score);
-    }
-
-    public static bool FindFuzzyScope(ReadOnlySpan<byte> text, byte[] pattern, bool caseSensitive, out int start, out int end)
-    {
-        start = -1;
-        end = -1;
-
-        var currentIdx = 0;
-        byte lastChar = 0;
-
-        for (var patternIndex = 0; patternIndex < pattern.Length; patternIndex++)
+        var pIdx = 0;
+        for (var i = shrinkStart; i < end && pIdx < pattern.Length; i++)
         {
-            var target = pattern[patternIndex];
-            int offset;
-            if (caseSensitive)
+            if (FzfCharTables.CharsEqual(text[i], pattern[pIdx], caseSensitive))
             {
-                offset = text.Slice(currentIdx).IndexOf(target);
+                if (i < marks.Length)
+                    marks[i] = true;
+                pIdx++;
             }
-            else
-            {
-                var lower = (byte)FzfCharTables.LowerOfAscii[target];
-                var upper = (byte)FzfCharTables.UpperOfAscii[target];
-                offset = lower == upper
-                    ? text.Slice(currentIdx).IndexOf(lower)
-                    : text.Slice(currentIdx).IndexOfAny(lower, upper);
-            }
-
-            if (offset < 0)
-                return false;
-
-            var absoluteIdx = currentIdx + offset;
-            if (patternIndex == 0)
-                start = Math.Max(0, absoluteIdx - 1);
-
-            lastChar = target;
-            currentIdx = absoluteIdx + 1;
         }
 
-        end = currentIdx;
-
-        var l = (byte)FzfCharTables.LowerOfAscii[lastChar];
-        var u = (byte)FzfCharTables.UpperOfAscii[lastChar];
-        var lastOffset = caseSensitive ? text.Slice(end).LastIndexOf(lastChar)
-            : (l == u ? text.Slice(end).LastIndexOf(l) : text.Slice(end).LastIndexOfAny(l, u));
-
-        if (lastOffset >= 0)
-            end = end + lastOffset + 1;
-
-        return true;
+        var score = FzfScoring.CalculateScore(text, pattern, shrinkStart, end, caseSensitive, scheme);
+        return new FzfMatchResult(shrinkStart, end, score);
     }
 }

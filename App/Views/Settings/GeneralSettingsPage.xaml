@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:services="clr-namespace:SwiftList.App.Services"
+             xmlns:local="clr-namespace:SwiftList.App.Views.Settings"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="700">
     <UserControl.Resources>
@@ -14,140 +15,6 @@
                 <ResourceDictionary Source="../../Resources/Styles/SettingsWindow.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <Style x:Key="SettingsTextBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                <Setter Property="Height" Value="30"/>
-                <Setter Property="Padding" Value="8,0"/>
-                <Setter Property="FontSize" Value="12"/>
-                <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
-                <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="VerticalContentAlignment" Value="Center"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="TextBox">
-                            <Border x:Name="border" CornerRadius="6" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                                <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="true">
-                                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
-                                </Trigger>
-                                <Trigger Property="IsFocused" Value="true">
-                                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-
-            <!-- Mirrors FavoritesSettingsPage.xaml's own FavIconButton exactly: same small square icon
-                 button used for its Move Up/Down actions, but defined locally rather than shared across
-                 UserControls, matching how SettingsTextBox above is already page-local rather than pulled
-                 from a shared dictionary. -->
-            <Style x:Key="QuickNavIconButton" TargetType="Button">
-                <Setter Property="Width" Value="32"/>
-                <Setter Property="Height" Value="32"/>
-                <Setter Property="Margin" Value="6,0,0,0"/>
-                <Setter Property="Padding" Value="0"/>
-                <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-                <Setter Property="Foreground" Value="{DynamicResource TextSecondary2}"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
-                <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
-                <Setter Property="FontSize" Value="14"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" CornerRadius="6" Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBackground}"/>
-                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource AccentColor}"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-
-            <DataTemplate x:Key="QuickNavItemTemplate">
-                <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis"/>
-
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="&#xE74A;"
-                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_MoveUpTooltip]}"
-                                    Style="{StaticResource QuickNavIconButton}"
-                                    Command="{Binding DataContext.General.QuickNavigationOrder.MoveUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"/>
-                            <Button Content="&#xE74B;"
-                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_MoveDownTooltip]}"
-                                    Style="{StaticResource QuickNavIconButton}"
-                                    Command="{Binding DataContext.General.QuickNavigationOrder.MoveDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-            </DataTemplate>
-
-            <!-- Same shape as QuickNavItemTemplate above, just wired to ResultTypeOrder's own
-                 Move Up/Down commands instead of QuickNavigationOrder's. -->
-            <DataTemplate x:Key="ResultTypeOrderItemTemplate">
-                <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis"/>
-
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                            <TextBox Text="{Binding TriggerChar, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     MaxLength="1"
-                                     Width="32" Height="32"
-                                     Padding="0"
-                                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                                     Style="{StaticResource SettingsTextBox}"
-                                     Margin="0,0,6,0">
-                                <TextBox.ToolTip>
-                                    <ToolTip>
-                                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ResultTypeTriggerTooltip]}"
-                                                   TextWrapping="Wrap" MaxWidth="260"/>
-                                    </ToolTip>
-                                </TextBox.ToolTip>
-                            </TextBox>
-                            <Button Content="&#xE74A;"
-                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_MoveUpTooltip]}"
-                                    Style="{StaticResource QuickNavIconButton}"
-                                    Command="{Binding DataContext.General.ResultTypeOrder.MoveUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"/>
-                            <Button Content="&#xE74B;"
-                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_MoveDownTooltip]}"
-                                    Style="{StaticResource QuickNavIconButton}"
-                                    Command="{Binding DataContext.General.ResultTypeOrder.MoveDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -293,10 +160,10 @@
             </StackPanel>
             <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
 
-            <!-- Tab: System -->
-            <StackPanel x:Name="TabSystem">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <!-- Tab: System (extracted; see GeneralSettingsSystemTab.xaml) -->
+            <local:GeneralSettingsSystemTab x:Name="TabSystem">
+                <local:GeneralSettingsSystemTab.Style>
+                    <Style TargetType="local:GeneralSettingsSystemTab">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding General.SelectedTab}" Value="System">
@@ -304,68 +171,13 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
+                </local:GeneralSettingsSystemTab.Style>
+            </local:GeneralSettingsSystemTab>
 
-                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
-                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SysHint]}"/>
-
-            <Border Style="{StaticResource SettingsCard}">
-                <StackPanel>
-                    <CheckBox x:Name="RowStartup" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_Startup]}"
-                               IsChecked="{Binding General.StartWithWindows, Mode=TwoWay}"
-                               Margin="0,4"/>
-
-                    <CheckBox x:Name="RowAutoCheckUpdates" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_AutoCheckUpdates]}"
-                               IsChecked="{Binding General.AutoCheckUpdates, Mode=TwoWay}"
-                               Margin="0,4"/>
-
-                    <CheckBox x:Name="RowAutoSilentUpdate" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_AutoSilentUpdate]}"
-                               IsChecked="{Binding General.AutoSilentUpdate, Mode=TwoWay}"
-                               IsEnabled="{Binding General.IsAutoSilentUpdateEnabled}"
-                               Margin="0,4"/>
-
-                    <CheckBox x:Name="RowHardwareAcceleration" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_HardwareAcceleration]}"
-                               IsChecked="{Binding General.EnableHardwareAcceleration, Mode=TwoWay}"
-                               Margin="0,4"/>
-
-                    <CheckBox x:Name="RowHideTrayIcon" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_HideTrayIcon]}"
-                               IsChecked="{Binding General.HideTrayIcon, Mode=TwoWay}"
-                               Margin="0,4"/>
-
-                    <Grid x:Name="RowLogLevel" Margin="0,12,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="Auto" MinWidth="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LogLevel]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <ComboBox Grid.Column="1"
-                                  Style="{StaticResource SettingsComboBox}"
-                                  ItemsSource="{Binding General.LogLevelOptions}"
-                                  DisplayMemberPath="Label"
-                                  SelectedItem="{Binding General.SelectedLogLevel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    </Grid>
-
-                    <Grid x:Name="RowLangSelect" Margin="0,12,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="Auto" MinWidth="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LangSelect]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <ComboBox Grid.Column="1"
-                                  Style="{StaticResource SettingsComboBox}"
-                                  ItemsSource="{Binding General.LanguageOptions}"
-                                  DisplayMemberPath="Label"
-                                  SelectedValuePath="Value"
-                                  SelectedValue="{Binding General.PreferredLanguage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-            </StackPanel>
-
-            <!-- Tab: Layout -->
-            <StackPanel x:Name="TabLayout">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <!-- Tab: Layout (extracted; see GeneralSettingsLayoutTab.xaml) -->
+            <local:GeneralSettingsLayoutTab x:Name="TabLayout">
+                <local:GeneralSettingsLayoutTab.Style>
+                    <Style TargetType="local:GeneralSettingsLayoutTab">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding General.SelectedTab}" Value="Layout">
@@ -373,75 +185,13 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
+                </local:GeneralSettingsLayoutTab.Style>
+            </local:GeneralSettingsLayoutTab>
 
-                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
-                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutHint]}"/>
-
-            <Border Style="{StaticResource SettingsCard}">
-                <StackPanel>
-                    <TextBlock x:Name="RowLayoutSectionTitle" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutSectionTitle]}"
-                               FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutSectionHint]}"
-                               Style="{StaticResource SettingsHintText}" TextWrapping="Wrap" Margin="0,0,0,8"/>
-
-                    <Grid x:Name="RowLayoutWidth" Margin="0,4,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutWidth]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.Layout.SearchBarWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
-                    </Grid>
-
-                    <Grid x:Name="RowLayoutHeight" Margin="0,8,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutHeight]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.Layout.SearchBarHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
-                    </Grid>
-
-                    <CheckBox x:Name="RowLayoutShowClock" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutShowClock]}"
-                               IsChecked="{Binding General.Layout.ShowClock, Mode=TwoWay}"
-                               Margin="0,12,0,0"/>
-
-                    <Grid x:Name="RowLayoutReset" Margin="0,16,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutReset]}"
-                                Command="{Binding General.Layout.ResetCommand}"
-                                Style="{StaticResource SettingsButton}"
-                                Margin="0" HorizontalAlignment="Left"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-            <Border Style="{StaticResource SettingsCard}" Margin="0,12,0,0">
-                <StackPanel>
-                    <TextBlock x:Name="RowResultTypeOrderList" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ResultTypeOrderTitle]}"
-                               FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ResultTypeOrderHint]}"
-                               Style="{StaticResource SettingsHintText}" TextWrapping="Wrap" Margin="0,0,0,8"/>
-
-                    <ItemsControl ItemsSource="{Binding General.ResultTypeOrder.Items}" ItemTemplate="{StaticResource ResultTypeOrderItemTemplate}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <VirtualizingStackPanel />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                    </ItemsControl>
-                </StackPanel>
-            </Border>
-            </StackPanel>
-
-            <!-- Tab: Search Window -->
-            <StackPanel x:Name="TabSearchWindow">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <!-- Tab: Search Window (extracted; see GeneralSettingsSearchWindowTab.xaml) -->
+            <local:GeneralSettingsSearchWindowTab x:Name="TabSearchWindow">
+                <local:GeneralSettingsSearchWindowTab.Style>
+                    <Style TargetType="local:GeneralSettingsSearchWindowTab">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding General.SelectedTab}" Value="SearchWindow">
@@ -449,49 +199,13 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
+                </local:GeneralSettingsSearchWindowTab.Style>
+            </local:GeneralSettingsSearchWindowTab>
 
-                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
-                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SearchWindowHint]}"/>
-
-            <Border Style="{StaticResource SettingsCard}">
-                <StackPanel>
-                    <Grid x:Name="RowSearchWindowWidth" Margin="0,4,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SearchWindowWidth]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.MainWindow.Width, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
-                    </Grid>
-
-                    <Grid x:Name="RowSearchWindowHeight" Margin="0,8,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SearchWindowHeight]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.MainWindow.Height, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
-                    </Grid>
-
-                    <Grid x:Name="RowSearchWindowReset" Margin="0,16,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SearchWindowReset]}"
-                                Command="{Binding General.MainWindow.ResetCommand}"
-                                Style="{StaticResource SettingsButton}"
-                                Margin="0" HorizontalAlignment="Left"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-            </StackPanel>
-
-            <!-- Tab: Preview Window -->
-            <StackPanel x:Name="TabPreviewWindow">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <!-- Tab: Preview Window (extracted; see GeneralSettingsPreviewWindowTab.xaml) -->
+            <local:GeneralSettingsPreviewWindowTab x:Name="TabPreviewWindow">
+                <local:GeneralSettingsPreviewWindowTab.Style>
+                    <Style TargetType="local:GeneralSettingsPreviewWindowTab">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewWindow">
@@ -499,49 +213,13 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
+                </local:GeneralSettingsPreviewWindowTab.Style>
+            </local:GeneralSettingsPreviewWindowTab>
 
-                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
-                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowHint]}"/>
-
-            <Border Style="{StaticResource SettingsCard}">
-                <StackPanel>
-                    <Grid x:Name="RowPreviewWindowWidth" Margin="0,4,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowWidth]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.PreviewWindow.Width, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
-                    </Grid>
-
-                    <Grid x:Name="RowPreviewWindowHeight" Margin="0,8,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowHeight]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1" Style="{StaticResource SettingsTextBox}" Text="{Binding General.PreviewWindow.Height, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True, ValidatesOnExceptions=True}"/>
-                    </Grid>
-
-                    <Grid x:Name="RowPreviewWindowReset" Margin="0,16,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
-                            <ColumnDefinition Width="150"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewWindowReset]}"
-                                Command="{Binding General.PreviewWindow.ResetCommand}"
-                                Style="{StaticResource SettingsButton}"
-                                Margin="0" HorizontalAlignment="Left"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-            </StackPanel>
-
-            <!-- Tab: Quick Navigation -->
-            <StackPanel x:Name="TabQuickNavigation">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <!-- Tab: Quick Navigation (extracted; see GeneralSettingsQuickNavigationTab.xaml) -->
+            <local:GeneralSettingsQuickNavigationTab x:Name="TabQuickNavigation">
+                <local:GeneralSettingsQuickNavigationTab.Style>
+                    <Style TargetType="local:GeneralSettingsQuickNavigationTab">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding General.SelectedTab}" Value="QuickNavigation">
@@ -549,26 +227,8 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
-
-                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
-                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_QuickNavHint]}"/>
-
-            <Border Style="{StaticResource SettingsCard}">
-                <StackPanel>
-                    <TextBlock x:Name="RowQuickNavList" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_QuickNavListTitle]}"
-                               FontWeight="SemiBold" FontSize="13" Margin="0,0,0,8"/>
-
-                    <ItemsControl ItemsSource="{Binding General.QuickNavigationOrder.Items}" ItemTemplate="{StaticResource QuickNavItemTemplate}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <VirtualizingStackPanel />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                    </ItemsControl>
-                </StackPanel>
-            </Border>
-            </StackPanel>
+                </local:GeneralSettingsQuickNavigationTab.Style>
+            </local:GeneralSettingsQuickNavigationTab>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

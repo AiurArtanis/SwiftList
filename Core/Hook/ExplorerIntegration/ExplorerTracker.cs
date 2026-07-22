@@ -13,6 +13,7 @@ public class ExplorerTracker : IDisposable
     private bool _isRunning;
     private readonly FileDialogNavigationTracker _dialogTracker = new();
     private readonly ExplorerWindowClassifier _classifier;
+    private readonly ExplorerActivePathPoller _pathPoller;
     // Internal state exposed to ExplorerWindowClassifier
     public string? LastPath { get; set; }
     public IntPtr LastActiveHwnd { get; set; }
@@ -123,7 +124,11 @@ public class ExplorerTracker : IDisposable
     internal void RaiseExplorerActivated(IntPtr hwnd, string title, string cls, bool isDesktop) => OnExplorerActivated?.Invoke(hwnd, title, cls, isDesktop);
     internal void RaisePathCaptured(string path, bool isDesktop) => OnPathCaptured?.Invoke(path, isDesktop);
     internal void RaiseError(string msg) => OnError?.Invoke(msg);
-    public ExplorerTracker() => _classifier = new ExplorerWindowClassifier(this, _dialogTracker);
+    public ExplorerTracker()
+    {
+        _classifier = new ExplorerWindowClassifier(this, _dialogTracker);
+        _pathPoller = new ExplorerActivePathPoller(_classifier);
+    }
     public void Start()
     {
         if (_isRunning) return;
@@ -214,91 +219,7 @@ public class ExplorerTracker : IDisposable
             if (root == ExplorerNativeHooks.GetForegroundWindow())
                 _classifier.CheckActiveWindow(root);
         }
-        var currentFg = ExplorerNativeHooks.GetForegroundWindow();
-        if (currentFg != IntPtr.Zero && currentFg != ActiveHwnd)
-        {
-            var sbClass = new StringBuilder(256);
-            ExplorerNativeHooks.GetClassName(currentFg, sbClass, sbClass.Capacity);
-            var className = sbClass.ToString();
-            var processName = GetProcessName(currentFg);
-            if (FileDialogAdapterRegistry.GetMatchingAdapter(currentFg, className, processName) != null ||
-                InlineSearchAdapterRegistry.GetMatchingAdapter(currentFg, className, processName) != null)
-            {
-                _classifier.CheckActiveWindow(currentFg);
-            }
-        }
-        if (IsActiveWindowDialog && ActiveHwnd != IntPtr.Zero && ActiveAdapter != null)
-        {
-            var activePath = ActiveAdapter.GetCurrentPath(ActiveHwnd);
-            if (!string.IsNullOrEmpty(activePath) && activePath != LastPath)
-            {
-                UpdatePath(activePath, false);
-            }
-        }
-
-        var polledByCollector = false;
-        if (ActiveHwnd != IntPtr.Zero && ActiveInlineAdapter == null)
-        {
-            var sbClass = new StringBuilder(256);
-            ExplorerNativeHooks.GetClassName(ActiveHwnd, sbClass, sbClass.Capacity);
-            var activeClass = sbClass.ToString();
-            var collectors = ActivePathCollectorRegistry.GetCollectors();
-            foreach (var collector in collectors)
-            {
-                if (collector.CanHandle(activeClass))
-                {
-                    polledByCollector = true;
-                    var focused = IntPtr.Zero;
-                    var activeClassName = string.Empty;
-                    try
-                    {
-                        var threadId = KeyboardNativeMethods.GetWindowThreadProcessId(ActiveHwnd, out _);
-                        var guiInfo = new KeyboardNativeMethods.GUITHREADINFO();
-                        guiInfo.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(guiInfo);
-                        if (KeyboardNativeMethods.GetGUIThreadInfo(threadId, ref guiInfo) && guiInfo.hwndFocus != IntPtr.Zero)
-                        {
-                            focused = guiInfo.hwndFocus;
-                            var sbActiveCls = new StringBuilder(256);
-                            KeyboardNativeMethods.GetClassName(focused, sbActiveCls, sbActiveCls.Capacity);
-                            activeClassName = sbActiveCls.ToString();
-                        }
-                    }
-                    catch { }
-
-                    if (focused == IntPtr.Zero) focused = ActiveHwnd;
-
-                    var activePath = collector.TryGetPath(focused, activeClassName, ActiveHwnd, activeClass, GetProcessName(ActiveHwnd));
-                    if (!string.IsNullOrEmpty(activePath))
-                    {
-                        if (activePath != LastPath)
-                        {
-                            UpdatePath(activePath, false);
-                        }
-                    }
-                    else if (!string.IsNullOrEmpty(LastPath))
-                    {
-                        UpdatePath(string.Empty, false);
-                    }
-                    break;
-                }
-            }
-        }
-
-        if (!polledByCollector && ActiveInlineAdapter != null && ActiveHwnd != IntPtr.Zero)
-        {
-            var activePath = ActiveInlineAdapter.GetSearchScope(ActiveHwnd);
-            if (!string.IsNullOrEmpty(activePath))
-            {
-                if (activePath != LastPath)
-                {
-                    UpdatePath(activePath, false);
-                }
-            }
-            else if (!string.IsNullOrEmpty(LastPath))
-            {
-                UpdatePath(string.Empty, false);
-            }
-        }
+        _pathPoller.Poll(this);
     }
     internal void Deactivate()
     {

@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:services="clr-namespace:SwiftList.App.Services"
              xmlns:ctrl="clr-namespace:SwiftList.App.Views.Controls"
+             xmlns:local="clr-namespace:SwiftList.App.Views.Settings"
              mc:Ignorable="d"
              d:DesignHeight="550" d:DesignWidth="700">
     <UserControl.Resources>
@@ -14,89 +15,6 @@
                 <ResourceDictionary Source="../../Resources/Styles/SearchWindow.xaml"/>
                 <ResourceDictionary Source="../../Resources/Styles/SettingsWindow.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-
-            <Style x:Key="RuleTextBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                <Setter Property="Height" Value="34"/>
-                <Setter Property="Padding" Value="10,6"/>
-
-                <Setter Property="FontSize" Value="13"/>
-                <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
-                <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="VerticalContentAlignment" Value="Center"/>
-            </Style>
-
-            <Style x:Key="RuleBulkTextBox" TargetType="TextBox" BasedOn="{StaticResource RuleTextBox}">
-                <Setter Property="Height" Value="132"/>
-                <Setter Property="AcceptsReturn" Value="True"/>
-                <Setter Property="AcceptsTab" Value="True"/>
-                <Setter Property="TextWrapping" Value="NoWrap"/>
-                <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-                <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
-                <Setter Property="VerticalContentAlignment" Value="Top"/>
-                <Setter Property="FontFamily" Value="Cascadia Mono, Consolas"/>
-            </Style>
-
-            <Style x:Key="RuleIconButton" TargetType="Button">
-                <Setter Property="Width" Value="32"/>
-                <Setter Property="Height" Value="32"/>
-                <Setter Property="Margin" Value="6,0,0,0"/>
-                <Setter Property="Padding" Value="0"/>
-                <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-                <Setter Property="Foreground" Value="{DynamicResource TextSecondary2}"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
-                <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
-                <Setter Property="FontSize" Value="14"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" CornerRadius="6" Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBackground}"/>
-                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-
-            <DataTemplate x:Key="BlacklistItemTemplate">
-                <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="24"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="&#xEA18;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                   Foreground="{DynamicResource AccentColor}" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="13"
-                                   Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0"/>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="&#xE70F;"
-                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Blacklist_EditTooltip]}"
-                                    Style="{StaticResource RuleIconButton}"
-                                    Command="{Binding DataContext.Blacklist.EditProcessCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"/>
-                            <Button Content="&#xE74D;"
-                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Blacklist_RemoveTooltip]}"
-                                    Style="{StaticResource RuleIconButton}"
-                                    Command="{Binding DataContext.Blacklist.RemoveProcessCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -190,10 +108,10 @@
             </StackPanel>
             <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
 
-            <!-- Tab: Global -->
-            <StackPanel x:Name="TabGlobal">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <!-- Tab: Global (extracted; see HotkeyGlobalTabSection.xaml) -->
+            <local:HotkeyGlobalTabSection x:Name="TabGlobal">
+                <local:HotkeyGlobalTabSection.Style>
+                    <Style TargetType="local:HotkeyGlobalTabSection">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding SelectedTab}" Value="Global">
@@ -201,200 +119,8 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
-
-                <!-- Group: Global Hotkeys -->
-                <TextBlock x:Name="RowGroupGlobal" Style="{StaticResource SettingsGroupTitle}" Margin="0,0,0,10"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_GroupGlobal]}"/>
-
-                <Grid x:Name="RowToggleHotkey" Margin="0,4,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ToggleLabel]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding ToggleHotkeyValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        RequireModifier="True" AllowBareModifier="True" DefaultValue="Ctrl"/>
-                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0"
-                               Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_ToggleDoubleTapHint]}">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock" BasedOn="{StaticResource SettingsHintText}">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsToggleModifierClick}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    <CheckBox x:Name="RowAllowHotkeysInFullscreen" Grid.Column="3" VerticalAlignment="Center" Margin="16,0,0,0"
-                              Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_AllowInFullscreen]}"
-                              IsChecked="{Binding AllowHotkeysInFullscreen, Mode=TwoWay}"/>
-                </Grid>
-
-                <Grid x:Name="RowQuickSwitch" Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickSwitchLabel]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding QuickSwitchComboHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        RequireModifier="True" DefaultValue="Ctrl+G"/>
-                </Grid>
-
-                <TextBlock x:Name="RowSelectionTitle" Style="{StaticResource SettingsSubHeading}"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectionTitle]}"/>
-
-                <Grid x:Name="RowSelectNext" Margin="0,4,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectNextItem]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding NextItemHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        DefaultValue="Ctrl+N"/>
-                </Grid>
-                <Grid x:Name="RowSelectPrevious" Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectPreviousItem]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding PreviousItemHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        DefaultValue="Ctrl+P"/>
-                </Grid>
-                <Grid x:Name="RowSelectJump" Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectJumpItem]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                        <ctrl:HotkeyRecorderControl Width="90" Height="26"
-                            Value="{Binding SelectJumpModifier, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            ModifierOnly="True" DefaultValue="Ctrl"/>
-                        <TextBlock Text=" + 1~9" VerticalAlignment="Center" Margin="6,0,0,0"/>
-                    </StackPanel>
-                </Grid>
-                <Grid x:Name="RowSelectActions" Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectActions]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding ActionsMenuHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        DefaultValue="Ctrl+O"/>
-                </Grid>
-                <Grid x:Name="RowSelectComplete" Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectComplete]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding CompleteFromSelectionHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        DefaultValue="Ctrl+Tab"/>
-                </Grid>
-                <Grid x:Name="RowSelectQuickLook" Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_SelectQuickLook]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding QuickLookHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        DefaultValue="Alt+P"/>
-                </Grid>
-                <Grid x:Name="RowKeywordHistoryPrevious" Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_KeywordHistoryPrevious]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding KeywordHistoryPreviousHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        DefaultValue="Alt+Up"/>
-                </Grid>
-                <Grid x:Name="RowKeywordHistoryNext" Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_KeywordHistoryNext]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding KeywordHistoryNextHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        DefaultValue="Alt+Down"/>
-                </Grid>
-                <Grid x:Name="RowKeywordHistoryDelete" Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_KeywordHistoryDelete]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding KeywordHistoryDeleteHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        RequireModifier="True" DefaultValue="Ctrl+Delete"/>
-                </Grid>
-                <Grid x:Name="RowOpenFullWindow" Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_OpenFullWindow]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding OpenFullWindowHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        RequireModifier="True" DefaultValue="Ctrl+F"/>
-                </Grid>
-
-                <Border Style="{StaticResource SettingsGroupDivider}"/>
-
-                <!-- Group: Quick Navigation -->
-                <TextBlock x:Name="RowGroupQuickNav" Style="{StaticResource SettingsGroupTitle}"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_GroupQuickNav]}"/>
-
-                <CheckBox x:Name="RowQuickNavDoubleClick" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickNavDoubleClick]}"
-                          IsChecked="{Binding QuickNavTriggerOnDoubleClick, Mode=TwoWay}"
-                          Margin="0,4"/>
-
-                <CheckBox x:Name="RowQuickNavMiddleClick" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_QuickNavMiddleClick]}"
-                          IsChecked="{Binding QuickNavTriggerOnMiddleClick, Mode=TwoWay}"
-                          Margin="0,4"/>
-
-                <Border Style="{StaticResource SettingsGroupDivider}"/>
-
-                <!-- Group: Startup Panel -->
-                <TextBlock x:Name="RowGroupStartupPanel" Style="{StaticResource SettingsGroupTitle}"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_GroupStartupPanel]}"/>
-
-                <Grid x:Name="RowStartupPanelNextTab" Margin="0,4,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_StartupPanelNextTab]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding StartupPanelNextTabHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        RequireModifier="True" DefaultValue="Ctrl+Right"/>
-                </Grid>
-                <Grid x:Name="RowStartupPanelPreviousTab" Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel"/>
-                        <ColumnDefinition Width="200"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Hotkeys_StartupPanelPreviousTab]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <ctrl:HotkeyRecorderControl Grid.Column="1" Width="200" Height="26"
-                        Value="{Binding StartupPanelPreviousTabHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        RequireModifier="True" DefaultValue="Ctrl+Left"/>
-                </Grid>
-            </StackPanel>
+                </local:HotkeyGlobalTabSection.Style>
+            </local:HotkeyGlobalTabSection>
 
             <!-- Tab: Plugin Actions -->
             <StackPanel x:Name="TabPluginActions">
@@ -442,10 +168,10 @@
                 </ItemsControl>
             </StackPanel>
 
-            <!-- Tab: Blacklist -->
-            <StackPanel x:Name="TabBlacklist">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
+            <!-- Tab: Blacklist (extracted; see HotkeyBlacklistTabSection.xaml) -->
+            <local:HotkeyBlacklistTabSection x:Name="TabBlacklist">
+                <local:HotkeyBlacklistTabSection.Style>
+                    <Style TargetType="local:HotkeyBlacklistTabSection">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding SelectedTab}" Value="Blacklist">
@@ -453,41 +179,8 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </StackPanel.Style>
-
-                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12" TextWrapping="Wrap"
-                           Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Blacklist_Hint]}"/>
-
-                <Border Style="{StaticResource SettingsCard}">
-                    <StackPanel>
-                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Blacklist_ProcessCardDesc]}"
-                                   Style="{StaticResource SettingsHintText}" Margin="0,0,0,10" TextWrapping="Wrap"/>
-
-                        <DockPanel Margin="0,0,0,10">
-                            <Button DockPanel.Dock="Right"
-                                    Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Blacklist_AddBtn]}"
-                                    Style="{StaticResource PrimarySettingsButton}"
-                                    Command="{Binding Blacklist.AddProcessCommand}" Margin="10,0,0,0"/>
-                            <TextBox Style="{StaticResource RuleTextBox}"
-                                     Text="{Binding Blacklist.NewProcessName, UpdateSourceTrigger=PropertyChanged}"/>
-                        </DockPanel>
-
-                        <ItemsControl ItemsSource="{Binding Blacklist.BlacklistedProcesses}" ItemTemplate="{StaticResource BlacklistItemTemplate}"/>
-
-                        <TextBox Style="{StaticResource RuleBulkTextBox}" Margin="0,10,0,8"
-                                 Text="{Binding Blacklist.BlacklistText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Blacklist_GenerateBtn]}"
-                                    Style="{StaticResource SettingsButton}"
-                                    Command="{Binding Blacklist.ExportTextCommand}" Margin="0,0,8,0"/>
-                            <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Blacklist_ApplyBtn]}"
-                                    Style="{StaticResource PrimarySettingsButton}"
-                                    Command="{Binding Blacklist.ApplyTextCommand}"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
+                </local:HotkeyBlacklistTabSection.Style>
+            </local:HotkeyBlacklistTabSection>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

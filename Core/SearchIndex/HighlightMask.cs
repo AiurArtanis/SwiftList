@@ -74,7 +74,7 @@ internal static class HighlightMask
         if (MarkLiteralSpan(fullText, term, comparison, highlights))
             return;
 
-        if (FzfFuzzyMatcher.FuzzyMatchV2WithPositions(fullText, term, caseSensitive, FzfScoringScheme.Default, highlights, slab).IsMatch)
+        if (FzfPositionMatcher.FuzzyMatchV2WithPositions(fullText, term, caseSensitive, FzfScoringScheme.Default, highlights, slab).IsMatch)
             return;
 
         materialized ??= fullText.ToString();

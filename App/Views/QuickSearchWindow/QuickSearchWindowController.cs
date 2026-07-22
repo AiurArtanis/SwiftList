@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Animation;
@@ -16,99 +15,19 @@ public class QuickSearchWindowController
     [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetForegroundWindow(IntPtr hWnd);
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-    [DllImport("user32.dll")] private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
-    [DllImport("user32.dll")] private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
-    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)] private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-    [DllImport("Shcore.dll")] private static extern int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);
-    [DllImport("user32.dll")] private static extern IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
-    [DllImport("user32.dll")] private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct POINT { public int X; public int Y; }
 
     private const int SW_RESTORE = 9;
-    private const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
-    private const uint WINEVENT_OUTOFCONTEXT = 0;
-    private const int MDT_EFFECTIVE_DPI = 0;
-    private const uint MONITOR_DEFAULTTONEAREST = 2;
 
-    private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
-    private WinEventDelegate? _foregroundHookDelegate;
-    private IntPtr _hForegroundHook = IntPtr.Zero;
     private IntPtr _lastActiveHwnd = IntPtr.Zero;
+    private readonly QuickSearchWindowPositioner _positioner;
+    private readonly QuickSearchWindowForegroundWatcher _foregroundWatcher;
 
     // Bumped by every ShowWindow()/HideWindow() call. HideWindow()'s actual Hide() is deferred behind
     // a fade-out (see its own comment), so a rapid Show() right after a Hide() needs a way to tell that
     // deferred continuation "a newer call already superseded you" -- otherwise the pending continuation
     // would still fire and hide the window moments after the user just re-summoned it.
     private int _visibilityOpToken;
-
-    private void StartForegroundHook()
-    {
-        if (_hForegroundHook != IntPtr.Zero) return;
-        _foregroundHookDelegate = ForegroundEventProc;
-        _hForegroundHook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, _foregroundHookDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
-    }
-    private void StopForegroundHook()
-    {
-        if (_hForegroundHook != IntPtr.Zero)
-        {
-            UnhookWinEvent(_hForegroundHook);
-            _hForegroundHook = IntPtr.Zero;
-        }
-        _foregroundHookDelegate = null;
-    }
-    private void ForegroundEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
-    {
-        if (hwnd == IntPtr.Zero) return;
-        try
-        {
-            var sbClass = new StringBuilder(256);
-            GetClassName(hwnd, sbClass, sbClass.Capacity);
-            var className = sbClass.ToString();
-            GetWindowThreadProcessId(hwnd, out var activePid);
-            var procName = ShellOverlayDismissHelper.TryGetProcessName(activePid);
-
-            // TODO(issue #68): temporary diagnostic for "a system notification makes the search window
-            // disappear" -- couldn't reproduce with a plain WinRT toast fired under Explorer's AUMID, so
-            // logging every candidate here (skipped or not) to see what's actually triggering it for the
-            // reporter. Remove once root-caused.
-            Logger.Log($"[ForegroundHook] class='{className}' pid={activePid} proc='{procName}'", LogLevel.Info);
-
-            // A preview provider may be hosting an out-of-process native handler (e.g. Office acting as
-            // its own Preview Handler COM server), whose window can grab foreground on its own -- at
-            // startup or from interacting with its content (e.g. a right-click menu) -- for as long as
-            // it's shown. See PreviewActivationSignal. That isn't the user switching to another app.
-            if (PluginSdk.Services.PreviewActivationSignal.IsActive) return;
-
-            if (className.Contains("InputSwitch", StringComparison.OrdinalIgnoreCase)) return;
-
-            if (activePid == (uint)Environment.ProcessId) return;
-
-            // A transient foreground steal can happen mid-typing without the user actually switching away
-            // -- e.g. rendering a \\wsl$ result's icon/modified date wakes the WSL VM, whose cold start
-            // briefly flashes a console host that grabs foreground (see the identical wait-and-recheck in
-            // QuickSearchWindow.Window_Deactivated, added for the same reason). That path alone isn't
-            // enough: this hook fires independently and used to hide immediately on the very first event.
-            // Debounce here too, so foreground that bounces right back doesn't drop the search window.
-            _window.Dispatcher.BeginInvoke(new Action(() =>
-            {
-                if (!_window.IsVisible) return;
-                var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-                timer.Tick += (s, _) =>
-                {
-                    timer.Stop();
-                    if (!_window.IsVisible) return;
-                    GetWindowThreadProcessId(GetForegroundWindow(), out var stillActivePid);
-                    if (stillActivePid == (uint)Environment.ProcessId) return;
-                    HideWindow();
-                };
-                timer.Start();
-            }), DispatcherPriority.Background);
-        }
-        catch { }
-    }
 
     // useAltTapBypass: see HookCommandHandler's ForceForeground case -- callers backed by very recent real
     // input on the Hook's own thread already (e.g. Quick Navigation's own mouse click) should pass false.
@@ -132,82 +51,19 @@ public class QuickSearchWindowController
         });
     }
 
-    public QuickSearchWindowController(SwiftList.App.QuickSearchWindow window) => _window = window;
-
-    public void PositionWindow()
+    public QuickSearchWindowController(SwiftList.App.QuickSearchWindow window)
     {
-        // DPI must come from the monitor this window is about to be placed ON, not from wherever it
-        // currently happens to sit (PresentationSource.FromVisual(_window)'s own CompositionTarget, the
-        // old source here) -- see InlineSearchWindowPositioner's identical fix for the full writeup.
-        // This window persists for the whole app session (only ever Hidden, never Closed), so it can be
-        // sitting on whatever monitor it was last shown on when ShowWindow() runs again for a different
-        // (differently-scaled) monitor; on a mixed-DPI multi-monitor setup that stale source computes a
-        // position wrong by exactly the ratio between the two monitors' scales.
-        var targetMonitor = _lastActiveHwnd != IntPtr.Zero
-            ? MonitorFromWindow(_lastActiveHwnd, MONITOR_DEFAULTTONEAREST)
-            : MonitorFromPoint(new POINT { X = Control.MousePosition.X, Y = Control.MousePosition.Y }, MONITOR_DEFAULTTONEAREST);
-        var (dpiScaleX, dpiScaleY) = GetMonitorDpiScale(targetMonitor);
-
-        var screen = _lastActiveHwnd != IntPtr.Zero
-            ? Screen.FromHandle(_lastActiveHwnd)
-            : Screen.FromPoint(Control.MousePosition);
-
-        var workingArea = screen.WorkingArea;
-        var settings = UserSettings.Load();
-        var windowWidth = settings.SearchWindow.SearchBarWidth + 48;
-        if (settings.SearchWindow.Left.HasValue && settings.SearchWindow.Top.HasValue
-            && IsAnchorOnAnyScreen(settings.SearchWindow.Left.Value + windowWidth / 2, settings.SearchWindow.Top.Value + 20, dpiScaleX, dpiScaleY))
-        {
-            // A saved position may point at a monitor that has since been unplugged or resized, which would
-            // open the window off-screen where it can't be seen or reached. Only restore it when its top
-            // strip still lands on a connected monitor's work area; otherwise fall back to centering below.
-            _window.Left = settings.SearchWindow.Left.Value;
-            _window.Top = settings.SearchWindow.Top.Value;
-        }
-        else
-        {
-            _window.Left = (workingArea.Width * dpiScaleX - windowWidth) / 2 + workingArea.Left * dpiScaleX;
-            _window.Top = workingArea.Height * dpiScaleY * 0.22 + workingArea.Top * dpiScaleY;
-        }
+        _window = window;
+        _positioner = new QuickSearchWindowPositioner(window, () => _lastActiveHwnd);
+        _foregroundWatcher = new QuickSearchWindowForegroundWatcher(window, () => HideWindow());
     }
+
+    public void PositionWindow() => _positioner.PositionWindow();
 
     // Wired to the search box's status icon right-click -- clears the saved position and immediately
     // re-centers the window using the same fallback PositionWindow already falls back to when there's
     // no saved position (or it's off-screen).
-    public void ResetPosition()
-    {
-        var settings = UserSettings.Load();
-        settings.SearchWindow.Left = null;
-        settings.SearchWindow.Top = null;
-        settings.Save();
-        PositionWindow();
-    }
-
-    // Falls back to 1.0 (96 DPI, unscaled) if the monitor handle is invalid or the query fails --
-    // GetDpiForMonitor has been available since Windows 8.1, so this should only trip on some
-    // unexpected edge case, not any supported OS version.
-    private static (double x, double y) GetMonitorDpiScale(IntPtr hMonitor)
-    {
-        if (hMonitor != IntPtr.Zero && GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, out var dpiX, out var dpiY) == 0 && dpiX > 0 && dpiY > 0)
-            return (96.0 / dpiX, 96.0 / dpiY);
-        return (1.0, 1.0);
-    }
-
-    // Saved Left/Top are DIP; Screen work areas are physical (system-DPI space), so scale them to DIP
-    // with the same factor before testing whether the given DIP anchor point falls on any monitor.
-    private static bool IsAnchorOnAnyScreen(double anchorX, double anchorY, double dpiScaleX, double dpiScaleY)
-    {
-        foreach (var s in Screen.AllScreens)
-        {
-            var wa = s.WorkingArea;
-            if (anchorX >= wa.Left * dpiScaleX && anchorX <= wa.Right * dpiScaleX &&
-                anchorY >= wa.Top * dpiScaleY && anchorY <= wa.Bottom * dpiScaleY)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
+    public void ResetPosition() => _positioner.ResetPosition();
 
     public void ToggleVisibility() => _window.Dispatcher.Invoke(() =>
                                            {
@@ -277,7 +133,7 @@ public class QuickSearchWindowController
             fadeContent.BeginAnimation(UIElement.OpacityProperty, fadeIn);
         }
 
-        StartForegroundHook();
+        _foregroundWatcher.Start();
 
         _window.Dispatcher.BeginInvoke(new Action(() =>
         {
@@ -321,7 +177,7 @@ public class QuickSearchWindowController
     {
         var opToken = ++_visibilityOpToken;
 
-        StopForegroundHook();
+        _foregroundWatcher.Stop();
         if (_window.MenuPresenter != null && _window.MenuPresenter.IsInActionsMode)
         {
             _window.MenuPresenter.ExitActionsMode();
