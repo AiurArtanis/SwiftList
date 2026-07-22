@@ -42,7 +42,7 @@ internal static class ActionMenuBuilder
         if (selection == null || selection.Count == 0)
             return uiItems;
 
-        var itemHeight = UiMetrics.ListItemHeight;
+        var itemHeight = Math.Round(UiMetrics.ListItemHeight * UiMetrics.ActionMenuCompactRowScale);
         // Unified to the exact same height a normal row gets (was a shorter, independently-derived
         // value) -- height-sum calculations elsewhere that assume a uniform row size can't drift from
         // what a header row actually renders at if the two are never allowed to be different numbers
@@ -117,7 +117,7 @@ internal static class ActionMenuBuilder
         if (selection == null || selection.Count == 0)
             return uiItems;
 
-        var itemHeight = UiMetrics.ListItemHeight;
+        var itemHeight = Math.Round(UiMetrics.ListItemHeight * UiMetrics.ActionMenuCompactRowScale);
         // Unified to the exact same height a normal row gets (was a shorter, independently-derived
         // value) -- height-sum calculations elsewhere that assume a uniform row size can't drift from
         // what a header row actually renders at if the two are never allowed to be different numbers
@@ -168,7 +168,7 @@ internal static class ActionMenuBuilder
                                 Icon = iconSource,
                                 OnExecute = item.OnExecute,
                                 ShortcutHint = item.ShortcutHint ?? string.Empty,
-                                ItemHeight = item.IsSeparator ? Math.Round(itemHeight * 0.3) : itemHeight
+                                ItemHeight = item.IsSeparator ? Math.Round(itemHeight * UiMetrics.ActionMenuSeparatorRowScale) : itemHeight
                             });
 
                             if (!item.IsSeparator && item.CommandId != 0)
@@ -206,7 +206,7 @@ internal static class ActionMenuBuilder
                         SubMenuHandle = item.SubMenuHandle,
                         IsDisabled = item.IsDisabled,
                         Icon = iconSource,
-                        ItemHeight = item.IsSeparator ? Math.Round(itemHeight * 0.3) : itemHeight
+                        ItemHeight = item.IsSeparator ? Math.Round(itemHeight * UiMetrics.ActionMenuSeparatorRowScale) : itemHeight
                     });
 
                     if (!item.IsSeparator && item.CommandId != 0)

@@ -22,6 +22,12 @@ public static class UiMetrics
     // Floor for the action-menu section header row so its title font never gets clipped.
     public const double MinSectionHeaderHeight = 18;
 
+    // Shared by every actions-menu surface (in-window list, quick window, flyout) so a compacted row
+    // and a separator row come out the same relative size no matter which surface renders them, instead
+    // of each surface picking its own ratio and drifting out of sync with the others.
+    public const double ActionMenuCompactRowScale = 0.8;
+    public const double ActionMenuSeparatorRowScale = 0.3;
+
     // The result row's ItemBorder (ResultItemStyle/ActionItemStyle in ListBox.xaml) has
     // Margin="6,2,6,2" -- since that Border is the template root, its 2px top + 2px bottom margin adds
     // to the row's own measured/desired size. Row-height math needs to budget for it, or a row whose

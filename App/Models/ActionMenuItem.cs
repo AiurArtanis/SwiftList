@@ -56,11 +56,22 @@ public class ActionMenuItem : INotifyPropertyChanged
     private const double BaseSectionFontSize = 12;
     private const double BaseShortcutFontSize = 11;
 
-    // Shares AppSearchResult's own row-height formula (UiMetrics.ScaledNormalRowHeight), not ItemHeight
-    // (34, used as-is by the full/inline windows' own unscaled action menu) -- so the quick window's
-    // action rows come out the same pixel size as its result rows (icon-size floor included) instead
-    // of looking cramped next to them.
-    public double ScaledItemHeight => Services.UiMetrics.ScaledNormalRowHeight;
+    // Was UiMetrics.ScaledNormalRowHeight as-is (matching the results list's own row height, so the two
+    // lists read as the same size when flipping between them) -- deliberately broken by request: a
+    // normal-sized action row wastes far more space than an action needs, and the actions list has no
+    // reason to stay visually locked to the results list's own sizing at the cost of fitting fewer
+    // actions on screen. Both scales are the same UiMetrics constants ActionMenuBuilder uses for the
+    // flyout/full-window action list, so all three actions-menu surfaces land on the same relative row
+    // and separator sizing rather than each picking its own ratio. A separator used to render as a full
+    // row (the quick window's ActionItemStyle binds MinHeight to this same property for every row
+    // regardless of IsSeparator), which is far more visual weight than a thin divider needs.
+    // QuickSearchWindowLayoutManager sums this same property to size the actions panel, so shrinking it
+    // here shrinks the panel to match -- no separate bookkeeping, and no leftover blank space at the
+    // bottom of the list.
+    private double CompactScaledNormalRowHeight => Math.Round(Services.UiMetrics.ScaledNormalRowHeight * Services.UiMetrics.ActionMenuCompactRowScale);
+    public double ScaledItemHeight => IsSeparator
+        ? Math.Round(CompactScaledNormalRowHeight * Services.UiMetrics.ActionMenuSeparatorRowScale)
+        : CompactScaledNormalRowHeight;
 
     // Scaled off IconRelativeFontScale (tracks the actual configured icon size), not raw Scale (tracks
     // only the search-bar height) -- the two only coincide when the configured result icon size equals

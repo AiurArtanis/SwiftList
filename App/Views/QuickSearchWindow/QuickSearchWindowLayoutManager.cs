@@ -46,13 +46,17 @@ internal sealed class QuickSearchWindowLayoutManager
                 }
                 else
                 {
+                    // A flat pixel ceiling, not a "cap at item #9" rule: the actions list has no reason
+                    // to match the results list's row COUNT, only the same overall height BUDGET it tops
+                    // out at, so a full-length actions list with several half-height separators can still
+                    // show more than 9 rows as long as the total stays within that same pixel ceiling.
                     // ScaledNormalRowHeight (not ScaledSearchResultItemHeight) matches what the results
                     // list's own rows actually render at once the icon-size floor kicks in -- using the
-                    // unfloored value here would cap the actions panel shorter than 9 real result rows.
-                    // Reduced by actionsHeaderHeight (the panel's own top banner, the target filename)
-                    // so a full actions list's total height (banner + rows) still tops out at the same
-                    // 9-row budget the results list uses -- otherwise the window visibly grows taller
-                    // the moment actions mode's own banner is added on top of a full 9 rows.
+                    // unfloored value here would cap the actions panel shorter than the results list's own
+                    // 9-row ceiling. Reduced by actionsHeaderHeight (the panel's own top banner, the target
+                    // filename) so a full actions list's total height (banner + rows) still tops out at
+                    // that same budget -- otherwise the window visibly grows taller the moment actions
+                    // mode's own banner is added on top of a full-height list.
                     var maxAvailableHeight = 9 * UiMetrics.ScaledNormalRowHeight - actionsHeaderHeight;
                     // Let the height naturally fit the items count (free size dynamic resize)
                     actualActionsHeight = Math.Max(0.0, Math.Min(totalHeight, maxAvailableHeight));

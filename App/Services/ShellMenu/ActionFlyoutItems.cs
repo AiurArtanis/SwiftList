@@ -98,7 +98,9 @@ internal static class ActionFlyoutItems
             // never actually painted. The plain actions list's own ActionItemStyle already uses MinHeight
             // for exactly this reason (a row is free to grow to fit content that needs more); mirroring
             // that here instead of special-casing the separator's arithmetic is what actually fixes it.
-            MinHeight = Math.Round(item.ItemHeight * 0.8),
+            // No extra multiplier here: item.ItemHeight already carries UiMetrics.ActionMenuCompactRowScale
+            // (applied in ActionMenuBuilder), so applying another one here would double-shrink this row.
+            MinHeight = item.ItemHeight,
             IsEnabled = false,
             IsHitTestVisible = false
         };
@@ -123,7 +125,9 @@ internal static class ActionFlyoutItems
             Style = flyoutStyle,
             DataContext = item,
             Header = item,
-            Height = Math.Round(item.ItemHeight * 0.8),
+            // No extra multiplier here either -- see CreateNonInteractiveItem's own comment on why:
+            // item.ItemHeight is already compacted at the source (UiMetrics.ActionMenuCompactRowScale).
+            Height = item.ItemHeight,
             IsEnabled = !item.IsDisabled
         };
 

@@ -10,7 +10,14 @@
 	<DataTemplate x:Key="ActionMenuItemTemplate" DataType="{x:Type app:ActionMenuItem}">
 		<Grid>
 			<!-- Separator view -->
-			<Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SeparatorBrush}" Height="1" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="0,4"
+			<!-- Margin halved (was 0,4): in the self-drawn actions list this row's real height comes from
+			     ActionItemStyle's externally-bound MinHeight, so this margin only affects how much
+			     breathing room the line gets there, not the row's own height. In the flyout MenuItem
+			     style (ActionFlyoutMenuItemStyle), the header ContentPresenter is Center-aligned rather
+			     than Stretched, so its row sizes to this content's own natural/desired height: this
+			     margin change is what actually shrinks that row, per ActionFlyoutItems.CreateNonInteractiveItem's
+			     own comment on why MinHeight alone can't do it. -->
+			<Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SeparatorBrush}" Height="1" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="0,1"
                     Visibility="{Binding IsSeparator, Converter={StaticResource BoolToVis}}"/>
 
 			<!-- No explicit Height here (and no VerticalAlignment="Center" on the root Grid above): the
