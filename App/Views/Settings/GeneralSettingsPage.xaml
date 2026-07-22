@@ -41,6 +41,69 @@
                     </Setter.Value>
                 </Setter>
             </Style>
+
+            <!-- Mirrors FavoritesSettingsPage.xaml's own FavIconButton exactly: same small square icon
+                 button used for its Move Up/Down actions, but defined locally rather than shared across
+                 UserControls, matching how SettingsTextBox above is already page-local rather than pulled
+                 from a shared dictionary. -->
+            <Style x:Key="QuickNavIconButton" TargetType="Button">
+                <Setter Property="Width" Value="32"/>
+                <Setter Property="Height" Value="32"/>
+                <Setter Property="Margin" Value="6,0,0,0"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextSecondary2}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" CornerRadius="6" Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBackground}"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource AccentColor}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <DataTemplate x:Key="QuickNavItemTemplate">
+                <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="&#xE74A;"
+                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_MoveUpTooltip]}"
+                                    Style="{StaticResource QuickNavIconButton}"
+                                    Command="{Binding DataContext.General.QuickNavigationOrder.MoveUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                            <Button Content="&#xE74B;"
+                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_MoveDownTooltip]}"
+                                    Style="{StaticResource QuickNavIconButton}"
+                                    Command="{Binding DataContext.General.QuickNavigationOrder.MoveDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -131,7 +194,7 @@
                         </Border.Style>
                     </Border>
                 </StackPanel>
-                <StackPanel>
+                <StackPanel Margin="0,0,28,0">
                     <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SearchWindowTitle]}"
                             Command="{Binding General.SelectTabCommand}" CommandParameter="SearchWindow">
                         <Button.Style>
@@ -150,6 +213,32 @@
                             <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding General.SelectedTab}" Value="SearchWindow">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                </StackPanel>
+                <StackPanel>
+                    <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_QuickNavTitle]}"
+                            Command="{Binding General.SelectTabCommand}" CommandParameter="QuickNavigation">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="QuickNavigation">
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Border>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="QuickNavigation">
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -379,6 +468,38 @@
                                 Style="{StaticResource SettingsButton}"
                                 Margin="0" HorizontalAlignment="Left"/>
                     </Grid>
+                </StackPanel>
+            </Border>
+            </StackPanel>
+
+            <!-- Tab: Quick Navigation -->
+            <StackPanel x:Name="TabQuickNavigation">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding General.SelectedTab}" Value="QuickNavigation">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+
+                <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
+                            Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_QuickNavHint]}"/>
+
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_QuickNavListTitle]}"
+                               FontWeight="SemiBold" FontSize="13" Margin="0,0,0,8"/>
+
+                    <ItemsControl ItemsSource="{Binding General.QuickNavigationOrder.Items}" ItemTemplate="{StaticResource QuickNavItemTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
                 </StackPanel>
             </Border>
             </StackPanel>

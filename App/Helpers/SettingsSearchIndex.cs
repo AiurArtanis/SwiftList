@@ -85,6 +85,7 @@ public static class SettingsSearchIndex
         new("General_SearchWindowWidth", "General", vm => vm.General.SelectedTab = "SearchWindow", "RowSearchWindowWidth", "General_SearchWindowTitle"),
         new("General_SearchWindowHeight", "General", vm => vm.General.SelectedTab = "SearchWindow", "RowSearchWindowHeight", "General_SearchWindowTitle"),
         new("General_SearchWindowReset", "General", vm => vm.General.SelectedTab = "SearchWindow", "RowSearchWindowReset", "General_SearchWindowTitle"),
+        new("General_QuickNavTitle", "General", vm => vm.General.SelectedTab = "QuickNavigation", "TabQuickNavigation"),
 
         // Appearance
         new("Settings_Appearance", "Appearance"),

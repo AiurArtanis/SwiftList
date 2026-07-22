@@ -316,7 +316,9 @@ public static class PluginLoaderHelper
         }
     }
 
-    private static string MakeId(string dllName, PluginComponentType type, string name) => $"{dllName}::{type}::{name}";
+    // internal (not private): reused by PluginManager.QuickNavigationProviders to build the same id
+    // shape for its own ordering-by-persisted-list lookup, so the two never drift into different formats.
+    internal static string MakeId(string dllName, PluginComponentType type, string name) => $"{dllName}::{type}::{name}";
 
     private static string GetDescriptionWithFallback(IPluginComponent component)
     {

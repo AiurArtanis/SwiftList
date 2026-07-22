@@ -172,8 +172,26 @@ public class PluginManager : PluginRegistry
     public IEnumerable<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> DynamicActionProviders
         => _dynamicActionProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.DynamicActionProvider, p.GetType().Name));
 
+    // Ordered per UserSettings.QuickNavigationProviderOrder (position = priority, most-preferred
+    // first); a provider whose id isn't listed there yet falls back to int.MaxValue, which -- since
+    // LINQ's OrderBy is a stable sort -- lands it after every listed provider while preserving its
+    // original discovery-order position relative to any OTHER unlisted provider, rather than an
+    // arbitrary reshuffle.
     public IEnumerable<PluginSdk.Abstractions.Plugins.IQuickNavigationProvider> QuickNavigationProviders
-        => _quickNavigationProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.QuickNavigationProvider, p.GetType().Name));
+    {
+        get
+        {
+            var order = UserSettings.Load().QuickNavigationProviderOrder;
+            return _quickNavigationProviders
+                .Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.QuickNavigationProvider, p.GetType().Name))
+                .OrderBy(p =>
+                {
+                    var id = Helpers.PluginLoaderHelper.MakeId(ComponentFilter.GetDllName(p), PluginComponentType.QuickNavigationProvider, p.GetType().Name);
+                    var rank = order.IndexOf(id);
+                    return rank >= 0 ? rank : int.MaxValue;
+                });
+        }
+    }
 
     public IEnumerable<PluginSdk.Abstractions.Plugins.IQuickNavigationProvider> AllQuickNavigationProviders => _quickNavigationProviders;
 

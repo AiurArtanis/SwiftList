@@ -37,6 +37,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         Layout = new SearchBarLayoutSettingsViewModel(userSettings);
         PreviewWindow = new PreviewWindowSettingsViewModel(userSettings);
         MainWindow = new MainWindowSettingsViewModel(userSettings);
+        QuickNavigationOrder = new QuickNavigationOrderViewModel(userSettings);
 
         _startWithWindows = userSettings.StartWithWindows;
         _autoCheckUpdates = userSettings.AutoCheckUpdates;
@@ -189,6 +190,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         Layout.Save();
         PreviewWindow.Save();
         MainWindow.Save();
+        QuickNavigationOrder.Save();
 
         _userSettings.Save();
     }
@@ -196,4 +198,5 @@ public class GeneralSettingsViewModel : ViewModelBase
     public SearchBarLayoutSettingsViewModel Layout { get; }
     public PreviewWindowSettingsViewModel PreviewWindow { get; }
     public MainWindowSettingsViewModel MainWindow { get; }
+    public QuickNavigationOrderViewModel QuickNavigationOrder { get; }
 }

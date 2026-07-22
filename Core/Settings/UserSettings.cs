@@ -72,6 +72,14 @@ public class UserSettings
     /// </summary>
     public List<string> DisabledPluginComponents { get; set; } = new();
 
+    /// <summary>
+    /// User-chosen display order for IQuickNavigationProvider entries in the quick-navigation menu's
+    /// root level, most-preferred first. Same id format as DisabledPluginComponents. A provider whose
+    /// id isn't present here yet (newly installed, or never reordered) falls back to its original
+    /// discovery order, appended after every listed provider -- see PluginManager.QuickNavigationProviders.
+    /// </summary>
+    public List<string> QuickNavigationProviderOrder { get; set; } = new();
+
     public Dictionary<string, Dictionary<string, object>> PluginSettings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public T GetPluginSetting<T>(string pluginId, string key, T defaultValue)
