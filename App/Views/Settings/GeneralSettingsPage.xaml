@@ -490,7 +490,7 @@
 
             <Border Style="{StaticResource SettingsCard}">
                 <StackPanel>
-                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_QuickNavListTitle]}"
+                    <TextBlock x:Name="RowQuickNavList" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_QuickNavListTitle]}"
                                FontWeight="SemiBold" FontSize="13" Margin="0,0,0,8"/>
 
                     <ItemsControl ItemsSource="{Binding General.QuickNavigationOrder.Items}" ItemTemplate="{StaticResource QuickNavItemTemplate}">
