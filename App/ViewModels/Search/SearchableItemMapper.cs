@@ -172,8 +172,15 @@ public static class SearchableItemMapper
         }
         else if ((isRealFile || isRealDir || isApplication) && !string.IsNullOrWhiteSpace(item.ActionArgument))
         {
-            // Fallback to ShellIconHelper so native high-fidelity shell thumbnails display correctly!
-            iconOverride = ShellIconHelper.GetIconForPath(item.ActionArgument, isRealDir);
+            // Deliberately leave IconOverride unset here -- AppSearchResult.Icon's own getter (FullPath/
+            // IsDir are set below to item.ActionArgument/isRealDir, exactly what this needs) already
+            // does a cache-only check first, then a background-thread ShellIconHelper extraction
+            // (semaphore-limited, marshaled back once ready) the same way every regular file search
+            // result already gets its icon. Calling ShellIconHelper.GetIconForPath eagerly here instead
+            // would set IconOverride and short-circuit that whole lazy/async path, forcing every File
+            // Filter/Application/Settings item through a SYNCHRONOUS extraction on the UI thread -- for
+            // a video file on a network drive, that means Windows' shell thumbnail handler reading the
+            // file over SMB to decode a frame, blocking the search results render until it returns.
         }
         else if (!string.IsNullOrWhiteSpace(item.IconData))
         {
