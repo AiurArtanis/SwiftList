@@ -5,11 +5,12 @@ namespace SwiftList.Core.SearchIndex;
 
 // Matches a query term that mixes an alias provider's own literal source alphabet (InputRanges,
 // e.g. CJK) with that same provider's generated-alias alphabet (OutputRanges, e.g. pinyin letters) --
-// "大cj" against a candidate "大长今": "大" must match the candidate's own text literally, "cj" must
-// match a subsequence of the provider's baked alias for the candidate's REMAINING (not yet consumed)
-// characters. Reached only as a last-resort tier, after the ordinary whole-query-against-name and
-// whole-query-against-alias attempts both fail -- a plain literal or single-alphabet query never
-// reaches this file.
+// e.g. one leading native-script character followed by a few alias-initial letters, matched against a
+// candidate whose own text starts with that same character: the leading character must match the
+// candidate's own text literally, the alias-initial letters must match a subsequence of the provider's
+// baked alias for the candidate's REMAINING (not yet consumed) characters. Reached only as a
+// last-resort tier, after the ordinary whole-query-against-name and whole-query-against-alias attempts
+// both fail -- a plain literal or single-alphabet query never reaches this file.
 internal enum MixedRunKind { Literal, AliasSyntax }
 
 internal readonly record struct MixedRun(MixedRunKind Kind, string Text);
@@ -31,7 +32,7 @@ internal static class MixedQueryMatcher
     // stay bit-compatible with.
     private const int ScorePerChar = 16;
 
-    // Only a bare single fuzzy term ("大cj" typed as-is, no "!", "^", "$", "'", "|", multi-word) is
+    // Only a bare single fuzzy term (typed as-is, no "!", "^", "$", "'", "|", multi-word) is
     // eligible -- segmenting a term that's part of a richer query (multiple space-separated terms,
     // an OR-set, an inverse/exact/prefix modifier) would require deciding how the mixed sub-match
     // combines with the rest of the query's own semantics, which this tier doesn't attempt.
@@ -73,10 +74,11 @@ internal static class MixedQueryMatcher
 
     // Splits `term` into contiguous runs by which of the provider's declared ranges each char falls
     // in. Returns null unless the term contains BOTH a literal-range run and an alias-range run --
-    // a pure-InputRange term (e.g. "古玩") is not a mix and must fall through to the ordinary
-    // literal/whole-alias tiers unchanged, otherwise a coincidental short alias subsequence can
-    // false-positive match unrelated candidates. A char outside both ranges also disqualifies the
-    // provider entirely (this term isn't expressible as a mix of this provider's two alphabets).
+    // a term entirely within one provider's own literal-range alphabet is not a mix and must fall
+    // through to the ordinary literal/whole-alias tiers unchanged, otherwise a coincidental short
+    // alias subsequence can false-positive match unrelated candidates. A char outside both ranges
+    // also disqualifies the provider entirely (this term isn't expressible as a mix of this
+    // provider's two alphabets).
     private static MixedRun[]? SegmentFor(string term, IAliasProvider provider)
     {
         var hasLiteral = false;

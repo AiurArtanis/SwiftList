@@ -212,8 +212,9 @@ internal static class HighlightMask
         return false;
     }
 
-    // Mixed-alphabet fallback (e.g. "大cj" against "大长今"): only reached once both the plain-alias
-    // tier above and this term's own literal/direct-fuzzy tiers have failed. Segments the term by an
+    // Mixed-alphabet fallback (a query mixing a native-script character with alias-initial letters,
+    // matched against a candidate starting with that same character): only reached once both the
+    // plain-alias tier above and this term's own literal/direct-fuzzy tiers have failed. Segments the term by an
     // active provider's own InputRanges/OutputRanges and, on a genuine mix, paints via
     // MixedQueryMatcher -- see its header comment for the run-by-run algorithm.
     private static void MarkViaMixedQuery(string text, string term, bool caseSensitive, Span<bool> highlights)

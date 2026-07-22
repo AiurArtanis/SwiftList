@@ -21,8 +21,8 @@ public static class QuickNavigationMenu
     public static bool IsShowingShellMenu { get; set; }
 
     // Bumped once per Show() call so a menu's own Closed handler can tell whether a NEWER Show() has
-    // already started by the time it runs -- see that handler's own comment for the "(空)" bug this
-    // exists to fix.
+    // already started by the time it runs -- see that handler's own comment for the empty-submenu bug
+    // this exists to fix.
     private static int _sessionGeneration;
 
     public static void Show(int mouseX, int mouseY)
@@ -113,8 +113,8 @@ public static class QuickNavigationMenu
             // point into. Rapid re-triggering (e.g. several quick middle-clicks) can open a NEWER menu
             // before an OLDER one's Closed event has been delivered; when that stale event finally arrives
             // here and this ran unconditionally, it cleared the newer menu's still-live session data out
-            // from under it, so hovering e.g. "This PC" resolved no path for its handle and rendered an
-            // empty submenu ("(空)") even though the menu itself was still open and otherwise fine. Only
+            // from under it, so hovering e.g. "This PC" resolved no path for its handle and rendered a
+            // visibly empty submenu even though the menu itself was still open and otherwise fine. Only
             // clear when no NEWER Show() has started since this one did -- an older Closed event finding a
             // mismatch just skips cleanup this time, which is harmless (the next real Show() clears these
             // same lightweight dictionaries at its own start anyway, see the ClearSession call above).

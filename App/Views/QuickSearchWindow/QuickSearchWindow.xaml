@@ -61,7 +61,7 @@
                  CardBackground everywhere with no depth. -->
             <Border Grid.Row="2" Grid.RowSpan="2" Background="{DynamicResource ContentBg}"/>
 
-            <!-- ═══════════ 3. Startup Panel Tab Strip ("初始面板") ═══════════ -->
+            <!-- ═══════════ 3. Startup Panel Tab Strip ═══════════ -->
             <ItemsControl x:Name="StartupPanelTabStrip" Grid.Row="2"
                           ItemsSource="{Binding StartupPanelTabs}"
                           Visibility="{Binding StartupPanelVisibility}"

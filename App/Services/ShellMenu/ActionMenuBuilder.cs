@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
@@ -5,6 +6,15 @@ namespace SwiftList.App.Services;
 
 internal static class ActionMenuBuilder
 {
+    // Windows shell menu text carries an access-key mnemonic SwiftList's own hotkey system never wires
+    // up (this menu is keyboard-navigated, not accelerator-key-driven) -- stripping only the leading
+    // "&" left the parenthesized letter itself behind for the common localized layout ("Word(&D)" ->
+    // "Word(D)"), showing a dead "(D)" hint that can never actually fire.
+    private static readonly Regex MnemonicPattern = new(@"\(&.\)", RegexOptions.Compiled);
+
+    private static string CleanMenuText(string? text) =>
+        MnemonicPattern.Replace(text ?? "", "").Replace("&", "");
+
     public static List<ActionMenuItem> Build(
         IReadOnlyList<AppSearchResult> selection,
         IntPtr hMenu,
@@ -159,7 +169,7 @@ internal static class ActionMenuBuilder
 
                             uiItems.Add(new ActionMenuItem
                             {
-                                Text = (item.Text ?? "").Replace("&", ""),
+                                Text = CleanMenuText(item.Text),
                                 CommandId = item.CommandId,
                                 IsSeparator = item.IsSeparator,
                                 HasSubMenu = item.HasSubMenu,
@@ -199,7 +209,7 @@ internal static class ActionMenuBuilder
 
                     uiItems.Add(new ActionMenuItem
                     {
-                        Text = (item.Text ?? "").Replace("&", ""),
+                        Text = CleanMenuText(item.Text),
                         CommandId = item.CommandId,
                         IsSeparator = item.IsSeparator,
                         HasSubMenu = item.HasSubMenu,

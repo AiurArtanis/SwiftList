@@ -62,8 +62,10 @@ public static class FuzzyMatcher
             }
         }
 
-        // Mixed-alphabet fallback ("大cj" against "大长今") -- mirrors the equivalent tier added to
-        // SearchMatcher/SearchMatcherRow so this public seam keeps matching the host's own file search.
+        // Mixed-alphabet fallback (a bare term mixing a native-script character with alias-initial
+        // letters, matched against a candidate starting with that same character) -- mirrors the
+        // equivalent tier added to SearchMatcher/SearchMatcherRow so this public seam keeps matching
+        // the host's own file search.
         // TrySegmentPattern already excluded a disabled provider from consideration.
         var mixedTerm = MixedQueryMatcher.TrySegmentPattern(fzf);
         if (mixedTerm != null && mixedTerm.Provider.CanHandle(text))

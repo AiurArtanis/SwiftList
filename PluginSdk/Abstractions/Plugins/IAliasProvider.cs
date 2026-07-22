@@ -14,7 +14,8 @@ public interface IAliasProvider : IPluginComponent
     /// <summary>
     /// The character range(s) this provider transliterates FROM -- the alphabet of the literal
     /// source text it recognizes (e.g. the CJK ideograph block, for pinyin). Used to split a query
-    /// term that mixes this alphabet with <see cref="OutputRanges"/> (e.g. "大cj") into a literal
+    /// term that mixes this alphabet with <see cref="OutputRanges"/> (e.g. one native-script character
+    /// followed by a few alias-initial letters) into a literal
     /// run to match against the candidate's own text, and an alias-syntax run to match against this
     /// provider's generated alias -- see <c>Core.SearchIndex.MixedQueryMatcher</c>.
     /// </summary>

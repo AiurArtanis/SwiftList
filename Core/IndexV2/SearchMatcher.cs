@@ -40,7 +40,7 @@ internal static class SearchMatcher
         public required ulong[][] OrSetMasks; // per multi-term set: candidate must cover at least one term
         public required bool CanFilter;
         public required int QueryLen;
-        public required MixedTerm? MixedTerm; // non-null only for a bare single term mixing an alias provider's own two alphabets, e.g. "大cj"
+        public required MixedTerm? MixedTerm; // non-null only for a bare single term mixing an alias provider's own two alphabets
     }
 
     private static readonly ConcurrentBag<Worker> WorkerPool = new();
@@ -231,7 +231,7 @@ internal static class SearchMatcher
         }
     }
 
-    // Last-resort tier for a query mixing an alias provider's own two alphabets (e.g. "大cj"): only
+    // Last-resort tier for a query mixing an alias provider's own two alphabets: only
     // the baked aliases belonging to that exact provider are worth trying, since MapAliasToSourceIndices
     // (needed to align the alias-syntax run back onto `name`) is only meaningful for the provider that
     // produced the alias. Decodes each candidate alias to UTF-16 -- acceptable here since this only runs
