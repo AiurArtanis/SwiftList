@@ -23,6 +23,7 @@ public partial class QuickLookWindow : Window
     public QuickLookWindow()
     {
         InitializeComponent();
+        Helpers.SystemMenuBlocker.Attach(this);
         ThemedWindowIconHelper.Apply(this);
         _overlay = new PreviewOverlay(this, ContentArea);
         IsVisibleChanged += (s, e) =>

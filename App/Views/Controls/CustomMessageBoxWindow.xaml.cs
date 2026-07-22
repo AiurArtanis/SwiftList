@@ -13,6 +13,7 @@ public partial class CustomMessageBoxWindow : Window
     {
         InitializeComponent();
 
+        Helpers.SystemMenuBlocker.Attach(this);
         ThemedWindowIconHelper.Apply(this);
         ThemedWindowIconHelper.Apply(TitleBarLogo, this);
 

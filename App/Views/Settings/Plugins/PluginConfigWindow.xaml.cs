@@ -10,6 +10,7 @@ public partial class PluginConfigWindow : Window
     public PluginConfigWindow(PluginInfoViewModel viewModel)
     {
         InitializeComponent();
+        Helpers.SystemMenuBlocker.Attach(this);
         ThemedWindowIconHelper.Apply(this);
         DataContext = viewModel;
     }
