@@ -96,6 +96,24 @@ only reveals results that are already indexed; a folder that was *never* indexed
 (an excluded folder on a network or WSL drive) still won't appear. Hidden/system files stay filtered
 either way — this only affects your own exclusion-rule configuration.
 
+## Result type trigger
+
+Optional, and off by default — you assign the character yourself. If you've assigned a trigger
+character to a result type under **Settings → General → Quick Search Window → Result Type
+Priority**, typing that character as the very first thing in the quick window shows only that
+type's results — Applications, Settings, one specific File Filter, a plugin's own items, or plain
+Files — hiding every other type:
+
+```
+;vs
+```
+
+finds "Visual Studio" among Applications only, if `;` is that type's configured trigger, regardless
+of which other type's results would otherwise have matched the text better. Typing just the trigger
+character with nothing after it yet shows a prompt naming the type instead of "No Search Results".
+History and Favorites are unaffected either way — they always come first, trigger or not. No trigger
+is configured by default; see [General settings](./settings/general#quick-search-window) to set one up.
+
 ## Chinese filenames: pinyin aliasing
 
 Filenames containing Chinese characters are automatically searchable by pinyin, with no setup

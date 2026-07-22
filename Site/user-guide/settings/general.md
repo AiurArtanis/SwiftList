@@ -53,8 +53,12 @@ query text better. History and Favorites always come first and aren't part of th
 
 Each type can also have its own single-character **trigger** (optional, one text box per row): typing
 that character as the very first thing in the quick window shows only that type's results, hiding
-everything else. Pick a character you'd never normally start a real search with, since it's reserved
-once a type is assigned it.
+everything else — see [Search Syntax](../search-syntax#result-type-trigger) for examples. Typing just
+the trigger with nothing after it yet shows a "keep typing to search X only" prompt instead of
+"No Search Results". Pick a character you'd never normally start a real search with, since it's
+reserved once a type is assigned it — a punctuation character (e.g. `;`) works more reliably than a
+plain space, since a lone space with nothing typed after it is treated the same as an empty search
+box and won't show that prompt.
 
 ## Full Search Window
 
