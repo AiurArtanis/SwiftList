@@ -41,8 +41,6 @@ public class SearchWindowChromeHandler
     {
         _window.BtnMaximize?.Content = _window.WindowState == WindowState.Maximized ? "\uE923" : "\uE922";
 
-        _window.DragGrip?.Visibility = _window.WindowState == WindowState.Maximized ? Visibility.Collapsed : Visibility.Visible;
-
         if (_window.MainBorder != null && _window.ClippingBorder != null)
         {
             if (_window.WindowState == WindowState.Maximized)

@@ -48,23 +48,12 @@
                         </Grid.ColumnDefinitions>
                         <!-- Search bar area -->
                         <Grid Grid.Column="0" Margin="12,12,8,12" MouseLeftButtonDown="Header_MouseLeftButtonDown">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/> <!-- Drag Grip -->
-                                <ColumnDefinition Width="*"/>    <!-- Input -->
-                            </Grid.ColumnDefinitions>
-                            <!-- Drag Grip Handle (::) -->
-                            <Viewbox x:Name="DragGrip" Grid.Column="0" Width="10" Height="16" Margin="4,0,10,0" Opacity="0.4" Cursor="SizeAll" ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_DragTooltip]}">
-                                <Canvas Width="12" Height="18" Background="Transparent" MouseLeftButtonDown="Header_MouseLeftButtonDown">
-                                    <Ellipse Canvas.Left="2" Canvas.Top="3" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary}"/>
-                                    <Ellipse Canvas.Left="7" Canvas.Top="3" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary}"/>
-                                    <Ellipse Canvas.Left="2" Canvas.Top="8" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary}"/>
-                                    <Ellipse Canvas.Left="7" Canvas.Top="8" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary}"/>
-                                    <Ellipse Canvas.Left="2" Canvas.Top="13" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary}"/>
-                                    <Ellipse Canvas.Left="7" Canvas.Top="13" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary}"/>
-                                </Canvas>
-                            </Viewbox>
+                            <!-- No dedicated drag grip: this whole area (including the SearchBoxControl's
+                                 own logo, IsIconOnLeft below) already drags the window via the
+                                 MouseLeftButtonDown handler above, so a separate six-dot grip icon was
+                                 pure visual redundancy. -->
                             <!-- Shared SearchBoxControl component -->
-                            <app:SearchBoxControl x:Name="SearchBox" Grid.Column="1" FontSize="15" Padding="0" IsIconOnLeft="True" SearchText="{Binding AdvancedQuery, Mode=TwoWay}" IsServiceRunning="{Binding IsServiceConnected}"/>
+                            <app:SearchBoxControl x:Name="SearchBox" FontSize="15" Padding="0" IsIconOnLeft="True" SearchText="{Binding AdvancedQuery, Mode=TwoWay}" IsServiceRunning="{Binding IsServiceConnected}"/>
                         </Grid>
                         <!-- Window controls -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,6,6,0">
