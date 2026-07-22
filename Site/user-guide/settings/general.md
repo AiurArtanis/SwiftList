@@ -51,6 +51,11 @@ third-party plugin's own searchable items, or the built-in "Files" entry) up or 
 outrank the types below it in the quick window's results, regardless of which one actually matched the
 query text better. History and Favorites always come first and aren't part of this list.
 
+Each type can also have its own single-character **trigger** (optional, one text box per row): typing
+that character as the very first thing in the quick window shows only that type's results, hiding
+everything else. Pick a character you'd never normally start a real search with, since it's reserved
+once a type is assigned it.
+
 ## Full Search Window
 
 Sets the default size of the full/main search window (the larger window you get from the taskbar

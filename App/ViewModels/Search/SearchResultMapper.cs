@@ -49,6 +49,24 @@ public static class SearchResultMapper
         // int.MaxValue), so an untouched order list is a complete no-op. See SearchResultTypePriority.
         var typeOrder = isInlineWindow ? new List<string>() : UserSettings.Load().ResultTypeOrder;
 
+        // Quick-window-only exclusive filter: if the first character the user actually typed matches a
+        // configured per-type trigger (UserSettings.ResultTypeTriggers), only that type's candidates
+        // enter the ranked competition below -- Favorites/history are unaffected, they're hardcoded
+        // top-priority regardless. rawQuery (not the sort/exclusion-token-stripped query) is what's
+        // probed since it's the one guaranteed to still have whatever the user actually typed first,
+        // including a literal space -- see PluginSearchResultMapper.AddInstantResults' own use of it
+        // above for the same reason. query itself already arrives with the trigger character stripped
+        // (SearchDispatchController.StripResultTypeTrigger removes it before the file-index engine ever
+        // sees it), so it's used as-is below for matching/highlighting -- the trigger character never
+        // shows up highlighted and never pollutes the fuzzy match, with no second stripping needed here.
+        string? triggeredTypeId = null;
+        if (!isInlineWindow)
+        {
+            var probe = rawQuery ?? query;
+            if (probe.Length > 0)
+                triggeredTypeId = SearchResultTypePriority.ResolveTrigger(probe[0], UserSettings.Load().ResultTypeTriggers);
+        }
+
         // Favorites, history-matched files, searchable items (apps/settings), and remaining file
         // results all compete on ONE list now: history priority first (an explicit "you've opened
         // this before" signal -- items with no history sort after every item that has one), then
@@ -85,15 +103,18 @@ public static class SearchResultMapper
 
         foreach (var (result, weight) in SearchableItemMapper.CollectSearchableItemResults(query, isInlineWindow))
         {
+            var typeId = result.SourceProvider is PluginSdk.Abstractions.Plugins.ISearchableItemProvider provider
+                ? SearchResultTypePriority.GetProviderTypeId(provider)
+                : SearchResultTypePriority.FilesTypeId;
+            if (triggeredTypeId != null && typeId != triggeredTypeId)
+                continue;
+
             // An application's FullPath can be a virtual shell:AppsFolder\{AUMID} id (packaged apps) --
             // Path.GetFullPath (inside NormalizePath) would mangle that, and SearchHistoryStore itself
             // never runs it through NormalizePath either (see SearchHistoryStore.RecordCore), so the
             // lookup key has to skip it here too or an app's history priority would never resolve.
             var lookupPath = result.IsApplication ? result.FullPath.Trim() : SearchResultHelper.NormalizePath(result.FullPath);
             var hasHistory = historySnapshot.TryGetValue(lookupPath, out var priority);
-            var typeId = result.SourceProvider is PluginSdk.Abstractions.Plugins.ISearchableItemProvider provider
-                ? SearchResultTypePriority.GetProviderTypeId(provider)
-                : SearchResultTypePriority.FilesTypeId;
             candidates.Add(new RankedCandidate(
                 result,
                 IsCurated: hasHistory,
@@ -103,7 +124,11 @@ public static class SearchResultMapper
                 SearchResultHelper.NormalizePath(result.FullPath)));
         }
 
-        if (fileResults != null)
+        // Only entered when nothing is triggered, or "Files" itself is the triggered type -- fileResults
+        // was already fetched from the backend using the trigger-stripped query (SearchDispatchController
+        // strips it before ever dispatching the search), so this gets the same clean-text recall any
+        // other type gets, not just whatever a trigger-polluted query happened to match.
+        if (fileResults != null && (triggeredTypeId == null || triggeredTypeId == SearchResultTypePriority.FilesTypeId))
         {
             foreach (var result in fileResults)
             {
@@ -198,6 +223,9 @@ public static class SearchResultMapper
 
     public static AppSearchResult CreateNoResultsResult(string query)
         => SearchResultHelper.CreateNoResultsResult(query);
+
+    public static AppSearchResult CreateResultTypeTriggerPromptResult(string typeDisplayName)
+        => SearchResultHelper.CreateResultTypeTriggerPromptResult(typeDisplayName);
 
     public static string FormatSearchStatus(int appCount, int fileCount)
         => SearchResultHelper.FormatSearchStatus(appCount, fileCount);

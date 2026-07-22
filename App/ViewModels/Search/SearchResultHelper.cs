@@ -52,6 +52,21 @@ internal static class SearchResultHelper
         SearchQuery = string.Empty
     };
 
+    // Shown instead of CreateNoResultsResult when a per-type trigger (SearchResultTypePriority) was
+    // typed with nothing after it yet -- "no results" would be misleading there, since no search has
+    // actually run yet at all.
+    public static AppSearchResult CreateResultTypeTriggerPromptResult(string typeDisplayName) => new AppSearchResult
+    {
+        Name = string.Format(TranslationManager.Instance["Search_ResultTypeTriggerPrompt"], typeDisplayName),
+        FullPath = "__NO_RESULTS__",
+        ParentDir = string.Empty,
+        IsDir = false,
+        Drive = string.Empty,
+        ResultKind = "Empty",
+        Index = 0,
+        SearchQuery = string.Empty
+    };
+
     public static string GetParentDisplayText(SearchResult item, bool isApplication, string? scope)
     {
         var parentDir = Path.GetDirectoryName(item.Path);

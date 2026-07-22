@@ -94,6 +94,17 @@ public class UserSettings
     /// </summary>
     public List<string> ResultTypeOrder { get; set; } = new();
 
+    /// <summary>
+    /// Per-type trigger character for the quick window's exclusive result-type filter -- key is the
+    /// same type-id ResultTypeOrder above uses, value is a single character (an entry is only present
+    /// when the user actually configured one). When the FIRST character the user types matches a
+    /// configured trigger, only that type's candidates enter the ranked competition in
+    /// SearchResultMapper.BuildQuickResults -- Favorites/history are unaffected, since they're
+    /// hardcoded top-priority regardless of any of this. See SearchResultTypePriority.ResolveTrigger.
+    /// Quick window only, same scope as ResultTypeOrder.
+    /// </summary>
+    public Dictionary<string, string> ResultTypeTriggers { get; set; } = new();
+
     public Dictionary<string, Dictionary<string, object>> PluginSettings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public T GetPluginSetting<T>(string pluginId, string key, T defaultValue)

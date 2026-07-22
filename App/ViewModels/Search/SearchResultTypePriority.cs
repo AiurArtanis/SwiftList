@@ -1,4 +1,5 @@
 using SwiftList.App.Helpers;
+using SwiftList.App.Services;
 using SwiftList.App.Services.PluginManagerCore;
 using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.PluginSdk.Abstractions.Plugins;
@@ -27,5 +28,33 @@ public static class SearchResultTypePriority
     {
         var idx = order.IndexOf(typeId);
         return idx >= 0 ? idx : int.MaxValue;
+    }
+
+    // The reverse lookup for UserSettings.ResultTypeTriggers -- a handful of entries at most, so a
+    // linear scan beats maintaining a second reversed dictionary in sync.
+    public static string? ResolveTrigger(char firstChar, IReadOnlyDictionary<string, string> triggers)
+    {
+        foreach (var (typeId, trigger) in triggers)
+        {
+            if (trigger.Length == 1 && trigger[0] == firstChar)
+                return typeId;
+        }
+        return null;
+    }
+
+    // Same display text ResultTypeOrderViewModel shows for this id in Settings -- used by
+    // SearchDispatchController to name the type in its "keep typing to search only X" prompt when a
+    // trigger was typed with nothing after it yet.
+    public static string? GetDisplayName(string typeId)
+    {
+        if (typeId == FilesTypeId)
+            return TranslationManager.Instance["General_ResultTypeFiles"];
+
+        foreach (var provider in PluginManager.Instance.SearchableItemProviders)
+        {
+            if (GetProviderTypeId(provider) == typeId)
+                return provider.Name;
+        }
+        return null;
     }
 }

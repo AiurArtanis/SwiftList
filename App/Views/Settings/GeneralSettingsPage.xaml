@@ -120,6 +120,20 @@
                                    TextTrimming="CharacterEllipsis"/>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <TextBox Text="{Binding TriggerChar, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     MaxLength="1"
+                                     Width="32" Height="32"
+                                     Padding="0"
+                                     HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                     Style="{StaticResource SettingsTextBox}"
+                                     Margin="0,0,6,0">
+                                <TextBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ResultTypeTriggerTooltip]}"
+                                                   TextWrapping="Wrap" MaxWidth="260"/>
+                                    </ToolTip>
+                                </TextBox.ToolTip>
+                            </TextBox>
                             <Button Content="&#xE74A;"
                                     ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_MoveUpTooltip]}"
                                     Style="{StaticResource QuickNavIconButton}"

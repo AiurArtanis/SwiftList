@@ -105,9 +105,7 @@ public static class SearchableItemMapper
                     continue;
                 }
 
-                if (activeQuery.Length < 2 && !isFileFilterItem) continue;
-
-                // The standard match+weight contract (FuzzyMatcher.ComputeBestMatch): title first,
+// The standard match+weight contract (FuzzyMatcher.ComputeBestMatch): title first,
                 // then each curated alias, via the same FzfPattern.Parse Core's real file search uses
                 // -- a multi-word query like "gsh ypfq" correctly requires BOTH words to match
                 // somewhere, unlike the old title.StartsWith/.Contains/MarkFuzzyMatch chain, which
@@ -123,92 +121,99 @@ public static class SearchableItemMapper
         var matches = matched.OrderByDescending(m => m.Weight).Take(50);
         foreach (var (entry, weight, provider, activeQuery) in matches)
         {
-            var item = entry.Item;
-            System.Windows.Media.ImageSource? iconOverride = null;
-
-            var isRealFile = false;
-            var isRealDir = false;
-            var isApplication = false;
-            var rKind = item.ResultKind ?? string.Empty;
-            var isFileFilterItem = rKind.StartsWith("FileFilter_", StringComparison.OrdinalIgnoreCase);
-
-            if (rKind == "File")
-            {
-                isRealFile = true;
-            }
-            else if (rKind == "Directory")
-            {
-                isRealDir = true;
-            }
-            else if (rKind == "Application")
-            {
-                // Keep the app's real target path (a Start Menu .lnk, or a virtual shell:AppsFolder
-                // token for packaged apps) instead of the generic "__SEARCHABLE_ITEM__:" placeholder,
-                // so file actions (copy, locate in explorer, ...) have something to act on -- each
-                // action's own CanExecute already handles a path that doesn't exist on disk.
-                isApplication = true;
-            }
-            else if (isFileFilterItem)
-            {
-                // For FileFilter items, we infer they are files unless they have no extension, then fallback safely to Folder type
-                var ext = Path.GetExtension(item.ActionArgument);
-                if (!string.IsNullOrEmpty(ext)) isRealFile = true;
-                else isRealDir = true;
-            }
-
-            if (entry.Icon != null)
-            {
-                // Frozen bitmap materialized once at load time (see EnsureLoaded); reused as-is with
-                // no per-keystroke rebuild and no leaked GDI handle.
-                iconOverride = entry.Icon;
-            }
-            else if ((isRealFile || isRealDir || isApplication) && !string.IsNullOrWhiteSpace(item.ActionArgument))
-            {
-                // Fallback to ShellIconHelper so native high-fidelity shell thumbnails display correctly!
-                iconOverride = ShellIconHelper.GetIconForPath(item.ActionArgument, isRealDir);
-            }
-            else if (!string.IsNullOrWhiteSpace(item.IconData))
-            {
-                try
-                {
-                    var color = string.IsNullOrWhiteSpace(item.IconColor) ? "DefaultPluginIconColor" : item.IconColor;
-                    iconOverride = ShellIconHelper.CreateVectorIcon(item.IconData, color);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log($"[SearchableItemMapper] Failed to create vector icon: {ex.Message}", LogLevel.Error);
-                }
-            }
-            else
-            {
-                try
-                {
-                    iconOverride = ShellIconHelper.CreateVectorIcon("M7 2v11h3v9l7-12h-4l3-8z", "DefaultPluginIconColor");
-                }
-                catch { }
-            }
-
-            candidates.Add((new AppSearchResult
-            {
-                Name = item.Title,
-                FullPath = (isRealFile || isRealDir || isApplication) ? item.ActionArgument : $"__SEARCHABLE_ITEM__:{provider.Name}:{item.Title}",
-                // Applications show name-only: blank the subtitle so the path row collapses (an app's
-                // FullPath is a virtual token anyway). Other item kinds keep their description.
-                ParentDir = item.ResultKind == "Application" ? string.Empty : item.Description,
-                IsDir = isRealDir,
-                Drive = string.Empty,
-                ResultKind = isRealFile ? "File" : (isRealDir ? "Directory" : (isApplication ? "Application" : "InstantResult")),
-                SearchQuery = activeQuery ?? string.Empty,
-                IconOverride = iconOverride,
-                InstantResultActionType = item.ActionType ?? "Copy",
-                InstantResultActionArgument = item.ActionArgument ?? string.Empty,
-                InstantResultOnExecute = item.OnExecute,
-                TabCompletion = item.TabCompletion,
-                SourceProvider = provider
-            }, weight));
+            candidates.Add(BuildCandidate(entry, provider, activeQuery, weight));
         }
 
         return candidates;
+    }
+
+    // Split out of the matches loop below purely to keep this file's per-method length down -- no
+    // other caller.
+    private static (AppSearchResult Result, double Weight) BuildCandidate(SearchableItemCache.CacheEntry entry, ISearchableItemProvider provider, string activeQuery, double weight)
+    {
+        var item = entry.Item;
+        System.Windows.Media.ImageSource? iconOverride = null;
+
+        var isRealFile = false;
+        var isRealDir = false;
+        var isApplication = false;
+        var rKind = item.ResultKind ?? string.Empty;
+        var isFileFilterItem = rKind.StartsWith("FileFilter_", StringComparison.OrdinalIgnoreCase);
+
+        if (rKind == "File")
+        {
+            isRealFile = true;
+        }
+        else if (rKind == "Directory")
+        {
+            isRealDir = true;
+        }
+        else if (rKind == "Application")
+        {
+            // Keep the app's real target path (a Start Menu .lnk, or a virtual shell:AppsFolder
+            // token for packaged apps) instead of the generic "__SEARCHABLE_ITEM__:" placeholder,
+            // so file actions (copy, locate in explorer, ...) have something to act on -- each
+            // action's own CanExecute already handles a path that doesn't exist on disk.
+            isApplication = true;
+        }
+        else if (isFileFilterItem)
+        {
+            // For FileFilter items, we infer they are files unless they have no extension, then fallback safely to Folder type
+            var ext = Path.GetExtension(item.ActionArgument);
+            if (!string.IsNullOrEmpty(ext)) isRealFile = true;
+            else isRealDir = true;
+        }
+
+        if (entry.Icon != null)
+        {
+            // Frozen bitmap materialized once at load time (see EnsureLoaded); reused as-is with
+            // no per-keystroke rebuild and no leaked GDI handle.
+            iconOverride = entry.Icon;
+        }
+        else if ((isRealFile || isRealDir || isApplication) && !string.IsNullOrWhiteSpace(item.ActionArgument))
+        {
+            // Fallback to ShellIconHelper so native high-fidelity shell thumbnails display correctly!
+            iconOverride = ShellIconHelper.GetIconForPath(item.ActionArgument, isRealDir);
+        }
+        else if (!string.IsNullOrWhiteSpace(item.IconData))
+        {
+            try
+            {
+                var color = string.IsNullOrWhiteSpace(item.IconColor) ? "DefaultPluginIconColor" : item.IconColor;
+                iconOverride = ShellIconHelper.CreateVectorIcon(item.IconData, color);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[SearchableItemMapper] Failed to create vector icon: {ex.Message}", LogLevel.Error);
+            }
+        }
+        else
+        {
+            try
+            {
+                iconOverride = ShellIconHelper.CreateVectorIcon("M7 2v11h3v9l7-12h-4l3-8z", "DefaultPluginIconColor");
+            }
+            catch { }
+        }
+
+        return (new AppSearchResult
+        {
+            Name = item.Title,
+            FullPath = (isRealFile || isRealDir || isApplication) ? item.ActionArgument : $"__SEARCHABLE_ITEM__:{provider.Name}:{item.Title}",
+            // Applications show name-only: blank the subtitle so the path row collapses (an app's
+            // FullPath is a virtual token anyway). Other item kinds keep their description.
+            ParentDir = item.ResultKind == "Application" ? string.Empty : item.Description,
+            IsDir = isRealDir,
+            Drive = string.Empty,
+            ResultKind = isRealFile ? "File" : (isRealDir ? "Directory" : (isApplication ? "Application" : "InstantResult")),
+            SearchQuery = activeQuery ?? string.Empty,
+            IconOverride = iconOverride,
+            InstantResultActionType = item.ActionType ?? "Copy",
+            InstantResultActionArgument = item.ActionArgument ?? string.Empty,
+            InstantResultOnExecute = item.OnExecute,
+            TabCompletion = item.TabCompletion,
+            SourceProvider = provider
+        }, weight);
     }
 
     private static bool IsRegisteredFilterKeyword(string targetFileFilterKind) => SearchableItemCache.IsRegisteredFilterKeyword(targetFileFilterKind);

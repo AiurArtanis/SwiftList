@@ -56,11 +56,15 @@ internal sealed class SearchDispatchController
         _queryTokens = tokens;
         var cleanQuery = SearchQuerySortParser.StripExclusionBypass(strippedTrailing, out var bypassExclusions);
         _bypassExclusions = bypassExclusions;
+        var (strippedClean, triggeredTypeId) = StripResultTypeTrigger(value, cleanQuery);
+        cleanQuery = strippedClean;
 
         if (string.IsNullOrWhiteSpace(cleanQuery))
         {
             _engine.CancelPendingSearch();
-            if (string.IsNullOrWhiteSpace(value))
+            if (triggeredTypeId != null)
+                ShowResultTypeTriggerPrompt(triggeredTypeId);
+            else if (string.IsNullOrWhiteSpace(value))
                 PerformSearch(string.Empty);
             else
                 ClearForTokenOnlyQuery();
@@ -86,6 +90,20 @@ internal sealed class SearchDispatchController
         // not just have its results cleared underneath it.
         _startupPanel.Deactivate();
         _replaceResults(new[] { SearchResultMapper.CreateNoResultsResult(string.Empty) });
+        _setResultsPanelVisibility(Visibility.Visible);
+        _setResultsSeparatorVisibility(Visibility.Visible);
+    }
+
+    // Same "nothing to search yet" situation as ClearForTokenOnlyQuery above, but for a per-type
+    // trigger typed with no content after it -- "No Search Results" would be misleading here since no
+    // search actually ran at all, so this names the type instead ("Keep typing to search Applications
+    // only") to make clear what's being waited on.
+    private void ShowResultTypeTriggerPrompt(string typeId)
+    {
+        _setIsSearching(false);
+        _startupPanel.Deactivate();
+        var typeName = SearchResultTypePriority.GetDisplayName(typeId) ?? string.Empty;
+        _replaceResults(new[] { SearchResultMapper.CreateResultTypeTriggerPromptResult(typeName) });
         _setResultsPanelVisibility(Visibility.Visible);
         _setResultsSeparatorVisibility(Visibility.Visible);
     }
@@ -183,14 +201,37 @@ internal sealed class SearchDispatchController
         _queryTokens = tokens;
         var cleanQuery = SearchQuerySortParser.StripExclusionBypass(strippedTrailing, out var bypassExclusions);
         _bypassExclusions = bypassExclusions;
+        var (strippedClean, triggeredTypeId) = StripResultTypeTrigger(query, cleanQuery);
+        cleanQuery = strippedClean;
 
         if (string.IsNullOrWhiteSpace(cleanQuery))
         {
-            ClearForTokenOnlyQuery();
+            if (triggeredTypeId != null)
+                ShowResultTypeTriggerPrompt(triggeredTypeId);
+            else
+                ClearForTokenOnlyQuery();
             return;
         }
 
         RunEngineSearch(_engine.PerformSearch, query, cleanQuery);
+    }
+
+    // Quick-window-only: if `raw`'s first character matches a configured per-type trigger
+    // (UserSettings.ResultTypeTriggers), strip it from cleanQuery before it's sent to the file-index
+    // engine (RunEngineSearch's engineCall) and reaches BuildQuickResults -- so a "Files" trigger gets
+    // the same clean-text recall from the backend as every other type gets locally, instead of the
+    // backend matching against the trigger-polluted text. BuildQuickResults still independently
+    // resolves WHICH type was triggered from originalValue/rawQuery (see
+    // SearchResultTypePriority.ResolveTrigger) -- this only fixes what text gets searched with. The
+    // returned type-id (null when no trigger matched) lets the caller show a type-specific prompt
+    // instead of the generic "no results" row when stripping leaves nothing behind.
+    private static (string CleanQuery, string? TriggeredTypeId) StripResultTypeTrigger(string raw, string cleanQuery)
+    {
+        if (raw.Length == 0 || cleanQuery.Length == 0 || cleanQuery[0] != raw[0])
+            return (cleanQuery, null);
+
+        var typeId = SearchResultTypePriority.ResolveTrigger(raw[0], UserSettings.Load().ResultTypeTriggers);
+        return typeId != null ? (cleanQuery.Substring(1), typeId) : (cleanQuery, null);
     }
 
     private void HandleLocalServiceUnavailable() => _mainVm.TriggerIndexBuild();
