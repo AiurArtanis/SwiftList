@@ -291,7 +291,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     private void ShowTrayMenu()
     {
         var queryText = (IsInActionsMode && _menuPresenter != null) ? _menuPresenter.SavedSearchQuery : TxtSearch.Text;
-        _trayService?.ShowMenuAt(RootGrid, () => FileExecutor.OpenFileOrFolder("__SHOW_MORE__", queryText, HideWindowNoRestore));
+        _trayService?.ShowMenuAt(RootGrid, () => FileExecutor.OpenFileOrFolder("__SHOW_MORE__", SearchResultTypePriority.StripLeadingTrigger(queryText), HideWindowNoRestore));
     }
 
     private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject

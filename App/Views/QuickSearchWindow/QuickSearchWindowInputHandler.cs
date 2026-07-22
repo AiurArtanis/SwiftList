@@ -71,9 +71,10 @@ public class QuickSearchWindowInputHandler
         {
             // Opens the full SearchWindow directly (bypassing the search box logo's menu detour), carrying
             // over whatever query is currently active (including a saved query while in actions mode) --
-            // same query-carrying behavior ShowTrayMenu gets to via its "Show Main Window" item.
+            // same query-carrying behavior ShowTrayMenu gets to via its "Show Main Window" item. The full
+            // window has no concept of a per-type trigger, so one is stripped before it ever gets there.
             var queryText = (_window.IsInActionsMode && _window.MenuPresenter != null) ? _window.MenuPresenter.SavedSearchQuery : _window.TxtSearch.Text;
-            FileExecutor.OpenFileOrFolder("__SHOW_MORE__", queryText, _window.HideWindowNoRestore);
+            FileExecutor.OpenFileOrFolder("__SHOW_MORE__", SearchResultTypePriority.StripLeadingTrigger(queryText), _window.HideWindowNoRestore);
             e.Handled = true;
             return;
         }

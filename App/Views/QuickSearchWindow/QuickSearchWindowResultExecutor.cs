@@ -62,11 +62,13 @@ public class QuickSearchWindowResultExecutor
         var currentQuery = _window.TxtSearch.Text;
         if (result.FullPath == "__SHOW_MORE__")
         {
+            // The full window has no concept of a per-type trigger, so one is stripped before it lands there.
+            var carriedQuery = SearchResultTypePriority.StripLeadingTrigger(currentQuery);
             _window.HideWindowNoRestore();
             if (asAdmin)
-                FileExecutor.OpenFileOrFolderAsAdmin(result.FullPath, currentQuery, _window.HideWindowNoRestore);
+                FileExecutor.OpenFileOrFolderAsAdmin(result.FullPath, carriedQuery, _window.HideWindowNoRestore);
             else
-                FileExecutor.OpenFileOrFolder(result.FullPath, currentQuery, _window.HideWindowNoRestore);
+                FileExecutor.OpenFileOrFolder(result.FullPath, carriedQuery, _window.HideWindowNoRestore);
         }
         else
         {

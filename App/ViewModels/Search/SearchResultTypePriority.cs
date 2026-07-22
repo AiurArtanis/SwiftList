@@ -2,6 +2,7 @@ using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.App.Services.PluginManagerCore;
 using SwiftList.App.ViewModels.Settings.Plugins;
+using SwiftList.Core;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
 namespace SwiftList.App.ViewModels.Search;
@@ -56,5 +57,18 @@ public static class SearchResultTypePriority
                 return provider.Name;
         }
         return null;
+    }
+
+    // Used whenever the quick window's current query is carried over somewhere that has no concept
+    // of a per-type trigger at all -- opening the full/main SearchWindow (Ctrl+F, or clicking "Show
+    // more search results"). Without this, a query like ";vs" would land in the full window searching
+    // literally for ";vs" instead of "vs".
+    public static string StripLeadingTrigger(string query)
+    {
+        if (query.Length == 0)
+            return query;
+        return ResolveTrigger(query[0], UserSettings.Load().ResultTypeTriggers) != null
+            ? query.Substring(1)
+            : query;
     }
 }

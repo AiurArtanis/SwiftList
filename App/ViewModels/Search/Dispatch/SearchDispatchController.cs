@@ -220,7 +220,8 @@ internal sealed class SearchDispatchController
         RunEngineSearch(_engine.PerformSearch, query, cleanQuery);
     }
 
-    // Quick-window-only: if `raw`'s first character matches a configured per-type trigger
+    // Quick-window-only (unlike "*"/exclusion-bypass and token syntax, which are general search
+    // syntax and apply everywhere): if `raw`'s first character matches a configured per-type trigger
     // (UserSettings.ResultTypeTriggers), strip it from cleanQuery before it's sent to the file-index
     // engine (RunEngineSearch's engineCall) and reaches BuildQuickResults -- so a "Files" trigger gets
     // the same clean-text recall from the backend as every other type gets locally, instead of the
@@ -228,10 +229,15 @@ internal sealed class SearchDispatchController
     // resolves WHICH type was triggered from originalValue/rawQuery (see
     // SearchResultTypePriority.ResolveTrigger) -- this only fixes what text gets searched with. The
     // returned type-id (null when no trigger matched) lets the caller show a type-specific prompt
-    // instead of the generic "no results" row when stripping leaves nothing behind.
-    private static (string CleanQuery, string? TriggeredTypeId) StripResultTypeTrigger(string raw, string cleanQuery)
+    // instead of the generic "no results" row when stripping leaves nothing behind. The inline window
+    // shares this same DispatchSearch/PerformSearch code path (see _getIsInlineSearchContext elsewhere
+    // in this class), but has no concept of a per-type trigger at all -- BuildQuickResults' own
+    // detection already skips it for isInlineWindow, so this must too, or an inline query that
+    // happens to start with someone's configured trigger character would silently search the wrong
+    // (one-character-short) text.
+    private (string CleanQuery, string? TriggeredTypeId) StripResultTypeTrigger(string raw, string cleanQuery)
     {
-        if (raw.Length == 0 || cleanQuery.Length == 0 || cleanQuery[0] != raw[0])
+        if (_getIsInlineSearchContext() || raw.Length == 0 || cleanQuery.Length == 0 || cleanQuery[0] != raw[0])
             return (cleanQuery, null);
 
         var typeId = SearchResultTypePriority.ResolveTrigger(raw[0], UserSettings.Load().ResultTypeTriggers);
