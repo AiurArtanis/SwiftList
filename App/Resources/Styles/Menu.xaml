@@ -174,4 +174,29 @@
         </Setter>
     </Style>
 
+    <!-- Non-interactive group-header row for the quick-navigation cascader's root menu (one per
+         IQuickNavigationProvider), matching the actions list/flyout's own section-header look
+         (ActionMenuItemTemplate's SectionHeaderVisibility block) without pulling in that template's
+         icon/shortcut/submenu-arrow columns this plain-text row never needs. Height uses
+         MinSectionHeaderHeight (a compact label height, not a full clickable row's MenuItemHeight):
+         this row has no icon/hover chrome to fill out, so the full row height just read as excess
+         padding around small text. FontSize a notch below the item text's own 12.5 (not the same 12 a
+         header would get in the full-size actions list) so the size gap reads clearly at this menu's
+         own smaller scale. Margin left at 8px, matching where a normal row's own icon starts (Bg's own
+         2px margin + the icon ContentPresenter's own 6px margin in the default MenuItem style above). -->
+    <Style x:Key="QuickNavGroupHeaderStyle" TargetType="{x:Type MenuItem}">
+        <Setter Property="IsEnabled" Value="False"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+        <Setter Property="Height" Value="{x:Static services:UiMetrics.MinSectionHeaderHeight}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type MenuItem}">
+                    <TextBlock Text="{TemplateBinding Header}" Foreground="{DynamicResource AccentBlue}"
+                               FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

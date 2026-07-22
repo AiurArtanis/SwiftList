@@ -51,7 +51,14 @@ public static class QuickNavigationMenu
         {
             if (!provider.CanProvide(dummyResult)) continue;
             provider.ClearSession();
-            foreach (var item in provider.GetMenuItems(dummyResult, IntPtr.Zero))
+            var providerItems = provider.GetMenuItems(dummyResult, IntPtr.Zero).ToList();
+            if (providerItems.Count == 0) continue;
+
+            // Shown even when this is the only active provider (by request) -- same "always label the
+            // group, not just when there's more than one" convention the actions menu already follows.
+            contextMenu.Items.Add(CreateGroupHeader(provider.GroupName));
+
+            foreach (var item in providerItems)
                 // Root entries are navigation categories (Favorites/History/configured folders/drives), so
                 // don't attach the right-click action flyout here, and clicking/Enter must not execute or
                 // navigate anywhere either -- only real files/folders in deeper levels do that.
@@ -153,6 +160,17 @@ public static class QuickNavigationMenu
         separator.SetResourceReference(Separator.BackgroundProperty, "SeparatorBrush");
         return separator;
     }
+
+    // One per IQuickNavigationProvider contributing root-level items, labeling which provider they came
+    // from -- same non-interactive, always-shown-even-for-a-single-group convention the actions menu's
+    // own section headers use (ActionMenuItemTemplate's SectionHeaderVisibility block), via a dedicated
+    // style (QuickNavGroupHeaderStyle in Menu.xaml) since this popup's items are plain MenuItems, not
+    // ActionMenuItemTemplate-driven rows.
+    internal static MenuItem CreateGroupHeader(string groupName) => new()
+    {
+        Header = groupName,
+        Style = (Style)Application.Current.FindResource("QuickNavGroupHeaderStyle")
+    };
 
     internal static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, QuickNavTriggerContext trigger, bool enableRightClick = true, bool isRootItem = false)
     {

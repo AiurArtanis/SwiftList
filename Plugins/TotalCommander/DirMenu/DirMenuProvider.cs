@@ -17,6 +17,9 @@ public class DirMenuProvider : IQuickNavigationProvider
     private int _nextId = 1;
     private uint _nextCmdId = 1;
 
+    // Matches TotalCommanderPlugin.Name exactly (a product name, not localized).
+    public string GroupName => "Total Commander";
+
     // No IQuickNavigationTriggerGate of its own: FolderCascader's own trigger already covers Total
     // Commander's file list generically via TotalCommanderInlineSearchAdapter.CanShowQuickNav, and this
     // provider only ever contributes content once that has already fired.
@@ -27,7 +30,9 @@ public class DirMenuProvider : IQuickNavigationProvider
         // A single named, iconed root entry -- like FolderCascader's own "Favorites"/"History" categories
         // -- rather than dumping the hotlist's own top-level entries straight into the shared popup's root.
         // Hidden entirely when the hotlist has nothing to show (no [DirMenu] section, or every entry got
-        // filtered out), rather than offering an entry that only ever opens onto an empty submenu.
+        // filtered out), rather than offering an entry that only ever opens onto an empty submenu. Labeled
+        // by the actual feature name (matching the docs' own term for it), not "Total Commander" again --
+        // the quick-nav group header above this entry already says that, from GroupName.
         if (hMenu == IntPtr.Zero)
         {
             var parsed = DirMenuIniParser.Parse();
@@ -37,7 +42,7 @@ public class DirMenuProvider : IQuickNavigationProvider
             {
                 new DynamicMenuItem
                 {
-                    Text = "Total Commander",
+                    Text = TranslationService.Get("Plugins_TotalCommander_DirMenu_RootLabel"),
                     HasSubMenu = true,
                     SubMenuHandle = AllocateHandle(new DirMenuNode { Children = parsed }),
                     HBitmapItem = DirMenuIcon.GetRootHBitmap()

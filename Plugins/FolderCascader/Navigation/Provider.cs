@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.FolderCascader.Navigation;
 
@@ -23,6 +24,10 @@ public class Provider : IQuickNavigationProvider
     private readonly ConcurrentDictionary<uint, string> _commandMap = new();
     private int _nextId = 1;
     private int _nextCmdId = 1;
+
+    // Reuses the plugin's own display name rather than a separate translation key -- this provider IS
+    // the plugin (FolderCascaderPlugin has no other component contributing quick-navigation items).
+    public string GroupName => TranslationService.Get("FolderCascader_PluginName");
 
     public bool CanProvide(ISearchResult result) => result != null && !string.IsNullOrEmpty(result.FullPath);
 

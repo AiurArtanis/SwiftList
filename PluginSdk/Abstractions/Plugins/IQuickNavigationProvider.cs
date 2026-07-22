@@ -15,6 +15,15 @@ public enum MouseTriggerType
 public interface IQuickNavigationProvider : IPluginComponent
 {
     /// <summary>
+    /// The group name shown as a section header above this provider's own root-level items, so a user
+    /// with more than one quick-navigation provider active can tell which contributed which entries.
+    /// </summary>
+    string GroupName { get; }
+
+    /// <summary>The display name of the provider.</summary>
+    string IPluginComponent.Name => GroupName;
+
+    /// <summary>
     /// Determines whether this provider can supply navigation items for the given search result.
     /// </summary>
     bool CanProvide(ISearchResult result);

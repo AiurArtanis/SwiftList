@@ -80,12 +80,17 @@ content source.
 ```csharp
 interface IQuickNavigationProvider
 {
+    string GroupName { get; }
     bool CanProvide(ISearchResult result);
     IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu);
     void ExecuteCommand(ISearchResult result, uint commandId, IntPtr ownerHwnd);
     void ClearSession();
 }
 ```
+
+`GroupName` labels a section header shown above this provider's own root-level items, so a user with
+more than one quick-navigation provider active can tell which contributed which entries — the same
+role `IDynamicActionProvider.GroupName` plays for the actions menu.
 
 `DynamicMenuItem` is the same model used by
 [`IDynamicActionProvider`](./core-search-actions#idynamicactionprovider).

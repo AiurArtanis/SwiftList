@@ -78,12 +78,16 @@ interface IInlineSearchAdapter
 ```csharp
 interface IQuickNavigationProvider
 {
+    string GroupName { get; }
     bool CanProvide(ISearchResult result);
     IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu);
     void ExecuteCommand(ISearchResult result, uint commandId, IntPtr ownerHwnd);
     void ClearSession();
 }
 ```
+
+`GroupName`是显示在这个 provider 自己根层级条目上方的分组标题，方便同时有多个快速导航 provider
+时区分各条目分别来自哪一个——跟 `IDynamicActionProvider.GroupName` 在动作菜单里的作用一样。
 
 `DynamicMenuItem` 与
 [`IDynamicActionProvider`](./core-search-actions#idynamicactionprovider) 用的是同一个模型。
