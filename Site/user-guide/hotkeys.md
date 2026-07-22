@@ -53,15 +53,19 @@ Enabled by default, toggled per-trigger in settings:
 - When the inline search window is docked to a native Open/Save/Browse-for-folder dialog, its own
   logo triggers quick navigation too — see [Search box logo icon](#search-box-logo-icon) above.
 
-Any of these triggers pops a cascading menu of your Favorites, History, and configured quick-access folders
-(see [Settings → Favorites](./settings/favorites) and [Settings → History](./settings/history)) —
-plugins can contribute their own entries too, such as Total Commander's own Directory Hotlist if
-you've set one up in `wincmd.ini`. Clicking a folder navigates the target window there; clicking a
-file navigates there too, landing on the file selected in its containing folder rather than opening
-it — the one exception is the desktop, which has no existing window pane to navigate within, so
-there a folder or file is opened directly, same as double-clicking it would. Inside a file dialog
-specifically, clicking a file instead jumps the dialog to that file's folder — it deliberately never
-auto-confirms Open/Save on your behalf.
+Any of these triggers pops a cascading menu of your Favorites, History, and configured quick-access
+folders (see [Settings → Favorites](./settings/favorites) and [Settings → History](./settings/history))
+— plugins can contribute their own entries too, such as Total Commander's own Directory Hotlist if
+you've set one up in `wincmd.ini`, or a [Custom Command](./instant-answers#custom-commands) flagged
+"Show in Quick Navigation" (optionally nested into a submenu by giving it a `/`-separated path). Each
+contributing plugin gets its own labeled section at the root of the menu, and the order those
+sections appear in is yours to set — see
+[Settings → General → Quick Navigation](./settings/general#quick-navigation). Clicking a folder
+navigates the target window there; clicking a file navigates there too, landing on the file selected
+in its containing folder rather than opening it — the one exception is the desktop, which has no
+existing window pane to navigate within, so there a folder or file is opened directly, same as
+double-clicking it would. Inside a file dialog specifically, clicking a file instead jumps the
+dialog to that file's folder — it deliberately never auto-confirms Open/Save on your behalf.
 
 ## Hardcoded keys (not configurable)
 

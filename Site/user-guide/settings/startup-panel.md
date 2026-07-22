@@ -6,7 +6,7 @@ giving quick access to recent files, favorites, and history without typing a que
 - **Enable the startup panel** — master switch; off means the panel never activates at all,
   regardless of the per-tab settings below.
 
-Three sub-tabs: **Recent Files**, **Last Directory**, and **Plugin Tabs**.
+Four sub-tabs: **Recent Files**, **Last Directory**, **Plugin Tabs**, and **Tab Order**.
 
 ## Recent Files
 
@@ -45,3 +45,15 @@ listed here, grouped by the plugin that provides it, unchecked; check it to brin
 
 Only tabs whose plugin component is currently enabled show up in this list — one disabled entirely
 under [Plugins](./plugins) never becomes a tab candidate in the first place.
+
+## Tab Order
+
+The same up/down-arrow reorder list used elsewhere in Settings (see [Favorites](./favorites)), but
+covering the panel's tab strip as a whole — both built-in tabs (Recent Files, Last Directory) and
+every currently-visible plugin tab, all in one flat list, unlike Plugin Tabs above which groups by
+plugin. Move a tab up or down to change where it lands relative to the others; left to right in this
+list is left to right in the live panel.
+
+Only tabs that would actually show right now are listed — a Recent Files/Last Directory tab you've
+disabled above, or a plugin tab closed with its **×** button, has nothing to order until it's
+re-enabled or reopened.

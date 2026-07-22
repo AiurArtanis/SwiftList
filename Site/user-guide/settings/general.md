@@ -1,6 +1,7 @@
 # General
 
-Four tabs: **System**, **Search Bar Layout**, **Preview**, and **Search Window**.
+Five tabs: **System**, **Search Bar Layout**, **Preview**, **Search Window**, and **Quick
+Navigation**.
 
 ## System
 
@@ -67,3 +68,15 @@ Dragging the window's edge to resize it manually is remembered automatically —
 open the window (or open a new one), it comes back at whatever size you last left it at, and this
 page's fields update to match. Resizing while maximized doesn't overwrite the remembered size; only
 resizing in the normal (non-maximized) state does.
+
+## Quick Navigation
+
+Sets the order the [Quick Navigation](../hotkeys#quick-navigation-mouse) menu's root-level sections
+appear in — one section per contributing provider (e.g. Favorites/History/configured folders, Total
+Commander's Directory Hotlist, a plugin's own quick-nav entries), each labeled with its own header.
+
+**Provider Order** — the same up/down-arrow reorder list used elsewhere in Settings (see
+[Favorites](./favorites)): move a provider up or down to change where its section lands relative to
+the others. Only providers whose plugin component is currently enabled are listed here — one
+disabled under [Plugins](./plugins) never becomes a menu candidate in the first place, so there's
+nothing to order for it.

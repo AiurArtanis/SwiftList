@@ -74,6 +74,14 @@ under **Settings → Plugins → Custom Commands → Configure**. The command's 
 supports positional placeholders (`%s1`, `%s2`, ... for each space-separated argument) and a
 whole-remainder placeholder (`%s` for everything typed after the keyword).
 
+Each command also has a **Show in Quick Navigation** checkbox (off by default) — turn it on to also
+list that command as its own entry at the root of the [Quick Navigation](./hotkeys#quick-navigation-mouse)
+menu, clickable without typing its keyword at all. The **Quick Navigation Submenu** field nests it
+under a named submenu instead of the root — use `/` to nest multiple levels deep (e.g. `Tools/Network`
+for a two-level submenu); leave it empty to keep the command at the top level. A command shown this
+way runs with its configured parameters as-is, since there's no typed argument text to substitute
+into `%s1`/`%s` here.
+
 ---
 
 None of the plugins on this page are required — each can be disabled independently under
