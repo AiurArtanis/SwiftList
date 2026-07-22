@@ -312,6 +312,7 @@
   "Search_SectionHeader": "Search Results",
   "Search_NoResult": "No Search Results",
   "Search_ResultTypeTriggerPrompt": "Keep typing to search {0} only",
+  "Search_KeepTypingPrompt": "Keep typing to search",
   "Search_ShowMoreTitle": "Show more search results for '{0}'",
   "Search_ShowMoreDesc": "Open full search window",
   "Search_StatsAppsAndFiles": "Found {0} applications, {1} files",

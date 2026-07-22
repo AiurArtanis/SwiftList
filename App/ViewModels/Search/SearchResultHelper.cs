@@ -67,6 +67,21 @@ internal static class SearchResultHelper
         SearchQuery = string.Empty
     };
 
+    // Same idea as CreateResultTypeTriggerPromptResult, generalized for every OTHER "operator typed,
+    // no keyword after it yet" case -- a bare "*" (bypass exclusion rules) or a token-only query like
+    // "::foo" both strip down to an empty clean query with no type to name, so this has no {0}.
+    public static AppSearchResult CreateKeepTypingPromptResult() => new AppSearchResult
+    {
+        Name = TranslationManager.Instance["Search_KeepTypingPrompt"],
+        FullPath = "__NO_RESULTS__",
+        ParentDir = string.Empty,
+        IsDir = false,
+        Drive = string.Empty,
+        ResultKind = "Empty",
+        Index = 0,
+        SearchQuery = string.Empty
+    };
+
     public static string GetParentDisplayText(SearchResult item, bool isApplication, string? scope)
     {
         var parentDir = Path.GetDirectoryName(item.Path);

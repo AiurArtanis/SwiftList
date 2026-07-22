@@ -312,6 +312,7 @@
   "Search_SectionHeader": "搜索结果",
   "Search_NoResult": "无搜索结果",
   "Search_ResultTypeTriggerPrompt": "继续输入以只搜索 '{0}'",
+  "Search_KeepTypingPrompt": "继续输入以搜索",
   "Search_ShowMoreTitle": "展示更多 '{0}' 的搜索结果",
   "Search_ShowMoreDesc": "显示完整搜索界面",
   "Search_StatsAppsAndFiles": "找到 {0} 个应用，{1} 个文件结果",

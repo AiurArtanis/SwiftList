@@ -227,6 +227,9 @@ public static class SearchResultMapper
     public static AppSearchResult CreateResultTypeTriggerPromptResult(string typeDisplayName)
         => SearchResultHelper.CreateResultTypeTriggerPromptResult(typeDisplayName);
 
+    public static AppSearchResult CreateKeepTypingPromptResult()
+        => SearchResultHelper.CreateKeepTypingPromptResult();
+
     public static string FormatSearchStatus(int appCount, int fileCount)
         => SearchResultHelper.FormatSearchStatus(appCount, fileCount);
 

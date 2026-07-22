@@ -74,14 +74,18 @@ internal sealed class SearchDispatchController
         RunEngineSearch(_engine.QueueSearch, value, cleanQuery);
     }
 
-    // A token-only query (e.g. "::foo" with no keyword before it) strips down to an empty clean query,
-    // but the search box itself isn't empty -- unlike a genuinely empty box, this must not fall back to
-    // the startup panel/recent-files history, since there's no keyword for a token to filter against
-    // and showing history here would look like an unrelated, unprompted result set. No engine search
-    // actually runs (there's no keyword to search for), so the synthetic "no results" row a real
-    // zero-match search would render (see SearchExecutionEngine's own final-empty-snapshot handling)
-    // has to be added here explicitly instead -- otherwise this would show nothing at all, which reads
-    // just as wrong as showing stale history.
+    // An operator typed with no keyword after it yet -- a token-only query (e.g. "::foo" with no
+    // keyword before it), or a bare "*" (bypass exclusion rules) -- strips down to an empty clean
+    // query, but the search box itself isn't empty -- unlike a genuinely empty box, this must not
+    // fall back to the startup panel/recent-files history, since there's nothing typed yet for a
+    // token/bypass to filter against and showing history here would look like an unrelated,
+    // unprompted result set. No engine search actually runs (there's no keyword to search for), so a
+    // synthetic row has to be added here explicitly instead of the real zero-match "no results" row a
+    // completed search would render (see SearchExecutionEngine's own final-empty-snapshot handling) --
+    // otherwise this would show nothing at all, which reads just as wrong as showing stale history.
+    // "No Search Results" would also be misleading here since no search actually ran, so this uses the
+    // generic "keep typing" prompt instead (see ShowResultTypeTriggerPrompt below for the type-named
+    // variant used when a per-type trigger is what's waiting on more input).
     private void ClearForTokenOnlyQuery()
     {
         _setIsSearching(false);
@@ -89,7 +93,7 @@ internal sealed class SearchDispatchController
         // if it was already showing (box was empty a moment ago), it must be explicitly hidden here too,
         // not just have its results cleared underneath it.
         _startupPanel.Deactivate();
-        _replaceResults(new[] { SearchResultMapper.CreateNoResultsResult(string.Empty) });
+        _replaceResults(new[] { SearchResultMapper.CreateKeepTypingPromptResult() });
         _setResultsPanelVisibility(Visibility.Visible);
         _setResultsSeparatorVisibility(Visibility.Visible);
     }

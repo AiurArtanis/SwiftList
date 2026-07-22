@@ -94,7 +94,9 @@ settings:
 The `*` itself is stripped before matching, so it's never treated as part of the search text. This
 only reveals results that are already indexed; a folder that was *never* indexed in the first place
 (an excluded folder on a network or WSL drive) still won't appear. Hidden/system files stay filtered
-either way — this only affects your own exclusion-rule configuration.
+either way — this only affects your own exclusion-rule configuration. Typing just `*` with nothing
+after it yet shows a "keep typing to search" prompt rather than "No Search Results", since no search
+has actually run yet.
 
 ## Result type trigger
 
