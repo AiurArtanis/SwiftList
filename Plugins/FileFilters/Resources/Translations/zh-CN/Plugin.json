@@ -12,6 +12,6 @@
   "FileFilters_Config_FilterPatternLabel": "匹配后缀",
   "FileFilters_Config_FilterPatternDesc": "文件匹配规则或过滤后缀（如 '*.exe;*.lnk'，默认 '*' 匹配所有）。",
   "FileFilters_PluginDesc": "自定义目录通配符过滤索引插件。允许用户配置特定文件夹与后缀过滤规则进行索引。",
-  "Plugin_Comp_Desc_FileFiltersSearchableItemProvider": "扫描并索引用口在配置中指定的自定义目录及通配符模式（如 *.pdf）下的文件，并加入主索引进行快捷检索。",
+  "Plugin_Comp_Desc_FileFiltersSearchableItemProvider": "扫描并索引用户在配置中指定的自定义目录下匹配通配符模式（如 *.pdf）的文件，以及每一层子文件夹，并加入主索引进行快捷检索。",
   "Plugin_Comp_Desc_FileFiltersTranslationProvider": "为各种过滤条件大类提供多语言翻译服务。"
 }

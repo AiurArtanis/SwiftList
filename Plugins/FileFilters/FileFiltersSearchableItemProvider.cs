@@ -84,6 +84,46 @@ public class FileFiltersSearchableItemProvider : ISearchableItemProvider, IDispo
                 ? $"{filter.Name.Trim()} · "
                 : string.Empty;
 
+            // Shared by both the file and folder loops below -- same SearchableItem shape either way,
+            // only the default (no-keyword) ResultKind and the log message differ. UseShellExecute on a
+            // directory path opens it in Explorer just as well as it opens a file with its default app,
+            // so OnExecute needs no branching between the two.
+            SearchableItem BuildItem(string path, string defaultResultKind)
+            {
+                var name = Path.GetFileName(path);
+                var parentDir = Path.GetDirectoryName(path) ?? string.Empty;
+                var desc = filterPrefix + parentDir;
+
+                // Assign unique ResultKind code pattern for keyword routing isolation (e.g. "FileFilter_tf")
+                var resultKind = string.IsNullOrEmpty(filter.Keyword) ? defaultResultKind : $"FileFilter_{filter.Keyword.Trim().ToLowerInvariant()}";
+
+                return new SearchableItem
+                {
+                    Title = name, // Clean title
+                    Description = desc,
+                    ResultKind = resultKind,
+                    HBitmapIcon = IntPtr.Zero, // Retain null so ShellIconHelper loads high fidelity video thumbnails dynamically!
+                    ActionType = "None",
+                    ActionArgument = path,
+                    OnExecute = () =>
+                    {
+                        try
+                        {
+                            var psi = new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = path,
+                                UseShellExecute = true
+                            };
+                            System.Diagnostics.Process.Start(psi);
+                        }
+                        catch (Exception ex)
+                        {
+                            PluginSdk.Logger.Log($"[FileFilters] Failed to open '{path}': {ex.Message}", PluginSdk.LogLevel.Error);
+                        }
+                    }
+                };
+            }
+
             foreach (var root in filter.Folders.Select(p => p.Trim()).Where(p => !string.IsNullOrEmpty(p) && Directory.Exists(p)))
             {
                 try
@@ -92,40 +132,19 @@ public class FileFiltersSearchableItemProvider : ISearchableItemProvider, IDispo
                     var files = Directory.EnumerateFiles(root, filter.FilterPattern, SearchOption.AllDirectories);
                     foreach (var file in files)
                     {
-                        var name = Path.GetFileName(file);
-                        if (string.IsNullOrEmpty(name)) continue;
+                        if (!string.IsNullOrEmpty(Path.GetFileName(file)))
+                            items.Add(BuildItem(file, "File"));
+                    }
 
-                        var parentDir = Path.GetDirectoryName(file) ?? string.Empty;
-                        var desc = filterPrefix + parentDir;
-
-                        // Assign unique ResultKind code pattern for keyword routing isolation (e.g. "FileFilter_tf")
-                        var resultKind = string.IsNullOrEmpty(filter.Keyword) ? "File" : $"FileFilter_{filter.Keyword.Trim().ToLowerInvariant()}";
-
-                        items.Add(new SearchableItem
-                        {
-                            Title = name, // Clean title
-                            Description = desc,
-                            ResultKind = resultKind,
-                            HBitmapIcon = IntPtr.Zero, // Retain null so ShellIconHelper loads high fidelity video thumbnails dynamically!
-                            ActionType = "None",
-                            ActionArgument = file,
-                            OnExecute = () =>
-                            {
-                                try
-                                {
-                                    var psi = new System.Diagnostics.ProcessStartInfo
-                                    {
-                                        FileName = file,
-                                        UseShellExecute = true
-                                    };
-                                    System.Diagnostics.Process.Start(psi);
-                                }
-                                catch (Exception ex)
-                                {
-                                    PluginSdk.Logger.Log($"[FileFilters] Failed to open file '{file}': {ex.Message}", PluginSdk.LogLevel.Error);
-                                }
-                            }
-                        });
+                    // Subfolders themselves are also searchable -- unlike files, these are never
+                    // filtered by FilterPattern (a pattern like "*.mp4" is meant for file extensions and
+                    // would hide every folder if applied here too), so every folder under root is
+                    // always included regardless of the configured pattern.
+                    var directories = Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories);
+                    foreach (var dir in directories)
+                    {
+                        if (!string.IsNullOrEmpty(Path.GetFileName(dir)))
+                            items.Add(BuildItem(dir, "Directory"));
                     }
                 }
                 catch (Exception ex)
