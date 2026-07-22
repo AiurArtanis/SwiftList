@@ -3,7 +3,6 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 using MenuItem = System.Windows.Controls.MenuItem;
 using ContextMenu = System.Windows.Controls.ContextMenu;
-using Separator = System.Windows.Controls.Separator;
 using Application = System.Windows.Application;
 
 namespace SwiftList.App.Services;
@@ -43,7 +42,7 @@ internal static class QuickNavigationSubMenuLoader
                     // missing here meant a separator nested inside any submenu rendered as a real
                     // MenuItem with an empty Header instead of an actual divider line, showing up as a
                     // blank row.
-                    menuItem.Items.Add(subItem.IsSeparator ? new Separator() : QuickNavigationMenu.CreateMenuItem(subItem, result, provider, contextMenu, trigger));
+                    menuItem.Items.Add(subItem.IsSeparator ? QuickNavigationMenu.CreateSeparator() : QuickNavigationMenu.CreateMenuItem(subItem, result, provider, contextMenu, trigger));
 
                 // A provider can legitimately return nothing here -- e.g. its backing data (favorites, a
                 // plugin's own cache) hasn't finished loading yet this soon after app startup, not just

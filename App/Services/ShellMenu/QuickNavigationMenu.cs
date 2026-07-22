@@ -55,7 +55,7 @@ public static class QuickNavigationMenu
                 // Root entries are navigation categories (Favorites/History/configured folders/drives), so
                 // don't attach the right-click action flyout here, and clicking/Enter must not execute or
                 // navigate anywhere either -- only real files/folders in deeper levels do that.
-                contextMenu.Items.Add(item.IsSeparator ? new Separator() : CreateMenuItem(item, dummyResult, provider, contextMenu, trigger, enableRightClick: false, isRootItem: true));
+                contextMenu.Items.Add(item.IsSeparator ? CreateSeparator() : CreateMenuItem(item, dummyResult, provider, contextMenu, trigger, enableRightClick: false, isRootItem: true));
         }
 
         if (contextMenu.Items.Count == 0) return;
@@ -137,6 +137,21 @@ public static class QuickNavigationMenu
 
         contextMenu.Opened += (s, e) => contextMenu.Focus();
         contextMenu.IsOpen = true;
+    }
+
+    // Explicit SeparatorBrush reference (SetResourceReference, not a plain Style lookup) rather than a
+    // bare `new Separator()`: this popup's items are built entirely in code with no local Style set, so
+    // it was left depending on Menu.xaml's implicit TargetType="Separator" style resolving correctly for
+    // an ad-hoc ContextMenu -- it visually came out a noticeably different, more saturated color than
+    // the actions menu's own separator, which uses SeparatorBrush directly rather than through implicit
+    // style matching. Forcing the same resource here, the same way ActionFlyout.cs already does for its
+    // own code-built popup chrome (SetResourceReference, so it still follows live theme switching),
+    // guarantees the two actually match instead of relying on two different resolution paths agreeing.
+    internal static Separator CreateSeparator()
+    {
+        var separator = new Separator();
+        separator.SetResourceReference(Separator.BackgroundProperty, "SeparatorBrush");
+        return separator;
     }
 
     internal static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, QuickNavTriggerContext trigger, bool enableRightClick = true, bool isRootItem = false)
