@@ -38,7 +38,14 @@ Customizes the size and on-screen position of the quick search bar:
   the usual "Type to search..." placeholder text with the current date, day of week, and time
   instead. Disappears the moment you start typing, same as the placeholder it replaces. Quick window
   only — the inline window always keeps its normal placeholder, even with this on.
-- **Reset Layout Settings** button — restores all three values above to their defaults.
+- **Prioritize applications over files in the quick window's search results (unless a file has its
+  own history/favorite priority)** — checkbox, on by default. Applications rank above regular files,
+  regardless of how well either one matched your query text — an abbreviation like "vs" reliably
+  surfaces "Visual Studio" instead of an unrelated folder that happens to be literally named `vs`.
+  A file you've opened before, or added as a Favorite, still outranks an application with neither —
+  that "you've deliberately used/chosen this" signal comes first, before this setting is ever
+  considered. Quick window only — has no effect on the inline window or the full/main window.
+- **Reset Layout Settings** button — restores all four values above to their defaults.
 
 Right-clicking the [quick window's logo](../hotkeys#search-box-logo-icon) resets just its on-screen
 position (not size), re-centering it the same way it centers on first launch.

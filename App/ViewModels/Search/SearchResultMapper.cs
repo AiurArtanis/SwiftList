@@ -42,6 +42,23 @@ public static class SearchResultMapper
 
         var historySnapshot = SearchHistoryStore.Snapshot();
 
+        // Quick-window-only (never the inline window, and the full/main window doesn't go through this
+        // method at all -- see SearchQueryDispatchController's own separate ranking). A hard tier above
+        // non-curated files, not a small tie-breaking nudge: a short abbreviation like "vs" matched
+        // against "Visual Studio" scores a very low fuzzy weight (two letters scattered across a much
+        // longer, non-contiguous name), while the same query can score near-perfectly against an
+        // unrelated file/folder literally named "vs" -- no modest additive bonus closes a gap that
+        // large, so this adds a full extra tier (ApplicationTierOffset, larger than any possible
+        // natural weight of 1.0) instead, guaranteeing an application sorts above every non-curated file
+        // regardless of either one's own match weight. Favorites/history-matched items are unaffected --
+        // they already win via IsCurated/Priority above, before Weight is ever compared. Restores the
+        // spirit of the app-priority tier dropped repo-wide in commit d6226e7 (an unintended side effect
+        // of a fix scoped to the inline window's own "Current Folder"/"Global Search" ranking), as a
+        // settings-gated tier within today's unified ranking rather than reviving the old separate-
+        // appResults-channel mechanism that fix legitimately replaced.
+        var boostApplications = !isInlineWindow && UserSettings.Load().SearchWindow.PrioritizeApplications;
+        const double ApplicationTierOffset = 1.0;
+
         // Favorites, history-matched files, searchable items (apps/settings), and remaining file
         // results all compete on ONE list now: history priority first (an explicit "you've opened
         // this before" signal -- items with no history sort after every item that has one), then
@@ -81,11 +98,14 @@ public static class SearchResultMapper
             // lookup key has to skip it here too or an app's history priority would never resolve.
             var lookupPath = result.IsApplication ? result.FullPath.Trim() : SearchResultHelper.NormalizePath(result.FullPath);
             var hasHistory = historySnapshot.TryGetValue(lookupPath, out var priority);
+            var boostedWeight = boostApplications && result.IsApplication
+                ? weight + ApplicationTierOffset
+                : weight;
             candidates.Add(new RankedCandidate(
                 result,
                 IsCurated: hasHistory,
                 hasHistory ? priority : int.MaxValue,
-                weight,
+                boostedWeight,
                 SearchResultHelper.NormalizePath(result.FullPath)));
         }
 

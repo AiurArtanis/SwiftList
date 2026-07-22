@@ -194,6 +194,7 @@
   "General_LayoutWidth": "Search Bar Width (px)",
   "General_LayoutHeight": "Search Bar Height (px)",
   "General_LayoutShowClock": "Replace the placeholder text with date, time, and day of week when the search box is empty",
+  "General_LayoutPrioritizeApplications": "Prioritize applications over files in the quick window's search results (unless a file has its own history/favorite priority)",
   "General_LayoutReset": "Reset Layout Settings",
   "General_PreviewWindowTitle": "Preview Window",
   "General_PreviewWindowHint": "Set the QuickLook preview window's size. This size is fixed and does not change with the number of results showing.",

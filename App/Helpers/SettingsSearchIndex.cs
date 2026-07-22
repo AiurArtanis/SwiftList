@@ -76,6 +76,7 @@ public static class SettingsSearchIndex
         new("General_LayoutWidth", "General", vm => vm.General.SelectedTab = "Layout", "RowLayoutWidth", "General_LayoutTitle"),
         new("General_LayoutHeight", "General", vm => vm.General.SelectedTab = "Layout", "RowLayoutHeight", "General_LayoutTitle"),
         new("General_LayoutShowClock", "General", vm => vm.General.SelectedTab = "Layout", "RowLayoutShowClock", "General_LayoutTitle"),
+        new("General_LayoutPrioritizeApplications", "General", vm => vm.General.SelectedTab = "Layout", "RowLayoutPrioritizeApplications", "General_LayoutTitle"),
         new("General_LayoutReset", "General", vm => vm.General.SelectedTab = "Layout", "RowLayoutReset", "General_LayoutTitle"),
         new("General_PreviewWindowTitle", "General", vm => vm.General.SelectedTab = "PreviewWindow", "TabPreviewWindow"),
         new("General_PreviewWindowWidth", "General", vm => vm.General.SelectedTab = "PreviewWindow", "RowPreviewWindowWidth", "General_PreviewWindowTitle"),

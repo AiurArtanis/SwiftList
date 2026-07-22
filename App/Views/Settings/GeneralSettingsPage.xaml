@@ -358,6 +358,10 @@
                                IsChecked="{Binding General.Layout.ShowClock, Mode=TwoWay}"
                                Margin="0,12,0,0"/>
 
+                    <CheckBox x:Name="RowLayoutPrioritizeApplications" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutPrioritizeApplications]}"
+                               IsChecked="{Binding General.Layout.PrioritizeApplications, Mode=TwoWay}"
+                               Margin="0,8,0,0"/>
+
                     <Grid x:Name="RowLayoutReset" Margin="0,16,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>

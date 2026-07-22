@@ -194,6 +194,7 @@
   "General_LayoutWidth": "搜索栏宽度 (像素)",
   "General_LayoutHeight": "搜索栏高度 (像素)",
   "General_LayoutShowClock": "搜索框为空时，用日期、时间和星期替代提示文字",
+  "General_LayoutPrioritizeApplications": "在快速窗口的搜索结果中，优先显示应用程序（除非某个文件本身有历史记录/收藏优先级）",
   "General_LayoutReset": "重置布局设置",
   "General_PreviewWindowTitle": "预览窗口",
   "General_PreviewWindowHint": "设置 QuickLook 预览窗口的大小。这个尺寸是固定的，不会随当前显示的结果数量变化。",
