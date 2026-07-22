@@ -92,13 +92,6 @@ public class SearchWindowSettings
     public double? Top { get; set; }
     // Replaces the quick window's empty-state placeholder text with date/time/day-of-week (see #101).
     public bool ShowClock { get; set; } = false;
-    // Quick-window-only (SearchResultMapper.BuildQuickResults gates this on !isInlineWindow -- the
-    // inline window and the full/main window never see it, the latter doesn't even go through that
-    // method). A soft ranking bonus, not a hard category above files: match quality still dominates,
-    // this only nudges same-quality ties toward applications. On by default, matching the app-priority
-    // tier that existed before it was dropped repo-wide in commit d6226e7 (removed as an unintended
-    // side effect of a fix scoped to the inline window's own ranking).
-    public bool PrioritizeApplications { get; set; } = true;
 }
 
 public class PreviewWindowSettings

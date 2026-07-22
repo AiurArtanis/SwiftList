@@ -104,6 +104,36 @@
                     </Grid>
                 </Border>
             </DataTemplate>
+
+            <!-- Same shape as QuickNavItemTemplate above, just wired to ResultTypeOrder's own
+                 Move Up/Down commands instead of QuickNavigationOrder's. -->
+            <DataTemplate x:Key="ResultTypeOrderItemTemplate">
+                <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="&#xE74A;"
+                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_MoveUpTooltip]}"
+                                    Style="{StaticResource QuickNavIconButton}"
+                                    Command="{Binding DataContext.General.ResultTypeOrder.MoveUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                            <Button Content="&#xE74B;"
+                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_MoveDownTooltip]}"
+                                    Style="{StaticResource QuickNavIconButton}"
+                                    Command="{Binding DataContext.General.ResultTypeOrder.MoveDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -358,10 +388,6 @@
                                IsChecked="{Binding General.Layout.ShowClock, Mode=TwoWay}"
                                Margin="0,12,0,0"/>
 
-                    <CheckBox x:Name="RowLayoutPrioritizeApplications" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LayoutPrioritizeApplications]}"
-                               IsChecked="{Binding General.Layout.PrioritizeApplications, Mode=TwoWay}"
-                               Margin="0,8,0,0"/>
-
                     <Grid x:Name="RowLayoutReset" Margin="0,16,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
@@ -372,6 +398,23 @@
                                 Style="{StaticResource SettingsButton}"
                                 Margin="0" HorizontalAlignment="Left"/>
                     </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource SettingsCard}" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock x:Name="RowResultTypeOrderList" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ResultTypeOrderTitle]}"
+                               FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ResultTypeOrderHint]}"
+                               Style="{StaticResource SettingsHintText}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                    <ItemsControl ItemsSource="{Binding General.ResultTypeOrder.Items}" ItemTemplate="{StaticResource ResultTypeOrderItemTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
                 </StackPanel>
             </Border>
             </StackPanel>

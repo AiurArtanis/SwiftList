@@ -38,6 +38,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         PreviewWindow = new PreviewWindowSettingsViewModel(userSettings);
         MainWindow = new MainWindowSettingsViewModel(userSettings);
         QuickNavigationOrder = new QuickNavigationOrderViewModel(userSettings);
+        ResultTypeOrder = new ResultTypeOrderViewModel(userSettings);
 
         _startWithWindows = userSettings.StartWithWindows;
         _autoCheckUpdates = userSettings.AutoCheckUpdates;
@@ -191,6 +192,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         PreviewWindow.Save();
         MainWindow.Save();
         QuickNavigationOrder.Save();
+        ResultTypeOrder.Save();
 
         _userSettings.Save();
     }
@@ -199,4 +201,5 @@ public class GeneralSettingsViewModel : ViewModelBase
     public PreviewWindowSettingsViewModel PreviewWindow { get; }
     public MainWindowSettingsViewModel MainWindow { get; }
     public QuickNavigationOrderViewModel QuickNavigationOrder { get; }
+    public ResultTypeOrderViewModel ResultTypeOrder { get; }
 }

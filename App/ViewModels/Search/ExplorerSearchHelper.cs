@@ -70,6 +70,7 @@ public static class ExplorerSearchHelper
                     match,
                     IsCurated: hasHistory || isFavorite,
                     hasHistory ? priority : int.MaxValue,
+                    TypeRank: int.MaxValue, // the type-priority order is quick-window only; never consulted here
                     FuzzyMatcher.ComputeMatchWeight(match.Name, query),
                     normalizedPath));
             }

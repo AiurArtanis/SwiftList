@@ -13,7 +13,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
     private double _searchBarWidth;
     private double _searchBarHeight;
     private bool _showClock;
-    private bool _prioritizeApplications;
     // Reset() clears the quick window's remembered screen position -- there's no bound field for it
     // (the window itself owns Left/Top), so this just stages the intent for Save() to commit.
     private bool _resetPosition;
@@ -24,7 +23,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
         _searchBarWidth = userSettings.SearchWindow.SearchBarWidth;
         _searchBarHeight = userSettings.SearchWindow.SearchBarHeight;
         _showClock = userSettings.SearchWindow.ShowClock;
-        _prioritizeApplications = userSettings.SearchWindow.PrioritizeApplications;
     }
 
     public double SearchBarWidth
@@ -59,12 +57,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
         set => SetProperty(ref _showClock, value);
     }
 
-    public bool PrioritizeApplications
-    {
-        get => _prioritizeApplications;
-        set => SetProperty(ref _prioritizeApplications, value);
-    }
-
     public ICommand ResetCommand => new RelayCommand(Reset);
 
     private void Reset()
@@ -72,7 +64,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
         SearchBarWidth = 570;
         SearchBarHeight = 60;
         ShowClock = false;
-        PrioritizeApplications = true;
         _resetPosition = true;
     }
 
@@ -81,7 +72,6 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
         _userSettings.SearchWindow.SearchBarWidth = _searchBarWidth;
         _userSettings.SearchWindow.SearchBarHeight = _searchBarHeight;
         _userSettings.SearchWindow.ShowClock = _showClock;
-        _userSettings.SearchWindow.PrioritizeApplications = _prioritizeApplications;
         if (_resetPosition)
         {
             _userSettings.SearchWindow.Left = null;

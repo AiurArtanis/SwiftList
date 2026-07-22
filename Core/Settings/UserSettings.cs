@@ -80,6 +80,20 @@ public class UserSettings
     /// </summary>
     public List<string> QuickNavigationProviderOrder { get; set; } = new();
 
+    /// <summary>
+    /// User-chosen priority order for the quick window's search-result "types" -- each
+    /// ISearchableItemProvider (Applications, Settings, File Filters, any third-party plugin) plus one
+    /// synthetic entry for raw file-index results (SearchResultTypePriority.FilesTypeId), most-preferred
+    /// first. Sits as a hard tier between history/favorite priority and match-quality weight in
+    /// SearchResultMapper.RankAndDedupe -- see RankedCandidate.TypeRank -- so e.g. Applications can be
+    /// made to always outrank Files regardless of which matched the query text better, without any
+    /// small weight bonus getting lost against a much better textual match. An id not listed here yet
+    /// falls back to int.MaxValue, same convention as
+    /// QuickNavigationProviderOrder above. Quick window only, same scope as the feature it replaces --
+    /// the inline window's own ranking (ExplorerSearchHelper) never consults this list.
+    /// </summary>
+    public List<string> ResultTypeOrder { get; set; } = new();
+
     public Dictionary<string, Dictionary<string, object>> PluginSettings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public T GetPluginSetting<T>(string pluginId, string key, T defaultValue)
