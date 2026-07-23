@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="App/logo.png" alt="SwiftList logo" width="120">
+</p>
+
 # ⚡ SwiftList
 
 [简体中文](README_ZH.md) | English
