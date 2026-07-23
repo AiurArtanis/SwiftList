@@ -1,0 +1,49 @@
+using SwiftList.Core;
+
+namespace SwiftList.App.Services;
+
+/// <summary>
+/// Bridges PluginSdk's static service delegates (settings, history, favorites, fuzzy-match,
+/// highlight-mask, directory search) to their Core/App implementations. Kept separate from
+/// <see cref="PluginManager"/>'s own job (plugin loading, registration, enabled-state filtering)
+/// since none of these delegates have anything to do with plugin lifecycle itself.
+/// </summary>
+internal static class PluginSdkBridge
+{
+    public static void Initialize(PluginManager manager)
+    {
+        // Wire up the settings delegate for plugins using the in-memory UserSettings cache.
+        PluginSdk.Services.PluginSettingsService.GetSettingFunc = manager.GetPluginSetting;
+
+        // Wire up the history service delegate for plugins using Core SearchHistoryStore
+        PluginSdk.Services.HistoryService.GetHistoryEntriesFunc = SearchHistoryStore.GetEntries;
+
+        // Wire up the favorites service delegate for plugins using Core UserSettings
+        PluginSdk.Services.FavoritesService.GetFavoritesFunc = () =>
+            UserSettings.Load().Favorites.Select(f => new PluginSdk.Models.FavoriteItem { Name = f.Name, Path = f.Path });
+
+        // Wire up the fuzzy-match delegate for plugins wanting the host's own matching (with alias
+        // fallback) instead of reimplementing a fuzzy matcher of their own
+        PluginSdk.Services.FuzzyMatchService.IsMatchFunc = FuzzyMatcher.IsMatch;
+
+        // Wire up the highlight-mask delegate so plugins share the exact same literal/fuzzy/alias
+        // highlighting tiers (including CJK pinyin) as the host's own results, instead of each
+        // reimplementing a literal-substring-only highlighter that misses fuzzy/alias matches
+        PluginSdk.Services.FuzzyMatchService.GetHighlightMaskFunc = FuzzyMatcher.ComputeHighlightMask;
+
+        // Wire up the directory search delegate for plugins using CoreDirectoryIndexManager
+        PluginSdk.Services.DirectoryIndexerService.SearchPluginDirectoriesFunc = async (pluginId, query, token) =>
+        {
+            var results = await CoreDirectoryIndexManager.Instance.SearchPluginDirectoriesAsync(pluginId, query, token).ConfigureAwait(false);
+            return results.Select(r => (PluginSdk.Abstractions.ISearchResult)new SimpleSearchResult
+            {
+                Name = r.Name,
+                FullPath = r.Path,
+                IsDir = r.IsDir
+            }).ToList();
+        };
+
+        // Trigger CoreDirectoryIndexManager singleton instantiation to bind SDK DirectoryIndexerService delegates
+        _ = CoreDirectoryIndexManager.Instance;
+    }
+}

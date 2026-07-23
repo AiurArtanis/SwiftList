@@ -202,7 +202,7 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
                 SpUpdateActions.Visibility = Visibility.Visible;
 
                 // If user is not admin, show warning and disable auto-update button
-                if (!UpdateService.Instance.IsUserAdmin())
+                if (!ElevationHelper.IsUserAdmin())
                 {
                     TxtNoAdminWarning.Visibility = Visibility.Visible;
                     BtnAutoUpdate.IsEnabled = false;

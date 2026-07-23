@@ -134,46 +134,10 @@ public class TranslationInstantProvider : IInstantResultProvider
                         }
                     }
 
-                    // Re-trigger search to show updated results via Reflection
-                    System.Windows.Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
-                    {
-                        try
-                        {
-                            foreach (System.Windows.Window window in System.Windows.Application.Current.Windows)
-                            {
-                                if (window.DataContext == null) continue;
-                                var type = window.DataContext.GetType();
-                                if (type.FullName == "SwiftList.App.ViewModels.Search.QuickSearchViewModel")
-                                {
-                                    var searchQueryProp = type.GetProperty("SearchQuery");
-                                    var currentQueryText = searchQueryProp?.GetValue(window.DataContext) as string ?? "";
-                                    if (currentQueryText.StartsWith(keyword + " ", StringComparison.OrdinalIgnoreCase) &&
-                                        string.Equals(currentQueryText.Substring(keyword.Length + 1).Trim(), textToTranslate, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        var searchProp = type.GetProperty("Search");
-                                        var searchVm = searchProp?.GetValue(window.DataContext);
-                                        if (searchVm != null)
-                                        {
-                                            var performSearchMethod = searchVm.GetType().GetMethod("PerformSearch");
-                                            performSearchMethod?.Invoke(searchVm, new object[] { currentQueryText });
-                                        }
-                                    }
-                                }
-                                else if (type.FullName == "SwiftList.App.ViewModels.Search.SearchViewModel")
-                                {
-                                    var advancedQueryProp = type.GetProperty("AdvancedQuery");
-                                    var currentQueryText = advancedQueryProp?.GetValue(window.DataContext) as string ?? "";
-                                    if (currentQueryText.StartsWith(keyword + " ", StringComparison.OrdinalIgnoreCase) &&
-                                        string.Equals(currentQueryText.Substring(keyword.Length + 1).Trim(), textToTranslate, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        var performSearchMethod = type.GetMethod("PerformSearch", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                                        performSearchMethod?.Invoke(window.DataContext, new object[] { currentQueryText });
-                                    }
-                                }
-                            }
-                        }
-                        catch { }
-                    }));
+                    // Re-trigger any active search whose current query is still this same "<keyword> <text>" request.
+                    SearchRefreshService.RefreshIfMatches(currentQueryText =>
+                        currentQueryText.StartsWith(keyword + " ", StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(currentQueryText.Substring(keyword.Length + 1).Trim(), textToTranslate, StringComparison.OrdinalIgnoreCase));
                 });
             }
 

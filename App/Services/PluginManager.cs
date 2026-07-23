@@ -63,55 +63,10 @@ public class PluginManager : PluginRegistry
         PluginSdk.Registries.InlineSearchAdapterRegistry.FilterFunc = prov =>
             _filter.IsEnabled(ComponentFilter.GetDllName(prov), PluginComponentType.InlineSearchAdapter, prov.GetType().Name);
 
-        // Wire up the settings delegate for plugins using the in-memory UserSettings cache. Falls back
-        // to the plugin's own schema-declared DefaultValue (see _pluginSchemaDefaults) when nothing has
-        // been persisted yet, before falling back to whatever default the call site itself passed in --
-        // so a plugin's config schema is the single source of truth for its defaults instead of needing
-        // a second hardcoded copy in code for the "never opened settings" case.
-        PluginSdk.Services.PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
-        {
-            var settings = UserSettings.Load();
-            if (settings.PluginSettings.TryGetValue(pluginId, out var pluginDict) && pluginDict.ContainsKey(key))
-            {
-                return settings.GetPluginSetting(pluginId, key, defaultValue);
-            }
-            if (_pluginSchemaDefaults.TryGetValue(pluginId, out var fieldDefaults) && fieldDefaults.TryGetValue(key, out var schemaDefault))
-            {
-                return schemaDefault;
-            }
-            return defaultValue;
-        };
-
-        // Wire up the history service delegate for plugins using Core SearchHistoryStore
-        PluginSdk.Services.HistoryService.GetHistoryEntriesFunc = SearchHistoryStore.GetEntries;
-
-        // Wire up the favorites service delegate for plugins using Core UserSettings
-        PluginSdk.Services.FavoritesService.GetFavoritesFunc = () =>
-            UserSettings.Load().Favorites.Select(f => new PluginSdk.Models.FavoriteItem { Name = f.Name, Path = f.Path });
-
-        // Wire up the fuzzy-match delegate for plugins wanting the host's own matching (with alias
-        // fallback) instead of reimplementing a fuzzy matcher of their own
-        PluginSdk.Services.FuzzyMatchService.IsMatchFunc = FuzzyMatcher.IsMatch;
-
-        // Wire up the highlight-mask delegate so plugins share the exact same literal/fuzzy/alias
-        // highlighting tiers (including CJK pinyin) as the host's own results, instead of each
-        // reimplementing a literal-substring-only highlighter that misses fuzzy/alias matches
-        PluginSdk.Services.FuzzyMatchService.GetHighlightMaskFunc = FuzzyMatcher.ComputeHighlightMask;
-
-        // Wire up the directory search delegate for plugins using CoreDirectoryIndexManager
-        PluginSdk.Services.DirectoryIndexerService.SearchPluginDirectoriesFunc = async (pluginId, query, token) =>
-        {
-            var results = await CoreDirectoryIndexManager.Instance.SearchPluginDirectoriesAsync(pluginId, query, token).ConfigureAwait(false);
-            return results.Select(r => (PluginSdk.Abstractions.ISearchResult)new SimpleSearchResult
-            {
-                Name = r.Name,
-                FullPath = r.Path,
-                IsDir = r.IsDir
-            }).ToList();
-        };
-
-        // Trigger CoreDirectoryIndexManager singleton instantiation to bind SDK DirectoryIndexerService delegates
-        _ = CoreDirectoryIndexManager.Instance;
+        // Bridges PluginSdk's own static service delegates (settings, history, favorites, fuzzy-match,
+        // highlight-mask, directory search) to their Core/App implementations -- none of that is plugin
+        // lifecycle itself, so it lives in its own class rather than this constructor.
+        PluginSdkBridge.Initialize(this);
 
         PluginLoader.Load(this);
 
@@ -142,6 +97,25 @@ public class PluginManager : PluginRegistry
     void PluginRegistry.AddStartupPanelTabProvider(PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider p) => _startupPanelTabProviders.Add(p);
 
     // ── Public API ────────────────────────────────────────────────────────
+
+    // Backs PluginSdkBridge's PluginSettingsService.GetSettingFunc wiring: falls back to a plugin's own
+    // schema-declared DefaultValue (see _pluginSchemaDefaults) when nothing has been persisted yet,
+    // before falling back to whatever default the call site itself passed in -- so a plugin's config
+    // schema is the single source of truth for its defaults instead of needing a second hardcoded copy
+    // in code for the "never opened settings" case.
+    internal object? GetPluginSetting(string pluginId, string key, object? defaultValue)
+    {
+        var settings = UserSettings.Load();
+        if (settings.PluginSettings.TryGetValue(pluginId, out var pluginDict) && pluginDict.ContainsKey(key))
+        {
+            return settings.GetPluginSetting(pluginId, key, defaultValue);
+        }
+        if (_pluginSchemaDefaults.TryGetValue(pluginId, out var fieldDefaults) && fieldDefaults.TryGetValue(key, out var schemaDefault))
+        {
+            return schemaDefault;
+        }
+        return defaultValue;
+    }
 
     public void RefreshDisabledComponents() => _filter.Refresh();
 

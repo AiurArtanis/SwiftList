@@ -123,7 +123,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         set { if (SetProperty(ref _autoCheckUpdates, value)) OnPropertyChanged(nameof(IsAutoSilentUpdateEnabled)); }
     }
 
-    public bool IsUserAdmin => UpdateService.Instance.IsUserAdmin();
+    public bool IsUserAdmin => ElevationHelper.IsUserAdmin();
 
     public bool IsAutoSilentUpdateEnabled => IsUserAdmin && AutoCheckUpdates;
 

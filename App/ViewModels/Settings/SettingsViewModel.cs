@@ -12,22 +12,10 @@ public class SettingsViewModel : ViewModelBase
 {
     private readonly SearchService _searchService = new();
     private readonly UserSettings _userSettings = UserSettings.Load();
-    private readonly System.Windows.Threading.DispatcherTimer _refreshTimer;
-    private readonly CancellationTokenSource _statusSubscriptionCts = new();
-    private Task? _statusSubscriptionTask;
+    private readonly SettingsStatusMonitor _statusMonitor;
     private bool _canApply = true;
     private bool _isBusy;
     private bool _isServiceReady = true;
-    private UsnIndexer.IndexerStatus _latestStatus = new() { State = "error" };
-    private IReadOnlyList<NetworkIndexStatus> _latestNetworkStatuses = Array.Empty<NetworkIndexStatus>();
-    private MachineSettings _latestMachineSettings = new();
-    // 1 while a Dispatcher.BeginInvoke(ApplyUiState) is queued or running, 0 otherwise -- Interlocked since
-    // ScheduleApplyUiState is called from both the UI thread and background threads (the status-stream
-    // callback, RefreshLists' Task.Run continuation). Coalesces bursts of status pushes (up to ~10/sec
-    // while a drive is actively indexing -- see UsnIndexer.NotifyProgressChanged) into at most one
-    // ApplyUiState in flight plus one queued, instead of one queued per push; an unthrottled queue is what
-    // made Settings tab-switching feel stuck during indexing (issue #112).
-    private int _uiUpdateScheduled;
 
     public SettingsViewModel()
     {
@@ -49,15 +37,8 @@ public class SettingsViewModel : ViewModelBase
         RefreshCommand = new RelayCommand(Refresh);
         ApplyCommand = new RelayCommand(Apply, () => CanApply);
 
-        _refreshTimer = new System.Windows.Threading.DispatcherTimer
-        {
-            Interval = TimeSpan.FromSeconds(5)
-        };
-        _refreshTimer.Tick += (s, e) => RefreshLists();
-        _refreshTimer.Start();
-        UserNetworkDriveSearch.StatusesChanged += OnNetworkStatusesChanged;
+        _statusMonitor = new SettingsStatusMonitor(_searchService, ApplyUiState);
         TranslationManager.Instance.PropertyChanged += OnLanguageChanged;
-        EnsureStatusSubscription();
         RefreshLists();
     }
 
@@ -90,47 +71,14 @@ public class SettingsViewModel : ViewModelBase
 
     public void Cleanup()
     {
-        _refreshTimer?.Stop();
-        _statusSubscriptionCts.Cancel();
-        UserNetworkDriveSearch.StatusesChanged -= OnNetworkStatusesChanged;
+        _statusMonitor.Dispose();
         TranslationManager.Instance.PropertyChanged -= OnLanguageChanged;
         Log.Dispose();
     }
 
     public void Refresh() => RefreshLists();
 
-    public void RefreshLists() => _ = Task.Run(async () =>
-    {
-        MachineSettings settings;
-        var isServiceReady = false;
-
-        try
-        {
-            isServiceReady = await _searchService.PingAsync();
-            if (isServiceReady)
-            {
-                settings = await _searchService.GetMachineSettingsAsync();
-                _latestNetworkStatuses = _searchService.GetNetworkIndexStatuses();
-            }
-            else
-            {
-                settings = new MachineSettings();
-                _latestNetworkStatuses = Array.Empty<NetworkIndexStatus>();
-            }
-        }
-        catch
-        {
-            settings = new MachineSettings();
-            _latestNetworkStatuses = Array.Empty<NetworkIndexStatus>();
-        }
-
-        _latestMachineSettings = settings;
-        if (!isServiceReady)
-            _latestStatus = new UsnIndexer.IndexerStatus { State = "error" };
-
-        EnsureStatusSubscription();
-        ScheduleApplyUiState();
-    });
+    public void RefreshLists() => _statusMonitor.RefreshLists();
 
     public void Apply()
     {
@@ -240,55 +188,11 @@ public class SettingsViewModel : ViewModelBase
         });
     }
 
-    private void EnsureStatusSubscription()
-    {
-        if (_statusSubscriptionTask is { IsCompleted: false })
-            return;
-
-        _statusSubscriptionTask = StartStatusSubscriptionAsync(_statusSubscriptionCts.Token);
-    }
-
-    private async Task StartStatusSubscriptionAsync(CancellationToken token)
-    {
-        if (token.IsCancellationRequested)
-            return;
-
-        try
-        {
-            await SearchStatusStream.SubscribeAsync(status =>
-            {
-                _latestStatus = status;
-                ScheduleApplyUiState();
-            }, token).ConfigureAwait(false);
-        }
-        catch
-        {
-        }
-    }
-
-    private void OnNetworkStatusesChanged(IReadOnlyList<NetworkIndexStatus> statuses)
-    {
-        _latestNetworkStatuses = statuses;
-        ScheduleApplyUiState();
-    }
-
-    private void ScheduleApplyUiState()
-    {
-        if (Interlocked.CompareExchange(ref _uiUpdateScheduled, 1, 0) != 0)
-            return; // already scheduled/running -- it will pick up the latest state fields once it runs
-
-        _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-        {
-            try { ApplyUiState(); }
-            finally { Interlocked.Exchange(ref _uiUpdateScheduled, 0); }
-        }));
-    }
-
     private void ApplyUiState()
     {
-        var status = _latestStatus;
-        var settings = _latestMachineSettings;
-        var networkStatuses = _latestNetworkStatuses;
+        var status = _statusMonitor.LatestStatus;
+        var settings = _statusMonitor.LatestMachineSettings;
+        var networkStatuses = _statusMonitor.LatestNetworkStatuses;
         var isServiceReady = status.State != "error";
         Service.UpdateStatus(status);
         LocalDrive.UpdateStatus(status, settings);

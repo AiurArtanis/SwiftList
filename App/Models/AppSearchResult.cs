@@ -123,37 +123,18 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         var pathCopy = FullPath;
         var isDirCopy = IsDir;
 
-        Task.Run(async () =>
+        LazyBackgroundLoader.Start(_iconSemaphore, () =>
         {
-            await _iconSemaphore.WaitAsync();
-            try
+            var realIcon = ShellIconHelper.GetIconForPath(pathCopy, isDirCopy);
+            if (realIcon != null)
             {
-                var realIcon = ShellIconHelper.GetIconForPath(pathCopy, isDirCopy);
-                if (realIcon != null)
+                LazyBackgroundLoader.ApplyOnUiThread(() =>
                 {
-                    var app = System.Windows.Application.Current;
-                    if (app != null)
-                    {
-                        _ = app.Dispatcher.BeginInvoke(new Action(() =>
-                        {
-                            _icon = realIcon;
-                            OnPropertyChanged(nameof(Icon));
-                        }), System.Windows.Threading.DispatcherPriority.Background);
-                    }
-                    else
-                    {
-                        _icon = realIcon;
-                    }
-                }
+                    _icon = realIcon;
+                    OnPropertyChanged(nameof(Icon));
+                });
             }
-            catch
-            {
-                // Ignore
-            }
-            finally
-            {
-                _iconSemaphore.Release();
-            }
+            return Task.CompletedTask;
         });
     }
 
@@ -212,12 +193,11 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     {
         var pathCopy = FullPath;
         var isDirCopy = IsDir;
-        Task.Run(async () =>
+        LazyBackgroundLoader.Start(_dateModifiedSemaphore, () =>
         {
-            await _dateModifiedSemaphore.WaitAsync();
+            var dt = DateTime.MinValue;
             try
             {
-                var dt = DateTime.MinValue;
                 if (isDirCopy)
                 {
                     if (System.IO.Directory.Exists(pathCopy))
@@ -228,30 +208,19 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
                     if (System.IO.File.Exists(pathCopy))
                         dt = System.IO.File.GetLastWriteTime(pathCopy);
                 }
-
-                var app = System.Windows.Application.Current;
-                if (app != null)
-                {
-                    _ = app.Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        _dateModified = dt;
-                        OnPropertyChanged(nameof(DateModified));
-                        OnPropertyChanged(nameof(DateModifiedText));
-                    }), System.Windows.Threading.DispatcherPriority.Background);
-                }
-                else
-                {
-                    _dateModified = dt;
-                }
             }
             catch
             {
-                _dateModified = DateTime.MinValue;
+                dt = DateTime.MinValue;
             }
-            finally
+
+            LazyBackgroundLoader.ApplyOnUiThread(() =>
             {
-                _dateModifiedSemaphore.Release();
-            }
+                _dateModified = dt;
+                OnPropertyChanged(nameof(DateModified));
+                OnPropertyChanged(nameof(DateModifiedText));
+            });
+            return Task.CompletedTask;
         });
     }
 

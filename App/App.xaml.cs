@@ -235,69 +235,7 @@ public partial class App : Application
         }), System.Windows.Threading.DispatcherPriority.Loaded);
 
         // Background update check on startup
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                // Delay slightly to ensure app is fully initialized and main window is up
-
-                await Task.Delay(3000);
-                var settings = UserSettings.Load();
-                if (!settings.AutoCheckUpdates)
-                {
-                    return;
-                }
-
-                var release = await UpdateService.Instance.CheckForUpdatesAsync();
-                if (release != null)
-                {
-                    var currentVersion = typeof(App).Assembly.GetName().Version;
-                    var cleanTag = release.TagName.TrimStart('v', 'V');
-                    if (Version.TryParse(cleanTag, out var latestVersion) && latestVersion > currentVersion)
-                    {
-                        // If auto silent update is enabled and user is admin, prompt user and execute silent update
-
-                        if (settings.AutoSilentUpdate && UpdateService.Instance.IsUserAdmin())
-                        {
-                            var zipAsset = Array.Find(release.Assets, a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
-                            if (zipAsset != null)
-                            {
-                                _ = Dispatcher.BeginInvoke(new Action(async () =>
-                                {
-                                    var promptFormat = TranslationManager.Instance["About_SilentUpdatePrompt"];
-                                    var prompt = string.Format(promptFormat, release.TagName);
-                                    var title = TranslationManager.Instance["About_CheckUpdate"];
-                                    MessageBox.Show(prompt, title, MessageBoxButton.OK, MessageBoxImage.Information);
-                                    var success = await UpdateService.Instance.StartSilentUpdateAsync(zipAsset.BrowserDownloadUrl);
-                                    if (success)
-                                    {
-                                        TrayCleanExitHelper.CleanExit();
-                                    }
-
-                                }));
-                                return;
-                            }
-                        }
-
-                        _ = Dispatcher.BeginInvoke(new Action(() =>
-                        {
-                            var promptFormat = TranslationManager.Instance["About_NewVersionAvailablePrompt"];
-                            var prompt = string.Format(promptFormat, release.TagName);
-                            var title = TranslationManager.Instance["About_CheckUpdate"];
-                            MessageBox.Show(prompt, title, MessageBoxButton.OK, MessageBoxImage.Information);
-                            ShowSettingsWindow("About");
-                        }));
-                    }
-                }
-            }
-
-            catch (Exception ex)
-            {
-                Logger.Log($"[App] Background startup update check failed: {ex.Message}", LogLevel.Warn);
-            }
-
-        });
+        UpdateCheckService.RunOnStartupAsync();
     }
 
     public static void HideInlineSearch() => InlineSearchManager.Instance.CloseInlineSearch();

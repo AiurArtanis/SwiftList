@@ -80,7 +80,7 @@ public class LocalDriveSettingsViewModel : ViewModelBase
         set => SetProperty(ref _drivesPlaceholderText, value);
     }
 
-    public bool IsUserAdmin => UpdateService.Instance.IsUserAdmin();
+    public bool IsUserAdmin => ElevationHelper.IsUserAdmin();
 
     public bool IsDriveCheckboxEnabled
     {

@@ -151,8 +151,9 @@ public static class PluginContextMenuHelper
                 Child = border
             };
 
-            var keyField = typeof(MenuItem).GetField("IsHighlightedPropertyKey", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
-            var isHighlightedKey = keyField?.GetValue(null) as DependencyPropertyKey;
+            // Shared with ActionFlyout so the reflection lookup for MenuItem's private IsHighlighted
+            // setter happens once, cached, instead of being duplicated per popup host.
+            var isHighlightedKey = ActionFlyoutItems.IsHighlightedKey;
 
             Action<int> updateHighlight = (newIdx) =>
             {

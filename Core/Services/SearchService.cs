@@ -1,4 +1,3 @@
-using System.IO.Pipes;
 using SwiftList.Core.Indexer.Usn;
 
 namespace SwiftList.Core;
@@ -6,46 +5,23 @@ namespace SwiftList.Core;
 public class SearchService : IDisposable
 {
     private readonly Dictionary<string, List<SearchResult>> _sessionDirectoryCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly SearchPipeClient _pipeClient = new();
 
-    private static async Task<NamedPipeClientStream> GetPipeAsync(CancellationToken token)
-    {
-        var pipe = new NamedPipeClientStream(".", "SwiftListPipe", PipeDirection.InOut, PipeOptions.Asynchronous);
-        await pipe.ConnectAsync(2000, token).ConfigureAwait(false);
-        return pipe;
-    }
+    public Task<UsnIndexer.IndexerStatus> GetStatusAsync(CancellationToken token = default) => _pipeClient.GetStatusAsync(token);
 
-    public async Task<UsnIndexer.IndexerStatus> GetStatusAsync(CancellationToken token = default)
-    {
-        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.Status }, token).ConfigureAwait(false);
-        if (resp.Kind == PipeResponseKind.Status && resp.Status != null) return resp.Status;
-        if (resp.Kind == PipeResponseKind.Error) Logger.Log($"[SearchService] STATUS failed: {resp.Message}", LogLevel.Error);
-        return new UsnIndexer.IndexerStatus { State = "error" };
-    }
-
-    public async Task<bool> PingAsync(CancellationToken token = default)
-    {
-        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.Ping }, token).ConfigureAwait(false);
-        return resp.Kind == PipeResponseKind.Ok;
-    }
+    public Task<bool> PingAsync(CancellationToken token = default) => _pipeClient.PingAsync(token);
 
     // Asks the already-running --service instance to spawn the hook process directly into this caller's
     // own session (see HookProcessBroker) -- the App itself never launches the hook process anymore, so
     // it never has a "runas" UAC prompt of its own to show. requestElevation is only honored server-side
     // when that session's user is genuinely an administrator; otherwise it just launches non-elevated.
-    public async Task<(bool Ok, int Pid, string? Error)> RequestHookLaunchAsync(bool requestElevation, CancellationToken token = default)
-    {
-        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.LaunchHook, RequestElevation = requestElevation }, token).ConfigureAwait(false);
-        return resp.Kind == PipeResponseKind.HookLaunched ? (true, resp.Pid, null) : (false, 0, resp.Message);
-    }
+    public Task<(bool Ok, int Pid, string? Error)> RequestHookLaunchAsync(bool requestElevation, CancellationToken token = default)
+        => _pipeClient.RequestHookLaunchAsync(requestElevation, token);
 
     // Fire-and-forget, called whenever a search window closes/hides (mirrors ShellIconHelper.ClearCache()'s
     // existing trigger points) -- gives back the local drives' per-row full-path memo, which otherwise
     // only self-clears once it crosses its own high backstop threshold (see PathQueryExtensions).
-    public async Task ClearPathCachesAsync(CancellationToken token = default)
-    {
-        var resp = await SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.ClearPathCaches }, token).ConfigureAwait(false);
-        if (resp.Kind == PipeResponseKind.Error) Logger.Log($"[SearchService] CLEAR_PATH_CACHES failed: {resp.Message}", LogLevel.Error);
-    }
+    public Task ClearPathCachesAsync(CancellationToken token = default) => _pipeClient.ClearPathCachesAsync(token);
 
     // bypassExclusions: opts this one search out of ExcludedPaths/IgnoredPathGlobs/IgnoredPathRegexes
     // filtering. The caller is responsible for stripping whatever query-string marker triggers this
@@ -115,7 +91,7 @@ public class SearchService : IDisposable
         {
             try
             {
-                await SendSearchPipeCommandAsync(msg, result =>
+                await SearchPipeClient.SendSearchPipeCommandAsync(msg, result =>
                 {
                     if (bypassExclusions || !exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
                         uniqueOnResult(result);
@@ -243,47 +219,10 @@ public class SearchService : IDisposable
         return (limit > 0 ? merged.Take(limit) : merged).ToList();
     }
 
-    internal async Task<PipeResponse> SendPipeCommandAsync(SearchRequestMessage msg, CancellationToken token)
-    {
-        try
-        {
-            var verboseLog = msg.Id != SearchRequestId.Search && msg.Id != SearchRequestId.SearchDir;
-            if (verboseLog)
-                Logger.Log($"[PipeClient] Connecting to pipe for command: {msg.Id}...", LogLevel.Debug);
-            using var pipe = new NamedPipeClientStream(".", "SwiftListPipe", PipeDirection.InOut, PipeOptions.Asynchronous);
-
-            await pipe.ConnectAsync(2000, token).ConfigureAwait(false);
-            if (verboseLog)
-                Logger.Log("[PipeClient] Connected. Writing command...", LogLevel.Debug);
-            await SearchRequestBinarySerializer.WriteSearchRequestAsync(pipe, msg, token).ConfigureAwait(false);
-            if (verboseLog)
-                Logger.Log("[PipeClient] Command written. Reading response...", LogLevel.Debug);
-            var resp = await PipeResponseBinarySerializer.ReadAsync(pipe, token).ConfigureAwait(false);
-            if (verboseLog)
-                Logger.Log($"[PipeClient] Response received: {resp.Kind}.", LogLevel.Debug);
-            return resp;
-        }
-        catch (Exception ex)
-        {
-            // Warn, not Error: this fires routinely on a cold start (App connects before the Service has
-            // finished coming up) and is expected to self-heal via the caller's own retry -- callers that
-            // need to surface a persistent failure to the user already re-log at Error with more context.
-            Logger.Log($"[PipeClient] SendPipeCommand failed for {msg.Id}: {ex.Message}", LogLevel.Warn);
-            return new PipeResponse { Kind = PipeResponseKind.Error, Message = ex.Message };
-        }
-    }
-
-    private static async Task SendSearchPipeCommandAsync(SearchRequestMessage msg, Action<SearchResult> onResult, CancellationToken token)
-    {
-        using var pipe = await GetPipeAsync(token).ConfigureAwait(false);
-        await SearchRequestBinarySerializer.WriteSearchRequestAsync(pipe, msg, token).ConfigureAwait(false);
-
-        await SearchResponseBinarySerializer.ReadAsync(pipe, result =>
-        {
-            token.ThrowIfCancellationRequested();
-            onResult(result);
-        }, token).ConfigureAwait(false);
-    }
+    // Forwards to the pipe client -- kept on SearchService itself since SearchServiceManagementExtensions
+    // and other callers already reach this as an instance method (`service.SendPipeCommandAsync(...)`).
+    internal Task<PipeResponse> SendPipeCommandAsync(SearchRequestMessage msg, CancellationToken token)
+        => _pipeClient.SendPipeCommandAsync(msg, token);
 
     public void Dispose() => GC.SuppressFinalize(this);
 }
