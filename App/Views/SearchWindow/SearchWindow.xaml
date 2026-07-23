@@ -4,6 +4,7 @@
         xmlns:app="clr-namespace:SwiftList.App"
         xmlns:converters="clr-namespace:SwiftList.App.Converters"
         xmlns:controls="clr-namespace:SwiftList.App.Views.Controls"
+        xmlns:results="clr-namespace:SwiftList.App.Views.Controls.Results"
         xmlns:services="clr-namespace:SwiftList.App.Services"
         xmlns:helpers="clr-namespace:SwiftList.App.Helpers.Visuals"
         Title="{Binding WindowTitle}" Height="480" Width="854"
@@ -77,7 +78,7 @@
                     <!-- Main Results Grid -->
                     <Grid Grid.Column="1" Background="{DynamicResource ContentBg}">
                         <!-- Shared ResultsControl component in Grid Mode -->
-                        <app:ResultsControl x:Name="ResultsPanelControl"
+                        <results:ResultsControl x:Name="ResultsPanelControl"
                                             ItemsSource="{Binding FilteredResults}"
                                             ViewMode="Grid"
                                             Visibility="Visible"/>

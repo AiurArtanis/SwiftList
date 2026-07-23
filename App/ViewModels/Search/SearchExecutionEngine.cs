@@ -2,6 +2,7 @@ using SwiftList.Core;
 using SwiftList.App.Services;
 using SwiftList.Core.Services.Search;
 
+using SwiftList.App.ViewModels.Search.Mapping;
 namespace SwiftList.App.ViewModels.Search;
 
 internal sealed class SearchExecutionEngine : IDisposable

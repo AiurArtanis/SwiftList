@@ -1,5 +1,6 @@
 using SwiftList.App.Services;
 
+using SwiftList.App.ViewModels.Search.Mapping;
 namespace SwiftList.App.ViewModels.Search;
 
 internal static class InlineListSearchHelper

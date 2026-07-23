@@ -15,6 +15,7 @@ using KeyEventHandler = System.Windows.Input.KeyEventHandler;
 using MouseButtonEventHandler = System.Windows.Input.MouseButtonEventHandler;
 
 using SwiftList.App.Services.ShellMenu.QuickNav;
+using SwiftList.App.Services.ShellMenu.QuickNav.RightClickActions;
 namespace SwiftList.App.Services.ShellMenu.ActionFlyout;
 
 /// <summary>

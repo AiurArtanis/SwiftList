@@ -13,6 +13,7 @@ using SwiftList.Core.Wire;
 using SwiftList.App.ViewModels.Settings.LocalDrive;
 using SwiftList.App.ViewModels.Settings.NetworkDrive;
 using SwiftList.App.ViewModels.Settings.StartupPanel;
+using SwiftList.App.ViewModels.Settings.General;
 namespace SwiftList.App.ViewModels.Settings;
 
 public class SettingsViewModel : ViewModelBase

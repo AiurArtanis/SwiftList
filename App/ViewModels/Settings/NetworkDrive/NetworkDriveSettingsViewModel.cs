@@ -9,6 +9,7 @@ using SwiftList.App.ViewModels.Settings.NetworkDrive;
 
 using SwiftList.Core.Services.Search;
 
+using SwiftList.App.ViewModels.Settings.General;
 namespace SwiftList.App.ViewModels.Settings.NetworkDrive;
 
 public class NetworkDriveSettingsViewModel : ViewModelBase

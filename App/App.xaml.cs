@@ -7,7 +7,7 @@ using SwiftList.App.ViewModels.Settings;
 using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Search;
 using Application = System.Windows.Application;
-using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
+using MessageBox = SwiftList.App.Views.Controls.Dialogs.CustomMessageBox;
 using SwiftList.App.Services.AppWindow;
 using SwiftList.App.Services.Pipe;
 using SwiftList.App.Services.Plugin;
@@ -18,6 +18,8 @@ using SwiftList.App.Services.UrlProtocol;
 using SwiftList.App.Services.ShellMenu.QuickNav;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 using SwiftList.Core.Hook.Ipc;
+using SwiftList.App.ViewModels.Search.Mapping;
+using SwiftList.App.ViewModels.Settings.General;
 namespace SwiftList.App;
 
 public partial class App : Application

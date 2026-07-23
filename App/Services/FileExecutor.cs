@@ -3,7 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using SwiftList.Core;
-using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
+using MessageBox = SwiftList.App.Views.Controls.Dialogs.CustomMessageBox;
 namespace SwiftList.App.Services;
 
 public static class FileExecutor

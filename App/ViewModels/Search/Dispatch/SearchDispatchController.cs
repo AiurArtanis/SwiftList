@@ -4,6 +4,7 @@ using SwiftList.App.Services;
 
 using SwiftList.App.ViewModels.Search.StartupPanel;
 using SwiftList.Core.SearchIndex.Query;
+using SwiftList.App.ViewModels.Search.Mapping;
 namespace SwiftList.App.ViewModels.Search.Dispatch;
 
 // Owns query-token parsing, dispatching a search (debounced/quick vs. blocking), and rendering the

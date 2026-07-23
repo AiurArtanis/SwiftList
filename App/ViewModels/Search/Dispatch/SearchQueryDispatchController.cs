@@ -3,6 +3,7 @@ using SwiftList.Core;
 using SwiftList.App.ViewModels.Service;
 
 using SwiftList.Core.SearchIndex.Query;
+using SwiftList.App.ViewModels.Search.Mapping;
 namespace SwiftList.App.ViewModels.Search.Dispatch;
 
 // Owns query-token parsing and search dispatch for the full search window's SearchViewModel --

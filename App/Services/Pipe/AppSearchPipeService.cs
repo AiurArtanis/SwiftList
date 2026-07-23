@@ -10,6 +10,7 @@ using SwiftList.Core.Services.Pipe;
 using SwiftList.Core.Wire;
 using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Query;
+using SwiftList.App.ViewModels.Search.Mapping;
 namespace SwiftList.App.Services.Pipe;
 
 // Prototype: lets an external client (e.g. a CLI) reuse the App's own already-initialized search state

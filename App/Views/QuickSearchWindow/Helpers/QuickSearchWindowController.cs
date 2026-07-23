@@ -1,0 +1,257 @@
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
+using SwiftList.App.Services;
+using SwiftList.Core;
+
+using SwiftList.App.Services.ShellIcons;
+using SwiftList.App.Services.Theme;
+using SwiftList.Core.Wire;
+namespace SwiftList.App.Views.QuickSearchWindow.Helpers;
+
+public class QuickSearchWindowController
+{
+    private readonly SwiftList.App.QuickSearchWindow _window;
+
+    [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    private const int SW_RESTORE = 9;
+
+    private IntPtr _lastActiveHwnd = IntPtr.Zero;
+    private readonly QuickSearchWindowPositioner _positioner;
+    private readonly QuickSearchWindowForegroundWatcher _foregroundWatcher;
+
+    // Bumped by every ShowWindow()/HideWindow() call. HideWindow()'s actual Hide() is deferred behind
+    // a fade-out (see its own comment), so a rapid Show() right after a Hide() needs a way to tell that
+    // deferred continuation "a newer call already superseded you" -- otherwise the pending continuation
+    // would still fire and hide the window moments after the user just re-summoned it.
+    private int _visibilityOpToken;
+
+    // useAltTapBypass: see HookCommandHandler's ForceForeground case -- callers backed by very recent real
+    // input on the Hook's own thread already (e.g. Quick Navigation's own mouse click) should pass false.
+    public static void ForceForeground(IntPtr hwnd, bool useAltTapBypass = true)
+    {
+        if (hwnd == IntPtr.Zero) return;
+        ShowWindow(hwnd, SW_RESTORE);
+
+        // Used to skip the IPC round-trip when GetForegroundWindow() already reported hwnd as
+        // foreground, on the assumption that Show()/Activate() already did the whole job. That
+        // assumption isn't always safe (e.g. a still-open shell overlay like the Start Menu can make
+        // Windows report our window as foreground without real per-thread keyboard focus having
+        // actually moved -- see ShellOverlayDismissHelper.DismissOverlayIfForeground(), which handles
+        // that case earlier in ShowWindow()). Always send it regardless; redoing an already-correct
+        // foreground/focus state is cheap and harmless.
+        App.HookClient?.SendMessage(new IpcMessage
+        {
+            Id = IpcMessageId.ForceForeground,
+            Hwnd = hwnd.ToInt64(),
+            BoolVal = useAltTapBypass
+        });
+    }
+
+    public QuickSearchWindowController(SwiftList.App.QuickSearchWindow window)
+    {
+        _window = window;
+        _positioner = new QuickSearchWindowPositioner(window, () => _lastActiveHwnd);
+        _foregroundWatcher = new QuickSearchWindowForegroundWatcher(window, () => HideWindow());
+    }
+
+    public void PositionWindow() => _positioner.PositionWindow();
+
+    // Wired to the search box's status icon right-click -- clears the saved position and immediately
+    // re-centers the window using the same fallback PositionWindow already falls back to when there's
+    // no saved position (or it's off-screen).
+    public void ResetPosition() => _positioner.ResetPosition();
+
+    public void ToggleVisibility() => _window.Dispatcher.Invoke(() =>
+                                           {
+                                               if (_window.IsVisible && _window.WindowState != WindowState.Minimized) HideWindow();
+                                               else ShowWindow();
+                                           });
+
+    public void ShowWindow(string? initialQuery = null)
+    {
+        _visibilityOpToken++;
+
+        // Must run before anything below touches this window (Show()/Activate()/ForceForeground):
+        // once any of those runs, GetForegroundWindow() starts reporting THIS window as foreground
+        // (shell light-dismiss overlays don't compete for activation the normal way), so this is the
+        // last point where it still reflects the real, uncontaminated state.
+        ShellOverlayDismissHelper.DismissOverlayIfForeground();
+
+        _lastActiveHwnd = GetForegroundWindow();
+        if (_lastActiveHwnd != IntPtr.Zero)
+        {
+            GetWindowThreadProcessId(_lastActiveHwnd, out var activePid);
+            if (activePid == (uint)Environment.ProcessId) _lastActiveHwnd = IntPtr.Zero;
+        }
+
+        _window.ViewModel.IsInlineSearchContext = false;
+        App.HideInlineSearch();
+        QuickLookManager.Instance.Reset();
+
+        InlineSearchManager.Instance.KeyboardHook.IsQuickSearchWindowVisible = true;
+        InlineSearchManager.Instance.KeyboardHook.Stop();
+        _window.ViewModel.EnsureServiceMonitoringActive();
+
+        _window.ViewModel.SearchQuery = initialQuery ?? string.Empty;
+        _window.ViewModel.RefreshEmptyState();
+        _window.ViewModel.RefreshLayoutSettings();
+        _window.UpdateLayout();
+        _window.Topmost = false;
+        _window.Topmost = true;
+        // Position before Show() (not after, as before) so the window's first painted frame already
+        // lands at the real target -- Show()-then-PositionWindow() used to render one frame at wherever
+        // this persistent window was last left (a different monitor entirely, if that's where the user
+        // last summoned it) before snapping to the correct spot, an unconditional flash-then-jump on
+        // every summon rather than just while on a single monitor. PositionWindow() itself doesn't need
+        // the window's actual layout/HWND for anything (its width comes from settings, not ActualWidth,
+        // and its DPI now comes from the target monitor, not this window's own CompositionTarget), so
+        // moving it earlier is safe.
+        PositionWindow();
+
+        // Fade in from 0 rather than popping in fully opaque -- same technique (and target opacity)
+        // ThemeManager already uses for its own theme-swap fade, animating window.Content rather than
+        // the Window itself so a translucent theme's WindowOpacity (see WindowEffectHelper) stays the
+        // ceiling instead of always fading to a flat 1.0.
+        var fadeContent = _window.Content as UIElement;
+        fadeContent?.BeginAnimation(UIElement.OpacityProperty, null);
+        if (fadeContent != null) fadeContent.Opacity = 0;
+
+        _window.Show();
+        _window.WindowState = WindowState.Normal;
+
+        if (fadeContent != null)
+        {
+            var targetOpacity = ThemeManager.Instance.ActiveTheme?.WindowOpacity ?? 1.0;
+            var fadeIn = new DoubleAnimation(targetOpacity, (Duration)System.Windows.Application.Current.FindResource("DurationWindowFadeIn"))
+            {
+                EasingFunction = System.Windows.Application.Current.TryFindResource("EaseOutCubic") as IEasingFunction
+            };
+            fadeContent.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+        }
+
+        _foregroundWatcher.Start();
+
+        _window.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            var hwnd = new WindowInteropHelper(_window).Handle;
+            if (hwnd != IntPtr.Zero) ForceForeground(hwnd);
+
+            _window.Activate();
+            _window.Focus();
+
+            FocusSearchBoxWhenForeground(hwnd);
+        }), DispatcherPriority.Input);
+    }
+
+    // ForceForeground's SetForegroundWindow call -- whether it succeeds locally or has to round-trip
+    // through the elevated Hook process's IPC -- doesn't complete synchronously with the call that
+    // requested it. TxtSearch.Focus() used to fire after a single fixed-priority dispatcher hop, a
+    // guess at "enough time has probably passed" that could still land before the OS actually handed
+    // this window real keyboard focus, silently dropping any keys the user typed in that gap right
+    // after invoking the hotkey (see issue #121). Poll the real OS state instead: 10ms ticks, capped
+    // at 200ms so a case where foreground genuinely never arrives (something else is holding it,
+    // blocked by Windows' foreground-lock rules) still ends in focusing the search box rather than
+    // leaving it silently unfocused forever.
+    private void FocusSearchBoxWhenForeground(IntPtr hwnd)
+    {
+        var deadline = Environment.TickCount64 + 200;
+        var timer = new DispatcherTimer(DispatcherPriority.Input) { Interval = TimeSpan.FromMilliseconds(10) };
+        timer.Tick += (s, _) =>
+        {
+            var isForeground = hwnd == IntPtr.Zero || GetForegroundWindow() == hwnd;
+            if (!isForeground && Environment.TickCount64 < deadline)
+                return;
+
+            timer.Stop();
+            _window.TxtSearch.Focus();
+            System.Windows.Input.Keyboard.Focus(_window.TxtSearch);
+        };
+        timer.Start();
+    }
+
+    public void HideWindow(bool restoreFocus = true)
+    {
+        var opToken = ++_visibilityOpToken;
+
+        _foregroundWatcher.Stop();
+        if (_window.MenuPresenter != null && _window.MenuPresenter.IsInActionsMode)
+        {
+            _window.MenuPresenter.ExitActionsMode();
+        }
+
+        _window.ViewModel.Monitor.StopStatusTimer();
+
+        // Must happen before the SearchQuery reset below: clearing the query resets SelectedResult to
+        // the startup panel's first item, which synchronously fires LstResults.SelectionChanged and
+        // (with _userWantsPreview still true) would make QuickLookManager jump the still-open preview
+        // window to that unrelated file instead of closing alongside this window.
+        QuickLookManager.Instance.Reset();
+
+        try { KeywordHistoryStore.Record(_window.ViewModel.SearchQuery); } catch { }
+        _window.KeywordHistoryController.Reset();
+
+        // Everything below this point (the SearchQuery reset onward) reads as the window's "closed"
+        // state, so it's deferred behind a fade-out of whatever is CURRENTLY on screen -- fading out
+        // first, then resetting the content, means the window dismisses showing what the user was just
+        // looking at instead of jump-cutting to the empty/startup-panel state a beat before it vanishes.
+        var fadeContent = _window.Content as UIElement;
+        void FinishHide()
+        {
+            // A newer ShowWindow()/HideWindow() call already superseded this one (e.g. the user
+            // re-summoned the window mid fade-out) -- don't hide out from under them.
+            if (opToken != _visibilityOpToken) return;
+
+            // SearchQuery's own setter already runs PerformSearch("") when this actually changes the query
+            // (clearing/replacing results the normal way). Explicitly wiping Search.Results here on top of
+            // that used to erase the startup panel's own still-valid results/tabs the moment the box was
+            // already empty (nothing "changes" so the setter is a no-op) -- meaning next time the window
+            // showed, there was nothing left to display while the panel's async refetch ran, which is what
+            // produced the empty/loading flash ShowWindow's RefreshEmptyState() was supposed to avoid.
+            _window.ViewModel.SearchQuery = string.Empty;
+
+            _window.UpdateLayout();
+            _window.Hide();
+
+            InlineSearchManager.Instance.KeyboardHook.IsQuickSearchWindowVisible = false;
+            InlineSearchManager.Instance.KeyboardHook.Start();
+
+            if (restoreFocus && _lastActiveHwnd != IntPtr.Zero) SetForegroundWindow(_lastActiveHwnd);
+            _lastActiveHwnd = IntPtr.Zero;
+
+            Task.Run(async () =>
+            {
+                await Task.Delay(100);
+                try { ShellIconHelper.ClearCache(); } catch { }
+                try { PathCacheMaintenance.ClearAllPathCaches(); } catch { }
+                try { Win32Api.TrimWorkingSet(); } catch { }
+            });
+        }
+
+        if (fadeContent != null)
+        {
+            var fadeOutDuration = (Duration)System.Windows.Application.Current.FindResource("DurationFast");
+            var fadeOut = new DoubleAnimation(0.0, fadeOutDuration)
+            {
+                EasingFunction = System.Windows.Application.Current.TryFindResource("EaseOutCubic") as IEasingFunction
+            };
+            fadeContent.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+
+            Task.Run(async () =>
+            {
+                await Task.Delay(fadeOutDuration.TimeSpan);
+                _window.Dispatcher.Invoke(FinishHide);
+            });
+        }
+        else
+        {
+            FinishHide();
+        }
+    }
+}

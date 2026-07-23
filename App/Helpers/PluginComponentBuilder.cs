@@ -13,6 +13,7 @@ using SwiftList.App.Services.Plugin;
 using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 using SwiftList.Core.SearchIndex;
+using SwiftList.App.ViewModels.Settings.General;
 namespace SwiftList.App.Helpers;
 
 internal static class PluginComponentBuilder

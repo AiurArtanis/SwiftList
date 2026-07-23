@@ -4,7 +4,7 @@ using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
-using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
+using MessageBox = SwiftList.App.Views.Controls.Dialogs.CustomMessageBox;
 
 using SwiftList.Core.Services.Search;
 

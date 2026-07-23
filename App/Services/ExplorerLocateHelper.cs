@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using SwiftList.Core;
-using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
+using MessageBox = SwiftList.App.Views.Controls.Dialogs.CustomMessageBox;
 using MessageBoxButton = System.Windows.MessageBoxButton;
 using MessageBoxImage = System.Windows.MessageBoxImage;
 

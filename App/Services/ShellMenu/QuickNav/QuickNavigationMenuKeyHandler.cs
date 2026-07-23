@@ -7,6 +7,7 @@ using ContextMenu = System.Windows.Controls.ContextMenu;
 using Application = System.Windows.Application;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
+using SwiftList.App.Services.ShellMenu.QuickNav.RightClickActions;
 namespace SwiftList.App.Services.ShellMenu.QuickNav;
 
 // The keyboard-navigation half of QuickNavigationMenu.CreateMenuItem's PreviewKeyDown handler, split out

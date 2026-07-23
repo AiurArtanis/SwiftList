@@ -1,7 +1,7 @@
 using System.Windows;
 using SwiftList.Core;
 using Application = System.Windows.Application;
-using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
+using MessageBox = SwiftList.App.Views.Controls.Dialogs.CustomMessageBox;
 
 using SwiftList.App.Services.Tray;
 namespace SwiftList.App.Services.Update;

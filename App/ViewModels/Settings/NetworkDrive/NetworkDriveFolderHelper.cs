@@ -3,7 +3,7 @@ using SwiftList.Core;
 using SwiftList.Core.Indexer.NetworkDrive;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
-using SwiftList.App.Views.Controls;
+using SwiftList.App.Views.Controls.Dialogs;
 
 using SwiftList.Core.Services.Search;
 

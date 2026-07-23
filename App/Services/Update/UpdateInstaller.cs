@@ -5,7 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Windows;
-using SwiftList.App.Views.Controls;
+using SwiftList.App.Views.Controls.Dialogs;
 
 namespace SwiftList.App.Services.Update;
 

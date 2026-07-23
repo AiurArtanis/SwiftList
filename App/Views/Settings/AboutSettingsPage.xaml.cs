@@ -3,7 +3,7 @@ using System.Windows;
 using System.ComponentModel;
 using SwiftList.App.Services;
 using SwiftList.Core;
-using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
+using MessageBox = SwiftList.App.Views.Controls.Dialogs.CustomMessageBox;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
 

@@ -1,0 +1,83 @@
+using System.Windows.Input;
+using SwiftList.App.Helpers;
+using SwiftList.App.Services;
+using SwiftList.Core;
+
+namespace SwiftList.App.ViewModels.Settings.General;
+
+// Edits stage locally and only commit to _userSettings/UiMetrics when Save() runs (called from
+// GeneralSettingsViewModel.Apply()) -- see GeneralSettingsViewModel's class-level comment.
+public class SearchBarLayoutSettingsViewModel : ViewModelBase
+{
+    private readonly UserSettings _userSettings;
+    private double _searchBarWidth;
+    private double _searchBarHeight;
+    private bool _showClock;
+    // Reset() clears the quick window's remembered screen position -- there's no bound field for it
+    // (the window itself owns Left/Top), so this just stages the intent for Save() to commit.
+    private bool _resetPosition;
+
+    public SearchBarLayoutSettingsViewModel(UserSettings userSettings)
+    {
+        _userSettings = userSettings;
+        _searchBarWidth = userSettings.SearchWindow.SearchBarWidth;
+        _searchBarHeight = userSettings.SearchWindow.SearchBarHeight;
+        _showClock = userSettings.SearchWindow.ShowClock;
+    }
+
+    public double SearchBarWidth
+    {
+        get => _searchBarWidth;
+        set
+        {
+            if (value < 300.0 || value > 1200.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "Width must be between 300 and 1200.");
+            }
+            SetProperty(ref _searchBarWidth, value);
+        }
+    }
+
+    public double SearchBarHeight
+    {
+        get => _searchBarHeight;
+        set
+        {
+            if (value < 45.0 || value > 120.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "Height must be between 45 and 120.");
+            }
+            SetProperty(ref _searchBarHeight, value);
+        }
+    }
+
+    public bool ShowClock
+    {
+        get => _showClock;
+        set => SetProperty(ref _showClock, value);
+    }
+
+    public ICommand ResetCommand => new RelayCommand(Reset);
+
+    private void Reset()
+    {
+        SearchBarWidth = 570;
+        SearchBarHeight = 60;
+        ShowClock = false;
+        _resetPosition = true;
+    }
+
+    public void Save()
+    {
+        _userSettings.SearchWindow.SearchBarWidth = _searchBarWidth;
+        _userSettings.SearchWindow.SearchBarHeight = _searchBarHeight;
+        _userSettings.SearchWindow.ShowClock = _showClock;
+        if (_resetPosition)
+        {
+            _userSettings.SearchWindow.Left = null;
+            _userSettings.SearchWindow.Top = null;
+            _resetPosition = false;
+        }
+        UiMetrics.ApplyScaleFromSettings();
+    }
+}

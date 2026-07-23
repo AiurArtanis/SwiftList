@@ -3,7 +3,7 @@ using System.Windows.Input;
 using SwiftList.Core;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
-using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
+using MessageBox = SwiftList.App.Views.Controls.Dialogs.CustomMessageBox;
 using SwiftList.App.ViewModels.Search;
 
 using SwiftList.Core.Services.Search;

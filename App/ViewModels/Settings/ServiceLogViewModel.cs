@@ -8,6 +8,7 @@ using SwiftList.Core;
 using SwiftList.Core.Services.Search;
 
 using SwiftList.Core.SearchIndex;
+using SwiftList.App.ViewModels.Settings.General;
 namespace SwiftList.App.ViewModels.Settings;
 
 // A single rendered log line, colored by its level for the log-view tabs on the Service Status page.

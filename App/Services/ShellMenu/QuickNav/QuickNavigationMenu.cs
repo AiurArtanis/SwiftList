@@ -18,6 +18,8 @@ using SwiftList.App.Services.Plugin;
 using SwiftList.App.Services.ShellIcons;
 using SwiftList.App.Services.ShellMenu.ActionFlyout;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
+using SwiftList.App.Services.ShellMenu.QuickNav.RightClickActions;
+using SwiftList.App.Views.QuickSearchWindow.Helpers;
 namespace SwiftList.App.Services.ShellMenu.QuickNav;
 
 public static class QuickNavigationMenu
@@ -88,7 +90,7 @@ public static class QuickNavigationMenu
         // useAltTapBypass: false -- this call is triggered by a mouse click the Hook's own mouse hook just
         // processed, which already satisfies SetForegroundWindow's foreground-lock check on its own. See
         // ForceForeground's own comment for why simulating Alt here caused this popup to self-deactivate.
-        if (hwnd != IntPtr.Zero) Views.QuickSearchWindow.QuickSearchWindowController.ForceForeground(hwnd, useAltTapBypass: false);
+        if (hwnd != IntPtr.Zero) QuickSearchWindowController.ForceForeground(hwnd, useAltTapBypass: false);
 
         contextMenu.PlacementTarget = helperWin;
         contextMenu.Placement = PlacementMode.AbsolutePoint;
