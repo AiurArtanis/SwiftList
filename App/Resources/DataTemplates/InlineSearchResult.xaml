@@ -6,6 +6,7 @@
                     xmlns:services="clr-namespace:SwiftList.App.Services">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="../Styles/Colors.xaml"/>
+        <ResourceDictionary Source="ShortcutHintBadge.xaml"/>
     </ResourceDictionary.MergedDictionaries>
     <local:SplitColumnsConverter x:Key="SplitColumnsConverter"/>
     <!-- ═══════════ Inline Search Result Item Template ═══════════ -->
@@ -236,57 +237,14 @@
                     </TextBlock.Style>
                 </TextBlock>
             </Grid>
-            <!-- Keyboard shortcut hint: same pill badge as the quick window's SearchResultTemplate
-                 (DataTemplates.xaml), which was left as bare text here: the one surface that never got
-                 the Flow Launcher badge treatment. -->
-            <Border Grid.Column="2"
-                    Margin="14,0,0,0"
-                    CornerRadius="4"
-                    BorderThickness="1"
-                    VerticalAlignment="Center"
-                    BorderBrush="Transparent">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Visibility" Value="{Binding ShortcutVisibility}"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <!-- Selected state (see DataTemplates.xaml's own copy of this badge for the full
-                     history): both the base fill and the selected-state tint are low-opacity washes
-                     on separate overlay elements behind the text (so their Opacity never dims the
-                     text itself), rather than an opaque fill or a recolored border/text. Both overlays
-                     cover the OUTER border's full extent (no padding of their own, text carries the
-                     padding instead): an inset overlay would read as a smaller pill than the outer
-                     border's own edge. -->
-                <Grid>
-                    <Border CornerRadius="4" IsHitTestVisible="False" Background="{DynamicResource HoverBackground}" Opacity="0.5"/>
-                    <Border CornerRadius="4" IsHitTestVisible="False">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Background" Value="{DynamicResource AccentBlue}"/>
-                                <Setter Property="Opacity" Value="0"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                                        <Setter Property="Opacity" Value="0.05"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                    </Border>
-                    <TextBlock Text="{Binding ShortcutHint}"
-                               Padding="7,3,7,3"
-                               VerticalAlignment="Center"
-                               FontSize="12"
-                               Foreground="{DynamicResource ShortcutColor}"/>
-                </Grid>
-            </Border>
+            <!-- Shared badge markup: see ShortcutHintBadge.xaml's own comment for the full design
+                 history. FontSize is set here (not inside the shared template) so this window's own
+                 12pt badge text stays exactly what it was before the badge was shared with the
+                 full/quick search window's 11pt version. -->
+            <ContentPresenter Grid.Column="2"
+                               TextElement.FontSize="12"
+                               Content="{Binding}"
+                               ContentTemplate="{StaticResource ShortcutHintBadgeTemplate}"/>
         </Grid>
     </DataTemplate>
 </ResourceDictionary>

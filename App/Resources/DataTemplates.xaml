@@ -5,6 +5,7 @@
                     xmlns:helpers="clr-namespace:SwiftList.App.Helpers">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="Styles/Colors.xaml"/>
+        <ResourceDictionary Source="DataTemplates/ShortcutHintBadge.xaml"/>
         <ResourceDictionary Source="DataTemplates/InlineSearchResult.xaml"/>
         <ResourceDictionary Source="DataTemplates/ActionMenuItem.xaml"/>
     </ResourceDictionary.MergedDictionaries>
@@ -158,61 +159,14 @@
                 </ScrollViewer>
             </StackPanel>
 
-            <!-- Keyboard shortcut hint: a pill-shaped badge (Flow Launcher style) rather than bare text,
-                 reusing HoverBackground/ShortcutColor/AccentBlue (already defined in every theme) instead
-                 of introducing new themed resources every theme file would need to add too.
-                 Used to be filled with a fully opaque HoverBackground, but the row's OWN selected
-                 background is that same color (ResultItemStyle in ListBox.xaml): filled-on-filled made
-                 the badge disappear entirely on a selected row. A saturated AccentBlue outline (border +
-                 text) and a plain brighter/bolder text were both tried next, but each still read as too
-                 attention-grabbing next to the row's own left accent bar. Now both the base fill and the
-                 selected-state tint are low-opacity washes on separate overlay elements behind the text
-                 (so their Opacity never dims the text itself), rather than an opaque fill or a recolored
-                 border/text. -->
-            <Border Grid.Column="2"
-                    Margin="14,0,0,0"
-                    CornerRadius="4"
-                    BorderThickness="1"
-                    VerticalAlignment="Center"
-                    BorderBrush="Transparent">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Visibility" Value="{Binding ShortcutVisibility}"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsEmptyResult}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsSearchSectionHeader}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <!-- Both overlays cover the OUTER border's full extent (no padding of their own), and the
-                     text carries the padding instead: an inset overlay (sized to just the padded text
-                     area) would read as a smaller pill than the outer border's own edge. -->
-                <Grid>
-                    <Border CornerRadius="4" IsHitTestVisible="False" Background="{DynamicResource HoverBackground}" Opacity="0.5"/>
-                    <Border CornerRadius="4" IsHitTestVisible="False">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Background" Value="{DynamicResource AccentBlue}"/>
-                                <Setter Property="Opacity" Value="0"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}, Path=IsSelected}" Value="True">
-                                        <Setter Property="Opacity" Value="0.05"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                    </Border>
-                    <TextBlock Text="{Binding ShortcutHint}"
-                               Padding="7,3,7,3"
-                               VerticalAlignment="Center"
-                               FontSize="11"
-                               Foreground="{DynamicResource ShortcutColor}"/>
-                </Grid>
-            </Border>
+            <!-- Shared badge markup: see ShortcutHintBadge.xaml's own comment for the full design
+                 history. FontSize is set here (not inside the shared template) so this window's own
+                 11pt badge text stays exactly what it was before the badge was shared with the
+                 inline search window's 12pt version. -->
+            <ContentPresenter Grid.Column="2"
+                               TextElement.FontSize="11"
+                               Content="{Binding}"
+                               ContentTemplate="{StaticResource ShortcutHintBadgeTemplate}"/>
         </Grid>
     </DataTemplate>
 

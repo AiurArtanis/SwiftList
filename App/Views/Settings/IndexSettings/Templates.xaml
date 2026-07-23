@@ -3,9 +3,9 @@
                     xmlns:services="clr-namespace:SwiftList.App.Services">
     <!-- StaticResource inside a DataTemplate resolves against the scope where the template was
          declared, not wherever it's later instantiated. So every key these templates reference
-         (RuleIconButton/BoolToVis from Styles.xaml here, SettingsRow/SettingsButton/SettingsComboBox
-         from the app-level dictionaries) has to be merged in directly, not just by whichever tab
-         UserControl ends up hosting the ItemsControl that uses this template. -->
+         (BoolToVis from Styles.xaml here, RuleIconButtonAccent/SettingsRow/SettingsButton/
+         SettingsComboBox from the app-level dictionaries) has to be merged in directly, not just by
+         whichever tab UserControl ends up hosting the ItemsControl that uses this template. -->
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="pack://application:,,,/SwiftList.App;component/Resources/Styles.xaml"/>
         <ResourceDictionary Source="../../../Resources/Styles/SearchWindow.xaml"/>
@@ -29,12 +29,12 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="&#xE70F;"
                             ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_EditTooltip]}"
-                            Style="{StaticResource RuleIconButton}"
+                            Style="{StaticResource RuleIconButtonAccent}"
                             Command="{Binding DataContext.Exclusions.EditPathCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"/>
                     <Button Content="&#xE74D;"
                             ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_RemoveTooltip]}"
-                            Style="{StaticResource RuleIconButton}"
+                            Style="{StaticResource RuleIconButtonAccent}"
                             Command="{Binding DataContext.Exclusions.RemovePathCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"/>
                 </StackPanel>
@@ -58,12 +58,12 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="&#xE70F;"
                             ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_EditTooltip]}"
-                            Style="{StaticResource RuleIconButton}"
+                            Style="{StaticResource RuleIconButtonAccent}"
                             Command="{Binding DataContext.Exclusions.EditGlobCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"/>
                     <Button Content="&#xE74D;"
                             ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_RemoveTooltip]}"
-                            Style="{StaticResource RuleIconButton}"
+                            Style="{StaticResource RuleIconButtonAccent}"
                             Command="{Binding DataContext.Exclusions.RemoveGlobCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"/>
                 </StackPanel>
@@ -87,12 +87,12 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="&#xE70F;"
                             ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_EditTooltip]}"
-                            Style="{StaticResource RuleIconButton}"
+                            Style="{StaticResource RuleIconButtonAccent}"
                             Command="{Binding DataContext.Exclusions.EditRegexCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"/>
                     <Button Content="&#xE74D;"
                             ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Exclusions_RemoveTooltip]}"
-                            Style="{StaticResource RuleIconButton}"
+                            Style="{StaticResource RuleIconButtonAccent}"
                             Command="{Binding DataContext.Exclusions.RemoveRegexCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="{Binding}"/>
                 </StackPanel>

@@ -42,37 +42,6 @@
                 <Setter Property="FontFamily" Value="Cascadia Mono, Consolas"/>
             </Style>
 
-            <Style x:Key="RuleIconButton" TargetType="Button">
-                <Setter Property="Width" Value="32"/>
-                <Setter Property="Height" Value="32"/>
-                <Setter Property="Margin" Value="6,0,0,0"/>
-                <Setter Property="Padding" Value="0"/>
-                <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
-                <Setter Property="Foreground" Value="{DynamicResource TextSecondary2}"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
-                <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
-                <Setter Property="FontSize" Value="14"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bd" CornerRadius="6" Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBackground}"/>
-                                    <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBlue}"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-
             <DataTemplate x:Key="BlacklistItemTemplate">
                 <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
                     <Grid>
@@ -89,12 +58,12 @@
                         <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
                             <Button Content="&#xE70F;"
                                     ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Blacklist_EditTooltip]}"
-                                    Style="{StaticResource RuleIconButton}"
+                                    Style="{StaticResource RuleIconButtonAccent}"
                                     Command="{Binding DataContext.Blacklist.EditProcessCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
                             <Button Content="&#xE74D;"
                                     ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Blacklist_RemoveTooltip]}"
-                                    Style="{StaticResource RuleIconButton}"
+                                    Style="{StaticResource RuleIconButtonAccent}"
                                     Command="{Binding DataContext.Blacklist.RemoveProcessCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
                         </StackPanel>

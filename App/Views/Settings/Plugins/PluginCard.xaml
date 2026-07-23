@@ -19,29 +19,6 @@
             <conv:BoolToVisibilityConverter x:Key="InvertBoolToVis" Invert="True"/>
             <conv:ComponentTypeToBadgeBrushConverter x:Key="TypeToBrush"/>
 
-            <!-- Plain-text "select all / deselect all" toggle: a real Button (chrome, border,
-                 background) reads as a heavier action than it is next to a group label, so this
-                 uses a hyperlink look instead to match its actual weight. -->
-            <Style x:Key="LinkButton" TargetType="Button">
-                <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Padding" Value="0"/>
-                <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Button">
-                            <TextBlock x:Name="LinkText" Text="{TemplateBinding Content}" FontSize="{TemplateBinding FontSize}"
-                                       Foreground="{TemplateBinding Foreground}"/>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="LinkText" Property="TextDecorations" Value="Underline"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
