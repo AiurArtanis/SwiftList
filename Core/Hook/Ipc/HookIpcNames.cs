@@ -1,4 +1,4 @@
-namespace SwiftList.Core.Hook;
+namespace SwiftList.Core.Hook.Ipc;
 
 /// <summary>
 /// Centralized pipe naming for the hook IPC channel.

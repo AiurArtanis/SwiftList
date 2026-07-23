@@ -2,7 +2,8 @@ using System.Runtime.InteropServices;
 using SwiftList.Core.Hook.InlineSearch;
 
 using SwiftList.Core.Wire;
-namespace SwiftList.Core.Hook;
+using SwiftList.Core.Hook.Commands;
+namespace SwiftList.Core.Hook.Ipc;
 
 public sealed class HookProcess : IDisposable
 {

@@ -3,7 +3,8 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 using SwiftList.PluginSdk.Registries;
 
-namespace SwiftList.Core.Services.Plugin;
+using SwiftList.Core.SearchIndex;
+namespace SwiftList.Core.Services.Plugin.Loading;
 
 public static class ServicePluginLoader
 {

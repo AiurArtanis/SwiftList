@@ -1,5 +1,5 @@
 using SwiftList.Core.Wire;
-namespace SwiftList.Core.Hook;
+namespace SwiftList.Core.Hook.Commands;
 
 // Correlates the App-side blocking ExecuteItem call with the Hook's async reply over the event pipe.
 public static class InlineAdapterIpcCoordinator

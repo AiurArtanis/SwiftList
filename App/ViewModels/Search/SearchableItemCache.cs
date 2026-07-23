@@ -3,6 +3,7 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.App.Services;
 
 using SwiftList.App.Services.Plugin;
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.App.ViewModels.Search;
 
 // Owns the per-provider load/cache lifecycle for ISearchableItemProvider -- split out of
@@ -69,7 +70,7 @@ internal static class SearchableItemCache
                 {
                     if (item == null) continue;
                     var aliases = provider.EnableAlias
-                        ? Core.AliasProviderRegistry.GetActiveProviders()
+                        ? AliasProviderRegistry.GetActiveProviders()
                             .Where(p => p.CanHandle(item.Title))
                             .SelectMany(p => p.GetAliases(item.Title))
                             .ToList()

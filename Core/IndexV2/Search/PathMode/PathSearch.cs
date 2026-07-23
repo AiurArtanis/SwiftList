@@ -3,7 +3,8 @@ using SwiftList.Core.SearchIndex.Fzf;
 using SwiftList.Core.IndexV2.Delta;
 
 using SwiftList.Core.IndexV2.Persistence;
-namespace SwiftList.Core.IndexV2.Search;
+using SwiftList.Core.SearchIndex.Query;
+namespace SwiftList.Core.IndexV2.Search.PathMode;
 
 // Path-mode search entry point + exact-path navigation, mirroring PathExtensions.SearchPath /
 // TrySearchDirectoryChildren. Fuzzy dir+file matching lives in PathSearchFuzzy (split to stay under

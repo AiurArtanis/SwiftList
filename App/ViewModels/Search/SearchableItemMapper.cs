@@ -5,6 +5,7 @@ using SwiftList.Core;
 
 using SwiftList.App.Services.Plugin;
 using SwiftList.App.Services.ShellIcons;
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.App.ViewModels.Search;
 
 public static class SearchableItemMapper

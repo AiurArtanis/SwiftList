@@ -1,5 +1,6 @@
 using SwiftList.Core;
 
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.App.Services.ShellMenu.Presenter;
 
 public static class ShellMenuFilter

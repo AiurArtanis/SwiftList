@@ -1,5 +1,6 @@
 using SwiftList.Core.Wire;
-namespace SwiftList.Core.Hook;
+using SwiftList.Core.Hook.Ipc;
+namespace SwiftList.Core.Hook.Commands;
 
 public sealed class HookCommandHandler
 {

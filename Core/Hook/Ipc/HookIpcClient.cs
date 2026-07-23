@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using SwiftList.Core.Wire;
-namespace SwiftList.Core.Hook;
+using SwiftList.Core.Hook.Commands;
+namespace SwiftList.Core.Hook.Ipc;
 
 public sealed class HookIpcClient : IDisposable
 {

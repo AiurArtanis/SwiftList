@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
-namespace SwiftList.Core;
+namespace SwiftList.Core.SearchIndex;
 
 public static class AliasProviderRegistry
 {

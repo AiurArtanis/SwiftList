@@ -3,6 +3,7 @@ using SwiftList.Core;
 
 using SwiftList.Core.Services.Search;
 
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.App.ViewModels.Search;
 
 public static class ExplorerSearchHelper

@@ -1,3 +1,4 @@
+using SwiftList.Core.SearchIndex.Query;
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
 public static class NetworkIndexerSearchExtensions

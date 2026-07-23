@@ -17,6 +17,7 @@ using SwiftList.App.Services.Update;
 using SwiftList.App.Services.UrlProtocol;
 using SwiftList.App.Services.ShellMenu.QuickNav;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
+using SwiftList.Core.Hook.Ipc;
 namespace SwiftList.App;
 
 public partial class App : Application
@@ -29,7 +30,7 @@ public partial class App : Application
     private static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
 
     private Mutex? _appMutex;
-    public static Core.Hook.HookIpcClient? HookClient { get; private set; }
+    public static HookIpcClient? HookClient { get; private set; }
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -96,7 +97,7 @@ public partial class App : Application
             return;
         }
 
-        HookClient = new Core.Hook.HookIpcClient();
+        HookClient = new HookIpcClient();
 
         HookClient.OnMouseDoubleClick += (x, y) =>
         {

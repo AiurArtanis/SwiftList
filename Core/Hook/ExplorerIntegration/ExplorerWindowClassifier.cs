@@ -3,6 +3,7 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Registries;
 
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
+using SwiftList.Core.Hook.InlineSearch;
 namespace SwiftList.Core.Hook;
 
 /// <summary>

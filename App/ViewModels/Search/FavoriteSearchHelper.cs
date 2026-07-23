@@ -4,6 +4,7 @@ using SwiftList.App.Services;
 using SwiftList.Core;
 using SwiftList.PluginSdk.Helpers;
 
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.App.ViewModels.Search;
 
 public static class FavoriteSearchHelper

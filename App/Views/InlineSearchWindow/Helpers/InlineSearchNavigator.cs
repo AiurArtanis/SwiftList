@@ -5,6 +5,7 @@ using SwiftList.Core;
 using SwiftList.Core.Hook;
 using SwiftList.App.Services.Plugin;
 using SwiftList.Core.Wire;
+using SwiftList.Core.Hook.Commands;
 namespace SwiftList.App.Views.InlineSearchWindow.Helpers;
 
 public static class InlineSearchNavigator

@@ -1,4 +1,4 @@
-namespace SwiftList.Core;
+namespace SwiftList.Core.SearchIndex.Query;
 
 // Splits an optional trailing "<query> :a,b,c" suffix off a raw search query into raw tokens --
 // deliberately dumb: it has no idea what a token means (that's up to whichever IQueryTokenProvider

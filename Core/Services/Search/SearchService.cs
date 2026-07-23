@@ -3,6 +3,8 @@ using SwiftList.Core.Indexer.Usn;
 using SwiftList.Core.Services.Network;
 
 using SwiftList.Core.Wire;
+using SwiftList.Core.SearchIndex;
+using SwiftList.Core.SearchIndex.Query;
 namespace SwiftList.Core.Services.Search;
 
 public class SearchService : IDisposable

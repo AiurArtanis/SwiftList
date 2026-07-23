@@ -4,7 +4,7 @@ using SwiftList.Core.SearchIndex.Fzf;
 using SwiftList.Core.IndexV2.Delta;
 
 using SwiftList.Core.IndexV2.Persistence;
-namespace SwiftList.Core.IndexV2.Search;
+namespace SwiftList.Core.IndexV2.Search.PathMode;
 
 // Fuzzy path-mode matching as a thin layer over the shared name-mode pipeline: the file part runs
 // through the SAME phase A as name search (SearchMatcherPath -- mask prefilter, byte path, pooled

@@ -4,6 +4,7 @@ using SwiftList.Core;
 using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.App.Services.PluginManagerCore;
 
 /// <summary>

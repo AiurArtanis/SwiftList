@@ -1,6 +1,7 @@
 using System.Text;
 using SwiftList.Core;
 
+using SwiftList.Core.SearchIndex.Query;
 namespace SwiftList.Cli.Search;
 
 // Owns everything about "what's currently on screen and why": the live query text, the current result

@@ -1,3 +1,4 @@
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.Core.IndexV2.Alias;
 
 // Alias generation for snapshot building and delta rows -- same providers, same lowercasing, same

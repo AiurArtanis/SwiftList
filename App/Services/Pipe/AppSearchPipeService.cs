@@ -8,6 +8,8 @@ using SwiftList.Core.Services.Search;
 
 using SwiftList.Core.Services.Pipe;
 using SwiftList.Core.Wire;
+using SwiftList.Core.SearchIndex;
+using SwiftList.Core.SearchIndex.Query;
 namespace SwiftList.App.Services.Pipe;
 
 // Prototype: lets an external client (e.g. a CLI) reuse the App's own already-initialized search state

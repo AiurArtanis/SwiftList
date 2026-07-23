@@ -1,6 +1,8 @@
 using SwiftList.Core;
 
 using SwiftList.Core.Services.Plugin;
+using SwiftList.Core.SearchIndex;
+using SwiftList.Core.Services.Plugin.DirectoryIndex;
 namespace SwiftList.App.Services.Plugin;
 
 /// <summary>

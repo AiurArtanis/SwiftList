@@ -8,6 +8,7 @@ using SwiftList.Core.IndexV2.Search;
 
 using SwiftList.Core.IndexV2.Persistence;
 using SwiftList.Core.Indexer.NetworkDrive.Walk;
+using SwiftList.Core.SearchIndex.Query;
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
 // Wraps one network/WSL/folder-index drive's IndexV2 LiveIndex. IsComplete/ExclusionRulesFingerprint/

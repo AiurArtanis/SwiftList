@@ -4,6 +4,8 @@ using SwiftList.Core.Services;
 
 using SwiftList.Core.Services.Plugin;
 
+using SwiftList.Core.Hook.Ipc;
+using SwiftList.Core.Services.Plugin.Loading;
 namespace SwiftList.Service;
 
 // Hook-mode bootstrap: DPI awareness, plugin loading for path collectors, and the Win32 message loop that

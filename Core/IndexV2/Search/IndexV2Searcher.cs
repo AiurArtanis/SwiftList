@@ -1,5 +1,7 @@
 using SwiftList.Core.SearchIndex.Fzf;
 
+using SwiftList.Core.IndexV2.Search.PathMode;
+using SwiftList.Core.SearchIndex.Query;
 namespace SwiftList.Core.IndexV2.Search;
 
 // Top-level search entry point for a single drive's LiveIndex, mirroring Searcher.SearchStreaming's

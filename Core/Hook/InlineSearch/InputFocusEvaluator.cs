@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SwiftList.Core.Hook;
+namespace SwiftList.Core.Hook.InlineSearch;
 
 public static class InputFocusEvaluator
 {

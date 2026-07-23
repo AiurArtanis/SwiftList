@@ -7,6 +7,7 @@ using SwiftList.Core;
 using Brush = System.Windows.Media.Brush;
 using Color = System.Windows.Media.Color;
 
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.App.Converters;
 
 /// <summary>

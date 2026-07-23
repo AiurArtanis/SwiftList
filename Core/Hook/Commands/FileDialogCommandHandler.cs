@@ -4,7 +4,8 @@ using SwiftList.PluginSdk.Registries;
 
 using SwiftList.Core.Wire;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
-namespace SwiftList.Core.Hook;
+using SwiftList.Core.Hook.Ipc;
+namespace SwiftList.Core.Hook.Commands;
 
 // Split out of HookCommandHandler to keep that file under the line-count limit. Handles
 // NavigateDialog/RestoreDialogFocus, dispatching to IFileDialogAdapter in the Hook process. Also

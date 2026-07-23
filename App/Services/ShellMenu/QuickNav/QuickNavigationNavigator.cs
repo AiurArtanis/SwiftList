@@ -6,6 +6,7 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 
 using SwiftList.Core.Wire;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
+using SwiftList.Core.Hook.Commands;
 namespace SwiftList.App.Services.ShellMenu.QuickNav;
 
 // Everything about "what was the active host" that NavigateOrOpen needs, captured once by the caller

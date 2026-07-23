@@ -1,7 +1,7 @@
 using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
-namespace SwiftList.Core;
+namespace SwiftList.Core.SearchIndex;
 
 // A standalone, public entry point for the exact "name, falling back to alias" matching rule the core
 // index scan already applies per record (see RecordSearch/CacheExtensions.cs and its siblings), for

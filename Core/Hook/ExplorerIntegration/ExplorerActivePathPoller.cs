@@ -1,5 +1,6 @@
 using System.Text;
 using SwiftList.PluginSdk.Registries;
+using SwiftList.Core.Hook.InlineSearch;
 namespace SwiftList.Core.Hook;
 
 internal sealed class ExplorerActivePathPoller

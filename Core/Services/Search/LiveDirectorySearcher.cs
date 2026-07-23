@@ -1,5 +1,6 @@
 using SwiftList.Core.SearchIndex.Fzf;
 
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.Core.Services.Search;
 
 public static class LiveDirectorySearcher

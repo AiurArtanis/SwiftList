@@ -6,6 +6,7 @@ using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings;
 
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.App;
 
 // Title-bar search box + results popup for SettingsWindow, as extension methods (matching RuntimeIndex's
@@ -56,7 +57,7 @@ internal static class SettingsWindowSearchExtensions
                 continue;
 
             var label = TranslationManager.Instance[entry.LabelKey];
-            if (Core.FuzzyMatcher.IsMatch(query, label))
+            if (FuzzyMatcher.IsMatch(query, label))
                 results.Add(new SettingsSearchResultItem(label, BuildBreadcrumb(entry), entry.Section, entry.Activate, entry.TargetElementName));
         }
 
@@ -70,13 +71,13 @@ internal static class SettingsWindowSearchExtensions
                 var capturedPlugin = plugin;
                 void ExpandPlugin(SettingsViewModel _) => capturedPlugin.IsExpanded = true;
 
-                if (Core.FuzzyMatcher.IsMatch(query, plugin.Name))
+                if (FuzzyMatcher.IsMatch(query, plugin.Name))
                     results.Add(new SettingsSearchResultItem(plugin.Name, pluginsSectionLabel, "Plugins", ExpandPlugin,
                         Reveal: new SettingsSearchDynamicReveal("PluginsList", capturedPlugin)));
 
                 foreach (var component in plugin.RawComponents)
                 {
-                    if (Core.FuzzyMatcher.IsMatch(query, component.DisplayName))
+                    if (FuzzyMatcher.IsMatch(query, component.DisplayName))
                         results.Add(new SettingsSearchResultItem(component.DisplayName, $"{pluginsSectionLabel} › {plugin.Name}", "Plugins", ExpandPlugin,
                             Reveal: new SettingsSearchDynamicReveal("PluginsList", capturedPlugin, component)));
                 }
@@ -89,13 +90,13 @@ internal static class SettingsWindowSearchExtensions
                 var capturedGroup = group;
                 void SelectPluginActionsTab(SettingsViewModel v) => v.Hotkeys.SelectedTab = "PluginActions";
 
-                if (Core.FuzzyMatcher.IsMatch(query, group.PluginName))
+                if (FuzzyMatcher.IsMatch(query, group.PluginName))
                     results.Add(new SettingsSearchResultItem(group.PluginName, $"{hotkeysSectionLabel} › {pluginActionsTabLabel}", "Hotkeys", SelectPluginActionsTab,
                         Reveal: new SettingsSearchDynamicReveal("PluginActionGroupsList", capturedGroup)));
 
                 foreach (var action in group.Items)
                 {
-                    if (Core.FuzzyMatcher.IsMatch(query, action.DisplayName))
+                    if (FuzzyMatcher.IsMatch(query, action.DisplayName))
                         results.Add(new SettingsSearchResultItem(action.DisplayName, $"{hotkeysSectionLabel} › {pluginActionsTabLabel} › {group.PluginName}", "Hotkeys", SelectPluginActionsTab,
                             Reveal: new SettingsSearchDynamicReveal("PluginActionGroupsList", capturedGroup, action)));
                 }
@@ -108,13 +109,13 @@ internal static class SettingsWindowSearchExtensions
                 var capturedGroup = group;
                 void SelectPluginTabsSubTab(SettingsViewModel v) => v.StartupPanel.SelectedSubTab = "PluginTabs";
 
-                if (Core.FuzzyMatcher.IsMatch(query, group.PluginName))
+                if (FuzzyMatcher.IsMatch(query, group.PluginName))
                     results.Add(new SettingsSearchResultItem(group.PluginName, $"{startupPanelSectionLabel} › {pluginTabsTabLabel}", "StartupPanel", SelectPluginTabsSubTab,
                         Reveal: new SettingsSearchDynamicReveal("PluginTabGroupsList", capturedGroup)));
 
                 foreach (var tab in group.Tabs)
                 {
-                    if (Core.FuzzyMatcher.IsMatch(query, tab.Label))
+                    if (FuzzyMatcher.IsMatch(query, tab.Label))
                         results.Add(new SettingsSearchResultItem(tab.Label, $"{startupPanelSectionLabel} › {pluginTabsTabLabel} › {group.PluginName}", "StartupPanel", SelectPluginTabsSubTab,
                             Reveal: new SettingsSearchDynamicReveal("PluginTabGroupsList", capturedGroup, tab)));
                 }

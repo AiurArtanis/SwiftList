@@ -1,5 +1,6 @@
 using SwiftList.Core.Services.Network;
 
+using SwiftList.Core.SearchIndex.Query;
 namespace SwiftList.Core.Services.Search;
 
 internal static class SearchServiceHelper

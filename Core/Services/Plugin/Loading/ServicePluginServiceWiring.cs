@@ -1,7 +1,7 @@
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 
-namespace SwiftList.Core.Services.Plugin;
+namespace SwiftList.Core.Services.Plugin.Loading;
 
 // Bridges PluginSdk's static service delegates (TranslationService, PluginSettingsService) to their
 // Core implementations for the elevated service/hook process. Kept separate from ServicePluginLoader,

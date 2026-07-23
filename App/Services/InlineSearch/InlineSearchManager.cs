@@ -7,6 +7,7 @@ using SwiftList.App.Views.InlineSearchWindow.Helpers;
 
 using SwiftList.App.Services.ShellIcons;
 using SwiftList.Core.Wire;
+using SwiftList.Core.Hook.InlineSearch;
 namespace SwiftList.App.Services;
 
 /// <summary>

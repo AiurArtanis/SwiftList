@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Channels;
 
 using SwiftList.Core.Wire;
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.Core.Services.Search;
 
 using SwiftList.Core;

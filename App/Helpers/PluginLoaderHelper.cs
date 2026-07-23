@@ -10,6 +10,7 @@ using SwiftList.PluginSdk.Registries;
 
 using SwiftList.App.Services.Plugin;
 
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.App.Helpers;
 
 public static class PluginLoaderHelper

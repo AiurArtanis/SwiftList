@@ -1,4 +1,4 @@
-namespace SwiftList.Core;
+namespace SwiftList.Core.SearchIndex.Query;
 
 public static class SearchQueryParser
 {

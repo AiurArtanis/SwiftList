@@ -1,6 +1,7 @@
 using System.IO;
 using SwiftList.Core;
 
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.App.ViewModels.Search;
 
 public static class SearchResultMapper

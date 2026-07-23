@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using SwiftList.Core.Services.Search;
 
-namespace SwiftList.Core.Hook;
+namespace SwiftList.Core.Hook.Ipc;
 
 // Split out of HookIpcClient to keep that file under the line-count limit. The App never spawns the hook
 // process itself anymore -- every launch (elevated or not) is asked of the already-running --service

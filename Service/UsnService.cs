@@ -5,6 +5,7 @@ using SwiftList.Core.Services;
 
 using SwiftList.Core.Services.Plugin;
 
+using SwiftList.Core.Services.Plugin.Loading;
 namespace SwiftList.Service;
 
 public class UsnService : ServiceBase

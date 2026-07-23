@@ -3,7 +3,7 @@ using System.Threading.Channels;
 using SwiftList.Core.Services.Pipe;
 
 using SwiftList.Core.Wire;
-namespace SwiftList.Core.Hook;
+namespace SwiftList.Core.Hook.Ipc;
 
 /// <summary>
 /// Runs inside the hook process.

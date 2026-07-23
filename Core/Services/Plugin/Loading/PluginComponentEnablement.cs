@@ -1,6 +1,6 @@
 using SwiftList.PluginSdk.Registries;
 
-namespace SwiftList.Core.Services.Plugin;
+namespace SwiftList.Core.Services.Plugin.Loading;
 
 // Component-enablement policy for the hook process: is a given plugin component (inline-search adapter,
 // file-dialog adapter, active-path collector, alias provider) currently enabled per UserSettings'

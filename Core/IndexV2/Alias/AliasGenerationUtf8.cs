@@ -1,6 +1,7 @@
 using SwiftList.Core.SearchIndex.Fzf;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
+using SwiftList.Core.SearchIndex;
 namespace SwiftList.Core.IndexV2.Alias;
 
 // Byte-native twin of AliasGeneration for the snapshot bulk path: aliases arrive as UTF-8 segments
