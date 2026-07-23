@@ -42,7 +42,7 @@ public static class UriRouter
                     break;
 
                 case "settings":
-                    AppWindowManager.ShowSettingsWindow(string.IsNullOrEmpty(arg) ? null : arg);
+                    RouteSettings(arg, uriString);
                     break;
 
                 default:
@@ -50,5 +50,26 @@ public static class UriRouter
                     break;
             }
         }));
+    }
+
+    // "page/<section>" switches to a top-level sidebar section (e.g. "page/Index"), matching the tag
+    // values SettingsWindow.SelectSection already accepts. A separate "entry/<index>" form (jump to one
+    // specific setting row, with the search-jump highlight) is not wired up yet.
+    private static void RouteSettings(string arg, string uriString)
+    {
+        if (arg.Length == 0)
+        {
+            AppWindowManager.ShowSettingsWindow();
+            return;
+        }
+
+        var segments = arg.Split('/', 2, StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 2 && segments[0].Equals("page", StringComparison.OrdinalIgnoreCase))
+        {
+            AppWindowManager.ShowSettingsWindow(segments[1]);
+            return;
+        }
+
+        Logger.Log($"[UriRouter] Unknown settings sub-route: {uriString}", LogLevel.Warn);
     }
 }

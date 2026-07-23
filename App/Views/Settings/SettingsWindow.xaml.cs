@@ -72,6 +72,8 @@ public partial class SettingsWindow : Window
         }
     }
 
+    // Case-insensitive: callers include swiftlist://settings/page/<section>, external/typed input that
+    // shouldn't have to match this internal tag's exact casing.
     public void SelectSection(string tag)
     {
         if (LstSections == null || LstSectionsBottom == null)
@@ -79,7 +81,7 @@ public partial class SettingsWindow : Window
 
         foreach (ListBoxItem item in LstSections.Items)
         {
-            if (item.Tag as string == tag)
+            if (string.Equals(item.Tag as string, tag, StringComparison.OrdinalIgnoreCase))
             {
                 LstSectionsBottom.SelectedItem = null;
                 LstSections.SelectedItem = item;
@@ -88,7 +90,7 @@ public partial class SettingsWindow : Window
         }
         foreach (ListBoxItem item in LstSectionsBottom.Items)
         {
-            if (item.Tag as string == tag)
+            if (string.Equals(item.Tag as string, tag, StringComparison.OrdinalIgnoreCase))
             {
                 LstSections.SelectedItem = null;
                 LstSectionsBottom.SelectedItem = item;
