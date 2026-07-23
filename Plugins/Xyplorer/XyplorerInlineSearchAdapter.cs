@@ -4,6 +4,7 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 using SwiftList.Plugins.Xyplorer.Win32;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Plugins.Xyplorer;
 
 /// <summary>

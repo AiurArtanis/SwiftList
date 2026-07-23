@@ -1,4 +1,4 @@
-namespace SwiftList.PluginSdk.Abstractions.Plugins;
+namespace SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 
 /// <summary>
 /// Optional capability of a preview control (the UIElement returned from

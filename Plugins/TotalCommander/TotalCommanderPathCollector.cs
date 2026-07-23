@@ -2,6 +2,7 @@ using System.IO;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.Plugins.TotalCommander.Win32;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Plugins.TotalCommander;
 
 /// <summary>

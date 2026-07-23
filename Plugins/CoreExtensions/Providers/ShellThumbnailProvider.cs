@@ -7,6 +7,7 @@ using System.Windows.Media.Imaging;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 namespace SwiftList.Plugins.CoreExtensions.Providers;
 
 public class ShellThumbnailProvider : IThumbnailProvider

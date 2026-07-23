@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace SwiftList.PluginSdk.Abstractions.Plugins;
+namespace SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 
 /// <summary>
 /// Interface that allows plugins to provide custom UI previews for files or folders.

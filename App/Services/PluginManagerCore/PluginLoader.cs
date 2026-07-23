@@ -1,6 +1,8 @@
 using System.IO;
 using System.Reflection;
 using SwiftList.Core;
+using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 
 namespace SwiftList.App.Services.PluginManagerCore;
 
@@ -109,44 +111,44 @@ internal static class PluginLoader
                     Logger.Log($"[PluginManager] Loaded theme provider: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.Abstractions.Plugins.IActivePathCollector).IsAssignableFrom(type))
+                if (typeof(IActivePathCollector).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.Abstractions.Plugins.IActivePathCollector)Activator.CreateInstance(type)!;
+                    var provider = (IActivePathCollector)Activator.CreateInstance(type)!;
                     registry.AddActivePathCollector(provider);
                     Logger.Log($"[PluginManager] Loaded active path collector: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.Abstractions.Plugins.IFilePreviewProvider).IsAssignableFrom(type))
+                if (typeof(IFilePreviewProvider).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.Abstractions.Plugins.IFilePreviewProvider)Activator.CreateInstance(type)!;
+                    var provider = (IFilePreviewProvider)Activator.CreateInstance(type)!;
                     registry.AddFilePreviewProvider(provider);
                     Logger.Log($"[PluginManager] Loaded file preview provider: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.Abstractions.Plugins.IFileDialogAdapter).IsAssignableFrom(type))
+                if (typeof(IFileDialogAdapter).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.Abstractions.Plugins.IFileDialogAdapter)Activator.CreateInstance(type)!;
+                    var provider = (IFileDialogAdapter)Activator.CreateInstance(type)!;
                     PluginSdk.Registries.FileDialogAdapterRegistry.Register(provider);
                     Logger.Log($"[PluginManager] Loaded file dialog adapter: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.Abstractions.Plugins.IInlineSearchAdapter).IsAssignableFrom(type))
+                if (typeof(IInlineSearchAdapter).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.Abstractions.Plugins.IInlineSearchAdapter)Activator.CreateInstance(type)!;
+                    var provider = (IInlineSearchAdapter)Activator.CreateInstance(type)!;
                     PluginSdk.Registries.InlineSearchAdapterRegistry.Register(provider);
                     Logger.Log($"[PluginManager] Loaded inline search adapter: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.Abstractions.Plugins.IQuickNavigationProvider).IsAssignableFrom(type))
+                if (typeof(IQuickNavigationProvider).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.Abstractions.Plugins.IQuickNavigationProvider)Activator.CreateInstance(type)!;
+                    var provider = (IQuickNavigationProvider)Activator.CreateInstance(type)!;
                     registry.AddQuickNavigationProvider(provider);
                     Logger.Log($"[PluginManager] Loaded quick navigation provider: '{type.Name}' from {fileName}");
                 }
 
-                if (typeof(PluginSdk.Abstractions.Plugins.IThumbnailProvider).IsAssignableFrom(type))
+                if (typeof(IThumbnailProvider).IsAssignableFrom(type))
                 {
-                    var provider = (PluginSdk.Abstractions.Plugins.IThumbnailProvider)Activator.CreateInstance(type)!;
+                    var provider = (IThumbnailProvider)Activator.CreateInstance(type)!;
                     registry.AddThumbnailProvider(provider);
                     Logger.Log($"[PluginManager] Loaded thumbnail provider: '{type.Name}' from {fileName}");
                 }

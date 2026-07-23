@@ -1,4 +1,4 @@
-namespace SwiftList.PluginSdk.Abstractions.Plugins;
+namespace SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 
 /// <summary>
 /// Contract for collecting the active directory/file path from a specific window class.

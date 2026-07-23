@@ -1,4 +1,4 @@
-namespace SwiftList.PluginSdk.Abstractions.Plugins;
+namespace SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 
 public enum MouseTriggerType
 {

@@ -4,6 +4,7 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using Logger = SwiftList.Core.Logger;
 using LogLevel = SwiftList.Core.LogLevel;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.App.Services.ShellMenu.QuickNav;
 
 public static class QuickNavigationPathResolver

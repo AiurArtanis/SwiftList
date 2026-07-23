@@ -17,6 +17,7 @@ using MouseButtonEventHandler = System.Windows.Input.MouseButtonEventHandler;
 using SwiftList.App.Services.Plugin;
 using SwiftList.App.Services.ShellIcons;
 using SwiftList.App.Services.ShellMenu.ActionFlyout;
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.App.Services.ShellMenu.QuickNav;
 
 public static class QuickNavigationMenu

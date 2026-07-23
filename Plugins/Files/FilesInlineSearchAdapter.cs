@@ -4,6 +4,7 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 using SwiftList.Plugins.Files.Automation;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Plugins.Files;
 
 /// <summary>

@@ -2,6 +2,7 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Helpers;
 using SwiftList.Plugins.DirectoryOpus.Win32;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Plugins.DirectoryOpus;
 
 public class DirectoryOpusPathCollector : IActivePathCollector

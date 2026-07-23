@@ -10,6 +10,7 @@ using SwiftList.App.Services.Plugin;
 using SwiftList.App.Services.ShellIcons;
 using SwiftList.App.Services.Theme;
 using SwiftList.App.Helpers.Visuals;
+using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 namespace SwiftList.App.Views.QuickLook;
 
 public partial class QuickLookWindow : Window

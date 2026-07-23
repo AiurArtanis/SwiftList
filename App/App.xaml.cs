@@ -16,6 +16,7 @@ using SwiftList.App.Services.Theme;
 using SwiftList.App.Services.Update;
 using SwiftList.App.Services.UrlProtocol;
 using SwiftList.App.Services.ShellMenu.QuickNav;
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.App;
 
 public partial class App : Application
@@ -104,7 +105,7 @@ public partial class App : Application
             var trk = InlineSearchManager.Instance.ExplorerTracker;
             var proc = GetProcessNameOfWindow(trk.ActiveHwnd);
             var cls = GetClassNameOfWindow(trk.ActiveHwnd);
-            if (QuickNavigationTriggerGate.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, PluginSdk.Abstractions.Plugins.MouseTriggerType.DoubleClick))
+            if (QuickNavigationTriggerGate.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, MouseTriggerType.DoubleClick))
                 Dispatcher.BeginInvoke(() => QuickNavigationMenu.Show(x, y));
         };
 
@@ -115,7 +116,7 @@ public partial class App : Application
             var trk = InlineSearchManager.Instance.ExplorerTracker;
             var proc = GetProcessNameOfWindow(trk.ActiveHwnd);
             var cls = GetClassNameOfWindow(trk.ActiveHwnd);
-            if (QuickNavigationTriggerGate.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, PluginSdk.Abstractions.Plugins.MouseTriggerType.MiddleClick)
+            if (QuickNavigationTriggerGate.CanShow(trk.ActiveHwnd, proc, cls, trk.IsDesktop, x, y, MouseTriggerType.MiddleClick)
                 || FileDialogQuickNavGate.CanShow(trk.ActiveHwnd, proc, cls, x, y))
                 Dispatcher.BeginInvoke(() => QuickNavigationMenu.Show(x, y));
         };

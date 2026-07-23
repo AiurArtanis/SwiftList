@@ -5,6 +5,7 @@ using MenuItem = System.Windows.Controls.MenuItem;
 using ContextMenu = System.Windows.Controls.ContextMenu;
 using Application = System.Windows.Application;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.App.Services.ShellMenu.QuickNav;
 
 // Loads a quick-nav submenu's items in the background -- split out of QuickNavigationMenu purely to

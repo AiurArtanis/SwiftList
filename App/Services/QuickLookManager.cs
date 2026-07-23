@@ -6,6 +6,7 @@ using SwiftList.PluginSdk.Services;
 
 using SwiftList.App.Services.AppWindow;
 using SwiftList.App.Services.Plugin;
+using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 namespace SwiftList.App.Services;
 
 public class QuickLookManager

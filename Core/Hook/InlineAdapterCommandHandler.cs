@@ -3,6 +3,7 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Registries;
 
 using SwiftList.Core.Wire;
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Core.Hook;
 
 // Split out of HookCommandHandler to keep that file under the line-count limit. Runs

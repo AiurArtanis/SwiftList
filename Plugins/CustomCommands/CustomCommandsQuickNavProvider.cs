@@ -2,6 +2,7 @@ using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Plugins.CustomCommands;
 
 // Surfaces commands with ShowInQuickNav=true as root-level entries in the quick navigation cascader.

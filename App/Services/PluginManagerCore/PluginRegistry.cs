@@ -1,5 +1,7 @@
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.App.Services.PluginManagerCore;
 
 /// <summary>

@@ -6,6 +6,7 @@ using System.Windows.Threading;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 namespace SwiftList.Plugins.CoreExtensions.Preview;
 
 // Hosts a native Windows Preview Handler (IPreviewHandler) inside WPF via an HwndHost, so rich formats

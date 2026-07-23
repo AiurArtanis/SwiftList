@@ -5,6 +5,7 @@ using System.Text;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 using SwiftList.Plugins.CoreExtensions.Providers;
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Plugins.CoreExtensions.InlineSearch;
 
 public class ExplorerInlineSearchAdapter : IInlineSearchAdapter

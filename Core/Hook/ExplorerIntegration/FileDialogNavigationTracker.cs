@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Core.Hook;
 
 internal sealed class FileDialogNavigationTracker
@@ -16,7 +17,7 @@ internal sealed class FileDialogNavigationTracker
         _lastExplorerPathUpdateTime = DateTime.Now;
     }
 
-    public void HandleDialogSeen(IntPtr mainDialog, PluginSdk.Abstractions.Plugins.IFileDialogAdapter? adapter, bool previousWasPathProvider)
+    public void HandleDialogSeen(IntPtr mainDialog, IFileDialogAdapter? adapter, bool previousWasPathProvider)
     {
         var isNewDialog = false;
         var dialogFirstSeenTime = _dialogFirstSeenTimes.GetOrAdd(mainDialog, _ =>

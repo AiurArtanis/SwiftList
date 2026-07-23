@@ -1,6 +1,6 @@
 using System.Windows.Media;
 
-namespace SwiftList.PluginSdk.Abstractions.Plugins;
+namespace SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 
 /// <summary>
 /// Provides custom file thumbnails or icon overrides for search results.

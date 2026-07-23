@@ -2,6 +2,7 @@ using System.Text;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Registries;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Core.Hook;
 
 /// <summary>

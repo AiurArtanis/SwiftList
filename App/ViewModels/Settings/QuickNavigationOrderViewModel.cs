@@ -5,6 +5,7 @@ using SwiftList.App.Services;
 using SwiftList.App.Services.PluginManagerCore;
 using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.Core;
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 
 using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.ViewModels.Settings;
@@ -43,7 +44,7 @@ public class QuickNavigationOrderViewModel : ViewModelBase
     public ICommand MoveUpCommand { get; }
     public ICommand MoveDownCommand { get; }
 
-    private static string BuildId(PluginSdk.Abstractions.Plugins.IQuickNavigationProvider provider) =>
+    private static string BuildId(IQuickNavigationProvider provider) =>
         PluginLoaderHelper.MakeId(ComponentFilter.GetDllName(provider), PluginComponentType.QuickNavigationProvider, provider.GetType().Name);
 
     private void MoveUp(QuickNavProviderOrderItem? item)

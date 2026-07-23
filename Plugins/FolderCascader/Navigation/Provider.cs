@@ -3,6 +3,7 @@ using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Plugins.FolderCascader.Navigation;
 
 // Content-only: deciding whether the Quick Navigation popup should open at all for a given click lives

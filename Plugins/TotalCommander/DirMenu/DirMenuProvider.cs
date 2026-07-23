@@ -4,6 +4,7 @@ using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Plugins.TotalCommander.DirMenu;
 
 // Exposes Total Commander's own Directory Hotlist ([DirMenu] in wincmd.ini) as a Quick Navigation cascade.

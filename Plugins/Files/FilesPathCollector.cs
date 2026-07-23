@@ -1,6 +1,7 @@
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.Plugins.Files.Automation;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Plugins.Files;
 
 /// <summary>

@@ -1,6 +1,8 @@
 using SwiftList.Core;
 using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.App.Services.PluginManagerCore;
+using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 
 namespace SwiftList.App.Services.Plugin;
 
@@ -28,10 +30,10 @@ public class PluginManager : PluginRegistry
     private readonly List<PluginSdk.Abstractions.Plugins.IResultColumnProvider> _resultColumnProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.ITranslationProvider> _translationProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.IThemeProvider> _themeProviders = new();
-    private readonly List<PluginSdk.Abstractions.Plugins.IActivePathCollector> _pathCollectors = new();
-    private readonly List<PluginSdk.Abstractions.Plugins.IFilePreviewProvider> _previewProviders = new();
-    private readonly List<PluginSdk.Abstractions.Plugins.IQuickNavigationProvider> _quickNavigationProviders = new();
-    private readonly List<PluginSdk.Abstractions.Plugins.IThumbnailProvider> _thumbnailProviders = new();
+    private readonly List<IActivePathCollector> _pathCollectors = new();
+    private readonly List<IFilePreviewProvider> _previewProviders = new();
+    private readonly List<IQuickNavigationProvider> _quickNavigationProviders = new();
+    private readonly List<IThumbnailProvider> _thumbnailProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.IQueryTokenProvider> _queryTokenProviders = new();
     private readonly List<PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider> _startupPanelTabProviders = new();
     private uint _nextRuntimeActionId = 0x80000000;
@@ -85,14 +87,14 @@ public class PluginManager : PluginRegistry
     void PluginRegistry.AddResultColumnProvider(PluginSdk.Abstractions.Plugins.IResultColumnProvider p) => _resultColumnProviders.Add(p);
     void PluginRegistry.AddTranslationProvider(PluginSdk.Abstractions.Plugins.ITranslationProvider p) => _translationProviders.Add(p);
     void PluginRegistry.AddThemeProvider(PluginSdk.Abstractions.Plugins.IThemeProvider p) => _themeProviders.Add(p);
-    void PluginRegistry.AddActivePathCollector(PluginSdk.Abstractions.Plugins.IActivePathCollector p)
+    void PluginRegistry.AddActivePathCollector(IActivePathCollector p)
     {
         _pathCollectors.Add(p);
         PluginSdk.Registries.ActivePathCollectorRegistry.Register(p);
     }
-    void PluginRegistry.AddFilePreviewProvider(PluginSdk.Abstractions.Plugins.IFilePreviewProvider p) => _previewProviders.Add(p);
-    void PluginRegistry.AddQuickNavigationProvider(PluginSdk.Abstractions.Plugins.IQuickNavigationProvider p) => _quickNavigationProviders.Add(p);
-    void PluginRegistry.AddThumbnailProvider(PluginSdk.Abstractions.Plugins.IThumbnailProvider p) => _thumbnailProviders.Add(p);
+    void PluginRegistry.AddFilePreviewProvider(IFilePreviewProvider p) => _previewProviders.Add(p);
+    void PluginRegistry.AddQuickNavigationProvider(IQuickNavigationProvider p) => _quickNavigationProviders.Add(p);
+    void PluginRegistry.AddThumbnailProvider(IThumbnailProvider p) => _thumbnailProviders.Add(p);
     void PluginRegistry.AddQueryTokenProvider(PluginSdk.Abstractions.Plugins.IQueryTokenProvider p) => _queryTokenProviders.Add(p);
     void PluginRegistry.AddStartupPanelTabProvider(PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider p) => _startupPanelTabProviders.Add(p);
 
@@ -151,7 +153,7 @@ public class PluginManager : PluginRegistry
     // LINQ's OrderBy is a stable sort -- lands it after every listed provider while preserving its
     // original discovery-order position relative to any OTHER unlisted provider, rather than an
     // arbitrary reshuffle.
-    public IEnumerable<PluginSdk.Abstractions.Plugins.IQuickNavigationProvider> QuickNavigationProviders
+    public IEnumerable<IQuickNavigationProvider> QuickNavigationProviders
     {
         get
         {
@@ -167,7 +169,7 @@ public class PluginManager : PluginRegistry
         }
     }
 
-    public IEnumerable<PluginSdk.Abstractions.Plugins.IQuickNavigationProvider> AllQuickNavigationProviders => _quickNavigationProviders;
+    public IEnumerable<IQuickNavigationProvider> AllQuickNavigationProviders => _quickNavigationProviders;
 
     public IEnumerable<PluginSdk.Abstractions.Plugins.IInstantResultProvider> InstantResultProviders
         => _instantResultProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.InstantProvider, p.GetType().Name));
@@ -195,13 +197,13 @@ public class PluginManager : PluginRegistry
 
     public IEnumerable<PluginSdk.Abstractions.Plugins.ITranslationProvider> TranslationProviders => _translationProviders;
     public IEnumerable<PluginSdk.Abstractions.Plugins.IThemeProvider> ThemeProviders => _themeProviders;
-    public IEnumerable<PluginSdk.Abstractions.Plugins.IActivePathCollector> ActivePathCollectors => _pathCollectors;
-    public IEnumerable<PluginSdk.Abstractions.Plugins.IFilePreviewProvider> FilePreviewProviders
+    public IEnumerable<IActivePathCollector> ActivePathCollectors => _pathCollectors;
+    public IEnumerable<IFilePreviewProvider> FilePreviewProviders
         => _previewProviders
             .Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.FilePreviewProvider, p.GetType().Name))
             .OrderByDescending(p => p.Priority);
 
-    public IEnumerable<PluginSdk.Abstractions.Plugins.IThumbnailProvider> ThumbnailProviders
+    public IEnumerable<IThumbnailProvider> ThumbnailProviders
         => _thumbnailProviders
             .Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.ThumbnailProvider, p.GetType().Name));
 
@@ -213,8 +215,8 @@ public class PluginManager : PluginRegistry
 
     // ── Unfiltered collections (settings UI ?show disabled as unchecked) ─
 
-    public IEnumerable<PluginSdk.Abstractions.Plugins.IFilePreviewProvider> AllFilePreviewProviders => _previewProviders;
-    public IEnumerable<PluginSdk.Abstractions.Plugins.IThumbnailProvider> AllThumbnailProviders => _thumbnailProviders;
+    public IEnumerable<IFilePreviewProvider> AllFilePreviewProviders => _previewProviders;
+    public IEnumerable<IThumbnailProvider> AllThumbnailProviders => _thumbnailProviders;
 
     public IEnumerable<PluginActionRegistration> AllActions => _actions;
     public IEnumerable<PluginSdk.Abstractions.Plugins.IDynamicActionProvider> AllDynamicActionProviders => _dynamicActionProviders;

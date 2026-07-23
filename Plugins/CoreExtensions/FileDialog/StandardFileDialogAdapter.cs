@@ -5,6 +5,7 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 using SwiftList.PluginSdk.Helpers;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.Plugins.CoreExtensions.FileDialog;
 
 public class StandardFileDialogAdapter : IFileDialogAdapter

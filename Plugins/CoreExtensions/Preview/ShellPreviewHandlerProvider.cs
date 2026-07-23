@@ -3,6 +3,7 @@ using System.Windows;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 namespace SwiftList.Plugins.CoreExtensions.Preview;
 
 // Previews any file type that has a registered Windows Preview Handler (PDF, Office, RTF, ...), using the

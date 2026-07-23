@@ -10,6 +10,8 @@ using SwiftList.PluginSdk.Registries;
 
 using SwiftList.App.Services.Plugin;
 
+using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.App.Helpers;
 
 internal static class PluginComponentBuilder

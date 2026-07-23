@@ -8,6 +8,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Input;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
+using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 namespace SwiftList.Plugins.CoreExtensions.Preview;
 public class ImagePreviewProvider : IFilePreviewProvider
 {

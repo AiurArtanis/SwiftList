@@ -1,4 +1,4 @@
-namespace SwiftList.PluginSdk.Abstractions.Plugins;
+namespace SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 
 /// <summary>
 /// Optional capability of a preview provider that caches native resources across previews (e.g. a pool of
