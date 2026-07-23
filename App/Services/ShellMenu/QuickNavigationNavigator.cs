@@ -4,6 +4,7 @@ using SwiftList.Core;
 using SwiftList.Core.Hook;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
+using SwiftList.Core.Wire;
 namespace SwiftList.App.Services;
 
 // Everything about "what was the active host" that NavigateOrOpen needs, captured once by the caller

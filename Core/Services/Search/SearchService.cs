@@ -2,6 +2,7 @@ using SwiftList.Core.Indexer.Usn;
 
 using SwiftList.Core.Services.Network;
 
+using SwiftList.Core.Wire;
 namespace SwiftList.Core.Services.Search;
 
 public class SearchService : IDisposable

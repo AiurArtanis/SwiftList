@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using SwiftList.Core;
 
+using SwiftList.Core.Wire;
 namespace SwiftList.Cli.Search;
 
 // The wire-level half of talking to AppSearchPipeService (App\Services\AppSearchPipeService.cs): connects

@@ -3,6 +3,8 @@ using SwiftList.Core.Indexer.NetworkDrive;
 
 using SwiftList.Core.IndexV2.Delta;
 
+using SwiftList.Core.DriveMonitoring;
+using SwiftList.Core.Indexer.NetworkDrive.Walk;
 namespace SwiftList.Core.Indexer.Usn;
 
 public static class UsnIndexerExtensions

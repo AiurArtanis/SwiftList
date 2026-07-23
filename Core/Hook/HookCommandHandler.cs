@@ -1,3 +1,4 @@
+using SwiftList.Core.Wire;
 namespace SwiftList.Core.Hook;
 
 public sealed class HookCommandHandler

@@ -4,6 +4,7 @@ using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings.Plugins;
 
 using SwiftList.App.Services.Theme;
+using SwiftList.Core.Wire;
 namespace SwiftList.App.Views.Settings.Plugins;
 
 public partial class PluginConfigWindow : Window
@@ -90,7 +91,7 @@ public partial class PluginConfigWindow : Window
             if (vm.ConfigFields.Count > 0)
             {
                 vm.ConfigFields[0].Settings.Save();
-                App.HookClient?.SendMessage(new Core.IpcMessage { Id = Core.IpcMessageId.ReloadSettings });
+                App.HookClient?.SendMessage(new IpcMessage { Id = IpcMessageId.ReloadSettings });
             }
         }
         IsSaved = true;

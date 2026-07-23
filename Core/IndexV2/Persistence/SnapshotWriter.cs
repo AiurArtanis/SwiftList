@@ -4,6 +4,7 @@ using SwiftList.Core.SearchIndex.Fzf;
 
 using SwiftList.Core.IndexV2.Alias;
 
+using SwiftList.Core.Indexer.NetworkDrive.Walk;
 namespace SwiftList.Core.IndexV2.Persistence;
 
 // Builds a snapshot file straight from a scanner's FileRecordStore -- no RuntimeIndex intermediate.

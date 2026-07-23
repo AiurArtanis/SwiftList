@@ -8,6 +8,7 @@ using SwiftList.Core;
 
 using SwiftList.App.Services.ShellIcons;
 using SwiftList.App.Services.Theme;
+using SwiftList.Core.Wire;
 namespace SwiftList.App.Views.QuickSearchWindow;
 
 public class QuickSearchWindowController

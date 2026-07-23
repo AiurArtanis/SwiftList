@@ -1,5 +1,6 @@
 using SwiftList.Core.Indexer.Usn;
 
+using SwiftList.Core.DriveMonitoring;
 namespace SwiftList.Core;
 
 public class SearchEngine : IDisposable

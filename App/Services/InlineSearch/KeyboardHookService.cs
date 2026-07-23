@@ -1,6 +1,7 @@
 using SwiftList.Core;
 using SwiftList.Core.Hook;
 
+using SwiftList.Core.Wire;
 namespace SwiftList.App.Services;
 
 public class KeyboardHookService : IDisposable

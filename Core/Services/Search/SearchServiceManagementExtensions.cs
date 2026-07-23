@@ -2,6 +2,7 @@ using SwiftList.Core.Indexer.NetworkDrive;
 
 using SwiftList.Core.Services.Network;
 
+using SwiftList.Core.Wire;
 namespace SwiftList.Core.Services.Search;
 
 // Drive and settings admin pass-throughs for SearchService, as extension methods (matching

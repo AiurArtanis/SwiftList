@@ -2,6 +2,7 @@ using System.Text;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Registries;
 
+using SwiftList.Core.Wire;
 namespace SwiftList.Core.Hook;
 
 // Split out of HookCommandHandler to keep that file under the line-count limit. Handles

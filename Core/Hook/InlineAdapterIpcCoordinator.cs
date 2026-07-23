@@ -1,3 +1,4 @@
+using SwiftList.Core.Wire;
 namespace SwiftList.Core.Hook;
 
 // Correlates the App-side blocking ExecuteItem call with the Hook's async reply over the event pipe.

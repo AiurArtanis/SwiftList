@@ -2,6 +2,7 @@ using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using System.Threading.Channels;
 
+using SwiftList.Core.Wire;
 namespace SwiftList.Core.Services.Search;
 
 using SwiftList.Core;

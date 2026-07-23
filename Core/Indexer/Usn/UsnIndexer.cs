@@ -1,5 +1,6 @@
 using SwiftList.Core.IndexV2;
 
+using SwiftList.Core.Indexer.Usn.Journal;
 namespace SwiftList.Core.Indexer.Usn;
 
 public class UsnIndexer : IDisposable

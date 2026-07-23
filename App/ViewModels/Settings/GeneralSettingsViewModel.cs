@@ -3,6 +3,7 @@ using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.Core;
 
+using SwiftList.Core.Wire;
 namespace SwiftList.App.ViewModels.Settings;
 
 public class GeneralSettingsViewModel : ViewModelBase

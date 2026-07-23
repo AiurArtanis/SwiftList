@@ -1,3 +1,4 @@
+using SwiftList.Core.Indexer.NetworkDrive.Walk;
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
 // The network/WSL counterpart to SearchEngineRecentFilesExtensions.GetRecentFiles -- UsnIndexer only

@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using SwiftList.Core.Indexer.NetworkDrive;
 
+using SwiftList.Core.Indexer.NetworkDrive.Walk;
 namespace SwiftList.Core;
 
 public sealed class ExclusionRuleSet

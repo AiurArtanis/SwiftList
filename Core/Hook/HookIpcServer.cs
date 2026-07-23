@@ -2,6 +2,7 @@ using System.IO.Pipes;
 using System.Threading.Channels;
 using SwiftList.Core.Services.Pipe;
 
+using SwiftList.Core.Wire;
 namespace SwiftList.Core.Hook;
 
 /// <summary>

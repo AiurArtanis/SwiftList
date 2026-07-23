@@ -1,6 +1,7 @@
 using SwiftList.Core.IndexV2;
 
 using SwiftList.Core.IndexV2.Persistence;
+using SwiftList.Core.Indexer.Usn.Journal;
 namespace SwiftList.Core.Indexer.Usn;
 
 public static class UsnIndexerBuildExtensions

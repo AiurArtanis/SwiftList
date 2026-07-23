@@ -4,6 +4,7 @@ using System.Windows.Threading;
 using SwiftList.Core;
 using SwiftList.App.Helpers;
 
+using SwiftList.Core.Wire;
 namespace SwiftList.App.Views.InlineSearchWindow.Helpers;
 
 public class InlineSearchWindowInputHandler

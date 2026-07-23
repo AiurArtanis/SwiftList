@@ -3,6 +3,7 @@ using System.IO.Pipes;
 
 using SwiftList.Core.Services.Pipe;
 
+using SwiftList.Core.Wire;
 namespace SwiftList.Core.Services.HookLaunch;
 
 // Split out of UsnServicePipeServer to keep that file under the line-count limit (mirrors PipeSecurityFactory).

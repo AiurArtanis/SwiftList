@@ -9,6 +9,7 @@ using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.Core.Services.Search;
 
 using SwiftList.App.Services.Plugin;
+using SwiftList.Core.Wire;
 namespace SwiftList.App.ViewModels.Settings;
 
 public class SettingsViewModel : ViewModelBase

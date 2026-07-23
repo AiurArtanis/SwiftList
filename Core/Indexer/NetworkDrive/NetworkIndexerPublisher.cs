@@ -1,3 +1,4 @@
+using SwiftList.Core.Indexer.NetworkDrive.Walk;
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
 // Status/index publishing for NetworkIndexer -- extracted into its own class (composition, not a
