@@ -59,12 +59,17 @@ internal static class DriveRefreshRunner
             // Reaching here without cancellation only means TreeBuilder.Run() drained its queue -- NOT
             // that every directory's real contents were captured. A directory that failed to enumerate
             // (network hiccup, permissions) is caught silently in WalkDirectory (CountError + return,
-            // never MarkListed), so it correctly stays un-Listed for a future resume to retry -- but that
-            // only works if this index isn't marked complete, since IsComplete=true tells Configure() this
-            // drive needs no further refresh at all, which would permanently paper over the gap instead.
-            index.IsComplete = index.Errors == 0;
-            if (!index.IsComplete)
-                Logger.Log($"[NetworkIndexer] {drive}: finished with {index.Errors} error(s) ({index.EnumerateErrors} enumerate, {index.AttributeErrors} attribute) -- not marking complete, next refresh will retry the gaps.", LogLevel.Warn);
+            // never MarkListed), so it stays un-Listed for a future rebuild to retry regardless. This
+            // used to gate IsComplete on Errors == 0, but requiring a literal zero across a huge
+            // network/virtual-drive tree meant IsComplete could functionally never become true --
+            // forcing a full initial-refresh attempt on every single app start regardless of refresh
+            // mode (see NetworkIndexer.Configure's cachedDrives gate), since a scan of that size hitting
+            // at least one transient error somewhere is common. Always marking complete accepts that a
+            // directory which keeps failing every pass just stays permanently un-listed until the user
+            // notices and triggers a manual rebuild themselves, rather than perpetually retrying it.
+            index.IsComplete = true;
+            if (index.Errors > 0)
+                Logger.Log($"[NetworkIndexer] {drive}: finished with {index.Errors} error(s) ({index.EnumerateErrors} enumerate, {index.AttributeErrors} attribute) -- marking complete anyway; affected directories stay un-Listed for a future manual rebuild to retry.", LogLevel.Warn);
             IndexerHelper.Save(index);
 
             stopwatch.Stop();
