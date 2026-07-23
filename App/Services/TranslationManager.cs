@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using SwiftList.Core;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.Services;
 
 /// <summary>

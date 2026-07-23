@@ -1,5 +1,6 @@
 using System.Windows;
 
+using SwiftList.App.Services.Theme;
 namespace SwiftList.App.Services;
 
 internal class MenuHelperWindow : Window

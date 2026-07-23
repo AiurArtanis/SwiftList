@@ -3,6 +3,9 @@ using System.Windows;
 using System.Windows.Input;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.App.Services.AppWindow;
+
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.Services;
 
 /// <summary>

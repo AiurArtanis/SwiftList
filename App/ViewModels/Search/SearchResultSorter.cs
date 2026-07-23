@@ -1,6 +1,7 @@
 using SwiftList.App.Services;
 using SwiftList.PluginSdk.Abstractions;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.ViewModels.Search;
 
 internal static class SearchResultSorter

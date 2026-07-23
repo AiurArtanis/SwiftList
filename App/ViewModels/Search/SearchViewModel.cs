@@ -7,6 +7,9 @@ using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Search.Dispatch;
 using SwiftList.App.ViewModels.Service;
 
+using SwiftList.Core.Services.Search;
+
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.ViewModels.Search;
 
 public class SearchViewModel : ViewModelBase, IDisposable

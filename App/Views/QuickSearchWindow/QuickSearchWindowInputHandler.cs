@@ -4,6 +4,7 @@ using SwiftList.App.Helpers;
 using SwiftList.App.ViewModels.Search;
 using SwiftList.Core;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.Views.QuickSearchWindow;
 
 public class QuickSearchWindowInputHandler

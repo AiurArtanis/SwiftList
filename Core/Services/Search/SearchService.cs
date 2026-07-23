@@ -1,6 +1,8 @@
 using SwiftList.Core.Indexer.Usn;
 
-namespace SwiftList.Core;
+using SwiftList.Core.Services.Network;
+
+namespace SwiftList.Core.Services.Search;
 
 public class SearchService : IDisposable
 {

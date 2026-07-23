@@ -1,3 +1,6 @@
+using SwiftList.Core.IndexV2.Delta;
+
+using SwiftList.Core.IndexV2.Persistence;
 namespace SwiftList.Core.IndexV2;
 
 // Owns one drive's Snapshot + DeltaOverlay pair and the concurrency model the prototype never needed

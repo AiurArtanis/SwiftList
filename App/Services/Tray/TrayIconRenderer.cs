@@ -1,7 +1,7 @@
 using System.Drawing.Imaging;
 using Application = System.Windows.Application;
 
-namespace SwiftList.App.Services;
+namespace SwiftList.App.Services.Tray;
 
 // The GDI+ recolor pipeline behind the tray icon's theme-following color -- split out of
 // TrayIconService.cs to keep that file under the project's line limit.

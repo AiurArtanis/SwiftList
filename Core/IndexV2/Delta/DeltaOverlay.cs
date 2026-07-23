@@ -1,4 +1,7 @@
-namespace SwiftList.Core.IndexV2;
+using SwiftList.Core.IndexV2.Alias;
+
+using SwiftList.Core.IndexV2.Persistence;
+namespace SwiftList.Core.IndexV2.Delta;
 
 // The live-update overlay: the mmap Snapshot stays immutable; changes land here as base-row
 // tombstones (delete), base-row overrides (rename/move/metadata -- rows keep their identity so

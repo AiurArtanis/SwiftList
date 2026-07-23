@@ -2,6 +2,9 @@ using System.Windows;
 using System.Windows.Interop;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
+using SwiftList.App.Services.AppWindow;
+
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.Services;
 
 // Owns dispatching the currently-selected actions-list row to whichever handler owns it (a plugin's

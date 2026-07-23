@@ -5,7 +5,7 @@ using Application = System.Windows.Application;
 using Color = System.Windows.Media.Color;
 using Image = System.Windows.Controls.Image;
 
-namespace SwiftList.App.Services;
+namespace SwiftList.App.Services.Theme;
 
 /// <summary>
 /// Sets a window's title-bar icon (native Window.Icon, and/or an in-window logo Image) to a

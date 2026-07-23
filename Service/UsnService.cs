@@ -3,6 +3,8 @@ using System.ServiceProcess;
 using SwiftList.Core;
 using SwiftList.Core.Services;
 
+using SwiftList.Core.Services.Plugin;
+
 namespace SwiftList.Service;
 
 public class UsnService : ServiceBase

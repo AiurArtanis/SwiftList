@@ -5,6 +5,7 @@ using SwiftList.App.ViewModels.Search;
 using SwiftList.Core;
 using ListBoxItem = System.Windows.Controls.ListBoxItem;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.Views.QuickSearchWindow;
 
 // Executes a selected/clicked search result from the results list -- split out of QuickSearchWindow

@@ -2,6 +2,8 @@ using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
 using Application = System.Windows.Application;
 
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.App.Services;
 
 internal static class SearchIndexBuildCoordinator

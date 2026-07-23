@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using SwiftList.App.Services;
 using SwiftList.Core;
 using SwiftList.Core.Hook;
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.Views.InlineSearchWindow.Helpers;
 
 public static class InlineSearchNavigator

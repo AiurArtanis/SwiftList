@@ -1,6 +1,6 @@
 using System.Windows.Media;
 
-namespace SwiftList.App;
+namespace SwiftList.App.Services.ShellIcons;
 
 /// <summary>
 /// Builds vector (geometry) based icons used for plugin actions and the built-in

@@ -1,6 +1,7 @@
 using SwiftList.Core.IndexV2;
 using SwiftList.Core.Indexer.Usn;
 
+using SwiftList.Core.IndexV2.Persistence;
 namespace SwiftList.Core;
 
 internal sealed class SearchEngineDriveMaintenance

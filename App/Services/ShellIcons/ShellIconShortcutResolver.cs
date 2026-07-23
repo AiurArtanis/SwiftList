@@ -7,7 +7,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace SwiftList.App;
+namespace SwiftList.App.Services.ShellIcons;
 
 public static class ShellIconShortcutResolver
 {

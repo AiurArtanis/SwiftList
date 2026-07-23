@@ -2,7 +2,7 @@ using SwiftList.Core;
 using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.App.Services.PluginManagerCore;
 
-namespace SwiftList.App.Services;
+namespace SwiftList.App.Services.Plugin;
 
 /// <summary>
 /// Central hub for plugin lifecycle management: loading, registration,

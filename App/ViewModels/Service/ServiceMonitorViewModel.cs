@@ -6,6 +6,8 @@ using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
 using SwiftList.App.ViewModels.Search;
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.App.ViewModels.Service;
 
 public class ServiceMonitorViewModel : ViewModelBase, IDisposable

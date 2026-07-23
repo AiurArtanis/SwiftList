@@ -3,6 +3,8 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.App.Services;
 using SwiftList.Core;
 
+using SwiftList.App.Services.Plugin;
+using SwiftList.App.Services.ShellIcons;
 namespace SwiftList.App.ViewModels.Search;
 
 public static class SearchableItemMapper

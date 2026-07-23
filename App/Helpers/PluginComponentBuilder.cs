@@ -8,6 +8,8 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 using SwiftList.PluginSdk.Registries;
 
+using SwiftList.App.Services.Plugin;
+
 namespace SwiftList.App.Helpers;
 
 internal static class PluginComponentBuilder

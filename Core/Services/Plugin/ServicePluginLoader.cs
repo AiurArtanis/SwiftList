@@ -2,7 +2,7 @@ using System.Reflection;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Registries;
 
-namespace SwiftList.Core.Services;
+namespace SwiftList.Core.Services.Plugin;
 
 public static class ServicePluginLoader
 {

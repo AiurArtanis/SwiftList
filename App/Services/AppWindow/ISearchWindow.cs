@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using ListBox = System.Windows.Controls.ListBox;
 using SwiftList.PluginSdk.Abstractions;
 
-namespace SwiftList.App.Services;
+namespace SwiftList.App.Services.AppWindow;
 
 /// <summary>
 /// Shared interface between QuickSearchWindow and InlineSearchWindow

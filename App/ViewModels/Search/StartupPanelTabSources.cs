@@ -5,6 +5,8 @@ using SwiftList.App.Services.PluginManagerCore;
 using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.Core;
 
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.App.ViewModels.Search;
 
 // One entry per candidate tab, built fresh on every StartupPanelController activation. A source that

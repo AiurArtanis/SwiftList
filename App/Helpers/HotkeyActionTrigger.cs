@@ -4,6 +4,9 @@ using SwiftList.App.Services.PluginManagerCore;
 using SwiftList.Core;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.App.Services.AppWindow;
+
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.Helpers;
 
 public static class HotkeyActionTrigger

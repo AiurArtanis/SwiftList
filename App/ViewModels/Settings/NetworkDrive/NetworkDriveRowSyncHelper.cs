@@ -4,6 +4,10 @@ using SwiftList.Core.Indexer.NetworkDrive;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 
+using SwiftList.Core.Services.Search;
+
+using SwiftList.Core.Services.Network;
+
 namespace SwiftList.App.ViewModels.Settings.NetworkDrive;
 
 // Bulk per-refresh row sync for ALL THREE row categories on the Network Drive settings page (network

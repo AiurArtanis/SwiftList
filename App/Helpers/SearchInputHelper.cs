@@ -3,6 +3,8 @@ using System.Windows.Input;
 using SwiftList.Core;
 using SwiftList.App.Services;
 
+using SwiftList.App.Services.AppWindow;
+
 namespace SwiftList.App.Helpers;
 
 public static class SearchInputHelper

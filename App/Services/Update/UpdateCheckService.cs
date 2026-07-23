@@ -3,7 +3,8 @@ using SwiftList.Core;
 using Application = System.Windows.Application;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
 
-namespace SwiftList.App.Services;
+using SwiftList.App.Services.Tray;
+namespace SwiftList.App.Services.Update;
 
 /// <summary>
 /// Startup update-check flow: checks GitHub for a new release and, depending on settings, either

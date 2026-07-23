@@ -1,3 +1,5 @@
+using SwiftList.App.Services.AppWindow;
+
 namespace SwiftList.App.Services;
 
 // Owns the shell-menu navigation stack (drilling into/out of submenus) for ShellMenuPresenter --

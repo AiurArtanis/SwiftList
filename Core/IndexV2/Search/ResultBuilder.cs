@@ -1,7 +1,10 @@
 using SwiftList.Core.SearchIndex.Fzf;
 using SwiftList.PluginSdk.Abstractions;
 
-namespace SwiftList.Core.IndexV2;
+using SwiftList.Core.IndexV2.Delta;
+
+using SwiftList.Core.IndexV2.Persistence;
+namespace SwiftList.Core.IndexV2.Search;
 
 // Converts a ranked FzfRank entry into a public SearchResult. entryIndex < Snapshot.Count is a base
 // row (possibly overridden); entryIndex >= Snapshot.Count addresses delta.Added[entryIndex - Count].

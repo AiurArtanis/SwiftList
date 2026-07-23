@@ -1,5 +1,7 @@
 using SwiftList.Core;
 
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.App.ViewModels.Settings;
 
 internal sealed record LocalDriveSnapshot(string Drive, string Id, bool IsEnabled);

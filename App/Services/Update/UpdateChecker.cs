@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace SwiftList.App.Services;
+namespace SwiftList.App.Services.Update;
 
 // Polls GitHub for the latest release. Kept separate from UpdateInstaller: checking for an update has a
 // different trigger (periodic/startup) and failure domain (network/JSON parsing) than installing one

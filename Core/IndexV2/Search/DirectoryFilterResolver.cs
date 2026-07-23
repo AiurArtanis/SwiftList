@@ -1,4 +1,7 @@
-namespace SwiftList.Core.IndexV2;
+using SwiftList.Core.IndexV2.Delta;
+
+using SwiftList.Core.IndexV2.Persistence;
+namespace SwiftList.Core.IndexV2.Search;
 
 // Shared "is this row under directory X" resolution for name search, path search and the recent-files
 // walk. Mirrors Helpers.NormalizeFilter/TryGetDirectoryRootId/IsUnderDirectoryCached and

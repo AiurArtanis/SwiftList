@@ -1,5 +1,7 @@
 using SwiftList.Core.IndexV2;
 
+using SwiftList.Core.IndexV2.Search;
+
 namespace SwiftList.Core;
 
 // Backs the GetFileMetadata pipe request: looks up Size/Created/Modified/Accessed straight out of

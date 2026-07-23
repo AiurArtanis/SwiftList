@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SwiftList.Core;
+namespace SwiftList.Core.Services.Network;
 
 public class ResolvedNetworkDrive
 {

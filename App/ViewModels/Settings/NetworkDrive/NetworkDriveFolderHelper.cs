@@ -5,6 +5,8 @@ using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.App.Views.Controls;
 
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.App.ViewModels.Settings.NetworkDrive;
 
 // Folder-index half of NetworkDriveSettingsViewModel -- a third row category alongside NetworkDrives/

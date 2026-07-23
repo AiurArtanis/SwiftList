@@ -2,7 +2,9 @@ using System.Runtime.InteropServices;
 using SwiftList.Core.Indexer.NetworkDrive;
 using SwiftList.Core.SearchIndex.Fzf;
 
-namespace SwiftList.Core.IndexV2;
+using SwiftList.Core.IndexV2.Alias;
+
+namespace SwiftList.Core.IndexV2.Persistence;
 
 // Builds a snapshot file straight from a scanner's FileRecordStore -- no RuntimeIndex intermediate.
 // Soft-deleted records are folded away, survivors are re-sorted by id (stable by input order for

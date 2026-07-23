@@ -1,6 +1,7 @@
 using SwiftList.Core;
 
-namespace SwiftList.App.Services;
+using SwiftList.App.Services.AppWindow;
+namespace SwiftList.App.Services.UrlProtocol;
 
 // Routes a "swiftlist://" URI to the matching in-app action. Reached from two places (see App.xaml.cs):
 // this process's own launch args, when the OS invoked SwiftList directly via the link; or forwarded

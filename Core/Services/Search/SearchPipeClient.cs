@@ -1,7 +1,7 @@
 using System.IO.Pipes;
 using SwiftList.Core.Indexer.Usn;
 
-namespace SwiftList.Core;
+namespace SwiftList.Core.Services.Search;
 
 /// <summary>
 /// Thin named-pipe RPC client to the elevated search service: each method wraps one request/response

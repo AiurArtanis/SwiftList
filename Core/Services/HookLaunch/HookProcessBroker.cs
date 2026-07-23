@@ -3,9 +3,9 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 
-using static SwiftList.Core.Services.HookLaunchNativeMethods;
+using static SwiftList.Core.Services.HookLaunch.HookLaunchNativeMethods;
 
-namespace SwiftList.Core.Services;
+namespace SwiftList.Core.Services.HookLaunch;
 
 // Runs inside the SYSTEM-privileged --service process. Every hook launch -- elevated or not -- goes
 // through here rather than the App spawning its own child process, so the App never has to hold a

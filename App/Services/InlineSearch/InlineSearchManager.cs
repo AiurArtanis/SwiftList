@@ -5,6 +5,7 @@ using Application = System.Windows.Application;
 using SwiftList.App.ViewModels.Search;
 using SwiftList.App.Views.InlineSearchWindow.Helpers;
 
+using SwiftList.App.Services.ShellIcons;
 namespace SwiftList.App.Services;
 
 /// <summary>

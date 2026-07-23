@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 
-namespace SwiftList.Core.Services;
+using SwiftList.Core.Services.Pipe;
+
+namespace SwiftList.Core.Services.HookLaunch;
 
 // Split out of UsnServicePipeServer to keep that file under the line-count limit (mirrors PipeSecurityFactory).
 // Handles SearchRequestId.LaunchHook: identifies the caller straight from the pipe's kernel handle (never

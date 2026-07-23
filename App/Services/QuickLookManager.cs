@@ -4,6 +4,8 @@ using System.Windows.Media.Animation;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 
+using SwiftList.App.Services.AppWindow;
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.Services;
 
 public class QuickLookManager

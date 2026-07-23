@@ -4,6 +4,7 @@ using SwiftList.App.Services;
 using SwiftList.App.Services.PluginManagerCore;
 using SwiftList.Core;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.ViewModels.Settings;
 
 public class HotkeySettingsViewModel : ViewModelBase

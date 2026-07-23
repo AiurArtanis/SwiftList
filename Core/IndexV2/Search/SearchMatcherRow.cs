@@ -1,7 +1,8 @@
 using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
-namespace SwiftList.Core.IndexV2;
+using SwiftList.Core.IndexV2.Persistence;
+namespace SwiftList.Core.IndexV2.Search;
 
 // Per-ROW / per-record matching for the small candidate sets that don't go unique-first: directory
 // children listing (PathSearch.TryDirectoryChildren) and delta rows (renamed/added live updates,

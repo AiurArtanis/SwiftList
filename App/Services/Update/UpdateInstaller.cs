@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Windows;
 using SwiftList.App.Views.Controls;
 
-namespace SwiftList.App.Services;
+namespace SwiftList.App.Services.Update;
 
 // Downloads, signature-verifies, and installs a portable-zip update. Kept separate from UpdateChecker:
 // installing is user-consented and has a different failure domain (crypto/filesystem/process elevation)

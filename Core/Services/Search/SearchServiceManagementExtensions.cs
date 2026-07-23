@@ -1,6 +1,8 @@
 using SwiftList.Core.Indexer.NetworkDrive;
 
-namespace SwiftList.Core;
+using SwiftList.Core.Services.Network;
+
+namespace SwiftList.Core.Services.Search;
 
 // Drive and settings admin pass-throughs for SearchService, as extension methods (matching
 // RuntimeIndex's BucketExtensions/QueryExtensions/StoreExtensions) instead of a partial class, to keep

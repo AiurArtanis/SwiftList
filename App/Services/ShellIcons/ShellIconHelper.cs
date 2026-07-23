@@ -6,7 +6,8 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace SwiftList.App;
+using SwiftList.App.Services.Plugin;
+namespace SwiftList.App.Services.ShellIcons;
 
 public static class ShellIconHelper
 {
@@ -38,7 +39,7 @@ public static class ShellIconHelper
         }
 
         var isVirtualItem = path.StartsWith("::") || path.StartsWith("shell:");
-        var hasThumbnailProvider = !isDir && Services.PluginManager.Instance.ThumbnailProviders.Any(p => p.CanProvideThumbnail(path, isDir));
+        var hasThumbnailProvider = !isDir && PluginManager.Instance.ThumbnailProviders.Any(p => p.CanProvideThumbnail(path, isDir));
         // Determine if it is a unique icon type
         var isUniqueIconType = (!isDir && (
             ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) ||
@@ -118,7 +119,7 @@ public static class ShellIconHelper
         // Also treat existing directories as unique icon types to extract their customized folder icons.
         var checkPath = path;
         var isVirtualItem = checkPath.StartsWith("::") || checkPath.StartsWith("shell:");
-        var hasThumbnailProvider = !isDir && Services.PluginManager.Instance.ThumbnailProviders.Any(p => p.CanProvideThumbnail(path, isDir));
+        var hasThumbnailProvider = !isDir && PluginManager.Instance.ThumbnailProviders.Any(p => p.CanProvideThumbnail(path, isDir));
         var isUniqueIconType = (!isDir && (
             ext.Equals(".exe", StringComparison.OrdinalIgnoreCase) ||
             ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase) ||
@@ -134,7 +135,7 @@ public static class ShellIconHelper
         }
 
         // Check custom plugin thumbnail providers first
-        var thumbnailProvider = Services.PluginManager.Instance.ThumbnailProviders.FirstOrDefault(p => p.CanProvideThumbnail(path, isDir));
+        var thumbnailProvider = PluginManager.Instance.ThumbnailProviders.FirstOrDefault(p => p.CanProvideThumbnail(path, isDir));
         if (thumbnailProvider != null)
         {
             try

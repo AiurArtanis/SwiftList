@@ -14,6 +14,11 @@ using ListBox = System.Windows.Controls.ListBox;
 using Grid = System.Windows.Controls.Grid;
 using SwiftList.App.ViewModels.Search;
 using SwiftList.App.Views.QuickSearchWindow.Helpers;
+using SwiftList.App.Services.AppWindow;
+
+using SwiftList.App.Services.Tray;
+
+using SwiftList.App.Services.Theme;
 namespace SwiftList.App;
 
 public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleContentInset

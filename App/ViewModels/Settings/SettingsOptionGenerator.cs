@@ -1,6 +1,7 @@
 using SwiftList.App.Services;
 using SwiftList.Core;
 
+using SwiftList.App.Services.Theme;
 namespace SwiftList.App.ViewModels.Settings;
 
 public static class SettingsOptionGenerator

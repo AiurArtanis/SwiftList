@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace SwiftList.App.Services;
+namespace SwiftList.App.Services.AppWindow;
 
 /// <summary>
 /// Implemented by windows that use AllowsTransparency with an invisible margin around their actual

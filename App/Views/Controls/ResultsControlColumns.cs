@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using SwiftList.App.Services;
 using SwiftList.Core;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.Views.Controls;
 
 // Grid-mode (full/main window) dynamic column population and header-click sorting -- split out of

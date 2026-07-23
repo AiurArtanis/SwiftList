@@ -6,6 +6,7 @@ using SwiftList.App.Services.PluginManagerCore;
 using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.Core;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.ViewModels.Settings;
 
 // Lets the user reorder which IQuickNavigationProvider's entries appear first/last in the quick

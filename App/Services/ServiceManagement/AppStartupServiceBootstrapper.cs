@@ -1,5 +1,6 @@
 using SwiftList.Core;
 
+using SwiftList.Core.Services.Search;
 namespace SwiftList.App.Services;
 
 internal static class AppStartupServiceBootstrapper

@@ -4,7 +4,8 @@ using SwiftList.App.ViewModels.Search;
 using SwiftList.Core;
 using Application = System.Windows.Application;
 
-namespace SwiftList.App.Services;
+using SwiftList.App.Services.Theme;
+namespace SwiftList.App.Services.Tray;
 
 public class TrayIconService : IDisposable
 {

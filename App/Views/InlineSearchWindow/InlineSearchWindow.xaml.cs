@@ -6,6 +6,9 @@ using SwiftList.App.Services;
 using ListBox = System.Windows.Controls.ListBox;
 using SwiftList.App.Views.InlineSearchWindow.Helpers;
 using SwiftList.App.ViewModels.Search;
+using SwiftList.App.Services.AppWindow;
+
+using SwiftList.App.Services.Theme;
 namespace SwiftList.App;
 
 /// <summary>

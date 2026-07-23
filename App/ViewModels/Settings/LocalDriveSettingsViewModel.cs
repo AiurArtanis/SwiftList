@@ -7,6 +7,8 @@ using SwiftList.App.Services;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
 
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.App.ViewModels.Settings;
 
 public class LocalDriveSettingsViewModel : ViewModelBase

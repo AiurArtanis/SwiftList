@@ -4,7 +4,10 @@ using SwiftList.Core;
 using SwiftList.Core.Services;
 using SwiftList.App.ViewModels.Search;
 
-namespace SwiftList.App.Services;
+using SwiftList.Core.Services.Search;
+
+using SwiftList.Core.Services.Pipe;
+namespace SwiftList.App.Services.Pipe;
 
 // Prototype: lets an external client (e.g. a CLI) reuse the App's own already-initialized search state
 // -- AliasProviderRegistry's loaded plugins, UserNetworkDriveSearch's configured network/WSL/folder

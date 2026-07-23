@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using SwiftList.App.Services;
 
+using SwiftList.App.Services.Theme;
 namespace SwiftList.App.Views.Controls;
 
 public partial class CustomMessageBoxWindow : Window

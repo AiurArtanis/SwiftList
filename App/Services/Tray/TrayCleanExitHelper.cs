@@ -2,7 +2,7 @@ using System.Diagnostics;
 using SwiftList.Core;
 using Application = System.Windows.Application;
 
-namespace SwiftList.App.Services;
+namespace SwiftList.App.Services.Tray;
 
 internal static class TrayCleanExitHelper
 {

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.App.Services;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.ViewModels.Search;
 
 // Owns the per-provider load/cache lifecycle for ISearchableItemProvider -- split out of

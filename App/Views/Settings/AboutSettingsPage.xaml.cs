@@ -7,6 +7,11 @@ using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
 
+using SwiftList.App.Services.Update;
+
+using SwiftList.App.Services.Theme;
+using SwiftList.App.Services.Tray;
+using SwiftList.Core.Services.Search;
 namespace SwiftList.App.Views.Settings;
 
 public partial class AboutSettingsPage : System.Windows.Controls.UserControl, INotifyPropertyChanged

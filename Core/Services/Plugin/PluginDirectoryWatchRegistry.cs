@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace SwiftList.Core;
+namespace SwiftList.Core.Services.Plugin;
 
 internal sealed class MonitoredDir
 {

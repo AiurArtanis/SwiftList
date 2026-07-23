@@ -6,6 +6,8 @@ using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
 
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.App.ViewModels.Settings;
 
 public class ServiceSettingsViewModel : ViewModelBase

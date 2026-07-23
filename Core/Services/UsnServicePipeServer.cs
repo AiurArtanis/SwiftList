@@ -1,5 +1,11 @@
 using System.IO.Pipes;
 
+using SwiftList.Core.Services.HookLaunch;
+
+using SwiftList.Core.Services.Pipe;
+
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.Core.Services;
 
 using SwiftList.Core;

@@ -3,6 +3,7 @@ using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.Core;
 
+using SwiftList.App.Services.Theme;
 namespace SwiftList.App.ViewModels.Settings;
 
 /// <summary>Theme selection, including the optional "follow system light/dark" mode. Split out of

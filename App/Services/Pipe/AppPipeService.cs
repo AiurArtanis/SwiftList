@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using SwiftList.Core;
-namespace SwiftList.App.Services;
+using SwiftList.App.Services.UrlProtocol;
+namespace SwiftList.App.Services.Pipe;
 
 public static class AppPipeService
 {

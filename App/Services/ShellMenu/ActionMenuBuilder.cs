@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.Services;
 
 internal static class ActionMenuBuilder

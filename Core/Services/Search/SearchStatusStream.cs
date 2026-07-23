@@ -1,7 +1,7 @@
 using System.IO.Pipes;
 using SwiftList.Core.Indexer.Usn;
 
-namespace SwiftList.Core;
+namespace SwiftList.Core.Services.Search;
 
 public static class SearchStatusStream
 {

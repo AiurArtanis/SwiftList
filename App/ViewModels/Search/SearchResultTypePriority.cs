@@ -5,6 +5,7 @@ using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.Core;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.ViewModels.Search;
 
 // Resolves the "type" tier a BuildQuickResults candidate belongs to for the quick window's

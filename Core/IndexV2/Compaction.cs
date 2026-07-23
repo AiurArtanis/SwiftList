@@ -1,3 +1,6 @@
+using SwiftList.Core.IndexV2.Delta;
+
+using SwiftList.Core.IndexV2.Persistence;
 namespace SwiftList.Core.IndexV2;
 
 // Fields the snapshot itself doesn't own live authority over -- LOCAL drives track JournalId/NextUsn

@@ -3,6 +3,7 @@ using System.Windows.Input;
 using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings.Plugins;
 
+using SwiftList.App.Services.Theme;
 namespace SwiftList.App.Views.Settings.Plugins;
 
 public partial class PluginConfigWindow : Window

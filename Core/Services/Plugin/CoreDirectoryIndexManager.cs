@@ -1,4 +1,4 @@
-namespace SwiftList.Core;
+namespace SwiftList.Core.Services.Plugin;
 
 /// <summary>
 /// Managed core indexer coordinator. Decides if a path should be query-routed

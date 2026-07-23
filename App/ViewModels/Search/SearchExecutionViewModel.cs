@@ -4,6 +4,8 @@ using SwiftList.Core;
 using SwiftList.App.Helpers;
 using SwiftList.App.ViewModels.Search.Dispatch;
 
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.App.ViewModels.Search;
 
 public class SearchExecutionViewModel : ViewModelBase, IDisposable

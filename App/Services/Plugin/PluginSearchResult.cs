@@ -1,6 +1,6 @@
 using SwiftList.PluginSdk.Abstractions;
 
-namespace SwiftList.App.Services;
+namespace SwiftList.App.Services.Plugin;
 
 public class PluginSearchResult : ISearchResult
 {

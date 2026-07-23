@@ -1,6 +1,8 @@
 using System.Windows;
 using SwiftList.App.Services;
 
+using SwiftList.App.Services.Plugin;
+using SwiftList.App.Services.ShellIcons;
 namespace SwiftList.App;
 
 public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, PluginSdk.Abstractions.ISearchResult

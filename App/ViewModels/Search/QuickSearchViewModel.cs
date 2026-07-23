@@ -4,6 +4,8 @@ using System.Windows.Input;
 using SwiftList.Core;
 using SwiftList.App.ViewModels.Service;
 
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.App.ViewModels.Search;
 
 public class QuickSearchViewModel : ViewModelBase, IDisposable

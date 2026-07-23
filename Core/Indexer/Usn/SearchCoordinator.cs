@@ -1,5 +1,7 @@
 using SwiftList.Core.IndexV2;
 
+using SwiftList.Core.IndexV2.Search;
+
 namespace SwiftList.Core.Indexer.Usn;
 
 // Fans a query out across every local drive's LiveIndex. Unlike the old RuntimeIndex-based coordinator

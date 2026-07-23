@@ -2,7 +2,7 @@ using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
 
-namespace SwiftList.Core.Services;
+namespace SwiftList.Core.Services.Pipe;
 
 // Split out of UsnServicePipeServer to keep that file under the line-count limit. Public (not internal)
 // so App\Services\AppSearchPipeService.cs -- a different assembly -- can reuse CreateCurrentUserOnly

@@ -6,6 +6,8 @@ using System.Windows.Threading;
 using SwiftList.App.Services;
 using SwiftList.Core;
 
+using SwiftList.App.Services.ShellIcons;
+using SwiftList.App.Services.Theme;
 namespace SwiftList.App.Views.QuickSearchWindow;
 
 public class QuickSearchWindowController

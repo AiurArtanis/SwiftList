@@ -7,6 +7,8 @@ using SwiftList.Core.Indexer.NetworkDrive;
 using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings.NetworkDrive;
 
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.App.ViewModels.Settings;
 
 public class NetworkDriveSettingsViewModel : ViewModelBase

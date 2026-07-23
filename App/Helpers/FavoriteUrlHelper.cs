@@ -1,5 +1,6 @@
 using System.Windows.Media;
 
+using SwiftList.App.Services.ShellIcons;
 namespace SwiftList.App.Helpers;
 
 // Helpers for favorites that point at a web address (http/https) rather than a local/shell path.

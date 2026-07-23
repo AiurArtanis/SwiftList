@@ -1,6 +1,6 @@
 using SwiftList.Core;
 
-namespace SwiftList.App.Services;
+namespace SwiftList.App.Services.Plugin;
 
 public static class PluginActionExecutor
 {

@@ -5,6 +5,7 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using MenuItem = System.Windows.Controls.MenuItem;
 using Application = System.Windows.Application;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.Services;
 
 /// <summary>

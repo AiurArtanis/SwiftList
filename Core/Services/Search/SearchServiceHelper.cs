@@ -1,4 +1,6 @@
-namespace SwiftList.Core;
+using SwiftList.Core.Services.Network;
+
+namespace SwiftList.Core.Services.Search;
 
 internal static class SearchServiceHelper
 {

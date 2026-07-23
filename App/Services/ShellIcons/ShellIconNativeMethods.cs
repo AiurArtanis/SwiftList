@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace SwiftList.App;
+namespace SwiftList.App.Services.ShellIcons;
 
 internal static class ShellIconNativeMethods
 {

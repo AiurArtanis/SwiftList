@@ -4,6 +4,7 @@ using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.Core;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.ViewModels.Settings;
 
 /// <summary>

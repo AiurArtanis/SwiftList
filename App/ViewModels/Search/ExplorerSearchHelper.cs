@@ -1,6 +1,8 @@
 using System.IO;
 using SwiftList.Core;
 
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.App.ViewModels.Search;
 
 public static class ExplorerSearchHelper

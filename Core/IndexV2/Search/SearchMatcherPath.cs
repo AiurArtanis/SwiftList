@@ -1,7 +1,8 @@
 using System.Text;
 using SwiftList.Core.SearchIndex.Fzf;
 
-namespace SwiftList.Core.IndexV2;
+using SwiftList.Core.IndexV2.Persistence;
+namespace SwiftList.Core.IndexV2.Search;
 
 // Path-mode phase-A output: the per-unique rank ingredients (low 32 sort-key bits + char length)
 // path mode combines with per-row directory scores -- see PathSearchFuzzy.

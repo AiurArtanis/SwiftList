@@ -1,6 +1,8 @@
 using SwiftList.Core;
 using SwiftList.App.Services;
 
+using SwiftList.Core.Services.Search;
+
 namespace SwiftList.App.ViewModels.Settings;
 
 // Shape common to NetworkDriveSettingsItem/WslSettingsItem/FolderIndexSettingsItem -- lets

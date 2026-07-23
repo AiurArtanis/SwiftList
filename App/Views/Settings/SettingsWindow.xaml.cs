@@ -5,6 +5,8 @@ using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings;
 
+using SwiftList.App.Services.ShellIcons;
+using SwiftList.App.Services.Theme;
 namespace SwiftList.App;
 
 // Window chrome and the sidebar's own section-switching. Search box/popup logic lives in

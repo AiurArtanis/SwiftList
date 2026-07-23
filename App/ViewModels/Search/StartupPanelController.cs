@@ -3,6 +3,9 @@ using System.Windows;
 using SwiftList.App.Services;
 using SwiftList.Core;
 
+using SwiftList.Core.Services.Search;
+
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.ViewModels.Search;
 
 /// <summary>

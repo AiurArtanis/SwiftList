@@ -1,6 +1,7 @@
 using SwiftList.Core;
 using SwiftList.PluginSdk.Abstractions;
 
+using SwiftList.Core.Services.Search;
 namespace SwiftList.App.Services;
 
 // Backs PluginSdk's FileMetadataService for plugins: ask the Service process's in-memory index

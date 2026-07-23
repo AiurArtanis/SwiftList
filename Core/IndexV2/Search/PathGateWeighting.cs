@@ -2,7 +2,10 @@ using System.Text;
 using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
-namespace SwiftList.Core.IndexV2;
+using SwiftList.Core.IndexV2.Delta;
+
+using SwiftList.Core.IndexV2.Persistence;
+namespace SwiftList.Core.IndexV2.Search;
 
 // Ranking-only weight (percentage*consecutiveness, product across matched segments), computed
 // separately from PathGate.Verify/VerifyPath and ONLY for path-mode's bounded post-scan refinement

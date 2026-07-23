@@ -5,6 +5,7 @@ using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Search;
 using SwiftList.Core;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.ViewModels.Settings;
 
 // Lets the user reorder the Startup Panel's tab strip -- both built-in tabs (Recent Files, Last

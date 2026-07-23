@@ -1,6 +1,6 @@
 using Microsoft.Win32;
 
-namespace SwiftList.App.Services;
+namespace SwiftList.App.Services.Theme;
 
 /// <summary>Reads and watches the Windows "apps use light theme" registry setting, independent of
 /// SwiftList's own <see cref="ThemeManager"/> theme -- used to drive the optional "follow system"

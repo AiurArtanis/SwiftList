@@ -1,7 +1,7 @@
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
 
-namespace SwiftList.Core.Services;
+namespace SwiftList.Core.Services.Pipe;
 
 // Identifies the process/session on the other end of a connected NamedPipeServerStream straight from the
 // kernel handle, so privileged handlers can verify who's actually asking instead of trusting anything the

@@ -1,6 +1,6 @@
 using SwiftList.Core.Indexer.NetworkDrive;
 
-namespace SwiftList.Core;
+namespace SwiftList.Core.Services.Network;
 
 public static class UserNetworkDriveSearch
 {

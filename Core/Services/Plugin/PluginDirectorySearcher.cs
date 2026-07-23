@@ -1,4 +1,6 @@
-namespace SwiftList.Core;
+using SwiftList.Core.Services.Search;
+
+namespace SwiftList.Core.Services.Plugin;
 
 /// <summary>
 /// Answers a plugin's directory search by routing each registered directory to either the USN-service

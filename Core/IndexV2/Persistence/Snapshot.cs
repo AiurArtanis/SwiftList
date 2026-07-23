@@ -1,6 +1,6 @@
 using System.IO.MemoryMappedFiles;
 
-namespace SwiftList.Core.IndexV2;
+namespace SwiftList.Core.IndexV2.Persistence;
 
 // The V2 engine's "load": memory-map the snapshot and hand out typed spans over its sections. No
 // parsing, no per-name string objects, no index rebuild -- opening is O(1) and resident memory is

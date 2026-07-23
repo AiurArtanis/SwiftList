@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace SwiftList.Core.IndexV2;
+namespace SwiftList.Core.IndexV2.Persistence;
 
 internal enum SnapshotSection
 {

@@ -1,5 +1,10 @@
 using SwiftList.PluginSdk.Abstractions;
 
+using SwiftList.Core.IndexV2.Delta;
+
+using SwiftList.Core.IndexV2.Search;
+
+using SwiftList.Core.IndexV2.Persistence;
 namespace SwiftList.Core.IndexV2;
 
 // Mirrors RecentFilesWalker.CollectFromDirectory over Snapshot+DeltaOverlay: an in-memory subtree DFS

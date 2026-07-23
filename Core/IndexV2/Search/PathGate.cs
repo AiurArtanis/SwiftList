@@ -3,7 +3,10 @@ using System.Text;
 using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
-namespace SwiftList.Core.IndexV2;
+using SwiftList.Core.IndexV2.Delta;
+
+using SwiftList.Core.IndexV2.Persistence;
+namespace SwiftList.Core.IndexV2.Search;
 
 // Directory-segment verification for path mode. Replaces the old per-candidate
 // "build parent path string -> Split -> re-ParseText each query segment -> live pinyin per segment"

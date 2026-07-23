@@ -1,6 +1,7 @@
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.App.Services;
 
+using SwiftList.App.Services.Plugin;
 namespace SwiftList.App.ViewModels.Search;
 
 // Dispatches the raw tokens split out of a query's trailing ":a,b,c" suffix to whichever registered

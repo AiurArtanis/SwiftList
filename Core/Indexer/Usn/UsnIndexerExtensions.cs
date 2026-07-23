@@ -1,6 +1,8 @@
 using SwiftList.Core.IndexV2;
 using SwiftList.Core.Indexer.NetworkDrive;
 
+using SwiftList.Core.IndexV2.Delta;
+
 namespace SwiftList.Core.Indexer.Usn;
 
 public static class UsnIndexerExtensions

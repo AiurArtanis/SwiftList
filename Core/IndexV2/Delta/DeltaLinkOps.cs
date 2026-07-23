@@ -1,4 +1,6 @@
-namespace SwiftList.Core.IndexV2;
+using SwiftList.Core.IndexV2.Alias;
+
+namespace SwiftList.Core.IndexV2.Delta;
 
 // Per-link delta operations mirroring HardLinkDelta: keyed by the (FRN, parentFRN, name) triple a USN
 // record carries, so one hard link's create/delete never disturbs the file's other links. AddLink

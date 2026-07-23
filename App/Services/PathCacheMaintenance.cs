@@ -1,5 +1,7 @@
 using SwiftList.Core;
 
+using SwiftList.Core.Services.Network;
+using SwiftList.Core.Services.Search;
 namespace SwiftList.App;
 
 // Gives back memory held by long-lived search caches across every live index, on both sides of the

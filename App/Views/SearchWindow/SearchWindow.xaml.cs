@@ -10,6 +10,10 @@ using ListView = System.Windows.Controls.ListView;
 using ListBox = System.Windows.Controls.ListBox;
 using Grid = System.Windows.Controls.Grid;
 using SwiftList.App.ViewModels.Search;
+using SwiftList.App.Services.AppWindow;
+
+using SwiftList.App.Services.ShellIcons;
+using SwiftList.App.Services.Theme;
 namespace SwiftList.App;
 
 public partial class SearchWindow : Window, ISearchWindow, IHasVisibleContentInset

@@ -7,7 +7,8 @@ using System.Text;
 using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
-namespace SwiftList.Core.IndexV2;
+using SwiftList.Core.IndexV2.Persistence;
+namespace SwiftList.Core.IndexV2.Search;
 
 internal readonly record struct UniqueMatch(int Uid, FzfPatternResult Match, ulong SortKey);
 

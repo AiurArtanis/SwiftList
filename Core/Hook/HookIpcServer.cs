@@ -1,5 +1,7 @@
 using System.IO.Pipes;
 using System.Threading.Channels;
+using SwiftList.Core.Services.Pipe;
+
 namespace SwiftList.Core.Hook;
 
 /// <summary>
@@ -81,7 +83,7 @@ public sealed class HookIpcServer : IDisposable
         // per-user into that specific user's own session -- see Services.PipeSecurityFactory.
         // CreateCurrentUserOnly's own comment for why this SID-scoped ACL still works across the
         // elevation boundary.
-        var pipeSecurity = Services.PipeSecurityFactory.CreateCurrentUserOnly();
+        var pipeSecurity = PipeSecurityFactory.CreateCurrentUserOnly();
         if (pipeSecurity == null)
         {
             // No unrestricted-pipe fallback here (unlike an earlier version of this method) -- the same

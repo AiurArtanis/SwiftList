@@ -2,6 +2,9 @@ using System.Security.Cryptography;
 using System.Text;
 using SwiftList.Core.IndexV2;
 
+using SwiftList.Core.Services.Network;
+
+using SwiftList.Core.IndexV2.Persistence;
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
 internal static class NetworkDriveCacheLocator

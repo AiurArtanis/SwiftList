@@ -1,6 +1,7 @@
 using SwiftList.Core;
 
-namespace SwiftList.App.Services;
+using SwiftList.Core.Services.Plugin;
+namespace SwiftList.App.Services.Plugin;
 
 /// <summary>
 /// Bridges PluginSdk's static service delegates (settings, history, favorites, fuzzy-match,

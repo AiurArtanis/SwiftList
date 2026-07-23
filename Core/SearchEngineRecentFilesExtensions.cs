@@ -1,5 +1,7 @@
 using SwiftList.Core.IndexV2;
 
+using SwiftList.Core.IndexV2.Search;
+
 namespace SwiftList.Core;
 
 // Backs the GetRecentFiles pipe request: for each configured target directory that resolves to a local

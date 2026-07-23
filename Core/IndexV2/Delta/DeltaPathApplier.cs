@@ -1,6 +1,6 @@
 using SwiftList.Core.Indexer.NetworkDrive;
 
-namespace SwiftList.Core.IndexV2;
+namespace SwiftList.Core.IndexV2.Delta;
 
 // Watcher-family (folder-scan / FAT drive-letter) path-based delta application, mirroring
 // Indexer.Shared.PathDeltaApplier but targeting a DeltaOverlay instead of a RuntimeIndex. Ids are path

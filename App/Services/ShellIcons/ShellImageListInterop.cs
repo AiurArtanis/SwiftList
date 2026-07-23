@@ -5,7 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using SwiftList.App.Services;
 
-namespace SwiftList.App;
+namespace SwiftList.App.Services.ShellIcons;
 
 /// <summary>
 /// Fetches high-resolution shell icons from the system image list (48px ExtraLarge /

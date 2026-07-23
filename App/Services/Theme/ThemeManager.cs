@@ -1,7 +1,8 @@
 using System.Windows;
 using SwiftList.Core;
 
-namespace SwiftList.App.Services;
+using SwiftList.App.Services.Plugin;
+namespace SwiftList.App.Services.Theme;
 
 public class ThemeManager
 {

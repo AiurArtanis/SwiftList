@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using SwiftList.Core.Services.Search;
 
 namespace SwiftList.Core.Hook;
 

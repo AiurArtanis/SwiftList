@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace SwiftList.Core.Services;
+namespace SwiftList.Core.Services.HookLaunch;
 
 // Win32 interop for HookProcessBroker. Kept in its own file (mirrors PipeSecurityFactory) rather than
 // inline, since HookProcessBroker already needs the full 300-line budget for the actual token/process logic.

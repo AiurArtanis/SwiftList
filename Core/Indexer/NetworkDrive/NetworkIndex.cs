@@ -1,5 +1,12 @@
 using SwiftList.Core.IndexV2;
 
+using SwiftList.Core.IndexV2.Alias;
+
+using SwiftList.Core.IndexV2.Delta;
+
+using SwiftList.Core.IndexV2.Search;
+
+using SwiftList.Core.IndexV2.Persistence;
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
 // Wraps one network/WSL/folder-index drive's IndexV2 LiveIndex. IsComplete/ExclusionRulesFingerprint/

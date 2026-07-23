@@ -1,7 +1,10 @@
 using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
-namespace SwiftList.Core.IndexV2;
+using SwiftList.Core.IndexV2.Delta;
+
+using SwiftList.Core.IndexV2.Persistence;
+namespace SwiftList.Core.IndexV2.Search;
 
 // Name-mode search: phase A matches unique names (SearchMatcher) + delta rows (renamed/added, matched
 // individually since they aren't folded into the unique table until compaction); phase B fans each

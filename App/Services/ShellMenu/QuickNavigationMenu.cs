@@ -14,6 +14,8 @@ using Application = System.Windows.Application;
 using WindowInteropHelper = System.Windows.Interop.WindowInteropHelper;
 using MouseButtonEventHandler = System.Windows.Input.MouseButtonEventHandler;
 
+using SwiftList.App.Services.Plugin;
+using SwiftList.App.Services.ShellIcons;
 namespace SwiftList.App.Services;
 
 public static class QuickNavigationMenu

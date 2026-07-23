@@ -1,3 +1,5 @@
+using SwiftList.Core.Services.Network;
+
 namespace SwiftList.Core.Indexer.NetworkDrive;
 
 internal static class NetworkIndexerHelper

@@ -1,4 +1,4 @@
-namespace SwiftList.Core.IndexV2;
+namespace SwiftList.Core.IndexV2.Delta;
 
 // Directory-delete cascades over CURRENT parentage, mirroring HardLinkDelta.CascadeDeleteChildren:
 // the snapshot CSR alone goes stale the moment overrides move rows around, so both walks patch it --

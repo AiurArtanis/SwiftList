@@ -1,7 +1,7 @@
 using Microsoft.Win32;
 using SwiftList.Core;
 
-namespace SwiftList.App.Services;
+namespace SwiftList.App.Services.UrlProtocol;
 
 // Registers "swiftlist://" as a URL protocol under HKCU\Software\Classes, so the OS can launch (or,
 // via the existing single-instance mutex/pipe relay -- see App.xaml.cs -- activate) SwiftList from a

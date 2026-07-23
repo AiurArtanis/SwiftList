@@ -8,6 +8,13 @@ using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Search;
 using Application = System.Windows.Application;
 using MessageBox = SwiftList.App.Views.Controls.CustomMessageBox;
+using SwiftList.App.Services.AppWindow;
+using SwiftList.App.Services.Pipe;
+using SwiftList.App.Services.Plugin;
+using SwiftList.App.Services.ShellIcons;
+using SwiftList.App.Services.Theme;
+using SwiftList.App.Services.Update;
+using SwiftList.App.Services.UrlProtocol;
 namespace SwiftList.App;
 
 public partial class App : Application
