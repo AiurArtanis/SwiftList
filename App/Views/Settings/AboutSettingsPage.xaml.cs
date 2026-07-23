@@ -163,7 +163,7 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
         GitHubReleaseInfo? release = null;
         try
         {
-            release = await UpdateService.Instance.CheckForUpdatesAsync();
+            release = await UpdateChecker.Instance.CheckForUpdatesAsync();
             BtnCheckUpdate.IsEnabled = true;
 
             if (release == null)
@@ -243,7 +243,7 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
 
         var downloadingFormat = TranslationManager.Instance["About_Downloading"];
 
-        var success = await UpdateService.Instance.StartSilentUpdateAsync(zipAsset.BrowserDownloadUrl, (progress) => Dispatcher.Invoke(() =>
+        var success = await UpdateInstaller.Instance.StartSilentUpdateAsync(zipAsset.BrowserDownloadUrl, (progress) => Dispatcher.Invoke(() =>
             {
                 PbUpdate.Value = progress * 100;
                 TxtUpdateStatus.Text = string.Format(downloadingFormat, (int)(progress * 100));

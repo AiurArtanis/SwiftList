@@ -25,7 +25,7 @@ public static class UpdateCheckService
                 if (!settings.AutoCheckUpdates)
                     return;
 
-                var release = await UpdateService.Instance.CheckForUpdatesAsync();
+                var release = await UpdateChecker.Instance.CheckForUpdatesAsync();
                 if (release == null)
                     return;
 
@@ -48,7 +48,7 @@ public static class UpdateCheckService
                             var prompt = string.Format(promptFormat, release.TagName);
                             var title = TranslationManager.Instance["About_CheckUpdate"];
                             MessageBox.Show(prompt, title, MessageBoxButton.OK, MessageBoxImage.Information);
-                            var success = await UpdateService.Instance.StartSilentUpdateAsync(zipAsset.BrowserDownloadUrl);
+                            var success = await UpdateInstaller.Instance.StartSilentUpdateAsync(zipAsset.BrowserDownloadUrl);
                             if (success)
                             {
                                 TrayCleanExitHelper.CleanExit();

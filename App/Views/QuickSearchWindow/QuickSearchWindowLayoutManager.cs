@@ -1,14 +1,14 @@
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Threading;
+using SwiftList.App.Helpers;
 using SwiftList.App.Services;
-using SwiftList.Core;
 
 namespace SwiftList.App;
 
 /// <summary>
-/// Manages UI layout computations for QuickSearchWindow — actions list height,
-/// results list height, and Ctrl+N shortcut hint updates.
+/// Manages panel-height layout math for QuickSearchWindow -- actions list height and results list
+/// height. Ctrl+N shortcut-hint labeling is a separate concern handled by QuickSearchShortcutHelper
+/// (still triggered from here after a resize, since that's when rows scroll into/out of view).
 /// </summary>
 internal sealed class QuickSearchWindowLayoutManager
 {
@@ -109,50 +109,6 @@ internal sealed class QuickSearchWindowLayoutManager
         }), DispatcherPriority.ContextIdle);
     }
 
-    public void UpdateShortcutHints()
-    {
-        var scrollViewer = GetScrollViewer(_window.LstResults);
-        var firstVisible = scrollViewer != null ? (int)Math.Round(scrollViewer.VerticalOffset) : 0;
-        var shortcutIndex = 1;
-
-        var selectMod = UserSettings.Load().Hotkeys.SelectJumpModifier;
-
-        for (var i = 0; i < _window.LstResults.Items.Count; i++)
-        {
-            if (_window.LstResults.Items[i] is AppSearchResult item)
-            {
-                if (item.IsEmptyResult || item.IsSearchSectionHeader || string.IsNullOrEmpty(selectMod))
-                {
-                    item.ShortcutHint = string.Empty;
-                    item.ShortcutVisibility = Visibility.Collapsed;
-                    continue;
-                }
-
-                if (i >= firstVisible && shortcutIndex <= 9)
-                {
-                    var prefix = string.Equals(selectMod, "None", StringComparison.OrdinalIgnoreCase) ? "" : $"{selectMod}+";
-                    item.ShortcutHint = $"{prefix}{shortcutIndex}";
-                    item.ShortcutVisibility = Visibility.Visible;
-                    shortcutIndex++;
-                }
-                else
-                {
-                    item.ShortcutHint = string.Empty;
-                    item.ShortcutVisibility = Visibility.Collapsed;
-                }
-            }
-        }
-    }
-
-    private static ScrollViewer? GetScrollViewer(DependencyObject depObj)
-    {
-        if (depObj is ScrollViewer viewer) return viewer;
-        for (var i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(depObj); i++)
-        {
-            var child = System.Windows.Media.VisualTreeHelper.GetChild(depObj, i);
-            var result = GetScrollViewer(child);
-            if (result != null) return result;
-        }
-        return null;
-    }
+    public void UpdateShortcutHints() =>
+        QuickSearchShortcutHelper.UpdateShortcutHints(_window, WpfUiHelper.GetScrollViewer(_window.LstResults));
 }

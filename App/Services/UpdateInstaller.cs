@@ -3,45 +3,27 @@ using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Security.Cryptography;
 using System.Windows;
 using SwiftList.App.Views.Controls;
 
 namespace SwiftList.App.Services;
 
-public class UpdateService
+// Downloads, signature-verifies, and installs a portable-zip update. Kept separate from UpdateChecker:
+// installing is user-consented and has a different failure domain (crypto/filesystem/process elevation)
+// than the periodic GitHub version check.
+public class UpdateInstaller
 {
-    private static readonly Lazy<UpdateService> _instance = new Lazy<UpdateService>(() => new UpdateService());
-    public static UpdateService Instance => _instance.Value;
+    private static readonly Lazy<UpdateInstaller> _instance = new Lazy<UpdateInstaller>(() => new UpdateInstaller());
+    public static UpdateInstaller Instance => _instance.Value;
 
     private readonly HttpClient _httpClient;
-    private const string GITHUB_API_URL = "https://api.github.com/repos/SwiftList/SwiftList/releases/latest";
 
-    private UpdateService()
+    private UpdateInstaller()
     {
         _httpClient = new HttpClient();
         // User-Agent header is strictly required by GitHub API
         _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("SwiftList", "1.0.0"));
-    }
-
-    /// <summary>
-    /// Retrieves the latest release info from GitHub.
-    /// </summary>
-    public async Task<GitHubReleaseInfo?> CheckForUpdatesAsync()
-    {
-        try
-        {
-            var response = await _httpClient.GetStringAsync(GITHUB_API_URL);
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            return JsonSerializer.Deserialize<GitHubReleaseInfo>(response, options);
-        }
-        catch (Exception ex)
-        {
-            Core.Logger.Log($"[UpdateService] Check update failed: {ex}", Core.LogLevel.Error);
-            throw;
-        }
     }
 
     private const string PUBLIC_KEY_PEM =
@@ -170,28 +152,4 @@ public class UpdateService
             return false;
         }
     }
-}
-
-public class GitHubReleaseInfo
-{
-    [JsonPropertyName("tag_name")]
-    public string TagName { get; set; } = string.Empty;
-
-    [JsonPropertyName("html_url")]
-    public string HtmlUrl { get; set; } = string.Empty;
-
-    [JsonPropertyName("body")]
-    public string Body { get; set; } = string.Empty;
-
-    [JsonPropertyName("assets")]
-    public GitHubAsset[] Assets { get; set; } = Array.Empty<GitHubAsset>();
-}
-
-public class GitHubAsset
-{
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonPropertyName("browser_download_url")]
-    public string BrowserDownloadUrl { get; set; } = string.Empty;
 }

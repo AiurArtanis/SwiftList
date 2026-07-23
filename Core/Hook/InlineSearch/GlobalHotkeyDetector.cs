@@ -5,15 +5,8 @@ public sealed class GlobalHotkeyDetector
     private readonly UserSettings _settings;
     private readonly ExplorerTracker _explorerTracker;
 
-    private uint _lastModifierDownTime;
-    private int _lastModifierVkCode;
-    private int _modifierClickCount;
-    private bool _modifierWasReleased = true;
-
-    private uint _lastQuickSwitchModifierTime;
-    private int _lastQuickSwitchModifierVkCode;
-    private int _quickSwitchModifierClickCount;
-    private bool _quickSwitchModifierWasReleased = true;
+    private readonly ModifierDoubleTapDetector _toggleWindowTapDetector = new();
+    private readonly ModifierDoubleTapDetector _quickSwitchTapDetector = new();
 
     public GlobalHotkeyDetector(UserSettings settings, ExplorerTracker explorerTracker)
     {
@@ -21,21 +14,19 @@ public sealed class GlobalHotkeyDetector
         _explorerTracker = explorerTracker;
     }
 
-    private const int DoubleTapClickCount = 2;
-
     /// <summary>Call on WM_KEYUP / WM_SYSKEYUP to reset the "was released" flags.</summary>
     public void OnKeyUp(int vkCode)
     {
         if (HotkeyStringFormat.IsBareModifier(_settings.Hotkeys.ToggleWindowHotkey, out var toggleModifier) &&
             KeyboardUtils.IsModifierKey(vkCode, toggleModifier))
         {
-            _modifierWasReleased = true;
+            _toggleWindowTapDetector.OnModifierKeyUp();
         }
 
         if (HotkeyStringFormat.IsBareModifier(_settings.Hotkeys.QuickSwitchHotkey, out var quickSwitchModifier) &&
             KeyboardUtils.IsModifierKey(vkCode, quickSwitchModifier))
         {
-            _quickSwitchModifierWasReleased = true;
+            _quickSwitchTapDetector.OnModifierKeyUp();
         }
     }
 
@@ -47,39 +38,11 @@ public sealed class GlobalHotkeyDetector
         {
             if (KeyboardUtils.IsModifierKey(vkCode, clickModifier))
             {
-                // Key-repeat: the key was never released since last press — ignore
-                if (!_modifierWasReleased)
-                    return false;
-                _modifierWasReleased = false;
-
-                var elapsed = time - _lastModifierDownTime;
-                if (vkCode == _lastModifierVkCode && elapsed > 100 && elapsed < 500)
-                {
-                    _modifierClickCount++;
-                    if (_modifierClickCount >= DoubleTapClickCount)
-                    {
-                        _modifierClickCount = 0;
-                        _lastModifierDownTime = 0;
-                        _lastModifierVkCode = 0;
-                        triggered = true;
-                    }
-                    else
-                    {
-                        _lastModifierDownTime = time;
-                    }
-                }
-                else
-                {
-                    _modifierClickCount = 1;
-                    _lastModifierDownTime = time;
-                    _lastModifierVkCode = vkCode;
-                }
+                triggered = _toggleWindowTapDetector.OnModifierKeyDown(vkCode, time);
             }
             else
             {
-                _modifierClickCount = 0;
-                _lastModifierDownTime = 0;
-                _lastModifierVkCode = 0;
+                _toggleWindowTapDetector.ResetOnOtherKey();
             }
         }
         else
@@ -111,39 +74,11 @@ public sealed class GlobalHotkeyDetector
         {
             if (KeyboardUtils.IsModifierKey(vkCode, clickModifier))
             {
-                // Key-repeat: the key was never released since last press — ignore
-                if (!_quickSwitchModifierWasReleased)
-                    return false;
-                _quickSwitchModifierWasReleased = false;
-
-                var elapsed = time - _lastQuickSwitchModifierTime;
-                if (vkCode == _lastQuickSwitchModifierVkCode && elapsed > 100 && elapsed < 500)
-                {
-                    _quickSwitchModifierClickCount++;
-                    if (_quickSwitchModifierClickCount >= DoubleTapClickCount)
-                    {
-                        _quickSwitchModifierClickCount = 0;
-                        _lastQuickSwitchModifierTime = 0;
-                        _lastQuickSwitchModifierVkCode = 0;
-                        triggered = true;
-                    }
-                    else
-                    {
-                        _lastQuickSwitchModifierTime = time;
-                    }
-                }
-                else
-                {
-                    _quickSwitchModifierClickCount = 1;
-                    _lastQuickSwitchModifierTime = time;
-                    _lastQuickSwitchModifierVkCode = vkCode;
-                }
+                triggered = _quickSwitchTapDetector.OnModifierKeyDown(vkCode, time);
             }
             else
             {
-                _quickSwitchModifierClickCount = 0;
-                _lastQuickSwitchModifierTime = 0;
-                _lastQuickSwitchModifierVkCode = 0;
+                _quickSwitchTapDetector.ResetOnOtherKey();
             }
         }
         else
@@ -159,6 +94,16 @@ public sealed class GlobalHotkeyDetector
             }
         }
 
+        return TryHandleQuickSwitchNavigation(triggered, out consumeKey);
+    }
+
+    // Quick Switch's trigger doesn't just toggle a window like the other hotkey does -- it re-navigates
+    // the active (dialog) Explorer-like window back to the last folder that was active outside it. Kept as
+    // its own method so the gesture-detection above (shared via ModifierDoubleTapDetector) and this
+    // navigation policy read as two separate steps, even though they still live in the same class.
+    private bool TryHandleQuickSwitchNavigation(bool triggered, out bool consumeKey)
+    {
+        consumeKey = false;
         if (_explorerTracker.IsActiveWindowDialog && triggered && _explorerTracker.ActiveAdapter != null)
         {
             var lastExplorerPath = _explorerTracker.LastActiveExplorerPath;
