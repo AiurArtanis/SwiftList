@@ -96,9 +96,9 @@ internal static class NetworkDriveRefreshCoordinator
             visibleFolders.All(path => vm.FolderIndexes.Any(f => f.Path.Equals(path, StringComparison.OrdinalIgnoreCase)));
 
         if (vm.HasPendingEdits || structureUnchanged)
-            NetworkDriveFolderHelper.UpdateRowsInPlace(vm, searchService, data.VisibleDrives, data.VisibleWsl, visibleFolders, data.Statuses, data.ResolvedByDrive, data.WslDistros, data.Configured, data.ConfiguredWsl, data.ConfiguredFolders);
+            NetworkDriveRowSyncHelper.UpdateRowsInPlace(vm, searchService, data.VisibleDrives, data.VisibleWsl, visibleFolders, data.Statuses, data.ResolvedByDrive, data.WslDistros, data.Configured, data.ConfiguredWsl, data.ConfiguredFolders);
         else
-            NetworkDriveFolderHelper.RebuildRows(vm, searchService, onTriggerFastRefresh, pendingRowRebuilds, observedRowRebuilds, data.VisibleDrives, data.VisibleWsl, visibleFolders, data.Statuses, data.ResolvedByDrive, data.WslDistros, data.Configured, data.ConfiguredWsl, data.ConfiguredFolders);
+            NetworkDriveRowSyncHelper.RebuildRows(vm, searchService, onTriggerFastRefresh, pendingRowRebuilds, observedRowRebuilds, data.VisibleDrives, data.VisibleWsl, visibleFolders, data.Statuses, data.ResolvedByDrive, data.WslDistros, data.Configured, data.ConfiguredWsl, data.ConfiguredFolders);
 
         // Scoped to NetworkDrives alone -- this used to require every category empty at once, so the
         // "no network drives" placeholder never showed as long as some unrelated folder or WSL distro was

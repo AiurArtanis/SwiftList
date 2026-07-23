@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Text;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using Native = SwiftList.Core.Hook.ExplorerNativeHooks;
@@ -44,13 +43,13 @@ internal static class QuickNavigationTriggerGate
         {
             // Cross-process LVM_HITTEST distinguishes a desktop icon from empty space; if that fails
             // (process open/memory allocation failure), fall through to the Shell selection-count check.
-            if (IsPointOnDesktopIcon(hwndUnderCursor, x, y))
+            if (DesktopIconHitTester.IsPointOnDesktopIcon(hwndUnderCursor, x, y))
             {
                 return false;
             }
         }
 
-        return IsActiveWindowFolderEmptySpace(activeHwnd);
+        return ExplorerSelectionQuery.IsActiveWindowFolderEmptySpace(activeHwnd);
     }
 
     // Third-party file managers (Directory Opus, Total Commander, ...) integrate through their
@@ -100,129 +99,4 @@ internal static class QuickNavigationTriggerGate
         return false;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct LVHITTESTINFO
-    {
-        public PointNative.POINT pt;
-        public uint flags;
-        public int iItem;
-        public int iSubItem;
-    }
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool ScreenToClient(IntPtr hWnd, ref PointNative.POINT lpPoint);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr OpenProcess(uint processAccess, bool bInheritHandle, uint processId);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, ref LVHITTESTINFO lpBuffer, uint nSize, out IntPtr lpNumberOfBytesWritten);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, out LVHITTESTINFO lpBuffer, uint nSize, out IntPtr lpNumberOfBytesRead);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool VirtualFreeEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize, uint dwFreeType);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool CloseHandle(IntPtr hObject);
-
-    private static bool IsPointOnDesktopIcon(IntPtr hwndListView, int x, int y)
-    {
-        var hProcess = IntPtr.Zero;
-        var pRemoteMem = IntPtr.Zero;
-        try
-        {
-            Native.GetWindowThreadProcessId(hwndListView, out var pid);
-            hProcess = OpenProcess(0x001F0FFF /* PROCESS_ALL_ACCESS */, false, pid);
-            if (hProcess == IntPtr.Zero) return false;
-
-            var pt = new PointNative.POINT { x = x, y = y };
-            ScreenToClient(hwndListView, ref pt);
-
-            var hitTestInfo = new LVHITTESTINFO
-            {
-                pt = pt,
-                flags = 0,
-                iItem = -1,
-                iSubItem = -1
-            };
-
-            pRemoteMem = VirtualAllocEx(hProcess, IntPtr.Zero, (uint)Marshal.SizeOf<LVHITTESTINFO>(), 0x1000 /* MEM_COMMIT */, 0x04 /* PAGE_READWRITE */);
-            if (pRemoteMem == IntPtr.Zero) return false;
-
-            WriteProcessMemory(hProcess, pRemoteMem, ref hitTestInfo, (uint)Marshal.SizeOf<LVHITTESTINFO>(), out _);
-
-            PointNative.SendMessage(hwndListView, 0x1012 /* LVM_HITTEST */, IntPtr.Zero, pRemoteMem);
-
-            ReadProcessMemory(hProcess, pRemoteMem, out hitTestInfo, (uint)Marshal.SizeOf<LVHITTESTINFO>(), out _);
-
-            return hitTestInfo.iItem != -1;
-        }
-        catch { }
-        finally
-        {
-            if (pRemoteMem != IntPtr.Zero) VirtualFreeEx(hProcess, pRemoteMem, 0, 0x8000 /* MEM_RELEASE */);
-            if (hProcess != IntPtr.Zero) CloseHandle(hProcess);
-        }
-        return false;
-    }
-
-    private static bool IsActiveWindowFolderEmptySpace(IntPtr hwnd)
-    {
-        try
-        {
-            var rootHwnd = Native.GetAncestor(hwnd, GA_ROOT);
-            var isActiveDesktop = Native.IsDesktopWindow(rootHwnd, out _);
-
-            var shellType = Type.GetTypeFromProgID("Shell.Application");
-            if (shellType == null) return true;
-
-            var shell = Activator.CreateInstance(shellType);
-            if (shell == null) return true;
-
-            dynamic dShell = shell;
-            dynamic windows = dShell.Windows();
-            if (windows == null) return true;
-
-            int count = windows.Count;
-            for (var i = 0; i < count; i++)
-            {
-                try
-                {
-                    dynamic window = windows.Item(i);
-                    if (window == null) continue;
-
-                    dynamic w = window;
-                    var wHwnd = new IntPtr(w.HWND);
-
-                    var isMatch = isActiveDesktop ? Native.IsDesktopWindow(wHwnd, out _) : wHwnd == rootHwnd;
-                    if (!isMatch) continue;
-
-                    dynamic doc = w.Document;
-                    if (doc != null)
-                    {
-                        dynamic selectedItems = doc.SelectedItems;
-                        if (selectedItems != null)
-                        {
-                            int itemsCount = selectedItems.Count;
-                            if (itemsCount > 0) return false;
-                        }
-                    }
-                    break;
-                }
-                catch { }
-            }
-        }
-        catch { }
-        return true;
-    }
 }

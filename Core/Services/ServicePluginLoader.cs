@@ -1,6 +1,5 @@
 using System.Reflection;
 using SwiftList.PluginSdk.Abstractions.Plugins;
-using SwiftList.PluginSdk.Services;
 using SwiftList.PluginSdk.Registries;
 
 namespace SwiftList.Core.Services;
@@ -104,70 +103,13 @@ public static class ServicePluginLoader
             }
 
             // Initialize TranslationService LookupFunc in the service process using the loaded translation providers
-            var translations = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var cultureName = System.Globalization.CultureInfo.CurrentUICulture.Name;
-            foreach (var provider in translationProviders)
-            {
-                try
-                {
-                    var dict = provider.GetTranslations(cultureName);
-                    if (dict != null)
-                    {
-                        foreach (var kvp in dict)
-                        {
-                            translations[kvp.Key] = kvp.Value;
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log($"[ServicePluginLoader] Failed to load translations from '{provider.Name}': {ex.Message}", LogLevel.Error);
-                }
-            }
-
-            TranslationService.LookupFunc = key => translations.TryGetValue(key, out var val) ? val : $"[{key}]";
-            TranslationService.CurrentCultureFunc = () =>
-            {
-                try
-                {
-                    var preferred = UserSettings.Load().PreferredLanguage;
-                    return string.IsNullOrEmpty(preferred) ? cultureName : preferred;
-                }
-                catch { return cultureName; }
-            };
-
-            PluginSettingsService.GetSettingFunc = (pluginId, key, defVal) =>
-            {
-                try
-                {
-                    var settings = UserSettings.Load();
-                    if (settings.PluginSettings.TryGetValue(pluginId, out var dict))
-                    {
-                        if (dict.TryGetValue(key, out var val))
-                        {
-                            if (val is System.Text.Json.JsonElement element)
-                            {
-                                if (element.ValueKind == System.Text.Json.JsonValueKind.True) return true;
-                                if (element.ValueKind == System.Text.Json.JsonValueKind.False) return false;
-                                if (element.ValueKind == System.Text.Json.JsonValueKind.String) return element.GetString();
-                            }
-                            return val;
-                        }
-                    }
-                }
-                catch { }
-                return defVal;
-            };
+            ServicePluginServiceWiring.WireTranslations(translationProviders, cultureName);
+            ServicePluginServiceWiring.WirePluginSettings();
 
             if (loadHookPlugins)
             {
-                // Wire up FilterFuncs so the hook process respects enabled/disabled state.
-                // The lambda reads UserSettings.Load() (cached) on every call, so after a
-                // ReloadSettings command triggers UserSettings.ForceReload() the next adapter
-                // lookup will automatically reflect the new disabled-components list.
-                InlineSearchAdapterRegistry.FilterFunc = a => IsComponentEnabled(a);
-                FileDialogAdapterRegistry.FilterFunc = a => IsComponentEnabled(a);
-                ActivePathCollectorRegistry.FilterFunc = a => IsComponentEnabled(a);
+                PluginComponentEnablement.WireFilterFuncs();
             }
 
             // Now register alias providers (this will trigger provider.Name evaluation)
@@ -180,31 +122,6 @@ public static class ServicePluginLoader
         catch (Exception ex)
         {
             Logger.Log($"[ServicePluginLoader] Error while loading plugins: {ex.Message}", LogLevel.Error);
-        }
-    }
-
-    private static bool IsComponentEnabled(object obj)
-    {
-        try
-        {
-            var dllName = Path.GetFileName(obj.GetType().Assembly.Location);
-            var typeName = obj.GetType().Name;
-            var settings = UserSettings.Load();
-
-            // Match the same ID formats used by App's ComponentFilter / MakeId helper
-            var idInlineSearch = $"{dllName}::InlineSearchAdapter::{typeName}";
-            var idFileDialog = $"{dllName}::FileDialogAdapter::{typeName}";
-            var idPathCollect = $"{dllName}::ActivePathCollector::{typeName}";
-            var idAlias = $"{dllName}::AliasProvider::{typeName}";
-
-            return !settings.DisabledPluginComponents.Contains(idInlineSearch, StringComparer.OrdinalIgnoreCase)
-                && !settings.DisabledPluginComponents.Contains(idFileDialog, StringComparer.OrdinalIgnoreCase)
-                && !settings.DisabledPluginComponents.Contains(idPathCollect, StringComparer.OrdinalIgnoreCase)
-                && !settings.DisabledPluginComponents.Contains(idAlias, StringComparer.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return true;
         }
     }
 }

@@ -77,7 +77,7 @@ public class KeyboardHookService : IDisposable
             // to an active file dialog (IsActiveWindowDialog) same as the blacklist does. Key-up
             // tracking and Explorer-tracker bookkeeping run unconditionally either way.
             var isFullscreenBlocking = !_settings.Hotkeys.AllowHotkeysInFullscreen && FullscreenHelper.IsForegroundWindowFullScreen();
-            var shouldDisableAllHooks = (IsHotkeysDisabledTemporarily || KeyboardUtils.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses) || isFullscreenBlocking)
+            var shouldDisableAllHooks = (IsHotkeysDisabledTemporarily || ForegroundProcessGate.IsForegroundProcessBlacklisted(_settings.BlacklistedProcesses) || isFullscreenBlocking)
                                          && !_explorerTracker.IsActiveWindowDialog;
 
             if (!shouldDisableAllHooks && _hotkeyDetector.CheckToggleWindowHotkey(vkCode, time, out var consumeToggleKey, OnDoubleCtrl))
@@ -156,7 +156,7 @@ public class KeyboardHookService : IDisposable
         KeyboardNativeMethods.GetClassName(targetFocus, sbClass, sbClass.Capacity);
         var className = sbClass.ToString();
 
-        var processName = KeyboardUtils.GetProcessNameWithoutExtension(fgPid);
+        var processName = ForegroundProcessGate.GetProcessNameWithoutExtension(fgPid);
 
         Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: targetFocus=0x{0:X}, className={1}, processName={2}", targetFocus.ToInt64(), className, processName), LogLevel.Debug);
 

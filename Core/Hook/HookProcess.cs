@@ -207,7 +207,7 @@ public sealed class HookProcess : IDisposable
     // fullscreen foreground app suppresses the quick-nav mouse triggers too, but still yields to an
     // active file dialog so FileDialogQuickNavGate's middle-click-in-dialogs support keeps working.
     private bool ShouldSuppressQuickNavTrigger() => (_isHotkeysDisabledTemporarily
-                || KeyboardUtils.IsForegroundProcessBlacklisted(UserSettings.Load().BlacklistedProcesses)
+                || ForegroundProcessGate.IsForegroundProcessBlacklisted(UserSettings.Load().BlacklistedProcesses)
                 || FullscreenHelper.IsForegroundWindowFullScreen())
                && !(_explorerTracker?.IsActiveWindowDialog ?? false);
 

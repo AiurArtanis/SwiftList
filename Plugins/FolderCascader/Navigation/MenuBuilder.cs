@@ -10,7 +10,7 @@ public static class MenuBuilder
 {
     public static IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu, Provider provider)
     {
-        Helper.EnsureIcons();
+        IconBitmapCache.EnsureIcons();
 
         if (hMenu == IntPtr.Zero)
         {
@@ -75,11 +75,11 @@ public static class MenuBuilder
                     Text = TranslationService.Get("FolderCascader_Favorites"),
                     HasSubMenu = true,
                     SubMenuHandle = provider.AllocateHandle("foldercascader://favorites"),
-                    HBitmapItem = Helper.FavoritesHBitmap
+                    HBitmapItem = IconBitmapCache.FavoritesHBitmap
                 });
             }
 
-            if (showHistory && Helper.GetRecentHistoryEntries().Count > 0)
+            if (showHistory && HistoryService.GetHistoryEntries().Take(30).ToList().Count > 0)
             {
                 if (items.Count > 0 && !items.Last().IsSeparator)
                 {
@@ -90,7 +90,7 @@ public static class MenuBuilder
                     Text = TranslationService.Get("FolderCascader_History"),
                     HasSubMenu = true,
                     SubMenuHandle = provider.AllocateHandle("foldercascader://history"),
-                    HBitmapItem = Helper.HistoryHBitmap
+                    HBitmapItem = IconBitmapCache.HistoryHBitmap
                 });
             }
 
@@ -111,7 +111,7 @@ public static class MenuBuilder
 
             if (path == "foldercascader://history")
             {
-                var recentEntries = Helper.GetRecentHistoryEntries();
+                var recentEntries = HistoryService.GetHistoryEntries().Take(30).ToList();
                 foreach (var entry in recentEntries)
                 {
                     var rpath = entry.Path;

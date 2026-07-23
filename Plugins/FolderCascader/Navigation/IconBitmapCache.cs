@@ -1,82 +1,18 @@
-using System.IO;
 using SwiftList.PluginSdk;
-using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.FolderCascader.Navigation;
 
-public static class Helper
+// Renders and caches the small set of GDI HBITMAPs the cascader menu draws (folder/file/favorites/
+// history icons). Kept separate from history lookups and Explorer-window enumeration -- icon rendering
+// changes for theming reasons, not for either of those.
+public static class IconBitmapCache
 {
     public static IntPtr FolderHBitmap { get; private set; } = IntPtr.Zero;
     public static IntPtr FileHBitmap { get; private set; } = IntPtr.Zero;
-    public static IntPtr ThisPcHBitmap { get; private set; } = IntPtr.Zero;
     public static IntPtr FavoritesHBitmap { get; private set; } = IntPtr.Zero;
     public static IntPtr HistoryHBitmap { get; private set; } = IntPtr.Zero;
 
     private static readonly object _iconLock = new();
-    private static readonly Dictionary<string, IntPtr> _extensionIconCache = new(StringComparer.OrdinalIgnoreCase);
-
-    public static List<HistoryEntry> GetRecentHistoryEntries() => HistoryService.GetHistoryEntries().Take(30).ToList();
-
-    public static List<string> GetOpenedExplorerPaths()
-    {
-        var paths = new List<string>();
-        try
-        {
-            var shellType = Type.GetTypeFromProgID("Shell.Application");
-            if (shellType != null)
-            {
-                var shell = Activator.CreateInstance(shellType);
-                if (shell != null)
-                {
-                    dynamic dShell = shell;
-                    dynamic windows = dShell.Windows();
-                    if (windows != null)
-                    {
-                        int count = windows.Count;
-                        for (var i = 0; i < count; i++)
-                        {
-                            try
-                            {
-                                dynamic window = windows.Item(i);
-                                if (window != null)
-                                {
-                                    dynamic w = window;
-                                    // w.Name is the shell window's localized app title, which varies per
-                                    // system display language -- checking it directly only recognizes
-                                    // whichever languages happen to be hardcoded here. w.FullName is the
-                                    // path to the hosting executable, unaffected by system language, so it
-                                    // correctly identifies a real Explorer window (as opposed to another
-                                    // Shell.Application window, e.g. Internet Explorer) on any locale.
-                                    string fullName = w.FullName ?? string.Empty;
-                                    if (fullName.EndsWith("explorer.exe", StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        var doc = w.Document as dynamic;
-                                        if (doc != null)
-                                        {
-                                            var folder = doc.Folder as dynamic;
-                                            if (folder != null)
-                                            {
-                                                var self = folder.Self as dynamic;
-                                                if (self != null)
-                                                {
-                                                    string path = self.Path;
-                                                    if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
-                                                        paths.Add(path);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            catch { }
-                        }
-                    }
-                }
-            }
-        }
-        catch { }
-        return paths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-    }
 
     [System.Runtime.InteropServices.DllImport("gdi32.dll", EntryPoint = "DeleteObject")]
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
@@ -94,7 +30,6 @@ public static class Helper
                     {
                         FolderHBitmap = ShellIconLoader.GetIconHBitmap("dummy_folder", isDir: true);
                         FileHBitmap = ShellIconLoader.GetIconHBitmap("dummy_file.txt", isDir: false);
-                        ThisPcHBitmap = ShellIconLoader.GetIconHBitmap("shell:::{20D04FE0-3AEA-1069-A2D8-08002B30309D}", isDir: true);
                     }
                     catch (Exception ex)
                     {
@@ -170,36 +105,5 @@ public static class Helper
         var strokeBrush = accentBrush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(33, 150, 243));
         var stroke = new System.Windows.Media.Pen(strokeBrush, 1.5);
         return CreateHBitmapFromWpfPath(path, null, stroke);
-    }
-
-    public static IntPtr GetFileIconHBitmap(string path)
-    {
-        var ext = Path.GetExtension(path);
-        if (string.IsNullOrEmpty(ext))
-        {
-            return FileHBitmap;
-        }
-
-        lock (_iconLock)
-        {
-            if (_extensionIconCache.TryGetValue(ext, out var hBitmap))
-            {
-                return hBitmap;
-            }
-
-            try
-            {
-                var dummyFile = "dummy" + ext;
-                var hBmp = ShellIconLoader.GetIconHBitmap(dummyFile, isDir: false);
-                if (hBmp != IntPtr.Zero)
-                {
-                    _extensionIconCache[ext] = hBmp;
-                    return hBmp;
-                }
-            }
-            catch { }
-
-            return FileHBitmap;
-        }
     }
 }
