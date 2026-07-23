@@ -44,8 +44,16 @@ public static class SettingsSearchHighlight
 
         protected override void OnRender(DrawingContext drawingContext)
         {
+            // Flush with the target's own bounds, not outset: several jump targets (e.g. the
+            // Local/Network/Folders index cards, styled via "SettingsCard") span the full width of
+            // their scrollable container with zero horizontal margin, so an outward-inflated border has
+            // nowhere to go and gets clipped by whichever ancestor happens to own that space
+            // (ScrollViewer, AdornerDecorator, ...). Drawing exactly on the target's own bounds needs no
+            // borrowed space, so it renders complete regardless of how tightly the target fits its
+            // container.
             var rect = new Rect(AdornedElement.RenderSize);
-            rect.Inflate(5, 5);
+            if (rect.Width <= 0 || rect.Height <= 0)
+                return;
             drawingContext.DrawRoundedRectangle(null, _pen, rect, 6, 6);
         }
     }
