@@ -8,7 +8,9 @@ public static class AppPipeService
 
     public static void StopServer() => _keepRunningPipeServer = false;
 
-    public static async Task SendActivateSignalAsync(CancellationToken token = default)
+    // uri, when given, is forwarded as-is instead of the plain "ACTIVATE" command -- the running
+    // instance's server loop below treats anything other than "ACTIVATE" as a swiftlist:// URI to route.
+    public static async Task SendActivateSignalAsync(string? uri = null, CancellationToken token = default)
     {
         var pipeName = $"SwiftList_App_Pipe_{Environment.UserName}";
 
@@ -17,7 +19,7 @@ public static class AppPipeService
             using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, PipeOptions.Asynchronous);
 
             await client.ConnectAsync(500, token).ConfigureAwait(false);
-            await PipeRequestBinarySerializer.WriteStringAsync(client, "ACTIVATE", token).ConfigureAwait(false);
+            await PipeRequestBinarySerializer.WriteStringAsync(client, uri ?? "ACTIVATE", token).ConfigureAwait(false);
         }
 
         catch (Exception ex)
@@ -49,6 +51,10 @@ public static class AppPipeService
                         }
 
                     }));
+                }
+                else
+                {
+                    UriRouter.Route(msg);
                 }
             }
 

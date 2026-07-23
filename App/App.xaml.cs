@@ -77,9 +77,11 @@ public partial class App : Application
 
             catch { }
 
-            // Send activation command to the already running process and then exit immediately
-
-            await AppPipeService.SendActivateSignalAsync();
+            // Send activation command to the already running process and then exit immediately.
+            // A swiftlist:// launch arg is forwarded as-is so the running instance can route it;
+            // anything else (a plain second launch) falls back to the bare activate signal.
+            var launchUri = e.Args.Length > 0 && UriRouter.IsSwiftListUri(e.Args[0]) ? e.Args[0] : null;
+            await AppPipeService.SendActivateSignalAsync(launchUri);
             Shutdown();
             return;
         }
@@ -190,10 +192,14 @@ public partial class App : Application
         _ = AppPipeService.StartPipeServerAsync();
         _ = AppSearchPipeService.StartPipeServerAsync(); // exposes the full window's search to external clients (see AppSearchPipeService)
         AppStartupServiceBootstrapper.EnsureServiceStarted();
+        UrlProtocolManager.EnsureRegistered();
         Logger.Log("Starting normal WPF GUI client mode.");
         base.OnStartup(e);
 
-        // After QuickSearchWindow is created (via StartupUri), start InlineSearchManager
+        // After QuickSearchWindow is created (via StartupUri), start InlineSearchManager. base.OnStartup
+        // above does NOT create the StartupUri window synchronously -- that happens once the Dispatcher
+        // message loop actually starts, which is still later than this point -- hence deferring to
+        // DispatcherPriority.Loaded rather than running inline here.
         _ = Dispatcher.BeginInvoke(new Action(() =>
         {
             if (Current.MainWindow is QuickSearchWindow quickSearchWindow)
@@ -201,6 +207,14 @@ public partial class App : Application
                 InlineSearchManager.Instance.Start();
                 Logger.Log("[App] InlineSearchManager started.");
             }
+
+            // This process won the single-instance mutex above, so if it was itself launched via a
+            // swiftlist:// link (rather than a second instance forwarding one through the pipe -- see
+            // the mutex branch above), route it here. Must run in this same deferred callback: routing
+            // to the quick/full search window needs MainWindow already set, which (see comment above)
+            // isn't guaranteed yet any earlier than this.
+            if (e.Args.Length > 0 && UriRouter.IsSwiftListUri(e.Args[0]))
+                UriRouter.Route(e.Args[0]);
         }), System.Windows.Threading.DispatcherPriority.Loaded);
 
         // Background update check on startup

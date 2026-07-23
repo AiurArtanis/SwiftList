@@ -230,5 +230,15 @@ begin
   // Always attempted (see EnvRemovePath's own comment on why) -- after files are gone (usPostUninstall),
   // not usUninstall (which the block above uses to stop processes still holding files open).
   if CurUninstallStep = usPostUninstall then
+  begin
     EnvRemovePath(ExpandConstant('{app}'));
+
+    // Both are HKCU writes the running app itself makes (StartupManager.cs / UrlProtocolManager.cs),
+    // not the installer -- so the installer is the only place left to clean them up. RegDeleteValue
+    // only removes SwiftList's own value from the shared Run key (never the key itself, other apps use
+    // it too); RegDeleteKeyIncludingSubkeys removes the whole swiftlist:// protocol registration tree.
+    // Both no-op harmlessly if already absent.
+    RegDeleteValue(HKEY_CURRENT_USER, 'Software\Microsoft\Windows\CurrentVersion\Run', 'SwiftList');
+    RegDeleteKeyIncludingSubkeys(HKEY_CURRENT_USER, 'Software\Classes\swiftlist');
+  end;
 end;
