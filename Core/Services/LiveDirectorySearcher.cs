@@ -120,7 +120,7 @@ public static class LiveDirectorySearcher
                         {
                             if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, slab))
                             {
-                                if (!pattern.IsAcceptableAliasMatch(aliasMatch))
+                                if (!pattern.IsAcceptableAliasMatch(aliasMatch, pattern.GetTotalTermLength(), alias, FzfScoringScheme.Default, slab))
                                     continue;
 
                                 matched = true;

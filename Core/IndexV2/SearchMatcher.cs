@@ -292,6 +292,7 @@ internal static class SearchMatcher
 
             FzfPatternResult aliasMatch;
             bool hit;
+            var decodedLength = -1; // -1: not decoded to chars yet (the ASCII/byte fast path below skips it)
             if (Ascii.IsValid(aliasUtf8))
             {
                 hit = ctx.BytePattern.TryMatchSegmented(aliasUtf8, out aliasMatch, FzfScoringScheme.Default, worker.Slab, worker.ByteBuffers);
@@ -300,17 +301,36 @@ internal static class SearchMatcher
             {
                 if (worker.AliasScratch.Length < aliasUtf8.Length)
                     worker.AliasScratch = new char[Math.Max(aliasUtf8.Length, worker.AliasScratch.Length * 2)];
-                var written = Encoding.UTF8.GetChars(aliasUtf8, worker.AliasScratch);
-                hit = ctx.Pattern.TryMatch(worker.AliasScratch.AsSpan(0, written), out aliasMatch, FzfScoringScheme.Default, worker.Slab);
+                decodedLength = Encoding.UTF8.GetChars(aliasUtf8, worker.AliasScratch);
+                hit = ctx.Pattern.TryMatch(worker.AliasScratch.AsSpan(0, decodedLength), out aliasMatch, FzfScoringScheme.Default, worker.Slab);
             }
 
-            if (hit && ctx.Pattern.IsAcceptableAliasMatch(aliasMatch, ctx.QueryLen))
+            if (hit)
             {
-                var weighted = ctx.Pattern.WeightAliasMatch(aliasMatch, ctx.QueryLen);
-                if (!matched || weighted.Score > best.Score)
+                var acceptable = ctx.Pattern.IsAcceptableAliasMatch(aliasMatch, ctx.QueryLen);
+                if (!acceptable)
                 {
-                    matched = true;
-                    best = weighted;
+                    // The multi-term "every term individually tight" fallback (see FzfPattern's own
+                    // comment on IsAcceptableAliasMatch) needs the alias as chars -- the ASCII/byte fast
+                    // path above deliberately never decodes it, since the common case doesn't need to.
+                    // Only pay that decode cost here, in this already-rare tail (existing check failed).
+                    if (decodedLength < 0)
+                    {
+                        if (worker.AliasScratch.Length < aliasUtf8.Length)
+                            worker.AliasScratch = new char[Math.Max(aliasUtf8.Length, worker.AliasScratch.Length * 2)];
+                        decodedLength = Encoding.UTF8.GetChars(aliasUtf8, worker.AliasScratch);
+                    }
+                    acceptable = ctx.Pattern.IsAcceptableAliasMatch(aliasMatch, ctx.QueryLen, worker.AliasScratch.AsSpan(0, decodedLength), FzfScoringScheme.Default, worker.Slab);
+                }
+
+                if (acceptable)
+                {
+                    var weighted = ctx.Pattern.WeightAliasMatch(aliasMatch, ctx.QueryLen);
+                    if (!matched || weighted.Score > best.Score)
+                    {
+                        matched = true;
+                        best = weighted;
+                    }
                 }
             }
         }

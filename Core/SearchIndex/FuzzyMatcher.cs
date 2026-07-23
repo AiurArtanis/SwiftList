@@ -55,7 +55,7 @@ public static class FuzzyMatcher
                 // FzfPattern.IsAcceptableAliasMatch) -- reject a match whose span is disproportionately
                 // wider than the query, or whose score is too low, so a weak coincidental alias hit
                 // doesn't count as a match here either.
-                if (!fzf.IsAcceptableAliasMatch(aliasMatch, queryLen))
+                if (!fzf.IsAcceptableAliasMatch(aliasMatch, queryLen, alias, FzfScoringScheme.Default))
                     continue;
 
                 return true;
