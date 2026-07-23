@@ -15,9 +15,11 @@ This manual covers everything a day-to-day user needs:
   QuickLook preview pane.
 - **[Instant Answers & Keyword Shortcuts](./instant-answers)** — the calculator, environment
   variables, run-command shortcuts, and keyword-triggered plugins like Process Manager,
-  Translation, Browser Data, and Web Search.
+  Translation, Browser Data, Settings Search, and Web Search.
 - **[Command-Line Search (slf)](./cli)** — the fzf-style CLI companion for searching from a
   terminal.
+- **[URI Protocol (swiftlist://)](./uri-protocol)** — jumping straight into a search or a
+  specific setting from a link, another app, or a script.
 - **[Supported File Managers](./file-manager-support)** — which file managers and file-picker
   dialogs SwiftList can dock into, trigger Quick Navigation from, or detect the current folder of.
 - **[Settings Reference](./settings/)** — every settings page, tab, and option, itemized.

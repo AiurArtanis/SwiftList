@@ -51,6 +51,7 @@ type often.
 | `ps` | Process Manager | Running processes by name — select one to kill it. |
 | `tr` | Translation | Translates the typed text, auto-detecting source language and translating to/from your interface language. |
 | `bm` | Browser Data | Bookmarks and history from Chrome/Chromium-family and Firefox-family browser profiles you've added under that plugin's own settings. |
+| `set` | Core Extensions | Every setting in the app, fuzzy-matched by name — pick one to jump straight to it in Settings, highlighted. Type `set` with nothing after it to list every setting. |
 
 ## Web search
 
