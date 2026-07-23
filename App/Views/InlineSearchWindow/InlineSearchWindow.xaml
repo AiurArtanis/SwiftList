@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:SwiftList.App"
         xmlns:services="clr-namespace:SwiftList.App.Services"
-        xmlns:helpers="clr-namespace:SwiftList.App.Helpers"
+        xmlns:helpers="clr-namespace:SwiftList.App.Helpers.Visuals"
         Title="SwiftList Inline"
         Width="465" Height="550" SizeToContent="Manual"
         WindowStyle="None"

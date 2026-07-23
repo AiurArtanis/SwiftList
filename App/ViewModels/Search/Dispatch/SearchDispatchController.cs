@@ -2,6 +2,7 @@ using System.Windows;
 using SwiftList.Core;
 using SwiftList.App.Services;
 
+using SwiftList.App.ViewModels.Search.StartupPanel;
 namespace SwiftList.App.ViewModels.Search.Dispatch;
 
 // Owns query-token parsing, dispatching a search (debounced/quick vs. blocking), and rendering the

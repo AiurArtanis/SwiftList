@@ -1,0 +1,78 @@
+<UserControl x:Class="SwiftList.App.Views.Settings.General.GeneralSettingsSystemTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:services="clr-namespace:SwiftList.App.Services"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="700">
+    <!-- Split out of GeneralSettingsPage.xaml (the "System" tab) to keep that file under the
+         project's line-count convention. DataContext is inherited from the host page, so the
+         General.Xxx bindings below resolve exactly as they did when this content lived inline. -->
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/SwiftList.App;component/Resources/Styles.xaml"/>
+                <ResourceDictionary Source="../../../Resources/Styles/Windows/SearchWindow.xaml"/>
+                <ResourceDictionary Source="../../../Resources/Styles/Windows/SettingsWindow.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <TextBlock Style="{StaticResource SettingsHintText}" Margin="0,0,0,12"
+                    Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SysHint]}"/>
+
+        <Border Style="{StaticResource SettingsCard}">
+            <StackPanel>
+                <CheckBox x:Name="RowStartup" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_Startup]}"
+                           IsChecked="{Binding General.StartWithWindows, Mode=TwoWay}"
+                           Margin="0,4"/>
+
+                <CheckBox x:Name="RowAutoCheckUpdates" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_AutoCheckUpdates]}"
+                           IsChecked="{Binding General.AutoCheckUpdates, Mode=TwoWay}"
+                           Margin="0,4"/>
+
+                <CheckBox x:Name="RowAutoSilentUpdate" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_AutoSilentUpdate]}"
+                           IsChecked="{Binding General.AutoSilentUpdate, Mode=TwoWay}"
+                           IsEnabled="{Binding General.IsAutoSilentUpdateEnabled}"
+                           Margin="0,4"/>
+
+                <CheckBox x:Name="RowHardwareAcceleration" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_HardwareAcceleration]}"
+                           IsChecked="{Binding General.EnableHardwareAcceleration, Mode=TwoWay}"
+                           Margin="0,4"/>
+
+                <CheckBox x:Name="RowHideTrayIcon" Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_HideTrayIcon]}"
+                           IsChecked="{Binding General.HideTrayIcon, Mode=TwoWay}"
+                           Margin="0,4"/>
+
+                <Grid x:Name="RowLogLevel" Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                        <ColumnDefinition Width="Auto" MinWidth="150"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LogLevel]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="1"
+                              Style="{StaticResource SettingsComboBox}"
+                              ItemsSource="{Binding General.LogLevelOptions}"
+                              DisplayMemberPath="Label"
+                              SelectedItem="{Binding General.SelectedLogLevel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                </Grid>
+
+                <Grid x:Name="RowLangSelect" Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="GeneralLabel"/>
+                        <ColumnDefinition Width="Auto" MinWidth="150"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_LangSelect]}" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="1"
+                              Style="{StaticResource SettingsComboBox}"
+                              ItemsSource="{Binding General.LanguageOptions}"
+                              DisplayMemberPath="Label"
+                              SelectedValuePath="Value"
+                              SelectedValue="{Binding General.PreferredLanguage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

@@ -4,7 +4,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:SwiftList.App"
         xmlns:services="clr-namespace:SwiftList.App.Services"
-        xmlns:helpers="clr-namespace:SwiftList.App.Helpers"
+        xmlns:helpers="clr-namespace:SwiftList.App.Helpers.Visuals"
         Title="SwiftList"
         SizeToContent="WidthAndHeight"
         WindowStyle="None"
@@ -74,7 +74,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <!-- Styled like the Settings window's own tab headers (Button+underline pair,
-                             see Resources/Styles/SettingsWindow.xaml's TabHeaderButtonStyle and
+                             see Resources/Styles/Windows/SettingsWindow.xaml's TabHeaderButtonStyle and
                              TabUnderlineStyle) for visual consistency; clicking the label switches to
                              this tab (IsSelected drives the accent-blue/underline "active" look). -->
                         <StackPanel Margin="0,0,20,0">

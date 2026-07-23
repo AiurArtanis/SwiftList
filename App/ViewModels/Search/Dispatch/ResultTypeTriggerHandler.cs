@@ -2,6 +2,7 @@ using System.Windows;
 using SwiftList.Core;
 using SwiftList.App.Services;
 
+using SwiftList.App.ViewModels.Search.StartupPanel;
 namespace SwiftList.App.ViewModels.Search.Dispatch;
 
 // Handles the quick-window-only "per-type search trigger character" feature on behalf of

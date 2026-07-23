@@ -5,6 +5,7 @@ using SwiftList.App.Services;
 
 using SwiftList.App.Services.AppWindow;
 
+using SwiftList.App.Services.ShellMenu.Presenter;
 namespace SwiftList.App.Helpers;
 
 public static class SearchInputHelper

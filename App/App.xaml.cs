@@ -15,6 +15,7 @@ using SwiftList.App.Services.ShellIcons;
 using SwiftList.App.Services.Theme;
 using SwiftList.App.Services.Update;
 using SwiftList.App.Services.UrlProtocol;
+using SwiftList.App.Services.ShellMenu.QuickNav;
 namespace SwiftList.App;
 
 public partial class App : Application

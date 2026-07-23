@@ -6,6 +6,7 @@ using SwiftList.App.Services;
 using SwiftList.App.Helpers;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using ListViewItem = System.Windows.Controls.ListViewItem;
+using SwiftList.App.Services.ShellMenu.ActionFlyout;
 namespace SwiftList.App.Views.SearchWindow;
 
 public class SearchWindowInputHandler

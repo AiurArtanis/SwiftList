@@ -19,6 +19,8 @@ using SwiftList.App.Services.AppWindow;
 using SwiftList.App.Services.Tray;
 
 using SwiftList.App.Services.Theme;
+using SwiftList.App.Services.ShellMenu.Presenter;
+using SwiftList.App.Helpers.Visuals;
 namespace SwiftList.App;
 
 public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleContentInset
@@ -40,7 +42,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     {
         InitializeComponent();
         ThemedWindowIconHelper.Apply(this);
-        Helpers.SystemMenuBlocker.Attach(this);
+        SystemMenuBlocker.Attach(this);
         _viewModel = new QuickSearchViewModel();
         this.DataContext = _viewModel;
         _controller = new QuickSearchWindowController(this);
@@ -196,7 +198,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
 
         if (ThemeManager.Instance.ActiveTheme != null)
         {
-            Helpers.WindowEffectHelper.ApplyThemeEffects(this, ThemeManager.Instance.ActiveTheme);
+            WindowEffectHelper.ApplyThemeEffects(this, ThemeManager.Instance.ActiveTheme);
         }
 
         // Position the window

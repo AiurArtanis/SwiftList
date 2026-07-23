@@ -9,6 +9,8 @@ using SwiftList.App.ViewModels.Search;
 using SwiftList.App.Services.AppWindow;
 
 using SwiftList.App.Services.Theme;
+using SwiftList.App.Services.ShellMenu.Presenter;
+using SwiftList.App.Helpers.Visuals;
 namespace SwiftList.App;
 
 /// <summary>
@@ -46,7 +48,7 @@ public partial class InlineSearchWindow : Window, ISearchWindow
     {
         InitializeComponent();
         ThemedWindowIconHelper.Apply(this);
-        Helpers.SystemMenuBlocker.Attach(this);
+        SystemMenuBlocker.Attach(this);
         _viewModel = viewModel;
         _manager = manager;
         this.DataContext = _viewModel;

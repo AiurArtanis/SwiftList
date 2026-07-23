@@ -2,6 +2,7 @@ using System.Windows;
 using SwiftList.Core;
 
 using SwiftList.App.Services.Plugin;
+using SwiftList.App.Helpers.Visuals;
 namespace SwiftList.App.Services.Theme;
 
 public class ThemeManager
@@ -90,7 +91,7 @@ public class ThemeManager
 
                 foreach (Window window in System.Windows.Application.Current.Windows)
                 {
-                    Helpers.WindowEffectHelper.ApplyThemeEffects(window, theme);
+                    WindowEffectHelper.ApplyThemeEffects(window, theme);
                 }
                 ThemeChanged?.Invoke();
             }
@@ -123,7 +124,7 @@ public class ThemeManager
 
                         foreach (Window window in System.Windows.Application.Current.Windows)
                         {
-                            Helpers.WindowEffectHelper.ApplyThemeEffects(window, theme);
+                            WindowEffectHelper.ApplyThemeEffects(window, theme);
                             if (window.Content is UIElement content)
                             {
                                 var targetOpacity = theme.WindowOpacity;

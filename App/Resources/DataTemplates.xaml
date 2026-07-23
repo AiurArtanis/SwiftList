@@ -2,9 +2,9 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:app="clr-namespace:SwiftList.App"
                     xmlns:local="clr-namespace:SwiftList.App.Converters"
-                    xmlns:helpers="clr-namespace:SwiftList.App.Helpers">
+                    xmlns:helpers="clr-namespace:SwiftList.App.Helpers.Visuals">
     <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="Styles/Colors.xaml"/>
+        <ResourceDictionary Source="Styles/Tokens/Colors.xaml"/>
         <ResourceDictionary Source="DataTemplates/ShortcutHintBadge.xaml"/>
         <ResourceDictionary Source="DataTemplates/InlineSearchResult.xaml"/>
         <ResourceDictionary Source="DataTemplates/ActionMenuItem.xaml"/>

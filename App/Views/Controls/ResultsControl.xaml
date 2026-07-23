@@ -5,15 +5,15 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:controls="clr-namespace:SwiftList.App.Views.Controls"
              xmlns:services="clr-namespace:SwiftList.App.Services"
-             xmlns:helpers="clr-namespace:SwiftList.App.Helpers"
+             xmlns:helpers="clr-namespace:SwiftList.App.Helpers.Visuals"
              xmlns:local="clr-namespace:SwiftList.App.Converters"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="600">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../../Resources/Styles/ListBox.xaml"/>
-                <ResourceDictionary Source="../../Resources/Styles/SearchWindow.xaml"/>
+                <ResourceDictionary Source="../../Resources/Styles/Controls/ListBox.xaml"/>
+                <ResourceDictionary Source="../../Resources/Styles/Windows/SearchWindow.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>

@@ -7,6 +7,7 @@ using SwiftList.App.ViewModels.Settings;
 
 using SwiftList.App.Services.ShellIcons;
 using SwiftList.App.Services.Theme;
+using SwiftList.App.Helpers.Visuals;
 namespace SwiftList.App;
 
 // Window chrome and the sidebar's own section-switching. Search box/popup logic lives in
@@ -22,7 +23,7 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         ThemedWindowIconHelper.Apply(this);
         ThemedWindowIconHelper.Apply(TitleBarLogo, this);
-        Helpers.SystemMenuBlocker.Attach(this);
+        SystemMenuBlocker.Attach(this);
         var vm = new SettingsViewModel();
         DataContext = vm;
         Loaded += (_, _) =>

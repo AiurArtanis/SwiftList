@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using SwiftList.App.Services;
 
+using SwiftList.App.ViewModels.Settings.NetworkDrive;
 namespace SwiftList.App.ViewModels.Settings;
 
 public class FolderIndexSettingsItem : ViewModelBase, INetworkRowItem

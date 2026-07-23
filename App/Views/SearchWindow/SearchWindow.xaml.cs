@@ -14,6 +14,8 @@ using SwiftList.App.Services.AppWindow;
 
 using SwiftList.App.Services.ShellIcons;
 using SwiftList.App.Services.Theme;
+using SwiftList.App.Services.ShellMenu.Presenter;
+using SwiftList.App.Helpers.Visuals;
 namespace SwiftList.App;
 
 public partial class SearchWindow : Window, ISearchWindow, IHasVisibleContentInset
@@ -31,7 +33,7 @@ public partial class SearchWindow : Window, ISearchWindow, IHasVisibleContentIns
         InitializeComponent();
 
         ThemedWindowIconHelper.Apply(this);
-        Helpers.SystemMenuBlocker.Attach(this);
+        SystemMenuBlocker.Attach(this);
 
         // XAML's Height/Width are just the design-time/factory-reset default -- the real size (user's
         // last resize, or the General settings page value) comes from UiMetrics, mirroring how

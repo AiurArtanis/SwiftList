@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:services="clr-namespace:SwiftList.App.Services"
-        xmlns:helpers="clr-namespace:SwiftList.App.Helpers"
+        xmlns:helpers="clr-namespace:SwiftList.App.Helpers.Visuals"
         mc:Ignorable="d"
         MinWidth="480" MinHeight="220" MaxWidth="900" MaxHeight="800"
         SizeToContent="WidthAndHeight"

@@ -10,8 +10,8 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/SwiftList.App;component/Resources/Styles.xaml"/>
-                <ResourceDictionary Source="../../Resources/Styles/SearchWindow.xaml"/>
-                <ResourceDictionary Source="../../Resources/Styles/SettingsWindow.xaml"/>
+                <ResourceDictionary Source="../../Resources/Styles/Windows/SearchWindow.xaml"/>
+                <ResourceDictionary Source="../../Resources/Styles/Windows/SettingsWindow.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -255,7 +255,7 @@
                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                          PreviewMouseWheel="LogTextBox_PreviewMouseWheel">
                 <!-- The app's TextBox style gives every plain TextBox this same themed context menu
-                     (Styles/Controls.xaml); it doesn't apply to RichTextBox (a different control type),
+                     (Styles/Controls/Controls.xaml); it doesn't apply to RichTextBox (a different control type),
                      so without this override it falls back to the unstyled native OS context menu. -->
                 <RichTextBox.ContextMenu>
                     <ContextMenu Style="{DynamicResource {x:Type ContextMenu}}">

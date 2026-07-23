@@ -5,6 +5,7 @@ using SwiftList.App.ViewModels.Settings.Plugins;
 
 using SwiftList.App.Services.Theme;
 using SwiftList.Core.Wire;
+using SwiftList.App.Helpers.Visuals;
 namespace SwiftList.App.Views.Settings.Plugins;
 
 public partial class PluginConfigWindow : Window
@@ -12,7 +13,7 @@ public partial class PluginConfigWindow : Window
     public PluginConfigWindow(PluginInfoViewModel viewModel)
     {
         InitializeComponent();
-        Helpers.SystemMenuBlocker.Attach(this);
+        SystemMenuBlocker.Attach(this);
         ThemedWindowIconHelper.Apply(this);
         DataContext = viewModel;
     }

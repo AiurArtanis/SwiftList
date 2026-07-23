@@ -4,6 +4,7 @@ using System.Windows.Input;
 using SwiftList.App.Services;
 
 using SwiftList.App.Services.Theme;
+using SwiftList.App.Helpers.Visuals;
 namespace SwiftList.App.Views.Controls;
 
 public partial class CustomMessageBoxWindow : Window
@@ -14,7 +15,7 @@ public partial class CustomMessageBoxWindow : Window
     {
         InitializeComponent();
 
-        Helpers.SystemMenuBlocker.Attach(this);
+        SystemMenuBlocker.Attach(this);
         ThemedWindowIconHelper.Apply(this);
         ThemedWindowIconHelper.Apply(TitleBarLogo, this);
 

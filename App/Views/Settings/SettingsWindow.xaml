@@ -4,8 +4,11 @@
         xmlns:controls="clr-namespace:SwiftList.App.Views.Controls"
         xmlns:settings="clr-namespace:SwiftList.App.Views.Settings"
         xmlns:plugins="clr-namespace:SwiftList.App.Views.Settings.Plugins"
+        xmlns:general="clr-namespace:SwiftList.App.Views.Settings.General"
+        xmlns:hotkey="clr-namespace:SwiftList.App.Views.Settings.Hotkey"
+        xmlns:startuppanel="clr-namespace:SwiftList.App.Views.Settings.StartupPanel"
         xmlns:services="clr-namespace:SwiftList.App.Services"
-        xmlns:helpers="clr-namespace:SwiftList.App.Helpers"
+        xmlns:helpers="clr-namespace:SwiftList.App.Helpers.Visuals"
         Title="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Settings_Title]}"
         Height="650" Width="900"
         MinHeight="520" MinWidth="760"
@@ -19,7 +22,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/SwiftList.App;component/Resources/Styles.xaml"/>
-                <ResourceDictionary Source="../../Resources/Styles/SearchWindow.xaml"/>
+                <ResourceDictionary Source="../../Resources/Styles/Windows/SearchWindow.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
@@ -234,9 +237,9 @@
                     <Grid>
                         <settings:ServiceSettingsPage x:Name="PageService" Visibility="Collapsed"/>
                         <settings:IndexSettingsPage x:Name="PageIndex"/>
-                        <settings:GeneralSettingsPage x:Name="PageGeneral" Visibility="Collapsed"/>
+                        <general:GeneralSettingsPage x:Name="PageGeneral" Visibility="Collapsed"/>
                         <settings:AppearanceSettingsPage x:Name="PageAppearance" Visibility="Collapsed"/>
-                        <settings:HotkeySettingsPage x:Name="PageHotkeys" Visibility="Collapsed"
+                        <hotkey:HotkeySettingsPage x:Name="PageHotkeys" Visibility="Collapsed"
                                                       DataContext="{Binding Hotkeys}"/>
                         <plugins:PluginManagementSettingsPage x:Name="PagePlugins" Visibility="Collapsed"
                                                               DataContext="{Binding Plugins}"/>
@@ -244,7 +247,7 @@
                                                       DataContext="{Binding History}"/>
                         <settings:FavoritesSettingsPage x:Name="PageFavorites" Visibility="Collapsed"
                                                         DataContext="{Binding Favorites}"/>
-                        <settings:StartupPanelSettingsPage x:Name="PageStartupPanel" Visibility="Collapsed"
+                        <startuppanel:StartupPanelSettingsPage x:Name="PageStartupPanel" Visibility="Collapsed"
                                                             DataContext="{Binding StartupPanel}"/>
                         <settings:AboutSettingsPage x:Name="PageAbout" Visibility="Collapsed"/>
                     </Grid>

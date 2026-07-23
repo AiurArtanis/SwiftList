@@ -8,8 +8,8 @@
          whichever tab UserControl ends up hosting the ItemsControl that uses this template. -->
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="pack://application:,,,/SwiftList.App;component/Resources/Styles.xaml"/>
-        <ResourceDictionary Source="../../../Resources/Styles/SearchWindow.xaml"/>
-        <ResourceDictionary Source="../../../Resources/Styles/SettingsWindow.xaml"/>
+        <ResourceDictionary Source="../../../Resources/Styles/Windows/SearchWindow.xaml"/>
+        <ResourceDictionary Source="../../../Resources/Styles/Windows/SettingsWindow.xaml"/>
         <ResourceDictionary Source="Styles.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 

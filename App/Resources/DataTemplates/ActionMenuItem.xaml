@@ -3,7 +3,7 @@
                     xmlns:app="clr-namespace:SwiftList.App"
                     xmlns:converters="clr-namespace:SwiftList.App.Converters">
 	<ResourceDictionary.MergedDictionaries>
-		<ResourceDictionary Source="../Styles/Colors.xaml"/>
+		<ResourceDictionary Source="../Styles/Tokens/Colors.xaml"/>
 	</ResourceDictionary.MergedDictionaries>
 
 	<!-- ═══════════ Self-Drawn Action Context Menu Item Template ═══════════ -->

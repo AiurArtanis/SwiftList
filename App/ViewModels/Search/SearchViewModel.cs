@@ -10,6 +10,7 @@ using SwiftList.App.ViewModels.Service;
 using SwiftList.Core.Services.Search;
 
 using SwiftList.App.Services.Plugin;
+using SwiftList.App.ViewModels.Search.DynamicSidebar;
 namespace SwiftList.App.ViewModels.Search;
 
 public class SearchViewModel : ViewModelBase, IDisposable

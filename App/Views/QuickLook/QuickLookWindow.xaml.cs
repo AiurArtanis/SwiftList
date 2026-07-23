@@ -9,6 +9,7 @@ using SwiftList.App.Services;
 using SwiftList.App.Services.Plugin;
 using SwiftList.App.Services.ShellIcons;
 using SwiftList.App.Services.Theme;
+using SwiftList.App.Helpers.Visuals;
 namespace SwiftList.App.Views.QuickLook;
 
 public partial class QuickLookWindow : Window
@@ -26,7 +27,7 @@ public partial class QuickLookWindow : Window
     public QuickLookWindow()
     {
         InitializeComponent();
-        Helpers.SystemMenuBlocker.Attach(this);
+        SystemMenuBlocker.Attach(this);
         ThemedWindowIconHelper.Apply(this);
         _overlay = new PreviewOverlay(this, ContentArea);
         IsVisibleChanged += (s, e) =>

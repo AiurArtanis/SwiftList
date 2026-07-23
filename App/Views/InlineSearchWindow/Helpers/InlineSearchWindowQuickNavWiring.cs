@@ -1,6 +1,7 @@
 using System.Windows.Threading;
 using SwiftList.App.Services;
 
+using SwiftList.App.Services.ShellMenu.QuickNav;
 namespace SwiftList.App.Views.InlineSearchWindow.Helpers;
 
 // Wires up the search box's icon-click-to-open-Quick-Navigation behavior -- split out of
