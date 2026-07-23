@@ -45,6 +45,36 @@ public static class AppWindowManager
         });
     }
 
+    // swiftlist://settings/entry/<index> (see UriRouter) -- jumps straight to one specific setting
+    // (section + tab + row highlight), not just its section. index into SettingsSearchIndex.Entries via
+    // SettingsWindow.JumpToEntry, which validates it and no-ops on an out-of-range value.
+    public static void ShowSettingsWindowEntry(int entryIndex)
+    {
+        if (System.Windows.Application.Current == null) return;
+
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            if (_settingsWindow == null)
+            {
+                _settingsWindow = new SettingsWindow();
+                _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+            }
+
+            // Same before-Show ordering as ShowSettingsWindow, for the same reason (see its own
+            // comment) -- JumpToEntry's own highlight/scroll step is separately deferred internally
+            // (ActivateSearchResult), so it still lands correctly once layout has actually happened.
+            _settingsWindow.JumpToEntry(entryIndex);
+
+            if (!_settingsWindow.IsVisible)
+                _settingsWindow.Show();
+
+            if (_settingsWindow.WindowState == WindowState.Minimized)
+                _settingsWindow.WindowState = WindowState.Normal;
+
+            _settingsWindow.Activate();
+        });
+    }
+
     public static void ShowSearchWindow()
     {
         if (System.Windows.Application.Current == null) return;

@@ -73,6 +73,14 @@ public class CoreExtensionsPlugin : IPlugin, IActionProvider, IConfigurable
                         DefaultValue = new List<string>()
                     }
                 }
+            },
+            new PluginConfigField
+            {
+                Key = "SearchSettingsTrigger",
+                LabelKey = "CoreExtensions_Config_SearchSettingsTriggerLabel",
+                DescriptionKey = "CoreExtensions_Config_SearchSettingsTriggerDesc",
+                FieldType = ConfigFieldType.Text,
+                DefaultValue = "set"
             }
         }
     };

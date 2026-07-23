@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Windows;
 using SwiftList.Core;
 using SwiftList.Core.Services;
+using SwiftList.App.Helpers;
 using SwiftList.App.ViewModels.Settings;
 using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Search;
@@ -168,6 +169,22 @@ public partial class App : Application
             };
             PluginSdk.Services.IconService.GetThumbnailFunc = (path, size) => ShellImageListInterop.TryGetPreviewThumbnail(path, size);
             PluginSdk.Services.FileMetadataService.BatchLookupFunc = FileMetadataBridge.GetMetadataBatchAsync;
+            PluginSdk.Services.SettingsSearchService.GetEntriesFunc = () =>
+            {
+                var entries = SettingsSearchIndex.Entries;
+                var list = new List<PluginSdk.Services.SettingsSearchEntryInfo>(entries.Count);
+                for (var i = 0; i < entries.Count; i++)
+                {
+                    var entry = entries[i];
+                    // Conditionally-visible entries (e.g. the WSL tab) need a live SettingsViewModel to
+                    // evaluate, which isn't guaranteed to exist here (Settings may never have been
+                    // opened yet) -- conservatively exclude rather than risk exposing a dead link.
+                    if (entry.IsVisible != null)
+                        continue;
+                    list.Add(new PluginSdk.Services.SettingsSearchEntryInfo(TranslationManager.Instance[entry.LabelKey], SettingsWindowSearchExtensions.BuildBreadcrumb(entry), i));
+                }
+                return list;
+            };
             PluginSdk.Logger.LogAction = (msg, lvl) => Logger.Log(msg, (LogLevel)(int)lvl);
             TranslationManager.Instance.ReloadTranslations();
             Logger.Log("[App] TranslationManager initialized.");

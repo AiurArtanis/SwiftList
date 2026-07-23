@@ -53,8 +53,9 @@ public static class UriRouter
     }
 
     // "page/<section>" switches to a top-level sidebar section (e.g. "page/Index"), matching the tag
-    // values SettingsWindow.SelectSection already accepts. A separate "entry/<index>" form (jump to one
-    // specific setting row, with the search-jump highlight) is not wired up yet.
+    // values SettingsWindow.SelectSection already accepts. "entry/<index>" jumps straight to one
+    // specific setting (section + tab + row highlight) -- index into SettingsSearchIndex.Entries, the
+    // same list PluginSdk.Services.SettingsSearchService exposes to plugins.
     private static void RouteSettings(string arg, string uriString)
     {
         if (arg.Length == 0)
@@ -67,6 +68,12 @@ public static class UriRouter
         if (segments.Length == 2 && segments[0].Equals("page", StringComparison.OrdinalIgnoreCase))
         {
             AppWindowManager.ShowSettingsWindow(segments[1]);
+            return;
+        }
+
+        if (segments.Length == 2 && segments[0].Equals("entry", StringComparison.OrdinalIgnoreCase) && int.TryParse(segments[1], out var entryIndex))
+        {
+            AppWindowManager.ShowSettingsWindowEntry(entryIndex);
             return;
         }
 

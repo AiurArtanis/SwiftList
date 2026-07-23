@@ -23,7 +23,9 @@ internal static class SettingsWindowSearchExtensions
     // "Section", "Section > Tab", or "Section > Tab > SubTab" -- entries whose own LabelKey names a
     // tab/sub-tab leave TabLabelKey/SubTabLabelKey null (see SettingsSearchEntry), so their breadcrumb
     // stops at the parent instead of repeating the result's own label back at the user.
-    private static string BuildBreadcrumb(SettingsSearchEntry entry)
+    // Internal, not private: also used by App.xaml.cs to build the entry list exposed to plugins via
+    // PluginSdk.Services.SettingsSearchService.
+    internal static string BuildBreadcrumb(SettingsSearchEntry entry)
     {
         var parts = new List<string> { TranslationManager.Instance[$"Settings_{entry.Section}"] };
         if (entry.TabLabelKey != null)
@@ -181,7 +183,10 @@ internal static class SettingsWindowSearchExtensions
             window.ActivateSearchResult(item);
     }
 
-    private static void ActivateSearchResult(this SettingsWindow window, SettingsSearchResultItem item)
+    // Internal, not private: also called directly by SettingsWindow.JumpToEntry (swiftlist://settings/
+    // entry/<index>), which builds a SettingsSearchResultItem from a SettingsSearchIndex entry rather
+    // than from a live text search.
+    internal static void ActivateSearchResult(this SettingsWindow window, SettingsSearchResultItem item)
     {
         if (window.DataContext is SettingsViewModel vm)
             item.Activate?.Invoke(vm);

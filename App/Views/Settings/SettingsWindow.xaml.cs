@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings;
 
@@ -97,6 +98,27 @@ public partial class SettingsWindow : Window
                 return;
             }
         }
+    }
+
+    // swiftlist://settings/entry/<index> (see UriRouter) -- index is this entry's position in
+    // SettingsSearchIndex.Entries, the same list PluginSdk.Services.SettingsSearchService exposes to
+    // plugins, so a plugin-selected result round-trips straight back to the entry it matched. Reuses
+    // ActivateSearchResult (the same jump+highlight a typed search-box match would trigger) rather than
+    // duplicating its section/tab-selection and highlight logic.
+    public void JumpToEntry(int index)
+    {
+        var entries = SettingsSearchIndex.Entries;
+        if (index < 0 || index >= entries.Count)
+            return;
+
+        var entry = entries[index];
+        var item = new SettingsSearchResultItem(
+            TranslationManager.Instance[entry.LabelKey],
+            SettingsWindowSearchExtensions.BuildBreadcrumb(entry),
+            entry.Section,
+            entry.Activate,
+            entry.TargetElementName);
+        this.ActivateSearchResult(item);
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
