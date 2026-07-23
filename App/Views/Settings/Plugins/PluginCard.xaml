@@ -17,7 +17,6 @@
 
             <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
             <conv:BoolToVisibilityConverter x:Key="InvertBoolToVis" Invert="True"/>
-            <conv:ComponentTypeToBadgeBrushConverter x:Key="TypeToBrush"/>
 
         </ResourceDictionary>
     </UserControl.Resources>

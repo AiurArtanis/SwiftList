@@ -10,7 +10,6 @@
 
     <conv:BoolToVisibilityConverter x:Key="BoolToVis" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
     <conv:BoolToVisibilityConverter x:Key="InvertBoolToVis" Invert="True" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
-    <conv:StringToVisibilityConverter x:Key="StringToVis" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
     <conv:NullToVisibilityConverter x:Key="NullToVis" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
     <conv:EmptyStringToPlaceholderConverter x:Key="EmptyOrPlaceholder" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
     <conv:ReferenceEqualsConverter x:Key="RefEquals" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>

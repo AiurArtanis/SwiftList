@@ -20,8 +20,6 @@
             <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
             <conv:BoolToVisibilityConverter x:Key="InvertBoolToVis" Invert="True"/>
             <conv:ComponentTypeToLabelConverter x:Key="TypeToLabel"/>
-            <conv:ComponentTypeToBadgeBrushConverter x:Key="TypeToBrush"/>
-            <conv:StringToVisibilityConverter x:Key="StringToVis"/>
 
         </ResourceDictionary>
     </UserControl.Resources>
