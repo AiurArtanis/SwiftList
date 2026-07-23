@@ -31,6 +31,8 @@ bin/
 obj/
 *.obj
 *.bin
+# Not a build artifact -- PinyinEngine's embedded pinyin lookup table (tracked source data).
+!Plugins/PinyinAlias/Resources/pinyin.bin
 
 # Visual Studio 2015/2017/2019/2022 cache directory
 .vs/
