@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:services="clr-namespace:SwiftList.App.Services"
-             xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"
+             xmlns:conv="clr-namespace:SwiftList.App.Converters"
              xmlns:vm="clr-namespace:SwiftList.App.ViewModels.Settings.Plugins"
              xmlns:local="clr-namespace:SwiftList.App.Views.Settings.Plugins"
              mc:Ignorable="d"
@@ -19,7 +19,7 @@
 
             <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
             <conv:BoolToVisibilityConverter x:Key="InvertBoolToVis" Invert="True"/>
-            <conv:ComponentTypeToLabelConverter x:Key="TypeToLabel"/>
+            <local:ComponentTypeToLabelConverter x:Key="TypeToLabel"/>
 
         </ResourceDictionary>
     </UserControl.Resources>

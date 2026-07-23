@@ -1,19 +1,21 @@
 <ResourceDictionary x:Class="SwiftList.App.Views.Settings.Plugins.PluginConfigTemplates"
                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:ctrl="clr-namespace:SwiftList.App.Views.Controls">
+                    xmlns:ctrl="clr-namespace:SwiftList.App.Views.Controls"
+                    xmlns:conv="clr-namespace:SwiftList.App.Converters"
+                    xmlns:local="clr-namespace:SwiftList.App.Views.Settings.Plugins">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="pack://application:,,,/SwiftList.App;component/Resources/Styles.xaml"/>
         <ResourceDictionary Source="../../../Resources/Styles/SearchWindow.xaml"/>
         <ResourceDictionary Source="../../../Resources/Styles/SettingsWindow.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
-    <conv:BoolToVisibilityConverter x:Key="BoolToVis" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
-    <conv:BoolToVisibilityConverter x:Key="InvertBoolToVis" Invert="True" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
-    <conv:NullToVisibilityConverter x:Key="NullToVis" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
-    <conv:EmptyStringToPlaceholderConverter x:Key="EmptyOrPlaceholder" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
-    <conv:ReferenceEqualsConverter x:Key="RefEquals" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
-    <conv:BadgeFieldToVisibilityConverter x:Key="BadgeFieldToVis" xmlns:conv="clr-namespace:SwiftList.App.Views.Converters"/>
+    <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
+    <conv:BoolToVisibilityConverter x:Key="InvertBoolToVis" Invert="True"/>
+    <conv:NullToVisibilityConverter x:Key="NullToVis"/>
+    <local:EmptyStringToPlaceholderConverter x:Key="EmptyOrPlaceholder"/>
+    <conv:ReferenceEqualsConverter x:Key="RefEquals"/>
+    <local:BadgeFieldToVisibilityConverter x:Key="BadgeFieldToVis"/>
 
     <!-- Selectable row container for the array master list -->
     <Style x:Key="ArrayMasterListItemStyle" TargetType="ListBoxItem">
