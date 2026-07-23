@@ -5,6 +5,7 @@ using SwiftList.PluginSdk.Services;
 using SwiftList.PluginSdk.Helpers;
 using SwiftList.Plugins.CoreExtensions.Shell;
 
+using SwiftList.Plugins.CoreExtensions.Shell.FileOperations;
 namespace SwiftList.Plugins.CoreExtensions.Actions;
 
 public class PasteFileAction : ISearchResultAction

@@ -3,6 +3,7 @@ using SwiftList.Plugins.CoreExtensions.Shell;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
+using SwiftList.Plugins.CoreExtensions.Shell.ContextMenu;
 namespace SwiftList.Plugins.CoreExtensions;
 
 public class CoreExtensionsPlugin : IPlugin, IActionProvider, IConfigurable

@@ -6,6 +6,8 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
 using SwiftList.Plugins.CoreExtensions.Providers;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
+using SwiftList.Plugins.CoreExtensions.Providers.Indexing;
+using SwiftList.Plugins.CoreExtensions.Shell.ContextMenu;
 namespace SwiftList.Plugins.CoreExtensions.InlineSearch;
 
 public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
@@ -123,7 +125,7 @@ public class ExplorerInlineSearchAdapter : IInlineSearchAdapter
         {
             // Reuses the SHParseDisplayName p/invoke already declared in Shell/ShellContextMenuNativeMethods.cs
             // (same project) instead of a second copy here.
-            if (Shell.ShellContextMenuNativeMethods.SHParseDisplayName(path, IntPtr.Zero, out var pidl, 0, out _) == 0)
+            if (ShellContextMenuNativeMethods.SHParseDisplayName(path, IntPtr.Zero, out var pidl, 0, out _) == 0)
             {
                 SHOpenFolderAndSelectItems(pidl, 0, null, 0);
                 Marshal.FreeCoTaskMem(pidl);
