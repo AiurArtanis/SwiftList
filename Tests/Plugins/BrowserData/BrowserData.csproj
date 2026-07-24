@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>SwiftList.Plugins.BrowserData.Tests</AssemblyName>
+    <RootNamespace>SwiftList.Plugins.BrowserData.Tests</RootNamespace>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest" Version="4.0.2" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- BrowserData.csproj's own PostBuild target nests+deletes its flat output DLL for the plugin
+         loader's benefit, which breaks a normal ProjectReference's copy-local step (the file it expects
+         to copy is gone by the time this project's build looks for it). Compiling its handful of
+         relevant source files directly into this test assembly sidesteps that entirely: no
+         InternalsVisibleTo needed either, since everything lands in the same assembly as the tests. -->
+    <Compile Include="..\..\..\Plugins\BrowserData\BrowserEntry.cs" Link="Source\BrowserEntry.cs" />
+    <Compile Include="..\..\..\Plugins\BrowserData\Readers\BrowserFamilyDetector.cs" Link="Source\Readers\BrowserFamilyDetector.cs" />
+    <Compile Include="..\..\..\Plugins\BrowserData\Readers\ChromiumBookmarksReader.cs" Link="Source\Readers\ChromiumBookmarksReader.cs" />
+    <Compile Include="..\..\..\Plugins\BrowserData\Readers\SqliteCopyReader.cs" Link="Source\Readers\SqliteCopyReader.cs" />
+    <Compile Include="..\..\..\Plugins\BrowserData\Readers\ChromiumHistoryReader.cs" Link="Source\Readers\ChromiumHistoryReader.cs" />
+    <Compile Include="..\..\..\Plugins\BrowserData\Readers\FirefoxPlacesReader.cs" Link="Source\Readers\FirefoxPlacesReader.cs" />
+    <Compile Include="**\*.cs" Exclude="bin\**;obj\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\PluginSdk\PluginSdk.csproj" />
+  </ItemGroup>
+
+</Project>
