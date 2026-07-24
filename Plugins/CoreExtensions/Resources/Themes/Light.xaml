@@ -24,14 +24,18 @@
     <SolidColorBrush x:Key="TextPrimary" Color="#3B3B3B"/>
     <SolidColorBrush x:Key="TextSecondary" Color="#717171"/>
     <SolidColorBrush x:Key="AccentBlue" Color="#007ACC"/>
-    <SolidColorBrush x:Key="HoverBackground" Color="#E8E8E8"/>
+    <!-- Darkened from #E8E8E8 (only 2/255 off ContentBg's #EAEAEA: effectively invisible as a
+         selection/hover overlay there, unlike every other theme which keeps a real gap between the
+         two, e.g. GraphiteLight's #EBEBEB vs its own #F5F5F5 ContentBg). Sakura.xaml hit this same
+         bug once already (see its own HoverBackground comment). -->
+    <SolidColorBrush x:Key="HoverBackground" Color="#DCDCDC"/>
     <SolidColorBrush x:Key="SeparatorBrush" Color="#E5E5E5"/>
     <SolidColorBrush x:Key="FolderIconColor" Color="#D97706"/>
     <SolidColorBrush x:Key="FileIconColor" Color="#717171"/>
     <SolidColorBrush x:Key="ShortcutColor" Color="#717171"/>
     <SolidColorBrush x:Key="ControlBackground" Color="#F5F5F5"/>
     <SolidColorBrush x:Key="ControlBorderBrush" Color="#CECECE"/>
-    <SolidColorBrush x:Key="ControlHoverBackground" Color="#E8E8E8"/>
+    <SolidColorBrush x:Key="ControlHoverBackground" Color="#DCDCDC"/>
     <SolidColorBrush x:Key="ControlDisabledBackground" Color="#F3F3F3"/>
     <SolidColorBrush x:Key="ControlDisabledBorderBrush" Color="#E5E5E5"/>
     <SolidColorBrush x:Key="ControlDisabledForeground" Color="#A5A5A5"/>
@@ -53,14 +57,14 @@
          windows), reading as almost borderless. -->
     <SolidColorBrush x:Key="WindowBorderBrush" Color="#D4D4D4"/>
     <SolidColorBrush x:Key="SidebarBg" Color="#F3F3F3"/>
-    <SolidColorBrush x:Key="SidebarHover" Color="#E8E8E8"/>
+    <SolidColorBrush x:Key="SidebarHover" Color="#DCDCDC"/>
     <SolidColorBrush x:Key="SidebarSelected" Color="#CDE8FA"/>
     <SolidColorBrush x:Key="SidebarText" Color="#3B3B3B"/>
     <SolidColorBrush x:Key="SidebarTextActive" Color="#000000"/>
     <SolidColorBrush x:Key="SidebarAccent" Color="#007ACC"/>
     <SolidColorBrush x:Key="ContentBg" Color="#EAEAEA"/>
     <SolidColorBrush x:Key="HeaderBg" Color="#F5F5F5"/>
-    <SolidColorBrush x:Key="ItemHover" Color="#E8E8E8"/>
+    <SolidColorBrush x:Key="ItemHover" Color="#DCDCDC"/>
     <SolidColorBrush x:Key="ItemSelected" Color="#CDE8FA"/>
     <SolidColorBrush x:Key="AccentBarColor" Color="#007ACC"/>
     <SolidColorBrush x:Key="BorderColor" Color="#D4D4D4"/>

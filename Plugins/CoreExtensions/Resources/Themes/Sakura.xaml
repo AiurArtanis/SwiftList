@@ -21,7 +21,10 @@
     <SolidColorBrush x:Key="ShortcutColor" Color="#8C5866"/>
     <SolidColorBrush x:Key="ControlBackground" Color="#FFF5F6"/>
     <SolidColorBrush x:Key="ControlBorderBrush" Color="#FFE4E8"/>
-    <SolidColorBrush x:Key="ControlHoverBackground" Color="#FFF8F9"/>
+    <!-- Was #FFF8F9: only 3 points lighter than ControlBackground (and lighter, not darker, unlike
+         every other hover token here), the same near-invisible-contrast bug HoverBackground had
+         above, just missed when that one got fixed. Reuses the same pink hover tone instead. -->
+    <SolidColorBrush x:Key="ControlHoverBackground" Color="#FFE4E8"/>
     <SolidColorBrush x:Key="ControlDisabledBackground" Color="#FFE4E8"/>
     <SolidColorBrush x:Key="ControlDisabledBorderBrush" Color="#FFF0F2"/>
     <SolidColorBrush x:Key="ControlDisabledForeground" Color="#8C5866"/>
