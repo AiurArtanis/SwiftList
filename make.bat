@@ -68,9 +68,9 @@ if not "%PLUGINS_EXIT%"=="0" (
 )
 
 
-:: 5. Copy portable updater and clean PDB files
+:: 5. Copy portable updater/cleanup files and clean PDB files
 echo.
-echo [4/6] Copying portable updater and cleaning PDB files...
+echo [4/6] Copying portable updater/cleanup files and cleaning PDB files...
 copy "%ROOT%portable-updater.bat" "%OUT%\" >nul
 if errorlevel 1 (
     echo [Warning] Failed to copy portable-updater.bat.
@@ -78,6 +78,10 @@ if errorlevel 1 (
 copy "%ROOT%install-dotnet-runtime.bat" "%OUT%\" >nul
 if errorlevel 1 (
     echo [Warning] Failed to copy install-dotnet-runtime.bat.
+)
+copy "%ROOT%portable-cleanup-registry.reg" "%OUT%\" >nul
+if errorlevel 1 (
+    echo [Warning] Failed to copy portable-cleanup-registry.reg.
 )
 del /s /q "%OUT%\*.pdb" >nul 2>&1
 
