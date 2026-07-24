@@ -31,8 +31,7 @@ public static class UpdateCheckService
                     return;
 
                 var currentVersion = typeof(App).Assembly.GetName().Version;
-                var cleanTag = release.TagName.TrimStart('v', 'V');
-                if (!Version.TryParse(cleanTag, out var latestVersion) || latestVersion <= currentVersion)
+                if (!IsNewerVersion(release.TagName, currentVersion, out _))
                     return;
 
                 var dispatcher = Application.Current.Dispatcher;
@@ -73,5 +72,13 @@ public static class UpdateCheckService
                 Logger.Log($"[App] Background startup update check failed: {ex.Message}", LogLevel.Warn);
             }
         });
+    }
+
+    // A release tag ("v1.2.3") counts as newer only if it parses as a version strictly greater than
+    // currentVersion -- an unparseable tag or a same-or-older one must never trigger the update prompt.
+    internal static bool IsNewerVersion(string tagName, Version? currentVersion, out Version? latestVersion)
+    {
+        var cleanTag = tagName.TrimStart('v', 'V');
+        return Version.TryParse(cleanTag, out latestVersion) && latestVersion > currentVersion;
     }
 }

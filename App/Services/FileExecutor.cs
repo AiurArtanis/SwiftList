@@ -52,83 +52,18 @@ public static class FileExecutor
     {
         try
         {
-            var isVirtual = path.StartsWith("::") || path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase);
+            var isVirtual = IsVirtualPath(path);
             if (isVirtual || File.Exists(path) || Directory.Exists(path))
             {
                 var isFile = !isVirtual && File.Exists(path);
-                ProcessStartInfo startInfo;
 
-                if (asAdmin)
-                {
-                    if (isFile)
-                    {
-                        var ext = Path.GetExtension(path).ToLowerInvariant();
-                        var isExecutable = ext == ".exe" || ext == ".bat" || ext == ".cmd" || ext == ".com" || ext == ".scr" || ext == ".msi" || ext == ".lnk";
-
-                        if (isExecutable)
-                        {
-                            startInfo = new ProcessStartInfo
-                            {
-                                FileName = path,
-                                UseShellExecute = true,
-                                Verb = "runas"
-                            };
-                        }
-                        else
-                        {
-                            // The "runas" verb applies to executables, not documents, so we can't just
-                            // elevate the file directly. Resolve the file's associated program (e.g.
-                            // Notepad++) and elevate THAT with the file as its argument, so admin-open
-                            // uses the same handler as a normal open.
-                            var associatedExe = TryGetAssociatedExecutable(path);
-                            if (!string.IsNullOrEmpty(associatedExe))
-                            {
-                                startInfo = new ProcessStartInfo
-                                {
-                                    FileName = associatedExe,
-                                    Arguments = $"\"{path}\"",
-                                    UseShellExecute = true,
-                                    Verb = "runas"
-                                };
-                            }
-                            else
-                            {
-                                // No association resolved — bring up the shell "Open with" dialog, but run
-                                // it ELEVATED (runas). The program the user then picks is launched as a
-                                // child of the elevated dialog and inherits admin rights, which matches the
-                                // admin-open intent instead of degrading to a normal launch.
-                                // OpenWith.exe is a normal exe that pops the same "Open with" dialog and
-                                // takes a standard quoted path argument (so spaces just work). Elevating it
-                                // means the program the user picks inherits admin rights.
-                                startInfo = new ProcessStartInfo
-                                {
-                                    FileName = "OpenWith.exe",
-                                    Arguments = $"\"{path}\"",
-                                    UseShellExecute = true,
-                                    Verb = "runas"
-                                };
-                            }
-                        }
-                    }
-                    else
-                    {
-                        startInfo = new ProcessStartInfo
-                        {
-                            FileName = "cmd.exe",
-                            Arguments = $"/k cd /d \"{path}\"",
-                            UseShellExecute = true,
-                            Verb = "runas"
-                        };
-                    }
-                }
-                else
-                {
-                    startInfo = new ProcessStartInfo
-                    {
-                        FileName = path,
-                        UseShellExecute = true
-                    };
-                }
+                // The "runas" verb applies to executables, not documents, so a non-executable file can't
+                // just be elevated directly -- BuildStartInfo below resolves the file's associated program
+                // (e.g. Notepad++) and elevates THAT with the file as its argument instead, so admin-open
+                // uses the same handler as a normal open. Only resolved when that branch will actually be
+                // taken, since it's a real (if cheap) registry/shell lookup.
+                var associatedExe = (asAdmin && isFile && !IsElevatableExecutable(path)) ? TryGetAssociatedExecutable(path) : null;
+                var startInfo = BuildStartInfo(path, isFile, asAdmin, associatedExe);
 
                 if (isFile && !asAdmin)
                 {
@@ -165,6 +100,47 @@ public static class FileExecutor
             Logger.Log($"[FileExecutor] OpenFileOrFolder failed for '{path}': {ex}", LogLevel.Error);
             MessageBox.Show(string.Format(TranslationManager.Instance["Executor_OpenFailed"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    // A "::{CLSID}"/"shell:..." token names a virtual shell namespace item (e.g. Control Panel, This PC)
+    // rather than a real filesystem path -- File.Exists/Directory.Exists would just return false for it.
+    internal static bool IsVirtualPath(string path) =>
+        path.StartsWith("::") || path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase);
+
+    // Extensions the shell will actually elevate directly via the "runas" verb; anything else is a
+    // document, which needs its associated program elevated instead (see BuildStartInfo).
+    internal static bool IsElevatableExecutable(string path)
+    {
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+        return ext is ".exe" or ".bat" or ".cmd" or ".com" or ".scr" or ".msi" or ".lnk";
+    }
+
+    // Pure: decides what to launch and how, given facts about the path already resolved by the caller
+    // via real I/O (isFile) and a real registry/shell lookup (associatedExe, only needed for the
+    // admin-elevate-a-document branch). Only builds the ProcessStartInfo -- never starts it, and never
+    // sets WorkingDirectory (the caller applies that separately, since it's real Directory.Exists I/O
+    // that's also non-admin-only, unlike everything decided here).
+    internal static ProcessStartInfo BuildStartInfo(string path, bool isFile, bool asAdmin, string? associatedExe)
+    {
+        if (!asAdmin)
+            return new ProcessStartInfo { FileName = path, UseShellExecute = true };
+
+        if (!isFile)
+            return new ProcessStartInfo { FileName = "cmd.exe", Arguments = $"/k cd /d \"{path}\"", UseShellExecute = true, Verb = "runas" };
+
+        if (IsElevatableExecutable(path))
+            return new ProcessStartInfo { FileName = path, UseShellExecute = true, Verb = "runas" };
+
+        if (!string.IsNullOrEmpty(associatedExe))
+            return new ProcessStartInfo { FileName = associatedExe, Arguments = $"\"{path}\"", UseShellExecute = true, Verb = "runas" };
+
+        // No association resolved — bring up the shell "Open with" dialog, but run it ELEVATED (runas).
+        // The program the user then picks is launched as a child of the elevated dialog and inherits
+        // admin rights, which matches the admin-open intent instead of degrading to a normal launch.
+        // OpenWith.exe is a normal exe that pops the same "Open with" dialog and takes a standard quoted
+        // path argument (so spaces just work). Elevating it means the program the user picks inherits
+        // admin rights.
+        return new ProcessStartInfo { FileName = "OpenWith.exe", Arguments = $"\"{path}\"", UseShellExecute = true, Verb = "runas" };
     }
 
     public static void LocateInExplorer(string path) => ExplorerLocateHelper.LocateInExplorer(path);
