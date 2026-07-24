@@ -11,6 +11,7 @@ public static class IconBitmapCache
     public static IntPtr FileHBitmap { get; private set; } = IntPtr.Zero;
     public static IntPtr FavoritesHBitmap { get; private set; } = IntPtr.Zero;
     public static IntPtr HistoryHBitmap { get; private set; } = IntPtr.Zero;
+    public static IntPtr CategoryHBitmap { get; private set; } = IntPtr.Zero;
 
     private static readonly object _iconLock = new();
 
@@ -51,9 +52,14 @@ public static class IconBitmapCache
                 {
                     DeleteObject(HistoryHBitmap);
                 }
+                if (CategoryHBitmap != IntPtr.Zero)
+                {
+                    DeleteObject(CategoryHBitmap);
+                }
 
                 FavoritesHBitmap = CreateStarHBitmap();
                 HistoryHBitmap = CreateClockHBitmap();
+                CategoryHBitmap = CreateCategoryHBitmap();
             }
             catch (Exception ex)
             {
@@ -62,13 +68,16 @@ public static class IconBitmapCache
         }
     }
 
-    private static IntPtr CreateHBitmapFromWpfPath(string pathData, System.Windows.Media.Brush? fill, System.Windows.Media.Pen? stroke)
+    // scale defaults to 4.0 (a 64px bitmap over the star/clock paths' own ~16-unit viewBox); the
+    // category hamburger path below is authored in a 24-unit viewBox (matching QuickNavIcon's own
+    // copy of it) and needs a correspondingly smaller scale, or it renders oversized/clipped.
+    private static IntPtr CreateHBitmapFromWpfPath(string pathData, System.Windows.Media.Brush? fill, System.Windows.Media.Pen? stroke, double scale = 4.0)
     {
         var geometry = System.Windows.Media.Geometry.Parse(pathData);
         var visual = new System.Windows.Media.DrawingVisual();
         using (var dc = visual.RenderOpen())
         {
-            dc.PushTransform(new System.Windows.Media.ScaleTransform(4.0, 4.0));
+            dc.PushTransform(new System.Windows.Media.ScaleTransform(scale, scale));
             dc.DrawGeometry(fill, stroke, geometry);
             dc.Pop();
         }
@@ -105,5 +114,17 @@ public static class IconBitmapCache
         var strokeBrush = accentBrush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(33, 150, 243));
         var stroke = new System.Windows.Media.Pen(strokeBrush, 1.5);
         return CreateHBitmapFromWpfPath(path, null, stroke);
+    }
+
+    // Hamburger/menu glyph for a submenu category node (a grouping created by a folder's own SubMenu
+    // field, not a real filesystem location) -- same glyph and theming (AccentBlue) as
+    // Plugins/CustomCommands/QuickNavIcon.cs's own GetCategoryHBitmap, for a consistent look between
+    // the two plugins' cascading menus.
+    private static IntPtr CreateCategoryHBitmap()
+    {
+        var path = "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z";
+        var accentBrush = System.Windows.Application.Current?.TryFindResource("AccentBlue") as System.Windows.Media.SolidColorBrush;
+        var fill = accentBrush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(33, 150, 243));
+        return CreateHBitmapFromWpfPath(path, fill, null, scale: 64.0 / 24.0);
     }
 }

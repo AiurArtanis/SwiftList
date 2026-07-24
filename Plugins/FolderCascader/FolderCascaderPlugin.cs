@@ -15,6 +15,7 @@ public class FolderCascaderPlugin : IPlugin, IConfigurable
     {
         public string Name { get; set; } = string.Empty;
         public string Path { get; set; } = string.Empty;
+        public string SubMenu { get; set; } = string.Empty;
     }
 
     public PluginConfigSchema GetConfigSchema() => new PluginConfigSchema
@@ -84,6 +85,14 @@ public class FolderCascaderPlugin : IPlugin, IConfigurable
                                 Key = "Path",
                                 LabelKey = "FolderCascader_Config_FolderPath",
                                 FieldType = ConfigFieldType.FolderPath,
+                                DefaultValue = ""
+                            },
+                            new PluginConfigField
+                            {
+                                Key = "SubMenu",
+                                LabelKey = "FolderCascader_Config_SubMenuLabel",
+                                DescriptionKey = "FolderCascader_Config_SubMenuDesc",
+                                FieldType = ConfigFieldType.Text,
                                 DefaultValue = ""
                             }
                         }

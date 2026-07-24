@@ -26,28 +26,7 @@ public static class MenuBuilder
 
             if (folders != null)
             {
-                foreach (var folder in folders)
-                {
-                    if (folder.Path == "-" || folder.Name == "-")
-                    {
-                        items.Add(new DynamicMenuItem { IsSeparator = true });
-                        continue;
-                    }
-                    if (string.IsNullOrWhiteSpace(folder.Path)) continue;
-                    var pathExists = true;
-                    if (!folder.Path.StartsWith("::") && !folder.Path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        pathExists = Directory.Exists(folder.Path);
-                    }
-                    items.Add(new DynamicMenuItem
-                    {
-                        Text = GetDisplayName(folder.Path, folder.Name),
-                        HasSubMenu = pathExists,
-                        SubMenuHandle = pathExists ? provider.AllocateHandle(folder.Path) : IntPtr.Zero,
-                        HBitmapItem = IntPtr.Zero,
-                        IsDisabled = !pathExists
-                    });
-                }
+                AddFolderItems(items, folders, Array.Empty<string>(), provider);
             }
 
             var showFavorites = PluginSettingsService.GetSetting(
@@ -192,6 +171,27 @@ public static class MenuBuilder
                 if (items.Count == 0)
                     items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_NoFavorites"), IsDisabled = true });
             }
+            else if (TryDecodeCategoryPath(path, out var categoryPrefix))
+            {
+                // A submenu category node (see AddFolderItems), not a real filesystem path -- reload
+                // the same Folders setting the root level did and re-run the grouping logic scoped to
+                // this category's prefix, same as CustomCommandsQuickNavProvider re-partitions its own
+                // flat list on every submenu expansion instead of building a tree once up front.
+                var folders = PluginSettingsService.GetSetting(
+                    "SwiftList.Plugins.FolderCascader",
+                    "Folders",
+                    new List<FolderCascaderPlugin.FolderConfigItem>());
+                if (folders != null)
+                {
+                    AddFolderItems(items, folders, categoryPrefix, provider);
+                }
+                while (items.Count > 0 && items.Last().IsSeparator)
+                {
+                    items.RemoveAt(items.Count - 1);
+                }
+                if (items.Count == 0)
+                    items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_EmptyFolder"), IsDisabled = true });
+            }
             else
             {
                 try
@@ -291,4 +291,93 @@ public static class MenuBuilder
     private static bool IsWebUrl(string path)
         => Uri.TryCreate(path?.Trim(), UriKind.Absolute, out var uri)
            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
+    private const string CategoryPathPrefix = "foldercascader://category/";
+
+    // Groups configured folders by their SubMenu field and appends the items belonging at exactly
+    // "prefix" depth -- a leaf (Name/Path) entry for folders whose SubMenu matches prefix exactly, or
+    // (at most once per distinct next segment) a HasSubMenu category entry for folders nested deeper.
+    // Same re-partition-a-flat-list-on-every-expansion technique CustomCommandsQuickNavProvider uses
+    // for its own SubMenu field, rather than building a tree once up front.
+    internal static void AddFolderItems(List<DynamicMenuItem> items, List<FolderCascaderPlugin.FolderConfigItem> folders, string[] prefix, Provider provider)
+    {
+        var seenCategories = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var folder in folders)
+        {
+            var segments = SplitSubMenuPath(folder.SubMenu);
+            if (!StartsWithPrefix(segments, prefix)) continue;
+
+            if (segments.Length > prefix.Length)
+            {
+                var category = segments[prefix.Length];
+                if (!seenCategories.Add(category)) continue;
+
+                var childPrefix = new string[prefix.Length + 1];
+                Array.Copy(prefix, childPrefix, prefix.Length);
+                childPrefix[prefix.Length] = category;
+
+                items.Add(new DynamicMenuItem
+                {
+                    Text = category,
+                    HasSubMenu = true,
+                    SubMenuHandle = provider.AllocateHandle(EncodeCategoryPath(childPrefix)),
+                    HBitmapItem = IconBitmapCache.CategoryHBitmap
+                });
+                continue;
+            }
+
+            // segments.Length == prefix.Length: this entry belongs exactly at the current level.
+            if (folder.Path == "-" || folder.Name == "-")
+            {
+                items.Add(new DynamicMenuItem { IsSeparator = true });
+                continue;
+            }
+            if (string.IsNullOrWhiteSpace(folder.Path)) continue;
+            var pathExists = true;
+            if (!folder.Path.StartsWith("::") && !folder.Path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
+            {
+                pathExists = Directory.Exists(folder.Path);
+            }
+            items.Add(new DynamicMenuItem
+            {
+                Text = GetDisplayName(folder.Path, folder.Name),
+                HasSubMenu = pathExists,
+                SubMenuHandle = pathExists ? provider.AllocateHandle(folder.Path) : IntPtr.Zero,
+                HBitmapItem = IntPtr.Zero,
+                IsDisabled = !pathExists
+            });
+        }
+    }
+
+    // Empty segments (e.g. "a//b", "a/", "/a") are dropped rather than producing an empty-named
+    // category or erroring -- a stray typo in the config shouldn't break navigation.
+    internal static string[] SplitSubMenuPath(string subMenu) =>
+        string.IsNullOrWhiteSpace(subMenu)
+            ? Array.Empty<string>()
+            : subMenu.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    // Case-sensitive by design, matching CustomCommandsQuickNavProvider's own SubMenu grouping:
+    // "Tools" and "tools" are two distinct categories, never merged.
+    internal static bool StartsWithPrefix(string[] segments, string[] prefix)
+    {
+        if (segments.Length < prefix.Length) return false;
+        for (var i = 0; i < prefix.Length; i++)
+        {
+            if (!string.Equals(segments[i], prefix[i], StringComparison.Ordinal)) return false;
+        }
+        return true;
+    }
+
+    internal static string EncodeCategoryPath(string[] segments) => CategoryPathPrefix + string.Join("/", segments);
+
+    internal static bool TryDecodeCategoryPath(string path, out string[] segments)
+    {
+        if (!path.StartsWith(CategoryPathPrefix, StringComparison.Ordinal))
+        {
+            segments = Array.Empty<string>();
+            return false;
+        }
+        segments = path.Substring(CategoryPathPrefix.Length).Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return true;
+    }
 }
