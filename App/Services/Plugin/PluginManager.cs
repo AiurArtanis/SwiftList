@@ -178,12 +178,23 @@ public class PluginManager : PluginRegistry
     public IEnumerable<PluginSdk.Abstractions.Plugins.ISearchableItemProvider> SearchableItemProviders
         => _searchableItemProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.SearchableItemProvider, p.GetType().Name));
 
+    // Ordered per UserSettings.SidebarGroupOrder (position = priority, most-preferred first), one id per
+    // PROVIDER rather than per group -- a provider whose id isn't listed there yet falls back to its own
+    // SortOrder, so the built-in Type/Date/Size default ordering still holds until the user customizes it.
     public IEnumerable<PluginSdk.Abstractions.Plugins.ISidebarFilterProvider> SidebarFilterProviders
     {
         get
         {
-            foreach (var p in _sidebarFilterProviders)
-                yield return new FilteredSidebarFilterProvider(p, ComponentFilter.GetDllName(p), this);
+            var order = UserSettings.Load().SidebarGroupOrder;
+            return _sidebarFilterProviders
+                .OrderBy(p =>
+                {
+                    var id = Helpers.PluginLoaderHelper.MakeId(ComponentFilter.GetDllName(p), PluginComponentType.FilterProvider, p.GetType().Name);
+                    var rank = order.IndexOf(id);
+                    return rank >= 0 ? rank : int.MaxValue;
+                })
+                .ThenBy(p => p.SortOrder)
+                .Select(p => (PluginSdk.Abstractions.Plugins.ISidebarFilterProvider)new FilteredSidebarFilterProvider(p, ComponentFilter.GetDllName(p), this));
         }
     }
 

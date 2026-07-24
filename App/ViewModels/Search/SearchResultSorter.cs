@@ -1,4 +1,3 @@
-using SwiftList.App.Services;
 using SwiftList.PluginSdk.Abstractions;
 
 using SwiftList.App.Services.Plugin;
@@ -6,24 +5,28 @@ namespace SwiftList.App.ViewModels.Search;
 
 internal static class SearchResultSorter
 {
+    // currentSortColumn is a stable id -- "Name"/"Path"/"DateModified" for the built-in columns (see
+    // Helpers/Visuals/ColumnIdentity), or a plugin's own ResultColumnDefinition.ColumnId -- never the
+    // column's displayed (translated) header text, which would break on a language switch or collide
+    // between two plugins that happen to share a display string.
     public static IEnumerable<AppSearchResult> Sort(IEnumerable<AppSearchResult> resultsList, string currentSortColumn, bool isSortAscending)
     {
         if (string.IsNullOrEmpty(currentSortColumn))
             return resultsList;
 
-        if (currentSortColumn == TranslationManager.Instance["Search_HeaderName"])
+        if (currentSortColumn == "Name")
         {
             return isSortAscending
                 ? resultsList.OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase)
                 : resultsList.OrderByDescending(r => r.Name, StringComparer.CurrentCultureIgnoreCase);
         }
-        if (currentSortColumn == TranslationManager.Instance["Search_HeaderPath"])
+        if (currentSortColumn == "Path")
         {
             return isSortAscending
                 ? resultsList.OrderBy(r => r.FullPath, StringComparer.CurrentCultureIgnoreCase)
                 : resultsList.OrderByDescending(r => r.FullPath, StringComparer.CurrentCultureIgnoreCase);
         }
-        if (currentSortColumn == TranslationManager.Instance["Search_HeaderDateModified"])
+        if (currentSortColumn == "DateModified")
         {
             return isSortAscending
                 ? resultsList.OrderBy(r => r.DateModified)
@@ -33,7 +36,7 @@ internal static class SearchResultSorter
         Func<ISearchResult, ISearchResult, int>? customComparer = null;
         foreach (var provider in PluginManager.Instance.ResultColumnProviders)
         {
-            var col = provider.GetColumns().FirstOrDefault(c => c.HeaderText.Equals(currentSortColumn, StringComparison.OrdinalIgnoreCase) || c.ColumnId.Equals(currentSortColumn, StringComparison.OrdinalIgnoreCase));
+            var col = provider.GetColumns().FirstOrDefault(c => c.ColumnId.Equals(currentSortColumn, StringComparison.OrdinalIgnoreCase));
             if (col != null && col.SortComparer != null)
             {
                 customComparer = col.SortComparer;
@@ -48,19 +51,9 @@ internal static class SearchResultSorter
                 : resultsList.OrderByDescending(r => r, new CustomSearchResultComparer(customComparer));
         }
 
-        var columnId = currentSortColumn;
-        foreach (var provider in PluginManager.Instance.ResultColumnProviders)
-        {
-            var col = provider.GetColumns().FirstOrDefault(c => c.HeaderText.Equals(currentSortColumn, StringComparison.OrdinalIgnoreCase));
-            if (col != null)
-            {
-                columnId = col.ColumnId;
-                break;
-            }
-        }
         return isSortAscending
-            ? resultsList.OrderBy(r => r[columnId], StringComparer.CurrentCultureIgnoreCase)
-            : resultsList.OrderByDescending(r => r[columnId], StringComparer.CurrentCultureIgnoreCase);
+            ? resultsList.OrderBy(r => r[currentSortColumn], StringComparer.CurrentCultureIgnoreCase)
+            : resultsList.OrderByDescending(r => r[currentSortColumn], StringComparer.CurrentCultureIgnoreCase);
     }
 }
 

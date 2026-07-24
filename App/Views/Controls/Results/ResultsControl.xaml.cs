@@ -53,15 +53,16 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
             LoadDynamicColumns();
         };
 
-        // Plugin-provided column headers (PopulateDynamicColumns) are a one-time translated snapshot,
-        // so they'd otherwise stay stuck in whatever language was active when this control was created
-        // (i.e. when its owning window was opened) even after a live language switch. Re-resolve them
-        // on every TranslationManager change; harmless no-op for List-mode-only owners (QuickSearchWindow/
-        // InlineSearchWindow) since LstGridResults still exists there, just hidden. Unsubscribes on
-        // Unloaded so a closed SearchWindow's ResultsControl doesn't linger forever pinned by the
-        // singleton's event -- never fires for QuickSearchWindow/InlineSearchWindow's instances since
-        // those windows are only ever Hidden, not Closed, which is exactly the lifetime this subscription
-        // should have there too.
+        // Every grid column's header (built-in and plugin alike) can end up as a one-time translated
+        // snapshot rather than a live binding -- plugin columns always are (PopulateDynamicColumns sets
+        // Header as a literal string), and a built-in column's own live XAML binding is overwritten the
+        // first time it's clicked/sorted (see ResultsControlColumns' own comment). Re-resolve them all on
+        // every TranslationManager change so none stay stuck in whatever language was active at that
+        // point; harmless no-op for List-mode-only owners (QuickSearchWindow/InlineSearchWindow) since
+        // LstGridResults still exists there, just hidden. Unsubscribes on Unloaded so a closed
+        // SearchWindow's ResultsControl doesn't linger forever pinned by the singleton's event -- never
+        // fires for QuickSearchWindow/InlineSearchWindow's instances since those windows are only ever
+        // Hidden, not Closed, which is exactly the lifetime this subscription should have there too.
         Services.TranslationManager.Instance.PropertyChanged += OnTranslationsChanged;
         Unloaded += (s, e) => Services.TranslationManager.Instance.PropertyChanged -= OnTranslationsChanged;
     }
@@ -69,7 +70,7 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
     private void OnTranslationsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == "Item[]")
-            ResultsControlColumns.RefreshDynamicColumnHeaders(LstGridResults);
+            ResultsControlColumns.RefreshAllColumnHeaders(LstGridResults);
     }
 
     private System.Windows.Point? _lastHoverPos;
@@ -270,6 +271,14 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
         if (_columnsLoaded || LstGridResults == null) return;
         _columnsLoaded = true;
         ResultsControlColumns.PopulateDynamicColumns(LstGridResults);
+
+        // Grid mode only (the full window) -- Quick/Inline windows' DataContext has no
+        // CurrentSortColumn/IsSortAscending pair to read, and never show LstGridResults anyway.
+        if (ViewMode == ResultsViewMode.Grid)
+        {
+            ResultsControlColumns.ApplyColumnOrder(LstGridResults, Core.UserSettings.Load().ColumnOrder);
+            ResultsControlColumns.ApplyInitialSortIndicator(LstGridResults, DataContext);
+        }
     }
 
     // sender is always the ListView itself (that's where GridViewColumnHeader.Click="..." attaches the

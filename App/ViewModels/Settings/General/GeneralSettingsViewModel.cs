@@ -40,6 +40,8 @@ public class GeneralSettingsViewModel : ViewModelBase
         MainWindow = new MainWindowSettingsViewModel(userSettings);
         QuickNavigationOrder = new QuickNavigationOrderViewModel(userSettings);
         ResultTypeOrder = new ResultTypeOrderViewModel(userSettings);
+        SidebarGroupOrder = new SidebarGroupOrderViewModel(userSettings);
+        ColumnOrder = new ColumnOrderViewModel(userSettings);
 
         _startWithWindows = userSettings.StartWithWindows;
         _autoCheckUpdates = userSettings.AutoCheckUpdates;
@@ -194,6 +196,8 @@ public class GeneralSettingsViewModel : ViewModelBase
         MainWindow.Save();
         QuickNavigationOrder.Save();
         ResultTypeOrder.Save();
+        SidebarGroupOrder.Save();
+        ColumnOrder.Save();
 
         _userSettings.Save();
     }
@@ -203,4 +207,6 @@ public class GeneralSettingsViewModel : ViewModelBase
     public MainWindowSettingsViewModel MainWindow { get; }
     public QuickNavigationOrderViewModel QuickNavigationOrder { get; }
     public ResultTypeOrderViewModel ResultTypeOrder { get; }
+    public SidebarGroupOrderViewModel SidebarGroupOrder { get; }
+    public ColumnOrderViewModel ColumnOrder { get; }
 }

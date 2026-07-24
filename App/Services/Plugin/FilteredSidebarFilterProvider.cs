@@ -16,6 +16,12 @@ public class FilteredSidebarFilterProvider : ISidebarFilterProvider
         _manager = manager;
     }
 
+    // The real plugin-defined provider this wraps -- needed by anything (e.g.
+    // SidebarGroupOrderViewModel) that has to compute this provider's identity the same way
+    // PluginManager.SidebarFilterProviders' own ordering does, which reads GetType()/assembly off the
+    // INNER provider, not this wrapper (whose own GetType() would just say "FilteredSidebarFilterProvider").
+    public ISidebarFilterProvider Inner => _inner;
+
     public int SortOrder => _inner.SortOrder;
 
     public IEnumerable<SidebarFilterGroup> GetFilterGroups()

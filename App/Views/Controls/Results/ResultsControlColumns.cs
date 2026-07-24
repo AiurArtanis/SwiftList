@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using SwiftList.App.Helpers.Visuals;
 using SwiftList.App.Services;
 using SwiftList.Core;
 
@@ -24,6 +25,7 @@ internal static class ResultsControlColumns
                     Header = colDef.HeaderText,
                     Width = colDef.Width
                 };
+                ColumnIdentity.SetId(gvc, colDef.ColumnId);
 
                 var binding = new System.Windows.Data.Binding($"[{colDef.ColumnId}]")
                 {
@@ -46,34 +48,97 @@ internal static class ResultsControlColumns
         }
     }
 
-    // Re-resolves every plugin-provided column's header text in the now-current language and re-applies
-    // it in place -- called on TranslationManager language switches so these headers don't stay stuck in
-    // whatever language was active when PopulateDynamicColumns ran, without needing to tear down and
-    // rebuild the columns themselves. GridViewColumn is a DependencyObject, not a FrameworkElement (no
-    // Tag to stash an identity on), so this correlates by position instead: dynamic columns are always
-    // appended after the fixed built-in ones, in this same provider/GetColumns() order every time,
-    // matching how PopulateDynamicColumns built them. If the dynamic column count no longer matches
-    // (a plugin was enabled/disabled mid-session), skip rather than risk relabeling the wrong column.
-    // Preserves an existing sort-arrow suffix (see HandleColumnHeaderClick below) so an active sort
-    // indicator survives the relabel.
-    public static void RefreshDynamicColumnHeaders(System.Windows.Controls.ListView lstGridResults)
+    // Reorders the already-populated columns (built-in + plugin) to match UserSettings.ColumnOrder --
+    // a column whose id isn't listed yet keeps its natural position, same "unlisted falls back to
+    // int.MaxValue, stable sort preserves relative order" convention as SidebarGroupOrder/
+    // ResultTypeOrder/QuickNavigationProviderOrder. Purely a display-position concern, unrelated to
+    // which column the rows are sorted BY (see SearchResultSortMemory).
+    public static void ApplyColumnOrder(System.Windows.Controls.ListView lstGridResults, List<string> order)
+    {
+        if (order.Count == 0) return;
+        if (lstGridResults.View is not GridView gridView) return;
+
+        var target = gridView.Columns
+            .Select((col, index) => (col, index))
+            .OrderBy(x =>
+            {
+                var rank = order.IndexOf(ColumnIdentity.GetId(x.col));
+                return rank >= 0 ? rank : int.MaxValue;
+            })
+            .ThenBy(x => x.index)
+            .Select(x => x.col)
+            .ToList();
+
+        for (var i = 0; i < target.Count; i++)
+        {
+            var currentIndex = gridView.Columns.IndexOf(target[i]);
+            if (currentIndex != i) gridView.Columns.Move(currentIndex, i);
+        }
+    }
+
+    // Single source of truth for a column's CURRENT, correctly-translated header text, resolved fresh
+    // from TranslationManager/PluginManager every time rather than read back off the GridViewColumn
+    // itself -- col.Header stops being a reliable source the moment any of the methods below have
+    // overwritten it once (see their own comments), so re-deriving it from the id avoids ever
+    // compounding a stale value forward.
+    private static string ResolveFreshHeaderText(string columnId) => columnId switch
+    {
+        "Name" => TranslationManager.Instance["Search_HeaderName"],
+        "Path" => TranslationManager.Instance["Search_HeaderPath"],
+        "DateModified" => TranslationManager.Instance["Search_HeaderDateModified"],
+        _ => PluginManager.Instance.ResultColumnProviders
+                 .SelectMany(p => p.GetColumns())
+                 .FirstOrDefault(c => c.ColumnId == columnId)?.HeaderText ?? columnId
+    };
+
+    // Re-resolves every column's header text (built-in and plugin alike) in the now-current language and
+    // re-applies it in place -- called on TranslationManager language switches. The 3 built-in columns'
+    // XAML Header bindings only cover the FIRST render: the moment HandleColumnHeaderClick/
+    // ApplyInitialSortIndicator below assigns col.Header a literal string (to paint the sort arrow), that
+    // binding is gone and the column would otherwise stay stuck in whatever language was active at that
+    // instant. Driving every column off ColumnIdentity.Id here instead of position also means an
+    // enabled/disabled plugin mid-session can never relabel the wrong column. Preserves an existing
+    // sort-arrow suffix so an active sort indicator survives the relabel.
+    public static void RefreshAllColumnHeaders(System.Windows.Controls.ListView lstGridResults)
     {
         if (lstGridResults.View is not GridView gridView) return;
 
-        var freshHeaders = new List<string>();
-        foreach (var provider in PluginManager.Instance.ResultColumnProviders)
-            foreach (var colDef in provider.GetColumns())
-                freshHeaders.Add(colDef.HeaderText);
-
-        var dynamicStartIndex = gridView.Columns.Count - freshHeaders.Count;
-        if (dynamicStartIndex < 0) return;
-
-        for (var i = 0; i < freshHeaders.Count; i++)
+        foreach (var col in gridView.Columns)
         {
-            var col = gridView.Columns[dynamicStartIndex + i];
-            var current = col.Header as string ?? string.Empty;
+            var id = ColumnIdentity.GetId(col);
+            if (string.IsNullOrEmpty(id) || col.Header is not string current) continue;
+
             var suffix = current.EndsWith(" ▲") ? " ▲" : current.EndsWith(" ▼") ? " ▼" : string.Empty;
-            col.Header = freshHeaders[i] + suffix;
+            col.Header = ResolveFreshHeaderText(id) + suffix;
+        }
+    }
+
+    // Paints the sort-arrow indicator for whatever column the ViewModel's own default sort (General
+    // settings -> Search Window tab) already applied to the results -- otherwise a window that opens
+    // pre-sorted would show correctly ordered rows with no header hinting why, until the user's first
+    // manual click. Safe no-op for any DataContext without a CurrentSortColumn/IsSortAscending pair
+    // (list-mode-only owners like QuickSearchWindow/InlineSearchWindow, which still run this on Loaded).
+    public static void ApplyInitialSortIndicator(System.Windows.Controls.ListView lstGridResults, object? dataContext)
+    {
+        if (dataContext == null || lstGridResults.View is not GridView gridView) return;
+
+        try
+        {
+            dynamic vm = dataContext;
+            string columnId = vm.CurrentSortColumn;
+            if (string.IsNullOrEmpty(columnId)) return;
+            bool isAsc = vm.IsSortAscending;
+
+            foreach (var col in gridView.Columns)
+            {
+                var id = ColumnIdentity.GetId(col);
+                if (id != columnId) continue;
+                col.Header = ResolveFreshHeaderText(id) + (isAsc ? " ▲" : " ▼");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[ResultsControlColumns] ApplyInitialSortIndicator failed: {ex}", LogLevel.Error);
         }
     }
 
@@ -84,32 +149,31 @@ internal static class ResultsControlColumns
         if (headerClicked is not { Column: not null })
             return;
 
-        var headerText = headerClicked.Column.Header as string ?? string.Empty;
-        if (string.IsNullOrEmpty(headerText) || dataContext == null)
+        var columnId = ColumnIdentity.GetId(headerClicked.Column);
+        if (string.IsNullOrEmpty(columnId) || dataContext == null)
             return;
 
-        var cleanHeader = headerText.Replace(" ▲", "").Replace(" ▼", "");
         dynamic vm = dataContext;
         try
         {
-            vm.SortByColumn(cleanHeader);
+            vm.SortByColumn(columnId);
             bool isAsc = vm.IsSortAscending;
 
             if (lstGridResults.View is not GridView gridView) return;
 
             foreach (var col in gridView.Columns)
             {
-                if (col.Header is not string colHeaderText) continue;
+                var id = ColumnIdentity.GetId(col);
+                if (string.IsNullOrEmpty(id)) continue;
 
-                var cleanColHeader = colHeaderText.Replace(" ▲", "").Replace(" ▼", "");
-                col.Header = cleanColHeader == cleanHeader
-                    ? cleanColHeader + (isAsc ? " ▲" : " ▼")
-                    : cleanColHeader;
+                col.Header = id == columnId
+                    ? ResolveFreshHeaderText(id) + (isAsc ? " ▲" : " ▼")
+                    : ResolveFreshHeaderText(id);
             }
         }
         catch (Exception ex)
         {
-            Logger.Log($"[ResultsControlColumns] HandleColumnHeaderClick failed for header '{cleanHeader}': {ex}", LogLevel.Error);
+            Logger.Log($"[ResultsControlColumns] HandleColumnHeaderClick failed for column '{columnId}': {ex}", LogLevel.Error);
         }
     }
 }

@@ -61,10 +61,9 @@ public class SearchViewModel : ViewModelBase, IDisposable
             setIsSearchBoxEnabled: v => IsSearchBoxEnabled = v,
             applyFiltersAndRender: ApplyFiltersAndRender);
 
-        // Initialize dynamic plugin sidebar groups
-        var orderedProviders = PluginManager.Instance.SidebarFilterProviders
-            .OrderBy(p => p.SortOrder)
-            .ToList();
+        // Initialize dynamic plugin sidebar groups -- PluginManager.SidebarFilterProviders already
+        // applies the user's saved order (falling back to each provider's own SortOrder).
+        var orderedProviders = PluginManager.Instance.SidebarFilterProviders.ToList();
 
         foreach (var provider in orderedProviders)
         {
@@ -78,6 +77,12 @@ public class SearchViewModel : ViewModelBase, IDisposable
         {
             DynamicSidebarGroups[0].IsFirst = true;
         }
+
+        // Seeds the results grid's sort state from whatever was last clicked THIS app run (see
+        // SearchResultSortMemory's own comment) so reopening the full window keeps showing the same
+        // sort instead of resetting to unsorted every time a fresh SearchViewModel is constructed.
+        _currentSortColumn = SearchResultSortMemory.CurrentSortColumn;
+        _isSortAscending = SearchResultSortMemory.IsSortAscending;
 
         ResultCountText = string.Format(TranslationManager.Instance["Search_Total"], 0);
         AdvancedQuery = initialQuery;
@@ -109,7 +114,6 @@ public class SearchViewModel : ViewModelBase, IDisposable
     private void RefreshDynamicSidebarLabels()
     {
         var freshGroups = PluginManager.Instance.SidebarFilterProviders
-            .OrderBy(p => p.SortOrder)
             .SelectMany(p => p.GetFilterGroups())
             .ToList();
 
@@ -209,18 +213,21 @@ public class SearchViewModel : ViewModelBase, IDisposable
     private bool _isSortAscending = true;
 
     public bool IsSortAscending => _isSortAscending;
+    public string CurrentSortColumn => _currentSortColumn;
 
-    public void SortByColumn(string columnHeaderOrId)
+    public void SortByColumn(string columnId)
     {
-        if (_currentSortColumn == columnHeaderOrId)
+        if (_currentSortColumn == columnId)
         {
             _isSortAscending = !_isSortAscending;
         }
         else
         {
-            _currentSortColumn = columnHeaderOrId;
+            _currentSortColumn = columnId;
             _isSortAscending = true;
         }
+        SearchResultSortMemory.CurrentSortColumn = _currentSortColumn;
+        SearchResultSortMemory.IsSortAscending = _isSortAscending;
         ApplyFiltersAndRender();
     }
 

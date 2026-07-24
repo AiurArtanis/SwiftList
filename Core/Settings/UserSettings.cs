@@ -81,6 +81,25 @@ public class UserSettings
     public List<string> QuickNavigationProviderOrder { get; set; } = new();
 
     /// <summary>
+    /// User-chosen display order for the full SearchWindow's sidebar filter groups (Type/Date/Size/any
+    /// third-party ISidebarFilterProvider), most-preferred first. Same id format as
+    /// DisabledPluginComponents, one id per PROVIDER (not per group -- a provider contributing multiple
+    /// groups moves them together as a unit). A provider whose id isn't present here yet falls back to
+    /// its own SortOrder, same convention QuickNavigationProviderOrder above uses for discovery order.
+    /// </summary>
+    public List<string> SidebarGroupOrder { get; set; } = new();
+
+    /// <summary>
+    /// User-chosen left-to-right display order for the full SearchWindow's results grid columns
+    /// (built-in "Name"/"Path"/"DateModified" plus any third-party IResultColumnProvider's own
+    /// ColumnId), most-preferred first. Purely which columns show in which position -- NOT which
+    /// column the rows are currently sorted by (see SearchResultSortMemory, deliberately in-memory-
+    /// only and not settings-backed). A column whose id isn't present here yet falls back to its
+    /// natural discovery position, same convention QuickNavigationProviderOrder above uses.
+    /// </summary>
+    public List<string> ColumnOrder { get; set; } = new();
+
+    /// <summary>
     /// User-chosen priority order for the quick window's search-result "types" -- each
     /// ISearchableItemProvider (Applications, Settings, File Filters, any third-party plugin) plus one
     /// synthetic entry for raw file-index results (SearchResultTypePriority.FilesTypeId), most-preferred

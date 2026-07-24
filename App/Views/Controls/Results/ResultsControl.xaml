@@ -55,7 +55,7 @@
                     <ListView.View>
                         <GridView>
                             <!-- Name Column -->
-                            <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderName]}" Width="320">
+                            <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderName]}" Width="320" helpers:ColumnIdentity.Id="Name">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <Grid Width="{Binding Path=ActualWidth, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" VerticalAlignment="Stretch" Background="Transparent">
@@ -81,7 +81,7 @@
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
                             <!-- Path Column -->
-                            <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderPath]}" Width="260">
+                            <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderPath]}" Width="260" helpers:ColumnIdentity.Id="Path">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <Grid Width="{Binding Path=ActualWidth, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" VerticalAlignment="Stretch" Background="Transparent">
@@ -101,7 +101,7 @@
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
                             <!-- Date Modified Column -->
-                            <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderDateModified]}" Width="120">
+                            <GridViewColumn Header="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Search_HeaderDateModified]}" Width="120" helpers:ColumnIdentity.Id="DateModified">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding DateModifiedText}"
