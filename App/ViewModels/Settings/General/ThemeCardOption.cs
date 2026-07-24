@@ -22,7 +22,11 @@ public sealed class ThemeCardOption
     public Brush SearchBg { get; }
     public Brush Text { get; }
     public Brush TextSecondary { get; }
-    public Brush ItemSelected { get; }
+    // Was ItemSelected: that key only ever fed this preview card, never the real result list (which
+    // uses HoverBackground for its selected/hovered row, since hovering a row selects it -- see
+    // ListBox.xaml's ResultItemStyle), so the two had drifted apart. Pulling from HoverBackground
+    // instead makes the preview show exactly what QuickSearchWindow actually renders.
+    public Brush SelectedRowBg { get; }
     // The same accent-bar brush the real result list uses to mark the selected row -- reused here so
     // the mock row in the preview mirrors the app's own selection treatment instead of inventing one.
     public Brush AccentBar { get; }
@@ -43,7 +47,7 @@ public sealed class ThemeCardOption
         SearchBg = ResolveBrush(res, "ControlBackground");
         Text = ResolveBrush(res, "TextPrimary");
         TextSecondary = ResolveBrush(res, "TextSecondary");
-        ItemSelected = ResolveBrush(res, "ItemSelected");
+        SelectedRowBg = ResolveBrush(res, "HoverBackground");
         AccentBar = ResolveBrush(res, "AccentBarColor");
         AccentText = ResolveBrush(res, "PrimaryButtonText");
     }
