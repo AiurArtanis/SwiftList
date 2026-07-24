@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:services="clr-namespace:SwiftList.App.Services"
+             xmlns:helpers="clr-namespace:SwiftList.App.Helpers.Visuals"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="700">
     <!-- Split out of GeneralSettingsPage.xaml (the "Layout" tab) to keep that file under the
@@ -55,15 +56,34 @@
                 <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"
+                        <Grid Grid.Column="0" Width="24" Height="32" Margin="0,0,10,0" Background="Transparent" VerticalAlignment="Center" Cursor="SizeAll" helpers:DragReorder.IsHandle="True">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Ellipse Grid.Row="0" Grid.Column="0" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="0" Grid.Column="1" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="1" Grid.Column="0" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="1" Grid.Column="1" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="2" Grid.Column="0" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="2" Grid.Column="1" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                        </Grid>
+
+                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis"/>
 
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
                             <TextBox Text="{Binding TriggerChar, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                      MaxLength="1"
                                      Width="32" Height="32"
@@ -152,7 +172,7 @@
                 <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ResultTypeOrderHint]}"
                            Style="{StaticResource SettingsHintText}" TextWrapping="Wrap" Margin="0,0,0,8"/>
 
-                <ItemsControl ItemsSource="{Binding General.ResultTypeOrder.Items}" ItemTemplate="{StaticResource ResultTypeOrderItemTemplate}">
+                <ItemsControl ItemsSource="{Binding General.ResultTypeOrder.Items}" ItemTemplate="{StaticResource ResultTypeOrderItemTemplate}" helpers:DragReorder.IsEnabled="True">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <VirtualizingStackPanel />

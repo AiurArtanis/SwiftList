@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:services="clr-namespace:SwiftList.App.Services"
+             xmlns:helpers="clr-namespace:SwiftList.App.Helpers.Visuals"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="700">
     <!-- Split out of StartupPanelSettingsPage.xaml (the "Tab Order" sub-tab) to keep that file under
@@ -22,13 +23,33 @@
                 <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding DisplayName}" FontSize="13"
+
+                        <Grid Grid.Column="0" Width="24" Height="32" Margin="0,0,10,0" Background="Transparent" VerticalAlignment="Center" Cursor="SizeAll" helpers:DragReorder.IsHandle="True">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Ellipse Grid.Row="0" Grid.Column="0" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="0" Grid.Column="1" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="1" Grid.Column="0" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="1" Grid.Column="1" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="2" Grid.Column="0" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="2" Grid.Column="1" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                        </Grid>
+
+                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}" FontSize="13"
                                    Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis"/>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
                             <Button Content="&#xE74A;"
                                     ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_MoveUpTooltip]}"
                                     Style="{StaticResource RuleIconButton}"
@@ -52,7 +73,7 @@
 
         <Border Style="{StaticResource SettingsCard}">
             <StackPanel>
-                <ItemsControl ItemsSource="{Binding TabOrder.Items}" ItemTemplate="{StaticResource TabOrderItemTemplate}"/>
+                <ItemsControl ItemsSource="{Binding TabOrder.Items}" ItemTemplate="{StaticResource TabOrderItemTemplate}" helpers:DragReorder.IsEnabled="True"/>
             </StackPanel>
         </Border>
     </StackPanel>
