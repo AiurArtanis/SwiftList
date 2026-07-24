@@ -29,6 +29,30 @@ public class ProcessManagerInstantProvider : IInstantResultProvider
         }
     }
 
+    // Lower tier ranks first: 0 = literal process-name match, 1 = literal PID match, 2 = literal
+    // window-title match, 3 = fuzzy/alias fallback on name or title -- the same literal/fuzzy/alias
+    // tiering BrowserDataInstantProvider uses, so e.g. a window titled in Chinese is still reachable by
+    // typing its pinyin, just ranked behind anything that matched literally instead of competing with
+    // it on plain alphabetical order. Returns null when nothing matches at any tier.
+    // windowTitle is often empty (background/non-windowed processes); Contains("", ...) would trivially
+    // match everything, and FuzzyMatchService.IsMatch isn't designed for an empty pattern/text either,
+    // so it's only checked when non-empty.
+    internal static int? GetMatchTier(string processName, string pid, string windowTitle, string searchTerm)
+    {
+        if (processName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            return 0;
+        if (pid.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            return 1;
+        if (!string.IsNullOrEmpty(windowTitle) && windowTitle.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            return 2;
+        if (FuzzyMatchService.IsMatch(searchTerm, processName))
+            return 3;
+        if (!string.IsNullOrEmpty(windowTitle) && FuzzyMatchService.IsMatch(searchTerm, windowTitle))
+            return 3;
+
+        return null;
+    }
+
     public IEnumerable<InstantResultItem> GetInstantResults(string query)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -61,8 +85,7 @@ public class ProcessManagerInstantProvider : IInstantResultProvider
             yield break;
         }
 
-        var matches = new List<Process>();
-        var searchTermLower = searchTerm.ToLowerInvariant();
+        var matches = new List<(Process Process, int Tier)>();
 
         foreach (var proc in processes)
         {
@@ -70,19 +93,13 @@ public class ProcessManagerInstantProvider : IInstantResultProvider
             {
                 if (string.IsNullOrEmpty(searchTerm))
                 {
-                    matches.Add(proc);
+                    matches.Add((proc, 0));
+                    continue;
                 }
-                else
-                {
-                    var pidStr = proc.Id.ToString();
-                    var name = proc.ProcessName;
 
-                    if (name.Contains(searchTermLower, StringComparison.OrdinalIgnoreCase) ||
-                        pidStr.Contains(searchTermLower, StringComparison.OrdinalIgnoreCase))
-                    {
-                        matches.Add(proc);
-                    }
-                }
+                var tier = GetMatchTier(proc.ProcessName, proc.Id.ToString(), proc.MainWindowTitle, searchTerm);
+                if (tier.HasValue)
+                    matches.Add((proc, tier.Value));
             }
             catch
             {
@@ -90,11 +107,15 @@ public class ProcessManagerInstantProvider : IInstantResultProvider
             }
         }
 
-        // Sort alphabetically by process name
-        matches.Sort((a, b) => string.Compare(a.ProcessName, b.ProcessName, StringComparison.OrdinalIgnoreCase));
+        // Lower tier first (stronger match), then alphabetically by process name within the same tier.
+        matches.Sort((a, b) =>
+        {
+            var tierCompare = a.Tier.CompareTo(b.Tier);
+            return tierCompare != 0 ? tierCompare : string.Compare(a.Process.ProcessName, b.Process.ProcessName, StringComparison.OrdinalIgnoreCase);
+        });
 
         // Limit results to 100 items to keep search extremely snappy
-        var results = matches.Take(100);
+        var results = matches.Select(m => m.Process).Take(100);
 
         var pathKey = TranslationService.Get("ProcessManager_Path");
         var windowKey = TranslationService.Get("ProcessManager_Window");
