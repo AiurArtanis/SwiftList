@@ -245,6 +245,8 @@ public class UserSettings
             }
         }
 
+        RotateBackups(SettingsPath);
+
         var retries = 5;
         while (retries > 0)
         {
@@ -269,6 +271,38 @@ public class UserSettings
             _lastJsonOnDisk = json;
         }
         ExclusionRuleSet.InvalidateCache();
+    }
+
+    // Keeps up to maxBackups previous copies of the settings file (e.g. "user-settings.json.bak.1" is
+    // the most recent, ".bak.5" the oldest) -- a general recovery safety net for any future settings-
+    // schema break (not just this one), rather than trying to make every past/future shape of the file
+    // load leniently. Best-effort: a failure here (e.g. a backup file locked by another process) must
+    // never block the actual save, so it only logs and moves on.
+    internal static void RotateBackups(string filePath, int maxBackups = 5)
+    {
+        try
+        {
+            if (!File.Exists(filePath)) return;
+
+            string BackupPath(int i) => $"{filePath}.bak.{i}";
+
+            var oldest = BackupPath(maxBackups);
+            if (File.Exists(oldest))
+                File.Delete(oldest);
+
+            for (var i = maxBackups - 1; i >= 1; i--)
+            {
+                var src = BackupPath(i);
+                if (File.Exists(src))
+                    File.Move(src, BackupPath(i + 1));
+            }
+
+            File.Copy(filePath, BackupPath(1), overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[UserSettings] Failed to rotate settings backups for '{filePath}': {ex.Message}", Core.LogLevel.Warn);
+        }
     }
 }
 
