@@ -1,8 +1,21 @@
 # About
 
 Shows version numbers for the App, Core, Service, and CLI components (colored to reflect whether
-the service is currently healthy), a short description of SwiftList, and a link to the project
-homepage.
+the service is currently healthy), a short description of SwiftList, and links to the project
+homepage and the online user guide.
+
+## Config folders
+
+Two more links, right below those, open the folders SwiftList reads and writes its own
+configuration from — each shows the actual path as the clickable link text, creating the folder
+first if it doesn't exist yet:
+
+- **User Config Folder** — the per-user folder holding `user-settings.json`. Every time settings
+  are saved, the previous file is rotated into `user-settings.json.bak.1` (shifting any older
+  backups down, up to `.bak.5`) before the new one is written, so a bad edit or a crash mid-save
+  always leaves a recent copy to restore from.
+- **System Config Folder** — the shared, machine-wide folder used by the background service
+  (`machine-settings.json`, index caches, and service-side logs).
 
 ## Checking for updates
 

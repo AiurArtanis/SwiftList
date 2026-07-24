@@ -40,12 +40,16 @@ Covers both the quick search bar's appearance and how its search results are pri
   the usual "Type to search..." placeholder text with the current date, day of week, and time
   instead. Disappears the moment you start typing, same as the placeholder it replaces. Quick window
   only — the inline window always keeps its normal placeholder, even with this on.
-- **Reset Layout Settings** button — restores all three values above to their defaults.
+- **Reopen as full window on repeat hotkey** — checkbox, off by default. Normally, pressing the
+  toggle hotkey again while the quick window is already open just hides it; turning this on makes
+  the second press switch to the full window instead (carrying over whatever query you'd already
+  typed), rather than closing anything.
+- **Reset Layout Settings** button — restores all four settings above to their defaults.
 
 Right-clicking the [quick window's logo](../hotkeys#search-box-logo-icon) resets just its on-screen
 position (not size), re-centering it the same way it centers on first launch.
 
-**Result Type Priority** — the same up/down-arrow reorder list used for [Quick
+**Result Type Priority** — the same up/down-arrow (or drag-to-reorder) list used for [Quick
 Navigation](#quick-navigation) below: move a result type (Applications, Settings, File Filters, any
 third-party plugin's own searchable items, or the built-in "Files" entry) up or down to make it always
 outrank the types below it in the quick window's results, regardless of which one actually matched the
@@ -76,6 +80,18 @@ open the window (or open a new one), it comes back at whatever size you last lef
 page's fields update to match. Resizing while maximized doesn't overwrite the remembered size; only
 resizing in the normal (non-maximized) state does.
 
+**Results Grid Column Order** — the same reorder list used elsewhere in Settings (see
+[Favorites](./favorites)): move a results-grid column (Name, Path, Date Modified, or any
+plugin-provided column) left or right. Only affects the grid/table results layout — there are no
+columns to reorder in the compact list layout.
+
+**Sidebar Filter Order** — same mechanic, for the order the sidebar's filter groups (Type, Date
+Modified, and any plugin-added groups) appear in.
+
+Clicking a results-grid column header to sort by it is remembered only for as long as SwiftList
+keeps running — quitting the app (not just closing the window) resets sorting back to the default
+the next time you open it, unlike the column/sidebar order above which is saved permanently.
+
 ## Preview
 
 - **Preview Width (px)** — range 250–900px.
@@ -92,7 +108,7 @@ Sets the order the [Quick Navigation](../hotkeys#quick-navigation-mouse) menu's 
 appear in — one section per contributing provider (e.g. Favorites/History/configured folders, Total
 Commander's Directory Hotlist, a plugin's own quick-nav entries), each labeled with its own header.
 
-**Provider Order** — the same up/down-arrow reorder list used elsewhere in Settings (see
+**Provider Order** — the same up/down-arrow (or drag-to-reorder) list used elsewhere in Settings (see
 [Favorites](./favorites)): move a provider up or down to change where its section lands relative to
 the others. Only providers whose plugin component is currently enabled are listed here — one
 disabled under [Plugins](./plugins) never becomes a menu candidate in the first place, so there's

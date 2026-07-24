@@ -48,7 +48,7 @@ under [Plugins](./plugins) never becomes a tab candidate in the first place.
 
 ## Tab Order
 
-The same up/down-arrow reorder list used elsewhere in Settings (see [Favorites](./favorites)), but
+The same up/down-arrow (or drag-to-reorder) list used elsewhere in Settings (see [Favorites](./favorites)), but
 covering the panel's tab strip as a whole — both built-in tabs (Recent Files, Last Directory) and
 every currently-visible plugin tab, all in one flat list, unlike Plugin Tabs above which groups by
 plugin. Move a tab up or down to change where it lands relative to the others; left to right in this

@@ -15,7 +15,10 @@ Pin frequently-used folders, files, or URLs so they're always one keystroke away
 Each favorite in the list shows its name and target path, with per-row actions:
 
 - **Move Up** / **Move Down** — reorders the list, which also affects how favorites rank against
-  other search results.
+  other search results. Each row can also be dragged directly by the six-dot handle on its left
+  edge — the same drag-to-reorder handle used by every other reorderable list in Settings (Result
+  Type Priority, Quick Navigation Order, Sidebar Filter Order, Results Grid Column Order, and
+  Startup Panel Tab Order).
 - **Edit** — loads the item back into the fields above for changes.
 - **Remove** — deletes it.
 

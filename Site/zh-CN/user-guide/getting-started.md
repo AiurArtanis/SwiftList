@@ -8,7 +8,10 @@
   启动。
 - **便携版**(`SwiftList-Portable.zip`)—— 解压即可运行，无需安装。之后仍然可以在
   **设置 → 运行状态** 里手动安装后台服务。如果电脑上还没有 SwiftList 需要的 .NET 桌面运行时，运行
-  一次自带的 `install-dotnet-runtime.bat` 即可——安装包会自动处理这一步，但便携版做不到。
+  一次自带的 `install-dotnet-runtime.bat` 即可——安装包会自动处理这一步，但便携版做不到。便携版
+  用完不再需要时，没有卸载程序帮你清理：删除文件夹前，双击自带的 `portable-cleanup-registry.reg`
+  (确认弹窗提示)即可移除 SwiftList 自己创建的两项每用户注册表项——`swiftlist://` URI 协议注册，
+  以及"开机自动启动"这一项。两者都只在 HKCU(当前用户)范围内，不需要管理员权限。
 
 首次运行时，SwiftList 会安装并启动一个 Windows 服务(`SwiftList.Service`)，专门负责文件索引。这
 个拆分是有意为之的——如果好奇原因可以参考[架构设计](../dev-guide/architecture)——但作为普通

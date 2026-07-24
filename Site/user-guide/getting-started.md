@@ -10,7 +10,12 @@ published for every release:
 - **Portable** (`SwiftList-Portable.zip`) — unzip and run, no installation. You can still install
   the background service later from **Settings → Service Status**. If your machine doesn't already
   have the .NET Desktop Runtime SwiftList needs, run the included `install-dotnet-runtime.bat` once
-  — the Installer handles this step automatically, but the portable build can't.
+  — the Installer handles this step automatically, but the portable build can't. When you're done
+  with a portable install, there's no uninstaller to clean up after you: double-click the included
+  `portable-cleanup-registry.reg` (confirm the prompt) before deleting the folder to remove the two
+  per-user registry entries SwiftList creates on its own — the `swiftlist://` URI protocol
+  registration and its "start with Windows" entry. Both are per-user (HKCU) only, so no
+  administrator prompt is needed.
 
 On first run, SwiftList installs and starts a Windows service (`SwiftList.Service`) that owns file
 indexing. This split exists on purpose — see [Architecture](../dev-guide/architecture) if you're
