@@ -43,6 +43,17 @@ public sealed class SearchSession
 
     public SearchSession(string pipeName) => _pipeName = pipeName;
 
+    // Test seam: _results otherwise only changes via RunSearchAsync's real App-pipe round trip, which
+    // unit tests can't drive. Mirrors that method's own post-search reset (HighlightIndex/ViewOffset
+    // both back to 0) so MoveHighlight/ToggleSelectionAtHighlight/GetChosenPaths can be exercised
+    // against a known result set exactly as they'd see one after a real search completes.
+    internal void SetResultsForTests(IReadOnlyList<(SearchResult Result, int[] Highlights)> results)
+    {
+        _results = results.ToList();
+        HighlightIndex = 0;
+        ViewOffset = 0;
+    }
+
     // Moves the highlight by `delta` rows (±1 for arrow keys, ±MaxVisible for PageUp/PageDown), clamped to
     // the result set, then slides ViewOffset just enough to keep the new highlight inside the visible
     // window -- never re-centers or over-scrolls, matching how a normal list box/fzf's own viewport
