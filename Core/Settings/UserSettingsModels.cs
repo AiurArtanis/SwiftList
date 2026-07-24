@@ -92,6 +92,9 @@ public class SearchWindowSettings
     public double? Top { get; set; }
     // Replaces the quick window's empty-state placeholder text with date/time/day-of-week (see #101).
     public bool ShowClock { get; set; } = false;
+    // When the quick window is already open, pressing the global toggle hotkey again normally hides
+    // it -- this opts into opening the full SearchWindow (carrying over the current query) instead.
+    public bool ReopenAsFullWindowOnRepeatHotkey { get; set; } = false;
 }
 
 public class PreviewWindowSettings

@@ -118,12 +118,14 @@ public sealed class SearchBarLayoutSettingsViewModelTests
         settings.SearchWindow.SearchBarWidth = 800;
         settings.SearchWindow.SearchBarHeight = 90;
         settings.SearchWindow.ShowClock = true;
+        settings.SearchWindow.ReopenAsFullWindowOnRepeatHotkey = true;
 
         var vm = new SearchBarLayoutSettingsViewModel(settings);
 
         Assert.AreEqual(800, vm.SearchBarWidth);
         Assert.AreEqual(90, vm.SearchBarHeight);
         Assert.IsTrue(vm.ShowClock);
+        Assert.IsTrue(vm.ReopenAsFullWindowOnRepeatHotkey);
     }
 
     [TestMethod]
@@ -137,25 +139,33 @@ public sealed class SearchBarLayoutSettingsViewModelTests
     [TestMethod]
     public void ResetCommand_Execute_RestoresDefaults()
     {
-        var vm = new SearchBarLayoutSettingsViewModel(new UserSettings()) { SearchBarWidth = 400, SearchBarHeight = 50, ShowClock = true };
+        var vm = new SearchBarLayoutSettingsViewModel(new UserSettings())
+        {
+            SearchBarWidth = 400,
+            SearchBarHeight = 50,
+            ShowClock = true,
+            ReopenAsFullWindowOnRepeatHotkey = true,
+        };
 
         vm.ResetCommand.Execute(null);
 
         Assert.AreEqual(570, vm.SearchBarWidth);
         Assert.AreEqual(60, vm.SearchBarHeight);
         Assert.IsFalse(vm.ShowClock);
+        Assert.IsFalse(vm.ReopenAsFullWindowOnRepeatHotkey);
     }
 
     [TestMethod]
     public void Save_WritesStagedValuesToUserSettings()
     {
         var settings = new UserSettings();
-        var vm = new SearchBarLayoutSettingsViewModel(settings) { SearchBarWidth = 700, ShowClock = true };
+        var vm = new SearchBarLayoutSettingsViewModel(settings) { SearchBarWidth = 700, ShowClock = true, ReopenAsFullWindowOnRepeatHotkey = true };
 
         vm.Save();
 
         Assert.AreEqual(700, settings.SearchWindow.SearchBarWidth);
         Assert.IsTrue(settings.SearchWindow.ShowClock);
+        Assert.IsTrue(settings.SearchWindow.ReopenAsFullWindowOnRepeatHotkey);
     }
 
     [TestMethod]

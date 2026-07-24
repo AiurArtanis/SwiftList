@@ -8,6 +8,7 @@ using SwiftList.Core;
 
 using SwiftList.App.Services.ShellIcons;
 using SwiftList.App.Services.Theme;
+using SwiftList.App.ViewModels.Search;
 using SwiftList.Core.Wire;
 namespace SwiftList.App.Views.QuickSearchWindow.Helpers;
 
@@ -69,10 +70,34 @@ public class QuickSearchWindowController
     public void ResetPosition() => _positioner.ResetPosition();
 
     public void ToggleVisibility() => _window.Dispatcher.Invoke(() =>
-                                           {
-                                               if (_window.IsVisible && _window.WindowState != WindowState.Minimized) HideWindow();
-                                               else ShowWindow();
-                                           });
+    {
+        switch (DetermineToggleAction(_window.IsVisible, _window.WindowState, UserSettings.Load().SearchWindow.ReopenAsFullWindowOnRepeatHotkey))
+        {
+            case ToggleAction.Show: ShowWindow(); break;
+            case ToggleAction.ReopenAsFullWindow: ReopenAsFullWindow(); break;
+            default: HideWindow(); break;
+        }
+    });
+
+    internal enum ToggleAction { Show, Hide, ReopenAsFullWindow }
+
+    // Pulled out of ToggleVisibility() so the decision tree (as opposed to the real Show/Hide/reopen
+    // I/O each branch performs) can be unit tested without a live window.
+    internal static ToggleAction DetermineToggleAction(bool isVisible, WindowState windowState, bool reopenAsFullWindowSetting)
+    {
+        if (!isVisible || windowState == WindowState.Minimized) return ToggleAction.Show;
+        return reopenAsFullWindowSetting ? ToggleAction.ReopenAsFullWindow : ToggleAction.Hide;
+    }
+
+    // Opens the full SearchWindow carrying over the quick window's current query -- the same
+    // "__SHOW_MORE__" path as the quick window's own Ctrl+F/"Open More" expand action -- then hides
+    // this window without restoring focus to whatever was active before it (the full window is about
+    // to take foreground instead).
+    private void ReopenAsFullWindow()
+    {
+        var query = SearchResultTypePriority.StripLeadingTrigger(_window.ViewModel.SearchQuery);
+        FileExecutor.OpenFileOrFolder("__SHOW_MORE__", query, () => HideWindow(restoreFocus: false));
+    }
 
     public void ShowWindow(string? initialQuery = null)
     {
