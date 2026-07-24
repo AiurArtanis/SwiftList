@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.ComponentModel;
@@ -112,6 +113,15 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
     // same translated URL string the link displays rather than a single hardcoded Uri like the
     // (locale-independent) homepage link above it.
     public Uri? UserGuideUri => Uri.TryCreate(TranslationManager.Instance["About_UserGuideUrl"], UriKind.Absolute, out var uri) ? uri : null;
+
+    // %LocalAppData%\SwiftList -- the UI's own per-user data (user-settings.json and its .bak.N
+    // rotation, UI logs). See Logger.UserDataDir's own doc comment.
+    public string UserConfigDirPath => Logger.UserDataDir;
+
+    // %ProgramData%\SwiftList -- the background service's machine-wide data (machine-settings.json,
+    // service logs, index cache), shared across every user account on this machine. See
+    // Logger.SharedDataDir's own doc comment.
+    public string SystemConfigDirPath => Logger.SharedDataDir;
 
     public AboutSettingsPage()
     {
@@ -282,4 +292,23 @@ public partial class AboutSettingsPage : System.Windows.Controls.UserControl, IN
         e.Handled = true;
     }
 
+    private void OpenUserConfigDir_Click(object sender, RoutedEventArgs e) => OpenFolder(UserConfigDirPath);
+    private void OpenSystemConfigDir_Click(object sender, RoutedEventArgs e) => OpenFolder(SystemConfigDirPath);
+
+    // Creates the folder first -- SystemConfigDirPath in particular may not exist yet on a machine
+    // where the background service was never installed/run, and opening a missing path would just
+    // show Explorer's own "location not available" error instead of a usable, if empty, folder.
+    private static void OpenFolder(string path)
+    {
+        try
+        {
+            Directory.CreateDirectory(path);
+            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[AboutSettingsPage] OpenFolder failed for '{path}': {ex}", LogLevel.Error);
+            MessageBox.Show(string.Format(TranslationManager.Instance["Executor_OpenFailed"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 }

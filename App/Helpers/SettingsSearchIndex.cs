@@ -173,6 +173,8 @@ public static class SettingsSearchIndex
         // About
         new("Settings_About", "About"),
         new("About_CheckUpdate", "About", TargetElementName: "BtnCheckUpdate"),
+        new("About_UserConfigDir", "About", TargetElementName: "RowUserConfigDir"),
+        new("About_SystemConfigDir", "About", TargetElementName: "RowSystemConfigDir"),
     };
 }
 
