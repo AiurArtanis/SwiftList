@@ -96,6 +96,11 @@ public sealed class MenuBuilderTests
         Assert.HasCount(1, items);
         Assert.AreEqual("Tools", items[0].Text);
         Assert.IsTrue(items[0].HasSubMenu);
+        // QuickNavigationMenu's own click-suppression for HasSubMenu items only applies automatically
+        // at the root level (isRootItem) -- nested submenu levels rely entirely on this flag, so a
+        // category item must set it explicitly regardless of how deep it sits, or clicking it (rather
+        // than hovering to expand) fires as if it were a real actionable leaf.
+        Assert.IsFalse(items[0].IsActionable);
     }
 
     [TestMethod]

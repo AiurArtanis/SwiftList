@@ -321,7 +321,14 @@ public static class MenuBuilder
                     Text = category,
                     HasSubMenu = true,
                     SubMenuHandle = provider.AllocateHandle(EncodeCategoryPath(childPrefix)),
-                    HBitmapItem = IconBitmapCache.CategoryHBitmap
+                    HBitmapItem = IconBitmapCache.CategoryHBitmap,
+                    // QuickNavigationMenu's own root-level click-suppression (isRootItem && HasSubMenu)
+                    // only ever applies at the very top level -- every nested submenu (any category one
+                    // level deep or more, e.g. this one when prefix.Length > 0) is built through
+                    // QuickNavigationSubMenuLoader, which never passes isRootItem: true. IsActionable is
+                    // the only gate that reaches those, so it has to be set explicitly here regardless of
+                    // depth, not just relied on implicitly like the root case.
+                    IsActionable = false
                 });
                 continue;
             }
