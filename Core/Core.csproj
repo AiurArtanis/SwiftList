@@ -16,5 +16,9 @@
     <ProjectReference Include="..\PluginSdk\PluginSdk.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="SwiftList.Core.Tests" />
+  </ItemGroup>
+
 </Project>
 
