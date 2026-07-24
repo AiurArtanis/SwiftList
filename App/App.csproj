@@ -24,6 +24,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="SwiftList.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="logo.png" />
     <Resource Include="logo.ico" />
     <Resource Include="tray.png" />
