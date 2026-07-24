@@ -39,6 +39,16 @@ internal static class SearchWindowMaximizeBoundsHelper
             mmi.ptMaxSize.X = info.rcWork.Right - info.rcWork.Left;
             mmi.ptMaxSize.Y = info.rcWork.Bottom - info.rcWork.Top;
             mmi.ptMaxTrackSize = mmi.ptMaxSize;
+
+            // Claiming this message (handled = true below) preempts WPF's own WM_GETMINMAXINFO handling,
+            // which is what normally derives ptMinTrackSize from Window.MinWidth/MinHeight -- without this,
+            // the OS silently falls back to its tiny system-default minimum track size, letting the window
+            // shrink far past MinWidth/MinHeight and clip the title bar's buttons/rounded corner (#153).
+            var toDevice = hwndSource.CompositionTarget.TransformToDevice;
+            var minSize = toDevice.Transform(new System.Windows.Point(window.MinWidth, window.MinHeight));
+            mmi.ptMinTrackSize.X = (int)minSize.X;
+            mmi.ptMinTrackSize.Y = (int)minSize.Y;
+
             Marshal.StructureToPtr(mmi, lParam, true);
             handled = true;
             return IntPtr.Zero;
