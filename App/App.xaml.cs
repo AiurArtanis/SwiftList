@@ -183,18 +183,15 @@ public partial class App : Application
             PluginSdk.Services.FileMetadataService.BatchLookupFunc = FileMetadataBridge.GetMetadataBatchAsync;
             PluginSdk.Services.SettingsSearchService.GetEntriesFunc = () =>
             {
-                var entries = SettingsSearchIndex.Entries;
+                // No live SettingsWindow is guaranteed to exist here (Settings may never have been
+                // opened yet), so this passes vm: null -- BuildAllEntries then builds the Plugins/
+                // Hotkeys-actions/StartupPanel-tabs sections straight from PluginManager.Instance/
+                // UserSettings instead of a live window's collections, and conservatively excludes any
+                // conditionally-visible static entry (e.g. the WSL tab) it can't evaluate without one.
+                var entries = SettingsWindowSearchExtensions.BuildAllEntries(vm: null);
                 var list = new List<PluginSdk.Services.SettingsSearchEntryInfo>(entries.Count);
                 for (var i = 0; i < entries.Count; i++)
-                {
-                    var entry = entries[i];
-                    // Conditionally-visible entries (e.g. the WSL tab) need a live SettingsViewModel to
-                    // evaluate, which isn't guaranteed to exist here (Settings may never have been
-                    // opened yet) -- conservatively exclude rather than risk exposing a dead link.
-                    if (entry.IsVisible != null)
-                        continue;
-                    list.Add(new PluginSdk.Services.SettingsSearchEntryInfo(TranslationManager.Instance[entry.LabelKey], SettingsWindowSearchExtensions.BuildBreadcrumb(entry), i));
-                }
+                    list.Add(new PluginSdk.Services.SettingsSearchEntryInfo(entries[i].Label, entries[i].SectionLabel, i));
                 return list;
             };
             PluginSdk.Logger.LogAction = (msg, lvl) => Logger.Log(msg, (LogLevel)(int)lvl);

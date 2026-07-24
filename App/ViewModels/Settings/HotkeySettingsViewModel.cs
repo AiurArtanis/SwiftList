@@ -69,7 +69,11 @@ public class HotkeySettingsViewModel : ViewModelBase
 
     public List<PluginActionGroupViewModel> PluginActionGroups { get; }
 
-    private static List<PluginActionGroupViewModel> BuildPluginActionGroups(Dictionary<string, Dictionary<string, string>> overrides)
+    // Internal, not private: also called by SettingsWindowSearchExtensions.BuildAllEntries to build the
+    // same groups (in the same PluginManager.Instance.AllActions order) for settings search, both for
+    // the in-app search box when no live HotkeySettingsViewModel exists yet and for the SDK-facing
+    // SettingsSearchService feed, which never has a live SettingsViewModel at all.
+    internal static List<PluginActionGroupViewModel> BuildPluginActionGroups(Dictionary<string, Dictionary<string, string>> overrides)
     {
         var groups = new List<PluginActionGroupViewModel>();
         foreach (var pluginGroup in PluginManager.Instance.AllActions.GroupBy(r => r.Plugin))

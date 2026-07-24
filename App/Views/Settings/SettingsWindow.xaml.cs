@@ -104,24 +104,18 @@ public partial class SettingsWindow : Window
     }
 
     // swiftlist://settings/entry/<index> (see UriRouter) -- index is this entry's position in
-    // SettingsSearchIndex.Entries, the same list PluginSdk.Services.SettingsSearchService exposes to
-    // plugins, so a plugin-selected result round-trips straight back to the entry it matched. Reuses
-    // ActivateSearchResult (the same jump+highlight a typed search-box match would trigger) rather than
-    // duplicating its section/tab-selection and highlight logic.
+    // SettingsWindowSearchExtensions.BuildAllEntries's combined static+dynamic list, the same list
+    // PluginSdk.Services.SettingsSearchService exposes to plugins (see App.xaml.cs), so a plugin-selected
+    // result round-trips straight back to the entry it matched. Reuses ActivateSearchResult (the same
+    // jump+highlight a typed search-box match would trigger) rather than duplicating its section/tab-
+    // selection and highlight logic.
     public void JumpToEntry(int index)
     {
-        var entries = SettingsSearchIndex.Entries;
+        var entries = SettingsWindowSearchExtensions.BuildAllEntries(DataContext as SettingsViewModel);
         if (index < 0 || index >= entries.Count)
             return;
 
-        var entry = entries[index];
-        var item = new SettingsSearchResultItem(
-            TranslationManager.Instance[entry.LabelKey],
-            SettingsWindowSearchExtensions.BuildBreadcrumb(entry),
-            entry.Section,
-            entry.Activate,
-            entry.TargetElementName);
-        this.ActivateSearchResult(item);
+        this.ActivateSearchResult(entries[index]);
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

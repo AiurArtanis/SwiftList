@@ -5,6 +5,9 @@ using System.Windows.Threading;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings;
+using SwiftList.App.ViewModels.Settings.Plugins;
+using SwiftList.App.ViewModels.Settings.StartupPanel;
+using SwiftList.Core;
 
 using SwiftList.Core.SearchIndex;
 namespace SwiftList.App;
@@ -36,6 +39,88 @@ internal static class SettingsWindowSearchExtensions
         return string.Join(" › ", parts);
     }
 
+    // Every currently-reachable settings entry, static + dynamic, in one fixed order: this is the single
+    // source of truth for the in-app search box, JumpToEntry's index resolution, and the SDK-facing
+    // SettingsSearchService feed (see App.xaml.cs), so all three agree on what "entry N" means and none
+    // of them silently omits the plugin/hotkey-action/startup-panel-tab entries the other two include.
+    // vm is null for the SDK feed (no live SettingsWindow may exist yet) -- the three dynamic sections
+    // then fall back to building their own data straight from PluginManager.Instance/UserSettings
+    // instead of reading the live window's already-built collections, since Activate/Reveal only matter
+    // once a real window exists to apply them to anyway (see ActivateSearchResult).
+    internal static List<SettingsSearchResultItem> BuildAllEntries(SettingsViewModel? vm)
+    {
+        var results = new List<SettingsSearchResultItem>();
+        foreach (var entry in SettingsSearchIndex.Entries)
+        {
+            // Entries like the WSL tab are only reachable while their own section is actually shown
+            // (IsVisible null for the overwhelming majority of entries, which are always reachable).
+            // Without vm there's no way to evaluate the predicate, so such an entry is conservatively
+            // excluded rather than shown as a dead link.
+            if (entry.IsVisible != null && (vm == null || !entry.IsVisible(vm)))
+                continue;
+
+            results.Add(new SettingsSearchResultItem(TranslationManager.Instance[entry.LabelKey], BuildBreadcrumb(entry), entry.Section, entry.Activate, entry.TargetElementName));
+        }
+
+        // These three sources have no static Entries above -- their labels only exist at runtime
+        // (whatever plugins happen to be loaded) -- so build from the same live models each page
+        // renders from when one is available, else from PluginManager.Instance/UserSettings directly.
+        var pluginsSectionLabel = TranslationManager.Instance["Settings_Plugins"];
+        var plugins = vm?.Plugins.Plugins ?? (IEnumerable<PluginInfoViewModel>)PluginLoaderHelper.BuildPluginList(UserSettings.Load());
+        foreach (var plugin in plugins)
+        {
+            var capturedPlugin = plugin;
+            void ExpandPlugin(SettingsViewModel _) => capturedPlugin.IsExpanded = true;
+
+            results.Add(new SettingsSearchResultItem(plugin.Name, pluginsSectionLabel, "Plugins", ExpandPlugin,
+                Reveal: new SettingsSearchDynamicReveal("PluginsList", capturedPlugin)));
+
+            foreach (var component in plugin.RawComponents)
+            {
+                results.Add(new SettingsSearchResultItem(component.DisplayName, $"{pluginsSectionLabel} › {plugin.Name}", "Plugins", ExpandPlugin,
+                    Reveal: new SettingsSearchDynamicReveal("PluginsList", capturedPlugin, component)));
+            }
+        }
+
+        var hotkeysSectionLabel = TranslationManager.Instance["Settings_Hotkeys"];
+        var pluginActionsTabLabel = TranslationManager.Instance["Hotkeys_Tab_PluginActions"];
+        var pluginActionGroups = vm?.Hotkeys.PluginActionGroups ?? (IEnumerable<PluginActionGroupViewModel>)HotkeySettingsViewModel.BuildPluginActionGroups(UserSettings.Load().Hotkeys.PluginActionHotkeys);
+        foreach (var group in pluginActionGroups)
+        {
+            var capturedGroup = group;
+            void SelectPluginActionsTab(SettingsViewModel v) => v.Hotkeys.SelectedTab = "PluginActions";
+
+            results.Add(new SettingsSearchResultItem(group.PluginName, $"{hotkeysSectionLabel} › {pluginActionsTabLabel}", "Hotkeys", SelectPluginActionsTab,
+                Reveal: new SettingsSearchDynamicReveal("PluginActionGroupsList", capturedGroup)));
+
+            foreach (var action in group.Items)
+            {
+                results.Add(new SettingsSearchResultItem(action.DisplayName, $"{hotkeysSectionLabel} › {pluginActionsTabLabel} › {group.PluginName}", "Hotkeys", SelectPluginActionsTab,
+                    Reveal: new SettingsSearchDynamicReveal("PluginActionGroupsList", capturedGroup, action)));
+            }
+        }
+
+        var startupPanelSectionLabel = TranslationManager.Instance["Settings_StartupPanel"];
+        var pluginTabsTabLabel = TranslationManager.Instance["StartupPanel_TabPluginTabs"];
+        var pluginTabGroups = vm?.StartupPanel.PluginTabGroups ?? (IEnumerable<StartupPanelPluginGroupViewModel>)StartupPanelSettingsViewModel.BuildPluginTabGroups();
+        foreach (var group in pluginTabGroups)
+        {
+            var capturedGroup = group;
+            void SelectPluginTabsSubTab(SettingsViewModel v) => v.StartupPanel.SelectedSubTab = "PluginTabs";
+
+            results.Add(new SettingsSearchResultItem(group.PluginName, $"{startupPanelSectionLabel} › {pluginTabsTabLabel}", "StartupPanel", SelectPluginTabsSubTab,
+                Reveal: new SettingsSearchDynamicReveal("PluginTabGroupsList", capturedGroup)));
+
+            foreach (var tab in group.Tabs)
+            {
+                results.Add(new SettingsSearchResultItem(tab.Label, $"{startupPanelSectionLabel} › {pluginTabsTabLabel} › {group.PluginName}", "StartupPanel", SelectPluginTabsSubTab,
+                    Reveal: new SettingsSearchDynamicReveal("PluginTabGroupsList", capturedGroup, tab)));
+            }
+        }
+
+        return results;
+    }
+
     public static void OnSettingsSearchTextChanged(this SettingsWindow window)
     {
         var query = window.TxtSettingsSearch.Text?.Trim() ?? string.Empty;
@@ -45,82 +130,10 @@ internal static class SettingsWindowSearchExtensions
             return;
         }
 
-        var results = new List<SettingsSearchResultItem>();
         var vm = window.DataContext as SettingsViewModel;
-        foreach (var entry in SettingsSearchIndex.Entries)
-        {
-            // Entries like the WSL tab are only reachable while their own section is actually shown
-            // (IsVisible null for the overwhelming majority of entries, which are always reachable).
-            // Without vm (DataContext not yet set) there's no way to evaluate the predicate, so such
-            // an entry is conservatively excluded rather than shown as a dead link.
-            if (entry.IsVisible != null && (vm == null || !entry.IsVisible(vm)))
-                continue;
-
-            var label = TranslationManager.Instance[entry.LabelKey];
-            if (FuzzyMatcher.IsMatch(query, label))
-                results.Add(new SettingsSearchResultItem(label, BuildBreadcrumb(entry), entry.Section, entry.Activate, entry.TargetElementName));
-        }
-
-        // These three collections have no static Entries above -- their labels only exist at runtime
-        // (whatever plugins happen to be loaded), so search the same live models each page renders from.
-        if (vm != null)
-        {
-            var pluginsSectionLabel = TranslationManager.Instance["Settings_Plugins"];
-            foreach (var plugin in vm.Plugins.Plugins)
-            {
-                var capturedPlugin = plugin;
-                void ExpandPlugin(SettingsViewModel _) => capturedPlugin.IsExpanded = true;
-
-                if (FuzzyMatcher.IsMatch(query, plugin.Name))
-                    results.Add(new SettingsSearchResultItem(plugin.Name, pluginsSectionLabel, "Plugins", ExpandPlugin,
-                        Reveal: new SettingsSearchDynamicReveal("PluginsList", capturedPlugin)));
-
-                foreach (var component in plugin.RawComponents)
-                {
-                    if (FuzzyMatcher.IsMatch(query, component.DisplayName))
-                        results.Add(new SettingsSearchResultItem(component.DisplayName, $"{pluginsSectionLabel} › {plugin.Name}", "Plugins", ExpandPlugin,
-                            Reveal: new SettingsSearchDynamicReveal("PluginsList", capturedPlugin, component)));
-                }
-            }
-
-            var hotkeysSectionLabel = TranslationManager.Instance["Settings_Hotkeys"];
-            var pluginActionsTabLabel = TranslationManager.Instance["Hotkeys_Tab_PluginActions"];
-            foreach (var group in vm.Hotkeys.PluginActionGroups)
-            {
-                var capturedGroup = group;
-                void SelectPluginActionsTab(SettingsViewModel v) => v.Hotkeys.SelectedTab = "PluginActions";
-
-                if (FuzzyMatcher.IsMatch(query, group.PluginName))
-                    results.Add(new SettingsSearchResultItem(group.PluginName, $"{hotkeysSectionLabel} › {pluginActionsTabLabel}", "Hotkeys", SelectPluginActionsTab,
-                        Reveal: new SettingsSearchDynamicReveal("PluginActionGroupsList", capturedGroup)));
-
-                foreach (var action in group.Items)
-                {
-                    if (FuzzyMatcher.IsMatch(query, action.DisplayName))
-                        results.Add(new SettingsSearchResultItem(action.DisplayName, $"{hotkeysSectionLabel} › {pluginActionsTabLabel} › {group.PluginName}", "Hotkeys", SelectPluginActionsTab,
-                            Reveal: new SettingsSearchDynamicReveal("PluginActionGroupsList", capturedGroup, action)));
-                }
-            }
-
-            var startupPanelSectionLabel = TranslationManager.Instance["Settings_StartupPanel"];
-            var pluginTabsTabLabel = TranslationManager.Instance["StartupPanel_TabPluginTabs"];
-            foreach (var group in vm.StartupPanel.PluginTabGroups)
-            {
-                var capturedGroup = group;
-                void SelectPluginTabsSubTab(SettingsViewModel v) => v.StartupPanel.SelectedSubTab = "PluginTabs";
-
-                if (FuzzyMatcher.IsMatch(query, group.PluginName))
-                    results.Add(new SettingsSearchResultItem(group.PluginName, $"{startupPanelSectionLabel} › {pluginTabsTabLabel}", "StartupPanel", SelectPluginTabsSubTab,
-                        Reveal: new SettingsSearchDynamicReveal("PluginTabGroupsList", capturedGroup)));
-
-                foreach (var tab in group.Tabs)
-                {
-                    if (FuzzyMatcher.IsMatch(query, tab.Label))
-                        results.Add(new SettingsSearchResultItem(tab.Label, $"{startupPanelSectionLabel} › {pluginTabsTabLabel} › {group.PluginName}", "StartupPanel", SelectPluginTabsSubTab,
-                            Reveal: new SettingsSearchDynamicReveal("PluginTabGroupsList", capturedGroup, tab)));
-                }
-            }
-        }
+        var results = BuildAllEntries(vm)
+            .Where(r => FuzzyMatcher.IsMatch(query, r.Label))
+            .ToList();
 
         window.LstSearchResults.ItemsSource = results;
         window.LstSearchResults.Visibility = results.Count > 0 ? Visibility.Visible : Visibility.Collapsed;

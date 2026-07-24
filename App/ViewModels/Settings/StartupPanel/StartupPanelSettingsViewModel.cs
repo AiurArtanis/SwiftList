@@ -105,15 +105,24 @@ public class StartupPanelSettingsViewModel : ViewModelBase
     public void RefreshPluginTabs()
     {
         PluginTabGroups.Clear();
+        foreach (var group in BuildPluginTabGroups())
+            PluginTabGroups.Add(group);
+        OnPropertyChanged(nameof(HasPluginTabs));
+    }
+
+    // Internal, not private: also called by SettingsWindowSearchExtensions.BuildAllEntries to build the
+    // same groups (in the same PluginManager.Instance.StartupPanelTabProviders order) for settings
+    // search, both for the in-app search box when no live StartupPanelSettingsViewModel exists yet and
+    // for the SDK-facing SettingsSearchService feed, which never has a live SettingsViewModel at all.
+    internal static List<StartupPanelPluginGroupViewModel> BuildPluginTabGroups()
+    {
         var manager = PluginManager.Instance;
-        var groups = manager.StartupPanelTabProviders
+        return manager.StartupPanelTabProviders
             .GroupBy(p => p.GetType().Assembly)
             .Select(g => new StartupPanelPluginGroupViewModel(
                 PluginLoaderHelper.GetPluginDisplayName(g.Key, manager),
-                g.Select(p => new StartupPanelPluginTabViewModel(p)).ToList()));
-        foreach (var group in groups)
-            PluginTabGroups.Add(group);
-        OnPropertyChanged(nameof(HasPluginTabs));
+                g.Select(p => new StartupPanelPluginTabViewModel(p)).ToList()))
+            .ToList();
     }
 
     private string _newDirectory = string.Empty;
