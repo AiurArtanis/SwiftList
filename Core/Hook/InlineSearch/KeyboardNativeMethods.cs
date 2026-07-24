@@ -116,6 +116,19 @@ internal static class KeyboardNativeMethods
     public const int IME_CMODE_NATIVE = 0x0001;
     public const uint SMTO_ABORTIFHUNG = 0x0002;
 
+    // GUITHREADINFO.flags bits: whether the owning thread is currently inside a menu's own modal
+    // message loop (context menu, system/title-bar menu, or a submenu of either). Explorer doesn't
+    // move keyboard focus to the menu HWND while it's open -- GUITHREADINFO.hwndFocus still resolves
+    // to whatever control opened it -- so these flags are the only reliable way to detect it.
+    public const uint GUI_INMENUMODE = 0x00000004;
+    public const uint GUI_SYSTEMMENUMODE = 0x00000008;
+    public const uint GUI_POPUPMENUMODE = 0x00000010;
+
+    // KBDLLHOOKSTRUCT.flags bit: set when this key event was synthesized (SendInput/keybd_event) by
+    // some process rather than coming from real hardware -- e.g. a third-party automation tool's own
+    // virtual-key-based hotkey scheme, as opposed to the user's own typing.
+    public const uint LLKHF_INJECTED = 0x00000010;
+
     [StructLayout(LayoutKind.Sequential)]
     public struct KBDLLHOOKSTRUCT
     {

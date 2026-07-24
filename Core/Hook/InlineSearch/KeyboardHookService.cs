@@ -142,13 +142,38 @@ public class KeyboardHookService : IDisposable
     }
     private bool HandleInlineSearchKeys(int vkCode, KeyboardNativeMethods.KBDLLHOOKSTRUCT hookStruct, IntPtr fgHwnd)
     {
+        // A synthesized key event (SendInput/keybd_event) from some other process -- e.g. a
+        // third-party automation tool's own virtual-key hotkey scheme (reported: Quicker's Right-Ctrl
+        // + number combo) -- was otherwise indistinguishable from the user's own typing, so it got
+        // swallowed as inline-search input (or as a "jump to result N" shortcut, if it happened to
+        // match SelectJumpModifier) instead of reaching whatever it was actually meant for.
+        if ((hookStruct.flags & KeyboardNativeMethods.LLKHF_INJECTED) != 0)
+        {
+            return false;
+        }
+
         var targetFocus = fgHwnd;
         var threadId = KeyboardNativeMethods.GetWindowThreadProcessId(fgHwnd, out var fgPid);
         var guiInfo = new KeyboardNativeMethods.GUITHREADINFO
         {
             cbSize = Marshal.SizeOf<KeyboardNativeMethods.GUITHREADINFO>()
         };
-        if (KeyboardNativeMethods.GetGUIThreadInfo(threadId, ref guiInfo) && guiInfo.hwndFocus != IntPtr.Zero)
+        var hasGuiInfo = KeyboardNativeMethods.GetGUIThreadInfo(threadId, ref guiInfo);
+
+        // A context/system menu (right-click menu, title-bar menu, or a submenu of either) is
+        // currently open. Explorer doesn't move keyboard focus to the menu HWND while it's up --
+        // guiInfo.hwndFocus below still resolves to whatever control opened it -- so without this,
+        // a menu mnemonic/accelerator keypress (e.g. "r" for Properties) got swallowed as the first
+        // inline-search character instead of reaching the menu.
+        const uint menuModeFlags = KeyboardNativeMethods.GUI_INMENUMODE
+            | KeyboardNativeMethods.GUI_SYSTEMMENUMODE
+            | KeyboardNativeMethods.GUI_POPUPMENUMODE;
+        if (hasGuiInfo && (guiInfo.flags & menuModeFlags) != 0)
+        {
+            return false;
+        }
+
+        if (hasGuiInfo && guiInfo.hwndFocus != IntPtr.Zero)
         {
             targetFocus = guiInfo.hwndFocus;
         }
