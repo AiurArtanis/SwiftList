@@ -47,7 +47,17 @@ internal static class SettingsWindowSearchExtensions
     // then fall back to building their own data straight from PluginManager.Instance/UserSettings
     // instead of reading the live window's already-built collections, since Activate/Reveal only matter
     // once a real window exists to apply them to anyway (see ActivateSearchResult).
-    internal static List<SettingsSearchResultItem> BuildAllEntries(SettingsViewModel? vm)
+    //
+    // evaluateConditionalVisibility governs ONLY the static IsVisible-gated entries (WSL tab, manual-theme
+    // rows, ...), independently of vm's own null-ness: the SDK feed always builds with vm: null, which
+    // unconditionally excludes these entries (no live window to evaluate their predicate against) --
+    // JumpToEntry must reproduce that exact same exclusion to keep its indices aligned with the SDK's,
+    // even though it DOES have a real, live vm available (needed for the Plugins/Hotkeys/StartupPanel
+    // dynamic sections below, whose Reveal step looks up a container by reference-equality against the
+    // live window's own bound collection -- rebuilding fresh throwaway objects there, as vm: null would,
+    // makes ContainerFromItem find nothing and silently skips the highlight). Defaults to true (evaluate
+    // for real) for the in-app search box's own live, no-index-round-trip usage.
+    internal static List<SettingsSearchResultItem> BuildAllEntries(SettingsViewModel? vm, bool evaluateConditionalVisibility = true)
     {
         var results = new List<SettingsSearchResultItem>();
         foreach (var entry in SettingsSearchIndex.Entries)
@@ -56,7 +66,7 @@ internal static class SettingsWindowSearchExtensions
             // (IsVisible null for the overwhelming majority of entries, which are always reachable).
             // Without vm there's no way to evaluate the predicate, so such an entry is conservatively
             // excluded rather than shown as a dead link.
-            if (entry.IsVisible != null && (vm == null || !entry.IsVisible(vm)))
+            if (entry.IsVisible != null && (!evaluateConditionalVisibility || vm == null || !entry.IsVisible(vm)))
                 continue;
 
             results.Add(new SettingsSearchResultItem(TranslationManager.Instance[entry.LabelKey], BuildBreadcrumb(entry), entry.Section, entry.Activate, entry.TargetElementName));

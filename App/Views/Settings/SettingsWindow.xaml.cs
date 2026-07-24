@@ -109,9 +109,17 @@ public partial class SettingsWindow : Window
     // result round-trips straight back to the entry it matched. Reuses ActivateSearchResult (the same
     // jump+highlight a typed search-box match would trigger) rather than duplicating its section/tab-
     // selection and highlight logic.
+    //
+    // Passes this window's own real DataContext (needed so the Plugins/Hotkeys/StartupPanel dynamic
+    // entries' Reveal step resolves against the SAME live-bound objects actually in the visual tree --
+    // otherwise ContainerFromItem never finds a match and the highlight silently no-ops), but
+    // evaluateConditionalVisibility: false so the static IsVisible-gated entries (WSL tab, etc.) are
+    // excluded the exact same way the SDK feed's own vm: null build always excludes them -- otherwise
+    // this window's actual live state could include one of those entries where the SDK's build never
+    // did, shifting every later index out of alignment (see BuildAllEntries's own comment).
     public void JumpToEntry(int index)
     {
-        var entries = SettingsWindowSearchExtensions.BuildAllEntries(DataContext as SettingsViewModel);
+        var entries = SettingsWindowSearchExtensions.BuildAllEntries(DataContext as SettingsViewModel, evaluateConditionalVisibility: false);
         if (index < 0 || index >= entries.Count)
             return;
 
