@@ -70,6 +70,34 @@ public sealed class PinyinAliasProviderTests
     [TestMethod]
     public void MapAliasToSourceIndices_UnmatchableAlias_ReturnsNull() => Assert.IsNull(Provider.MapAliasToSourceIndices("中国", "xyz123"));
 
+    // Regression test for a real bug: a browser tab title like "example.com | 代理" has a literal '|'
+    // before the Chinese portion. Before the fix, that '|' passed straight through into the generated
+    // alias, got misread by every downstream consumer as an alternative-reading boundary, and the
+    // Chinese portion's highlight (and, depending on positioning, its match) silently disappeared.
+    [TestMethod]
+    public void GetAliases_TextWithLiteralPipe_NeverContainsLiteralPipeCharacter()
+    {
+        var aliases = Provider.GetAliases("id | 中").ToList();
+
+        foreach (var alias in aliases)
+            Assert.DoesNotContain("|", alias);
+    }
+
+    [TestMethod]
+    public void MapAliasToSourceIndices_TextWithLiteralPipe_StillMapsChinesePortionToItsSourceChar()
+    {
+        var text = "id | 中";
+        var fullAlias = Provider.GetAliases(text).First(a => a.EndsWith("zhong", StringComparison.Ordinal));
+
+        var map = Provider.MapAliasToSourceIndices(text, fullAlias);
+
+        Assert.IsNotNull(map);
+        // "中" is the last character of `text` (source index 5) -- every position of the trailing
+        // "zhong" syllable in the alias must map back to that one source character.
+        for (var i = map.Length - 5; i < map.Length; i++)
+            Assert.AreEqual(5, map[i]);
+    }
+
     [TestMethod]
     public void GetAliasesUtf8_MatchesGetAliases()
     {

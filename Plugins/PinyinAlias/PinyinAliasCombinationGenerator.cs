@@ -20,12 +20,27 @@ internal static class PinyinAliasCombinationGenerator
     [ThreadStatic] private static List<string>? _initialsListScratch;
     [ThreadStatic] private static List<string>? _resultListScratch;
 
+    // '|' is the one ASCII character that can't pass through literally: every alias consumer (this
+    // class's own JoinUnique, HighlightMask.MarkViaAliasProviders, and FzfPattern.TryMatch/
+    // IsAcceptableAliasMatch's own alias-side splitting) treats a '|' found INSIDE a generated alias
+    // string as the separator between alternative polyphonic readings. A source text that happens to
+    // contain a literal '|' (e.g. a browser tab title like "example.com | 代理", which uses it as a
+    // plain visual separator) would otherwise pass that character straight through into the alias,
+    // getting it misread as a reading boundary -- splitting one continuous alias into two fragments
+    // that individually either can't find the query or can't map back to the right source positions,
+    // silently losing highlighting (and, in the worst case, a match) for perfectly good source text.
+    // Substituting a control character that can never occur in real generated aliases sidesteps the
+    // ambiguity entirely: it can never coincide with the genuine outer-join '|', so every consumer's
+    // existing split-on-'|' logic keeps working exactly as intended for real alternative readings.
+    private const char PipePlaceholder = (char)1; // U+0001 (SOH) -- a control character that can never occur in real generated aliases
+
     static PinyinAliasCombinationGenerator()
     {
         AsciiSyllableCache = new string[128][];
         for (var i = 0; i < 128; i++)
         {
-            AsciiSyllableCache[i] = new string[] { ((char)i).ToString().ToLowerInvariant() };
+            var c = (char)i;
+            AsciiSyllableCache[i] = new string[] { c == '|' ? PipePlaceholder.ToString() : c.ToString().ToLowerInvariant() };
         }
     }
 
