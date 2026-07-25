@@ -9,6 +9,7 @@ using ButtonBase = System.Windows.Controls.Primitives.ButtonBase;
 using DragDropEffects = System.Windows.DragDropEffects;
 using DragEventArgs = System.Windows.DragEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using Pen = System.Windows.Media.Pen;
 using Point = System.Windows.Point;
 using Size = System.Windows.Size;
 using TextBoxBase = System.Windows.Controls.Primitives.TextBoxBase;
@@ -48,7 +49,7 @@ public static class DragReorder
     // window at once (e.g. this settings page's own sidebar-order and column-order cards) never
     // interfere with each other's in-progress drag.
     private static readonly Dictionary<ItemsControl, (Point start, bool onHandle, object? item)> _state = new();
-    private static readonly Dictionary<ItemsControl, (AdornerLayer layer, DragAdorner adorner, FrameworkElement container)> _drag = new();
+    private static readonly Dictionary<ItemsControl, (AdornerLayer layer, DragAdorner adorner, DropIndicatorAdorner indicator, FrameworkElement container)> _drag = new();
 
     private static void OnIsEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -94,8 +95,10 @@ public static class DragReorder
         if (layer != null)
         {
             var adorner = new DragAdorner(container, control, e.GetPosition(control));
+            var indicator = new DropIndicatorAdorner(control);
+            layer.Add(indicator);
             layer.Add(adorner);
-            _drag[control] = (layer, adorner, container);
+            _drag[control] = (layer, adorner, indicator, container);
         }
         container.Opacity = 0.35;
 
@@ -109,6 +112,7 @@ public static class DragReorder
             if (_drag.TryGetValue(control, out var d))
             {
                 d.layer.Remove(d.adorner);
+                d.layer.Remove(d.indicator);
                 _drag.Remove(control);
             }
 
@@ -126,8 +130,39 @@ public static class DragReorder
         e.Handled = true;
 
         var control = (ItemsControl)sender;
-        if (_drag.TryGetValue(control, out var d))
-            d.adorner.UpdatePosition(e.GetPosition(control));
+        if (!_drag.TryGetValue(control, out var d)) return;
+
+        d.adorner.UpdatePosition(e.GetPosition(control));
+        UpdateDropIndicator(control, d.indicator, e);
+    }
+
+    // Shows a line at the exact edge the row would land on if dropped right now -- computed with the
+    // same oldIndex-vs-targetIndex comparison OnDrop itself uses, so the line never promises a landing
+    // spot the actual drop wouldn't deliver.
+    private static void UpdateDropIndicator(ItemsControl control, DropIndicatorAdorner indicator, DragEventArgs e)
+    {
+        if (!_state.TryGetValue(control, out var s) || s.item == null || control.ItemsSource is not IList list)
+        {
+            indicator.Update(0, 0, false);
+            return;
+        }
+
+        var oldIndex = list.IndexOf(s.item);
+        var targetContainer = FindContainer(e.OriginalSource as DependencyObject, control);
+        var targetItem = targetContainer != null ? control.ItemContainerGenerator.ItemFromContainer(targetContainer) : null;
+        var targetIndex = targetItem != null ? list.IndexOf(targetItem) : -1;
+
+        if (targetContainer == null || targetIndex < 0 || targetIndex == oldIndex)
+        {
+            indicator.Update(0, 0, false);
+            return;
+        }
+
+        var y = oldIndex < targetIndex
+            ? targetContainer.TranslatePoint(new Point(0, targetContainer.ActualHeight), control).Y
+            : targetContainer.TranslatePoint(new Point(0, 0), control).Y;
+
+        indicator.Update(y, control.ActualWidth, true);
     }
 
     private static void OnDrop(object sender, DragEventArgs e)
@@ -225,6 +260,41 @@ public static class DragReorder
         {
             _position = position;
             InvalidateArrange();
+        }
+    }
+
+    // The horizontal line marking exactly where the dragged row would land -- drawn full-width across
+    // the ItemsControl at whichever row edge OnDragOver's UpdateDropIndicator computes, hidden (not
+    // removed) between updates so it doesn't need to be re-added to the AdornerLayer every frame.
+    private sealed class DropIndicatorAdorner : Adorner
+    {
+        private double _y;
+        private double _width;
+        private bool _visible;
+        private readonly Pen _pen;
+
+        public DropIndicatorAdorner(UIElement adornedElement) : base(adornedElement)
+        {
+            IsHitTestVisible = false;
+
+            var brush = System.Windows.Application.Current?.TryFindResource("AccentBlue") as SolidColorBrush
+                        ?? System.Windows.Media.Brushes.DodgerBlue;
+            _pen = new Pen(brush, 2);
+            _pen.Freeze();
+        }
+
+        public void Update(double y, double width, bool visible)
+        {
+            _y = y;
+            _width = width;
+            _visible = visible;
+            InvalidateVisual();
+        }
+
+        protected override void OnRender(DrawingContext drawingContext)
+        {
+            if (!_visible) return;
+            drawingContext.DrawLine(_pen, new Point(0, _y), new Point(_width, _y));
         }
     }
 }
