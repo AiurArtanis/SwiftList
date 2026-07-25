@@ -63,7 +63,12 @@ internal static class BrowserDataCache
     private static void MaybeTriggerReload()
     {
         var configured = PluginSettingsService.GetSetting<List<BrowserProfileConfig>>("SwiftList.Plugins.BrowserData", "Profiles", null!);
-        var signature = configured != null ? System.Text.Json.JsonSerializer.Serialize(configured) : string.Empty;
+        var indexBookmarks = PluginSettingsService.GetSetting("SwiftList.Plugins.BrowserData", "IndexBookmarks", true);
+        var indexHistory = PluginSettingsService.GetSetting("SwiftList.Plugins.BrowserData", "IndexHistory", true);
+        // Bookmarks/history toggles folded into the same reload signature as Profiles -- flipping either
+        // one should take effect on the next query, not wait for the up-to-10-minute staleness timer.
+        var signature = (configured != null ? System.Text.Json.JsonSerializer.Serialize(configured) : string.Empty)
+            + $"|{indexBookmarks}|{indexHistory}";
 
         var needsReload = signature != _lastSignature || DateTime.UtcNow - _lastLoadUtc > RefreshInterval;
         if (!needsReload)
@@ -84,7 +89,7 @@ internal static class BrowserDataCache
             try
             {
                 CleanupOrphanedTempFiles();
-                var loaded = LoadAll(configured ?? new List<BrowserProfileConfig>());
+                var loaded = LoadAll(configured ?? new List<BrowserProfileConfig>(), indexBookmarks, indexHistory);
                 lock (Lock)
                 {
                     _snapshot = loaded;
@@ -104,9 +109,12 @@ internal static class BrowserDataCache
         });
     }
 
-    private static List<ProfileEntries> LoadAll(List<BrowserProfileConfig> profiles)
+    internal static List<ProfileEntries> LoadAll(List<BrowserProfileConfig> profiles, bool indexBookmarks, bool indexHistory)
     {
         var result = new List<ProfileEntries>();
+        if (!indexBookmarks && !indexHistory)
+            return result;
+
         foreach (var profile in profiles)
         {
             if (string.IsNullOrWhiteSpace(profile.Path))
@@ -127,13 +135,22 @@ internal static class BrowserDataCache
                 switch (family)
                 {
                     case BrowserFamily.Chromium:
-                        entries.Bookmarks.AddRange(ChromiumBookmarksReader.Read(expandedPath));
-                        entries.History.AddRange(ChromiumHistoryReader.Read(expandedPath));
+                        // Bookmarks and history are separate reads for Chromium -- skip the (often much
+                        // larger, see the plugin's IndexHistory setting) history read entirely rather than
+                        // reading it just to discard it.
+                        if (indexBookmarks)
+                            entries.Bookmarks.AddRange(ChromiumBookmarksReader.Read(expandedPath));
+                        if (indexHistory)
+                            entries.History.AddRange(ChromiumHistoryReader.Read(expandedPath));
                         break;
                     case BrowserFamily.Firefox:
+                        // Firefox keeps both in one places.sqlite, read together in a single pass -- only
+                        // the disabled half is discarded here, not skipped at the read.
                         var (bookmarks, history) = FirefoxPlacesReader.Read(expandedPath);
-                        entries.Bookmarks.AddRange(bookmarks);
-                        entries.History.AddRange(history);
+                        if (indexBookmarks)
+                            entries.Bookmarks.AddRange(bookmarks);
+                        if (indexHistory)
+                            entries.History.AddRange(history);
                         break;
                     default:
                         PluginSdk.Logger.Log($"[BrowserData] '{expandedPath}' doesn't look like a Chrome/Firefox profile folder (no Bookmarks/History/places.sqlite found), skipping.", PluginSdk.LogLevel.Warn);

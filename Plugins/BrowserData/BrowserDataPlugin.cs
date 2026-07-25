@@ -38,6 +38,21 @@ public class BrowserDataPlugin : IPlugin, IConfigurable
             },
             new PluginConfigField
             {
+                Key = "IndexBookmarks",
+                LabelKey = "BrowserData_Config_IndexBookmarksLabel",
+                FieldType = ConfigFieldType.Boolean,
+                DefaultValue = true
+            },
+            new PluginConfigField
+            {
+                Key = "IndexHistory",
+                LabelKey = "BrowserData_Config_IndexHistoryLabel",
+                DescriptionKey = "BrowserData_Config_IndexHistoryDesc",
+                FieldType = ConfigFieldType.Boolean,
+                DefaultValue = true
+            },
+            new PluginConfigField
+            {
                 Key = "Profiles",
                 LabelKey = "BrowserData_Config_ProfilesLabel",
                 DescriptionKey = "BrowserData_Config_ProfilesDesc",
