@@ -19,6 +19,9 @@ internal static class PluginSdkBridge
         PluginSdk.Services.PluginSettingsService.GetSettingFunc = manager.GetPluginSetting;
         PluginSdk.Services.PluginSettingsService.SetSettingFunc = manager.SetPluginSetting;
 
+        // Wire up the runtime field-prompt delegate, reusing the Settings UI's own field rendering.
+        PluginSdk.Services.PluginPromptService.PromptFunc = Views.Controls.Dialogs.PluginFieldPromptWindow.ShowPrompt;
+
         // Wire up the history service delegate for plugins using Core SearchHistoryStore
         PluginSdk.Services.HistoryService.GetHistoryEntriesFunc = SearchHistoryStore.GetEntries;
 

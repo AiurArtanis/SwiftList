@@ -96,7 +96,7 @@ public static class CommandExecutor
     // hands that to NavigateOrOpen as a literal path *before* Provider.ExecuteCommand/this class ever
     // gets a look at it, so a CommandId here would have opened "the sentinel string" via the shell
     // instead of running this.
-    internal static void AddCurrentFolder(string folderPath, string subMenu)
+    internal static void AddCurrentFolder(string folderPath, string subMenu, string name = "")
     {
         if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
             return;
@@ -107,7 +107,7 @@ public static class CommandExecutor
             new List<FolderCascaderPlugin.FolderConfigItem>());
         folders ??= new List<FolderCascaderPlugin.FolderConfigItem>();
 
-        folders.Add(new FolderCascaderPlugin.FolderConfigItem { Path = folderPath, SubMenu = subMenu });
+        folders.Add(new FolderCascaderPlugin.FolderConfigItem { Name = name, Path = folderPath, SubMenu = subMenu });
         PluginSettingsService.SetSetting("SwiftList.Plugins.FolderCascader", "Folders", folders);
     }
 }

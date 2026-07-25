@@ -52,6 +52,32 @@ public sealed class CommandExecutorTests
     }
 
     [TestMethod]
+    public void AddCurrentFolder_NameProvided_IsSavedOnTheEntry()
+    {
+        PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
+            pluginId == PluginId && key == "Folders" ? new List<FolderCascaderPlugin.FolderConfigItem>() : defaultValue;
+        List<FolderCascaderPlugin.FolderConfigItem>? saved = null;
+        PluginSettingsService.SetSettingFunc = (pluginId, key, value) => saved = (List<FolderCascaderPlugin.FolderConfigItem>)value!;
+
+        CommandExecutor.AddCurrentFolder(Path.GetTempPath(), "", "Custom Name");
+
+        Assert.AreEqual("Custom Name", saved!.Single().Name);
+    }
+
+    [TestMethod]
+    public void AddCurrentFolder_NoNameProvided_DefaultsToEmpty()
+    {
+        PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
+            pluginId == PluginId && key == "Folders" ? new List<FolderCascaderPlugin.FolderConfigItem>() : defaultValue;
+        List<FolderCascaderPlugin.FolderConfigItem>? saved = null;
+        PluginSettingsService.SetSettingFunc = (pluginId, key, value) => saved = (List<FolderCascaderPlugin.FolderConfigItem>)value!;
+
+        CommandExecutor.AddCurrentFolder(Path.GetTempPath(), "");
+
+        Assert.AreEqual("", saved!.Single().Name);
+    }
+
+    [TestMethod]
     public void AddCurrentFolder_PreservesExistingEntries()
     {
         var existing = new List<FolderCascaderPlugin.FolderConfigItem>

@@ -325,9 +325,52 @@ public static class MenuBuilder
         items.Add(new DynamicMenuItem
         {
             Text = TranslationService.Get("FolderCascader_AddCurrentFolder"),
-            OnExecute = () => CommandExecutor.AddCurrentFolder(folderPath, subMenu),
+            OnExecute = () => PromptAndAddCurrentFolder(folderPath, subMenu),
             HBitmapItem = IconBitmapCache.AddHBitmap
         });
+    }
+
+    // Asks for Name/Path/SubMenu (pre-filled from what was clicked) before adding, reusing the exact
+    // same fields -- key, label, description -- the real Configure dialog's Folders array uses for
+    // these three, via PluginPromptService rather than a bespoke input dialog. All three stay editable
+    // (not just Name): the user might want to add a sibling path, or file it under a different
+    // category than the one they happened to click "Add" from. A null result means the prompt was
+    // cancelled or the host hasn't wired PluginPromptService up (an older host build) -- either way,
+    // nothing gets added rather than silently adding an entry the user never confirmed.
+    internal static void PromptAndAddCurrentFolder(string folderPath, string subMenu)
+    {
+        var nameField = new PluginConfigField
+        {
+            Key = "Name",
+            LabelKey = "FolderCascader_Config_FolderName",
+            FieldType = ConfigFieldType.Text,
+            DefaultValue = GetDisplayName(folderPath, "")
+        };
+        var pathField = new PluginConfigField
+        {
+            Key = "Path",
+            LabelKey = "FolderCascader_Config_FolderPath",
+            FieldType = ConfigFieldType.FolderPath,
+            DefaultValue = folderPath
+        };
+        var subMenuField = new PluginConfigField
+        {
+            Key = "SubMenu",
+            LabelKey = "FolderCascader_Config_SubMenuLabel",
+            DescriptionKey = "FolderCascader_Config_SubMenuDesc",
+            FieldType = ConfigFieldType.Text,
+            DefaultValue = subMenu
+        };
+
+        var values = PluginPromptService.Prompt(
+            TranslationService.Get("FolderCascader_AddCurrentFolder"),
+            new[] { nameField, pathField, subMenuField });
+        if (values == null) return;
+
+        var name = values.TryGetValue("Name", out var n) ? n as string ?? "" : "";
+        var path = values.TryGetValue("Path", out var p) ? p as string ?? "" : "";
+        var editedSubMenu = values.TryGetValue("SubMenu", out var s) ? s as string ?? "" : "";
+        CommandExecutor.AddCurrentFolder(string.IsNullOrWhiteSpace(path) ? folderPath : path, editedSubMenu, name);
     }
 
     // Groups configured folders by their SubMenu field and appends the items belonging at exactly
