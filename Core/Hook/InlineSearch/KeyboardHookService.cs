@@ -111,7 +111,15 @@ public class KeyboardHookService : IDisposable
                 {
                     if (!IsDescendantOrOwned(_explorerTracker.ActiveHwnd, fgHwnd) && !IsImeWindow(fgHwnd))
                     {
-                        _explorerTracker.DeactivateWindow();
+                        // Re-derive state for whatever's actually foreground now (fgHwnd), not just wipe
+                        // to "nothing is active" -- the tracker's own async WinEvent-based tracking can
+                        // lag behind real foreground changes (e.g. a dialog re-gaining focus right after
+                        // Explorer briefly lost it to nothing), and this runs synchronously on the very
+                        // same keystroke Quick Switch (Ctrl+G) reads IsActiveWindowDialog from a few
+                        // lines below -- blindly deactivating here could clear that flag to false right
+                        // before Quick Switch's own check saw it, on the keystroke that was supposed to
+                        // trigger it in the first place.
+                        _explorerTracker.ReclassifyActiveWindow(fgHwnd);
                     }
                 }
             }

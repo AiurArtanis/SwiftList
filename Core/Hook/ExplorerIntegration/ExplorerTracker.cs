@@ -113,6 +113,14 @@ public class ExplorerTracker : IDisposable
         RaiseExplorerActivated(hwnd, title, className, isDesktop);
     }
     public void DeactivateWindow() => Deactivate();
+    // Re-derives full state (IsActiveWindowDialog, ActiveAdapter, dialog/path tracking, ...) for
+    // whatever window is ACTUALLY foreground right now, instead of just wiping everything to "nothing
+    // is active" -- see KeyboardHookService's own synchronous self-correction check, which used to call
+    // DeactivateWindow() here and could clear IsActiveWindowDialog=true a few lines before Quick Switch
+    // read it on the very same keystroke, if the async WinEvent hadn't caught up yet (e.g. right after a
+    // "foreground became nothing" transition Explorer can produce, which carries hwnd==0 and is dropped
+    // by WinEventProc, leaving ActiveHwnd stale until the next real foreground window shows up).
+    public void ReclassifyActiveWindow(IntPtr hwnd) => _classifier.CheckActiveWindow(hwnd);
     public void UpdatePath(string path, bool isDesktop)
     {
         LastPath = path;
