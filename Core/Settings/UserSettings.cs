@@ -213,7 +213,9 @@ public class UserSettings
                 {
                     _lastJsonOnDisk = json;
                 }
-                return JsonSerializer.Deserialize<UserSettings>(json) ?? new UserSettings();
+                var settings = JsonSerializer.Deserialize<UserSettings>(json) ?? new UserSettings();
+                NormalizeHotkeys(settings);
+                return settings;
             }
             catch (IOException)
             {
@@ -230,8 +232,21 @@ public class UserSettings
         return new UserSettings();
     }
 
+    // A blank ToggleWindowHotkey leaves GlobalHotkeyDetector.CheckToggleWindowHotkey with no modifier
+    // and no key to match against, so the hotkey silently stops firing altogether -- with no way back
+    // into Settings other than editing the JSON file by hand. Applied on both load and save so it's
+    // bulletproof regardless of how the value ended up empty (a settings file edited by hand, a
+    // recorder-control edge case that clears it, or a pre-existing file from before this normalization
+    // existed).
+    internal static void NormalizeHotkeys(UserSettings settings)
+    {
+        if (string.IsNullOrWhiteSpace(settings.Hotkeys.ToggleWindowHotkey))
+            settings.Hotkeys.ToggleWindowHotkey = new HotkeyPageSettings().ToggleWindowHotkey;
+    }
+
     public void Save()
     {
+        NormalizeHotkeys(this);
         Directory.CreateDirectory(Logger.UserDataDir);
         var options = new JsonSerializerOptions { WriteIndented = true };
         var json = JsonSerializer.Serialize(this, options);
