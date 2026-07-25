@@ -1,6 +1,7 @@
 using System.IO;
 using SwiftList.PluginSdk;
 using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.FolderCascader.Navigation;
 
@@ -84,5 +85,29 @@ public static class CommandExecutor
                 Logger.Log($"[FolderCascader] Failed to execute {path}: {ex.Message}", LogLevel.Error);
             }
         }
+    }
+
+    // Appends a new Folders entry for the currently active directory, nested under whichever level the
+    // "Add Current Folder" item was clicked from (subMenu is "" for root). Writes back through the SDK's
+    // SetSetting -- unlike every other command here, this doesn't launch anything, it edits this
+    // plugin's own configuration at runtime. Wired directly as a DynamicMenuItem.OnExecute delegate
+    // (see MenuBuilder.AppendAddCurrentFolderItem) rather than through the CommandId/Execute(path)
+    // mechanism above: the host resolves any allocated CommandId straight to its stored string and
+    // hands that to NavigateOrOpen as a literal path *before* Provider.ExecuteCommand/this class ever
+    // gets a look at it, so a CommandId here would have opened "the sentinel string" via the shell
+    // instead of running this.
+    internal static void AddCurrentFolder(string folderPath, string subMenu)
+    {
+        if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
+            return;
+
+        var folders = PluginSettingsService.GetSetting(
+            "SwiftList.Plugins.FolderCascader",
+            "Folders",
+            new List<FolderCascaderPlugin.FolderConfigItem>());
+        folders ??= new List<FolderCascaderPlugin.FolderConfigItem>();
+
+        folders.Add(new FolderCascaderPlugin.FolderConfigItem { Path = folderPath, SubMenu = subMenu });
+        PluginSettingsService.SetSetting("SwiftList.Plugins.FolderCascader", "Folders", folders);
     }
 }

@@ -120,6 +120,24 @@ public class PluginManager : PluginRegistry
         return defaultValue;
     }
 
+    // Backs PluginSdkBridge's PluginSettingsService.SetSettingFunc wiring -- a plugin writing its own
+    // setting back at runtime (as opposed to the Settings UI's own batched apply/save flow), so this
+    // saves immediately rather than waiting for anything else to trigger a save.
+    internal void SetPluginSetting(string pluginId, string key, object? value)
+    {
+        var settings = UserSettings.Load();
+        // Normalized to a JsonElement -- the same shape a fresh disk reload of UserSettings would
+        // produce for this value (System.Text.Json deserializes an `object`-typed property as
+        // JsonElement). Without this, a plugin passing a strongly-typed object (e.g. a
+        // List<SomePocoClass>) leaves a shape in memory that the Settings UI's own generic
+        // Dictionary/JsonElement-based readers (ConfigValueHelper.UnpackValue, used by
+        // PluginConfigArrayFieldSupport to populate each array row's fields) can't read field-by-field --
+        // the row appears but every field in it shows blank until the app restarts and reloads from disk.
+        object? normalized = value == null ? null : System.Text.Json.JsonSerializer.SerializeToElement(value);
+        settings.SetPluginSetting(pluginId, key, normalized);
+        settings.Save();
+    }
+
     public void RefreshDisabledComponents() => _filter.Refresh();
 
     public bool IsComponentEnabled(string dllName, PluginComponentType type, string name)

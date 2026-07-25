@@ -77,6 +77,36 @@ public sealed class ConfigValueHelperTests
         Assert.AreEqual(1, inner["a"]);
     }
 
+    private sealed class SamplePoco
+    {
+        public string Name { get; set; } = "";
+        public string Path { get; set; } = "";
+    }
+
+    // A plugin writing a strongly-typed object (e.g. List<SomePocoClass>) via PluginSettingsService.
+    // SetSetting must end up in exactly this shape -- PluginManager.SetPluginSetting normalizes through
+    // JsonSerializer.SerializeToElement before storing, so this is what a written-then-immediately-read
+    // array field's raw value actually looks like (matching what a fresh disk reload of UserSettings
+    // would also produce, since System.Text.Json deserializes an `object`-typed property as JsonElement
+    // either way). Without that normalization, a raw POCO list doesn't match the `is JsonElement` check
+    // at all and UnpackValue returns it unchanged (see UnpackValue_NonJsonElement_ReturnsAsIs above) --
+    // PluginConfigArrayFieldSupport's own Dictionary<string, object> cast then fails per item, and the
+    // Settings UI renders the row with every field blank.
+    [TestMethod]
+    public void UnpackValue_JsonElementFromSerializedPocoList_UnpacksToDictionariesKeyedByPropertyName()
+    {
+        var pocoList = new List<SamplePoco> { new() { Name = "Downloads", Path = @"C:\Downloads" } };
+        var element = JsonSerializer.SerializeToElement(pocoList);
+
+        var result = ConfigValueHelper.UnpackValue(element) as List<object>;
+
+        Assert.IsNotNull(result);
+        var inner = result.Single() as Dictionary<string, object>;
+        Assert.IsNotNull(inner);
+        Assert.AreEqual("Downloads", inner["Name"]);
+        Assert.AreEqual(@"C:\Downloads", inner["Path"]);
+    }
+
     [TestMethod]
     public void ConvertValue_Null_ReturnsNull() =>
         Assert.IsNull(ConfigValueHelper.ConvertValue(null, ConfigFieldType.Integer));

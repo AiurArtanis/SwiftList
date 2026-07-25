@@ -1,11 +1,27 @@
+using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
+using SwiftList.PluginSdk.Models;
+using SwiftList.PluginSdk.Services;
 using SwiftList.Plugins.FolderCascader.Navigation;
 
 namespace SwiftList.Plugins.FolderCascader.Tests;
 
+// Some tests wire PluginSettingsService.GetSettingFunc/SetSettingFunc/FavoritesService.
+// GetFavoritesFunc/HistoryService.GetHistoryEntriesFunc (shared static delegates) --
+// [DoNotParallelize] keeps it from racing against other tests in this class touching the same statics.
 [TestClass]
+[DoNotParallelize]
 public sealed class MenuBuilderTests
 {
+    private sealed class FakeResult : ISearchResult
+    {
+        public string Name { get; init; } = "";
+        public string FullPath { get; init; } = "";
+        public string ContextDirectory { get; init; } = "";
+        public bool IsDir { get; init; }
+        public bool IsApplication { get; init; }
+    }
+
     private static FolderCascaderPlugin.FolderConfigItem Folder(string name, string path, string subMenu = "") =>
         new() { Name = name, Path = path, SubMenu = subMenu };
 
@@ -176,5 +192,120 @@ public sealed class MenuBuilderTests
     {
         Assert.IsTrue(provider.TryGetPath(handle, out var path));
         return path!;
+    }
+
+    [TestMethod]
+    public void AppendAddCurrentFolderItem_ExistingDirectory_AppendsItemWithOnExecuteNotCommandId()
+    {
+        var items = new List<DynamicMenuItem>();
+        var result = new FakeResult { FullPath = Path.GetTempPath() };
+
+        MenuBuilder.AppendAddCurrentFolderItem(items, result, Array.Empty<string>());
+
+        var added = items.Single();
+        Assert.IsNotNull(added.OnExecute);
+        // Must NOT use CommandId: the host resolves any allocated CommandId straight to its stored
+        // string and passes that to NavigateOrOpen as a literal path to shell-open (see
+        // QuickNavigationMenu.CreateMenuItem), before Provider.ExecuteCommand ever runs.
+        Assert.AreEqual(0u, added.CommandId);
+    }
+
+    [TestMethod]
+    public void AppendAddCurrentFolderItem_OnExecute_SavesTheActiveFolderAtTheGivenLevel()
+    {
+        PluginSdk.Services.PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
+            pluginId == "SwiftList.Plugins.FolderCascader" && key == "Folders" ? new List<FolderCascaderPlugin.FolderConfigItem>() : defaultValue;
+        List<FolderCascaderPlugin.FolderConfigItem>? saved = null;
+        PluginSdk.Services.PluginSettingsService.SetSettingFunc = (_, _, value) => saved = (List<FolderCascaderPlugin.FolderConfigItem>)value!;
+        try
+        {
+            var items = new List<DynamicMenuItem>();
+            var result = new FakeResult { FullPath = Path.GetTempPath() };
+            MenuBuilder.AppendAddCurrentFolderItem(items, result, new[] { "Tools", "Network" });
+
+            items.Single().OnExecute!();
+
+            var added = saved!.Single();
+            Assert.AreEqual(Path.GetTempPath(), added.Path);
+            Assert.AreEqual("Tools/Network", added.SubMenu);
+        }
+        finally
+        {
+            PluginSdk.Services.PluginSettingsService.GetSettingFunc = null;
+            PluginSdk.Services.PluginSettingsService.SetSettingFunc = null;
+        }
+    }
+
+    [TestMethod]
+    public void AppendAddCurrentFolderItem_NonExistentDirectory_AddsNothing()
+    {
+        var items = new List<DynamicMenuItem>();
+        var result = new FakeResult { FullPath = @"Z:\definitely-not-a-real-swiftlist-dir" };
+
+        MenuBuilder.AppendAddCurrentFolderItem(items, result, Array.Empty<string>());
+
+        Assert.IsEmpty(items);
+    }
+
+    [TestMethod]
+    public void AppendAddCurrentFolderItem_EmptyFullPath_AddsNothing()
+    {
+        var items = new List<DynamicMenuItem>();
+        var result = new FakeResult { FullPath = "" };
+
+        MenuBuilder.AppendAddCurrentFolderItem(items, result, Array.Empty<string>());
+
+        Assert.IsEmpty(items);
+    }
+
+    [TestMethod]
+    public void AppendAddCurrentFolderItem_NonEmptyItemsWithoutTrailingSeparator_InsertsSeparatorFirst()
+    {
+        var items = new List<DynamicMenuItem> { new() { Text = "Existing" } };
+        var result = new FakeResult { FullPath = Path.GetTempPath() };
+
+        MenuBuilder.AppendAddCurrentFolderItem(items, result, Array.Empty<string>());
+
+        Assert.HasCount(3, items);
+        Assert.IsTrue(items[1].IsSeparator);
+    }
+
+    [TestMethod]
+    public void GetMenuItems_RootLevel_AddCurrentFolderComesBeforeFavoritesAndHistory()
+    {
+        PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
+        {
+            if (pluginId != "SwiftList.Plugins.FolderCascader") return defaultValue;
+            return key switch
+            {
+                "Folders" => new List<FolderCascaderPlugin.FolderConfigItem> { Folder("Downloads", @"C:\Downloads") },
+                "ShowFavorites" => true,
+                "ShowHistory" => true,
+                _ => defaultValue
+            };
+        };
+        FavoritesService.GetFavoritesFunc = () => new[] { new FavoriteItem { Name = "MyFav", Path = @"C:\Fav" } };
+        HistoryService.GetHistoryEntriesFunc = () => new[] { new HistoryEntry("", @"C:\Hist", HistoryEntryKind.Folder, 0) };
+        try
+        {
+            var provider = new Provider();
+            var result = new FakeResult { FullPath = Path.GetTempPath() };
+
+            var items = MenuBuilder.GetMenuItems(result, IntPtr.Zero, provider).ToList();
+
+            var addText = TranslationService.Get("FolderCascader_AddCurrentFolder");
+            var favoritesText = TranslationService.Get("FolderCascader_Favorites");
+            var addIndex = items.FindIndex(i => i.Text == addText);
+            var favoritesIndex = items.FindIndex(i => i.Text == favoritesText);
+            Assert.IsGreaterThanOrEqualTo(0, addIndex, "Add Current Folder item should be present");
+            Assert.IsGreaterThanOrEqualTo(0, favoritesIndex, "Favorites item should be present");
+            Assert.IsLessThan(favoritesIndex, addIndex, "Add Current Folder must come before Favorites/History, not after");
+        }
+        finally
+        {
+            PluginSettingsService.GetSettingFunc = null;
+            FavoritesService.GetFavoritesFunc = null;
+            HistoryService.GetHistoryEntriesFunc = null;
+        }
     }
 }

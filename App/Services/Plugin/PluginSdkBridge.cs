@@ -17,6 +17,7 @@ internal static class PluginSdkBridge
     {
         // Wire up the settings delegate for plugins using the in-memory UserSettings cache.
         PluginSdk.Services.PluginSettingsService.GetSettingFunc = manager.GetPluginSetting;
+        PluginSdk.Services.PluginSettingsService.SetSettingFunc = manager.SetPluginSetting;
 
         // Wire up the history service delegate for plugins using Core SearchHistoryStore
         PluginSdk.Services.HistoryService.GetHistoryEntriesFunc = SearchHistoryStore.GetEntries;

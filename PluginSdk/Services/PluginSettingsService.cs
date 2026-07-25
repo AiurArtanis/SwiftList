@@ -12,6 +12,15 @@ public static class PluginSettingsService
     public static Func<string, string, object?, object?>? GetSettingFunc { get; set; }
 
     /// <summary>
+    /// Delegate action set by the host application to persist a plugin setting written from plugin
+    /// code itself (as opposed to the Settings UI's own edit/apply flow). Parameters: (pluginId,
+    /// settingKey, value) -- a null value removes the key. Not every plugin needs this: most settings
+    /// are only ever edited through their own Configure dialog, so this stays unset (SetSetting is then
+    /// a silent no-op) unless the host wires it up.
+    /// </summary>
+    public static Action<string, string, object?>? SetSettingFunc { get; set; }
+
+    /// <summary>
     /// Event raised when a plugin setting is updated.
     /// Parameters: (pluginId, key)
     /// </summary>
@@ -56,4 +65,12 @@ public static class PluginSettingsService
         }
         return defaultValue;
     }
+
+    /// <summary>
+    /// Persists a setting value for a specific plugin, immediately (not batched with anything else the
+    /// Settings UI might be mid-editing) -- meant for a plugin writing back its own setting in response
+    /// to something the user did at runtime (e.g. a "add current folder" quick-navigation command),
+    /// not for mirroring every keystroke of a text field.
+    /// </summary>
+    public static void SetSetting(string pluginId, string key, object? value) => SetSettingFunc?.Invoke(pluginId, key, value);
 }

@@ -12,6 +12,7 @@ public static class IconBitmapCache
     public static IntPtr FavoritesHBitmap { get; private set; } = IntPtr.Zero;
     public static IntPtr HistoryHBitmap { get; private set; } = IntPtr.Zero;
     public static IntPtr CategoryHBitmap { get; private set; } = IntPtr.Zero;
+    public static IntPtr AddHBitmap { get; private set; } = IntPtr.Zero;
 
     private static readonly object _iconLock = new();
 
@@ -56,10 +57,15 @@ public static class IconBitmapCache
                 {
                     DeleteObject(CategoryHBitmap);
                 }
+                if (AddHBitmap != IntPtr.Zero)
+                {
+                    DeleteObject(AddHBitmap);
+                }
 
                 FavoritesHBitmap = CreateStarHBitmap();
                 HistoryHBitmap = CreateClockHBitmap();
                 CategoryHBitmap = CreateCategoryHBitmap();
+                AddHBitmap = CreateAddHBitmap();
             }
             catch (Exception ex)
             {
@@ -123,6 +129,17 @@ public static class IconBitmapCache
     private static IntPtr CreateCategoryHBitmap()
     {
         var path = "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z";
+        var accentBrush = System.Windows.Application.Current?.TryFindResource("AccentBlue") as System.Windows.Media.SolidColorBrush;
+        var fill = accentBrush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(33, 150, 243));
+        return CreateHBitmapFromWpfPath(path, fill, null, scale: 64.0 / 24.0);
+    }
+
+    // Plus glyph for "Add Current Folder" -- same 24-unit viewBox and AccentBlue theming as the
+    // category hamburger above, for a consistent look among this plugin's own structural (non-shell)
+    // menu icons.
+    private static IntPtr CreateAddHBitmap()
+    {
+        var path = "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z";
         var accentBrush = System.Windows.Application.Current?.TryFindResource("AccentBlue") as System.Windows.Media.SolidColorBrush;
         var fill = accentBrush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(33, 150, 243));
         return CreateHBitmapFromWpfPath(path, fill, null, scale: 64.0 / 24.0);
