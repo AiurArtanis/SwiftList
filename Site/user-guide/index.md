@@ -14,8 +14,8 @@ This manual covers everything a day-to-day user needs:
 - **[Actions Menu & Preview](./actions-and-preview)** — the right-click-style actions list and the
   QuickLook preview pane.
 - **[Instant Answers & Keyword Shortcuts](./instant-answers)** — the calculator, environment
-  variables, run-command shortcuts, and keyword-triggered plugins like Process Manager,
-  Translation, Browser Data, Settings Search, and Web Search.
+  variables, run-command shortcuts, and keyword-triggered plugins like Process Manager, Window
+  Switcher, Translation, Browser Data, Settings Search, and Web Search.
 - **[Command-Line Search (slf)](./cli)** — the fzf-style CLI companion for searching from a
   terminal.
 - **[URI Protocol (swiftlist://)](./uri-protocol)** — jumping straight into a search or a

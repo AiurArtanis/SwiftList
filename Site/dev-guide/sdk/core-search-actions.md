@@ -189,8 +189,13 @@ a section they've explicitly ordered keeps that position regardless of `Priority
 
 ## Supporting models
 
-- **`SearchableItem`** / **`InstantResultItem`** — Title, Description, IconData, IconColor,
-  ActionType (`"Copy"` / `"Execute"` / `"None"`), ActionArgument, TabCompletion.
+- **`SearchableItem`** / **`InstantResultItem`** — share Title, Description, IconData, IconColor,
+  ActionType (`"Copy"` / `"Execute"` / `"None"`), ActionArgument, TabCompletion, and `HBitmapIcon` (a
+  pre-loaded GDI HBITMAP that takes priority over IconData when set — the host takes ownership and
+  calls DeleteObject once it's done with it, so don't reuse or free the handle yourself afterward;
+  see the Window Switcher plugin's own window-thumbnail capture for a worked example).
+  `SearchableItem` additionally has `OnExecute` (a direct invocation delegate) and `ResultKind`
+  (override, e.g. `"Application"`/`"File"`).
 - **`DynamicMenuItem`** — Text, CommandId, IsSeparator, HasSubMenu, SubMenuHandle, IsDisabled,
   HBitmapItem, OnExecute, ShortcutHint, IsHeader. `IsHeader` renders the item as a non-clickable
   section-header row (like a Quick Navigation submenu's own group name) instead of a normal row —

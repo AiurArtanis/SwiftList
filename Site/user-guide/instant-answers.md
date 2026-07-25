@@ -49,9 +49,18 @@ type often.
 | Keyword (default) | Plugin | What it searches |
 |---|---|---|
 | `ps` | Process Manager | Running processes by name, PID, or window title (fuzzy/pinyin matches too) — select one to kill it. |
+| `win` | Window Switcher | Currently open, switchable windows — the same set Alt+Tab shows — by title, process name, or PID. Select one to bring it to the foreground. |
 | `tr` | Translation | Translates the typed text, auto-detecting source language and translating to/from your interface language. |
 | `bm` | Browser Data | Bookmarks and history from Chrome/Chromium-family and Firefox-family browser profiles you've added under that plugin's own settings. |
 | `set` | Core Extensions | Every setting in the app, fuzzy-matched by name — pick one to jump straight to it in Settings, highlighted. Type `set` with nothing after it to list every setting. |
+
+Window Switcher shows a live thumbnail of each window's actual content as its icon by default,
+captured in the background so it never slows down typing — a plain app icon shows immediately, and
+the thumbnail fades in once it's ready. Turn off **Show Window Content as Icon** in
+**Settings → Plugins → Window Switcher → Configure** to skip that capture entirely and always use
+the app icon. A window running as true exclusive fullscreen (most games default to borderless
+windowed instead, which this handles fine) can't be captured this way and always falls back to its
+app icon.
 
 Browser Data indexes bookmarks and history independently — **Index Bookmarks** and **Index History**
 are separate toggles in **Settings → Plugins → Browser Data → Configure**, so you can turn history

@@ -178,8 +178,12 @@ interface IDynamicActionProvider
 
 ## 支持模型
 
-- **`SearchableItem`** / **`InstantResultItem`** —— Title、Description、IconData、IconColor、
-  ActionType(`"Copy"` / `"Execute"` / `"None"`)、ActionArgument、TabCompletion。
+- **`SearchableItem`** / **`InstantResultItem`** —— 两者共有 Title、Description、IconData、IconColor、
+  ActionType(`"Copy"` / `"Execute"` / `"None"`)、ActionArgument、TabCompletion，以及 `HBitmapIcon`
+  (预先准备好的 GDI 位图句柄，设置后优先级高于 IconData——宿主会接管所有权，用完自己调用
+  DeleteObject，所以交出去之后不要再复用或释放这个句柄；具体用法可以参考窗口切换器插件自己的
+  窗口内容截图实现)。`SearchableItem` 还额外多了 `OnExecute`(直接调用委托)和 `ResultKind`
+  (覆盖结果类型，比如 `"Application"`/`"File"`)。
 - **`DynamicMenuItem`** —— Text、CommandId、IsSeparator、HasSubMenu、SubMenuHandle、IsDisabled、
   HBitmapItem、OnExecute、ShortcutHint、IsHeader。`IsHeader` 把这一项渲染成不可点击的分组标题行
   (就像快速导航子菜单自己的分组名一样)，而不是普通的一行——Text 就是标题文字，如果同时设置了
