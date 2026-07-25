@@ -31,17 +31,15 @@ public sealed class InlineSearchWindowLayoutManager
             // entirely: there's no separate number to drift out of sync with, because this IS what WPF
             // is about to render.
             var count = _window.ViewModel.Results.Count;
-            var rowHeight = Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7);
             // PathPreviewBorder (the truncated-path banner above the list, Grid.Row sibling of
             // ResultsPanelControl -- see InlineSearchWindow.xaml) is never counted out of this 9-row
-            // budget, same as actionsHeaderHeight is never counted out of the actions list's own row
-            // budget in UpdateActionsLayout below: the banner's own footprint (varies with how long/
-            // wrapped the previewed path is) is never a whole multiple of one row's height, so reducing
-            // the row count to compensate always undershoots by close to a full row -- a bigger, more
-            // noticeable gap than just letting the banner add its own height on top, which the window's
-            // fixed 550px shell already has headroom for (see InlineSearchWindowPositioner's comment on
-            // content growing internally within that fixed height).
-            var maxAvailableHeight = 9 * rowHeight;
+            // budget: unlike the quick window (which sizes itself via SizeToContent and so needs its
+            // tab-strip case to land on the exact same total height as its bannerless/tabstrip-less case,
+            // see QuickSearchWindowLayoutManager's own ceiling), this window's shell is a fixed 550px that
+            // already has headroom for content to grow inside it (see InlineSearchWindowPositioner's own
+            // comment on that) -- there's no bannerless sibling state it needs to visually match, so the
+            // banner can simply add its own height on top of a full, uncompromised 9-row list.
+            var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7);
 
             var measureWidth = _window.ResultsPanelControl.ActualWidth > 0 ? _window.ResultsPanelControl.ActualWidth : 437;
             // A result-set change (e.g. ReconcileTo mutating item 0 in place and RemoveAt-ing the rest, see
@@ -68,9 +66,6 @@ public sealed class InlineSearchWindowLayoutManager
             _window.LstResults.Measure(new System.Windows.Size(measureWidth, double.PositiveInfinity));
             var desiredHeight = _window.LstResults.DesiredSize.Height;
 
-            // maxAvailableHeight is always an exact multiple of rowHeight (9 * rowHeight, unreduced by
-            // the banner above), so capping the real, content-driven desiredHeight at it can never leave
-            // a fractional-row remainder for the ListBox to render as unusable blank space.
             var resultsHeight = Math.Min(desiredHeight, maxAvailableHeight);
 
             _window.LstResults.Height = resultsHeight;

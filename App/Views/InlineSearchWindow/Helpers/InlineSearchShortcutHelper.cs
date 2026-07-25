@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using SwiftList.App.Helpers;
+using SwiftList.App.Services;
 using SwiftList.Core;
 
 namespace SwiftList.App.Views.InlineSearchWindow.Helpers;
@@ -8,7 +10,14 @@ public static class InlineSearchShortcutHelper
 {
     public static void UpdateShortcutHints(SwiftList.App.InlineSearchWindow window, ScrollViewer? scrollViewer)
     {
-        var firstVisible = scrollViewer != null ? (int)Math.Round(scrollViewer.VerticalOffset) : 0;
+        // LstResults has ScrollViewer.CanContentScroll="False" (see ResultsControl.xaml, needed for the
+        // quick window's tab-strip height budget to clip a partial row instead of leaving blank space),
+        // shared by this window's LstResults too -- so VerticalOffset is in pixels, not items, and has to
+        // be converted back to an item index to find the first visible row.
+        var rowHeight = Math.Round(UiMetrics.SearchResultItemHeight * 0.7);
+        var firstVisible = scrollViewer != null
+            ? WpfUiHelper.GetFirstVisibleIndexFromPixelOffset(scrollViewer.VerticalOffset, rowHeight)
+            : 0;
         var shortcutIndex = 1;
 
         var selectMod = "Ctrl";

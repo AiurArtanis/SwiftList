@@ -105,4 +105,17 @@ public sealed class WpfUiHelperTests
     [TestMethod]
     public void MatchesHotkey_UnparsableStoredHotkey_ReturnsFalse() =>
         Assert.IsFalse(WpfUiHelper.MatchesHotkey(null, ModifierKeys.None, Key.Enter));
+
+    [TestMethod]
+    [DataRow(0.0, 58.0, 0)]
+    [DataRow(57.9, 58.0, 0)]
+    [DataRow(58.0, 58.0, 1)]
+    [DataRow(90.0, 58.0, 1)]
+    [DataRow(116.0, 58.0, 2)]
+    public void GetFirstVisibleIndexFromPixelOffset_ConvertsPixelsToWholeItemIndex(double verticalOffset, double rowHeight, int expected) =>
+        Assert.AreEqual(expected, WpfUiHelper.GetFirstVisibleIndexFromPixelOffset(verticalOffset, rowHeight));
+
+    [TestMethod]
+    public void GetFirstVisibleIndexFromPixelOffset_ZeroRowHeight_ReturnsZeroInsteadOfDividingByZero() =>
+        Assert.AreEqual(0, WpfUiHelper.GetFirstVisibleIndexFromPixelOffset(100.0, 0.0));
 }

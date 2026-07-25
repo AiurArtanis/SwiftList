@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using SwiftList.App.Helpers;
+using SwiftList.App.Services;
 using SwiftList.Core;
 
 namespace SwiftList.App.Views.QuickSearchWindow.Helpers;
@@ -12,7 +14,12 @@ internal static class QuickSearchShortcutHelper
 {
     public static void UpdateShortcutHints(SwiftList.App.QuickSearchWindow window, ScrollViewer? scrollViewer)
     {
-        var firstVisible = scrollViewer != null ? (int)Math.Round(scrollViewer.VerticalOffset) : 0;
+        // LstResults has ScrollViewer.CanContentScroll="False" (see ResultsControl.xaml, needed so the
+        // tab-strip height budget can clip a partial row instead of leaving blank space), so VerticalOffset
+        // is in pixels, not items -- convert it back to an item index to find the first visible row.
+        var firstVisible = scrollViewer != null
+            ? WpfUiHelper.GetFirstVisibleIndexFromPixelOffset(scrollViewer.VerticalOffset, UiMetrics.ScaledNormalRowHeight)
+            : 0;
         var shortcutIndex = 1;
 
         var selectMod = UserSettings.Load().Hotkeys.SelectJumpModifier;

@@ -86,4 +86,13 @@ public static class WpfUiHelper
         }
         return null;
     }
+
+    /// <summary>
+    /// Converts a ScrollViewer's pixel-based VerticalOffset (ScrollViewer.CanContentScroll="False") back
+    /// to an item index -- the shortcut-hint helpers (QuickSearchShortcutHelper, InlineSearchShortcutHelper)
+    /// need "the first visible row's index" to know where to resume the Ctrl+1..9 labeling, which used to
+    /// be exactly what VerticalOffset was while the ListBox scrolled by item (the WPF default).
+    /// </summary>
+    public static int GetFirstVisibleIndexFromPixelOffset(double verticalOffset, double rowHeight) =>
+        rowHeight > 0 ? (int)Math.Floor(verticalOffset / rowHeight) : 0;
 }

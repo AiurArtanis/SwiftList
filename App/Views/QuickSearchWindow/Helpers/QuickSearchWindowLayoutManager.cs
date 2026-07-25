@@ -92,13 +92,7 @@ internal sealed class QuickSearchWindowLayoutManager
             // Sum each visible row's own height rather than assuming a uniform row size -- a section
             // header, the "show more" row, or a row whose icon forces it to grow past the base height
             // (see MinHeight in ListBox.xaml) would otherwise throw off a single-height-times-count guess,
-            // leaving stray blank space (or clipping) at the bottom of the list. The startup panel's tab
-            // strip (Grid.Row="2") is a sibling row stacked above this list, not counted against the
-            // 9-row budget here: its own footprint (32px) is never a whole multiple of one row's height
-            // (58px), so reducing the row count to compensate always undershoots by nearly a full row --
-            // a bigger, more noticeable gap than just letting the tab strip add its own modest height on
-            // top instead (unlike UpdateActionsLayout above, whose own header height genuinely does need
-            // to come out of its budget, since that panel has no fixed row count to fall back on).
+            // leaving stray blank space (or clipping) at the bottom of the list.
             var results = _window.ViewModel.Results;
             var visibleCount = Math.Min(results.Count, 9);
 
@@ -106,6 +100,21 @@ internal sealed class QuickSearchWindowLayoutManager
             for (var i = 0; i < visibleCount; i++)
             {
                 resultsHeight += results[i].ScaledItemHeight;
+            }
+
+            // Same idea as UpdateActionsLayout reducing its own row budget by actionsHeaderHeight: the
+            // startup panel's tab strip (Grid.Row="2") sits stacked above this list, so a full 9-row list
+            // plus the tab strip would otherwise grow the window taller than a full list with no tab strip
+            // at all. LstResults now has ScrollViewer.CanContentScroll="False" (see ResultsControl.xaml),
+            // same as LstActions already did -- that switches it to pixel-based scrolling, so capping at a
+            // ceiling that isn't a whole multiple of the row height clips the last row's rendering at the
+            // boundary instead of leaving the leftover fraction as unrendered blank space underneath it.
+            if (_window.StartupPanelTabStrip.Visibility == Visibility.Visible)
+            {
+                var tabStripMargin = _window.StartupPanelTabStrip.Margin;
+                var tabStripFootprint = _window.StartupPanelTabStrip.ActualHeight + tabStripMargin.Top + tabStripMargin.Bottom;
+                var maxAvailableHeight = 9 * UiMetrics.ScaledNormalRowHeight - tabStripFootprint;
+                resultsHeight = Math.Max(0.0, Math.Min(resultsHeight, maxAvailableHeight));
             }
 
             _window.LstResults.Height = resultsHeight;
