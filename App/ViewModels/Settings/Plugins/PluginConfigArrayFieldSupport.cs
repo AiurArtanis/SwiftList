@@ -92,16 +92,34 @@ internal sealed class PluginConfigArrayFieldSupport
     private void AddArrayItemViewModel(object? itemValue)
     {
         PluginConfigArrayItemViewModel? itemVM = null;
-        itemVM = new PluginConfigArrayItemViewModel(_field, itemValue, () =>
-        {
-            var wasSelected = ReferenceEquals(_field.SelectedArrayItem, itemVM);
-            var index = _field.ArrayItems.IndexOf(itemVM!);
-            _field.ArrayItems.Remove(itemVM!);
-            if (wasSelected)
-                _field.SelectedArrayItem = _field.ArrayItems.Count > 0 ? _field.ArrayItems[Math.Min(index, _field.ArrayItems.Count - 1)] : null;
-            SaveArrayFromChildren();
-        });
+        itemVM = new PluginConfigArrayItemViewModel(_field, itemValue,
+            onDelete: () =>
+            {
+                var wasSelected = ReferenceEquals(_field.SelectedArrayItem, itemVM);
+                var index = _field.ArrayItems.IndexOf(itemVM!);
+                _field.ArrayItems.Remove(itemVM!);
+                if (wasSelected)
+                    _field.SelectedArrayItem = _field.ArrayItems.Count > 0 ? _field.ArrayItems[Math.Min(index, _field.ArrayItems.Count - 1)] : null;
+                SaveArrayFromChildren();
+            },
+            onMoveUp: () => MoveArrayItem(itemVM!, -1),
+            onMoveDown: () => MoveArrayItem(itemVM!, 1));
         _field.ArrayItems.Add(itemVM);
+    }
+
+    // Backs both the master list's Move Up/Down buttons and (indirectly, via the same underlying
+    // ObservableCollection.Move a drag-drop reorder also calls) the drag-to-reorder handle -- see
+    // DragReorder in FieldRowTemplate.xaml's ListBox. SaveArrayFromChildren keeps LocalValueStore in
+    // sync immediately, same as every other array mutation here (Add/Delete), even though Commit()
+    // would re-derive it fresh from ArrayItems' current order regardless once the window is confirmed.
+    internal void MoveArrayItem(PluginConfigArrayItemViewModel item, int direction)
+    {
+        var index = _field.ArrayItems.IndexOf(item);
+        var newIndex = index + direction;
+        if (index < 0 || newIndex < 0 || newIndex >= _field.ArrayItems.Count) return;
+
+        _field.ArrayItems.Move(index, newIndex);
+        SaveArrayFromChildren();
     }
 
     public void SaveObjectFromChildren()

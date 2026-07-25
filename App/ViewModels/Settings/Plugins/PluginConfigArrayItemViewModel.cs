@@ -14,6 +14,8 @@ public class PluginConfigArrayItemViewModel : ViewModelBase
     public PluginConfigFieldViewModel? SimpleValueViewModel { get; }
 
     public ICommand DeleteCommand { get; }
+    public ICommand MoveUpCommand { get; }
+    public ICommand MoveDownCommand { get; }
 
     // Master-list summary: best-effort picks from the item's own sub-fields, since the schema
     // varies per plugin (there's no dedicated "name"/"keyword" concept in PluginConfigField).
@@ -21,10 +23,12 @@ public class PluginConfigArrayItemViewModel : ViewModelBase
     public PluginConfigFieldViewModel? BadgeField => Children.Where(c => c.FieldType == ConfigFieldType.Text).Skip(1).FirstOrDefault();
     public PluginConfigFieldViewModel? IconField => Children.FirstOrDefault(c => c.IsIconField);
 
-    public PluginConfigArrayItemViewModel(PluginConfigFieldViewModel parent, object? initialValue, Action onDelete)
+    public PluginConfigArrayItemViewModel(PluginConfigFieldViewModel parent, object? initialValue, Action onDelete, Action? onMoveUp = null, Action? onMoveDown = null)
     {
         _parent = parent;
         DeleteCommand = new RelayCommand(onDelete);
+        MoveUpCommand = new RelayCommand(onMoveUp ?? (() => { }));
+        MoveDownCommand = new RelayCommand(onMoveDown ?? (() => { }));
 
         var subFields = parent.SchemaField.SubFields;
         if (subFields != null && subFields.Count > 0)

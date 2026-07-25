@@ -219,6 +219,21 @@
         </Setter>
     </Style>
 
+    <!-- Move Up/Down: same look as the delete button above, narrower since the master list column
+         is tight on space, and each row already carries three of these plus a title. -->
+    <Style x:Key="ArrayRowMoveUpButton" TargetType="Button" BasedOn="{StaticResource ArrayRowDeleteButton}">
+        <Setter Property="Content" Value="&#xE74A;"/>
+        <Setter Property="Command" Value="{Binding MoveUpCommand}"/>
+        <Setter Property="Width" Value="22"/>
+        <Setter Property="Margin" Value="4,0,0,0"/>
+    </Style>
+    <Style x:Key="ArrayRowMoveDownButton" TargetType="Button" BasedOn="{StaticResource ArrayRowDeleteButton}">
+        <Setter Property="Content" Value="&#xE74B;"/>
+        <Setter Property="Command" Value="{Binding MoveDownCommand}"/>
+        <Setter Property="Width" Value="22"/>
+        <Setter Property="Margin" Value="4,0,0,0"/>
+    </Style>
+
     <!-- Label-above-editor row for an array item's detail panel. The window is wide enough
          now (resizable) that the shared label-left/editor-right row below would leave an
          awkward gap between them; stacking keeps each field readable at any window width. -->

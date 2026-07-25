@@ -121,6 +121,40 @@ public sealed class PluginConfigArrayItemViewModelTests
     }
 
     [TestMethod]
+    public void MoveUpCommand_Execute_InvokesOnMoveUp()
+    {
+        var parent = ArrayField(null);
+        var called = false;
+        var item = new PluginConfigArrayItemViewModel(parent, "x", () => { }, onMoveUp: () => called = true);
+
+        item.MoveUpCommand.Execute(null);
+
+        Assert.IsTrue(called);
+    }
+
+    [TestMethod]
+    public void MoveDownCommand_Execute_InvokesOnMoveDown()
+    {
+        var parent = ArrayField(null);
+        var called = false;
+        var item = new PluginConfigArrayItemViewModel(parent, "x", () => { }, onMoveDown: () => called = true);
+
+        item.MoveDownCommand.Execute(null);
+
+        Assert.IsTrue(called);
+    }
+
+    [TestMethod]
+    public void MoveUpCommand_NoCallbackProvided_ExecutesWithoutThrowing()
+    {
+        var parent = ArrayField(null);
+        var item = new PluginConfigArrayItemViewModel(parent, "x", () => { });
+
+        item.MoveUpCommand.Execute(null);
+        item.MoveDownCommand.Execute(null);
+    }
+
+    [TestMethod]
     public void Constructor_ScalarItemWithBooleanDefault_InfersBooleanFieldType()
     {
         var field = new PluginConfigField { Key = "flags", FieldType = ConfigFieldType.Array, DefaultValue = false };

@@ -117,4 +117,59 @@ public sealed class PluginConfigArrayFieldSupportTests
 
         Assert.IsNull(field.SelectedArrayItem);
     }
+
+    [TestMethod]
+    public void MoveUpCommand_MiddleItem_SwapsWithPrevious()
+    {
+        var field = ScalarArrayField(new UserSettings(), new List<string> { "a", "b", "c" });
+        var b = field.ArrayItems[1];
+
+        b.MoveUpCommand.Execute(null);
+
+        CollectionAssert.AreEqual(new[] { "b", "a", "c" }, field.ArrayItems.Select(i => i.GetValue()).ToList());
+    }
+
+    [TestMethod]
+    public void MoveDownCommand_MiddleItem_SwapsWithNext()
+    {
+        var field = ScalarArrayField(new UserSettings(), new List<string> { "a", "b", "c" });
+        var b = field.ArrayItems[1];
+
+        b.MoveDownCommand.Execute(null);
+
+        CollectionAssert.AreEqual(new[] { "a", "c", "b" }, field.ArrayItems.Select(i => i.GetValue()).ToList());
+    }
+
+    [TestMethod]
+    public void MoveUpCommand_FirstItem_DoesNothing()
+    {
+        var field = ScalarArrayField(new UserSettings(), new List<string> { "a", "b" });
+
+        field.ArrayItems[0].MoveUpCommand.Execute(null);
+
+        CollectionAssert.AreEqual(new[] { "a", "b" }, field.ArrayItems.Select(i => i.GetValue()).ToList());
+    }
+
+    [TestMethod]
+    public void MoveDownCommand_LastItem_DoesNothing()
+    {
+        var field = ScalarArrayField(new UserSettings(), new List<string> { "a", "b" });
+
+        field.ArrayItems[^1].MoveDownCommand.Execute(null);
+
+        CollectionAssert.AreEqual(new[] { "a", "b" }, field.ArrayItems.Select(i => i.GetValue()).ToList());
+    }
+
+    [TestMethod]
+    public void MoveUpCommand_ReorderIsPersistedOnCommit()
+    {
+        var settings = new UserSettings();
+        var field = ScalarArrayField(settings, new List<string> { "a", "b" });
+
+        field.ArrayItems[1].MoveUpCommand.Execute(null);
+        field.Commit();
+
+        var saved = settings.GetPluginSetting<List<object?>?>("plugin", "items", null);
+        CollectionAssert.AreEqual(new object?[] { "b", "a" }, saved);
+    }
 }
