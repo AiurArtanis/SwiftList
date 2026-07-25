@@ -53,6 +53,10 @@ type often.
 | `bm` | Browser Data | Bookmarks and history from Chrome/Chromium-family and Firefox-family browser profiles you've added under that plugin's own settings. |
 | `set` | Core Extensions | Every setting in the app, fuzzy-matched by name — pick one to jump straight to it in Settings, highlighted. Type `set` with nothing after it to list every setting. |
 
+Browser Data indexes bookmarks and history independently — **Index Bookmarks** and **Index History**
+are separate toggles in **Settings → Plugins → Browser Data → Configure**, so you can turn history
+off (it tends to grow far larger than bookmarks) while still searching bookmarks, or vice versa.
+
 ## Web search
 
 Web Search ships with default keywords for several engines/sites — `bd` (Baidu), `g` (Google),

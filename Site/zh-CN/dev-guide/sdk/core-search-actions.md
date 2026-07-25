@@ -171,11 +171,20 @@ interface IDynamicActionProvider
 和自己的 `CanProvide`/`GetMenuItems` 调用(紧随其后、没有任何提前量)抢时间——不能阻塞，真正
 耗时的工作要放到后台线程里做。默认实现是空操作。
 
+`Priority` 决定这个 provider 在动作菜单的动态(按 provider 分组)分组里排在哪——数值越小越靠
+前，默认 `0`。不过这只是个兜底信号:用户可以在
+[设置 → 通用 → 完整搜索窗口](../../user-guide/settings/general#完整搜索窗口)里手动拖拽/调整这些
+分组的顺序，用户已经手动排过序的分组会保持在那个位置，不再受 `Priority` 影响。
+
 ## 支持模型
 
 - **`SearchableItem`** / **`InstantResultItem`** —— Title、Description、IconData、IconColor、
   ActionType(`"Copy"` / `"Execute"` / `"None"`)、ActionArgument、TabCompletion。
 - **`DynamicMenuItem`** —— Text、CommandId、IsSeparator、HasSubMenu、SubMenuHandle、IsDisabled、
-  HBitmapItem、OnExecute、ShortcutHint。
+  HBitmapItem、OnExecute、ShortcutHint、IsHeader。`IsHeader` 把这一项渲染成不可点击的分组标题行
+  (就像快速导航子菜单自己的分组名一样)，而不是普通的一行——Text 就是标题文字，如果同时设置了
+  `OnExecute`，标题行末尾会出现一个小按钮来调用它;`IsHeader` 为 true 时其余字段都会被忽略。这是
+  [`IQuickNavigationProvider.HeaderAction`](./system-adapters#iquicknavigationprovider)在子菜单
+  深度上的等价物，`HeaderAction` 本身只覆盖根层级。
 - **`SearchWindowType`** 枚举 —— `Main`、`Quick`、`Inline`。可以让动作或提供者根据当前显示在
   [用户手册](../../user-guide/getting-started#三种窗口)里说的三种窗口的哪一种而表现不同。

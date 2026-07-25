@@ -88,6 +88,12 @@ columns to reorder in the compact list layout.
 **Sidebar Filter Order** — same mechanic, for the order the sidebar's filter groups (Type, Date
 Modified, and any plugin-added groups) appear in.
 
+**Actions Menu Section Order** — same mechanic, for the order the sections of the
+[actions menu](../actions-and-preview#actions-menu) appear in: the built-in actions group, plus one
+section per plugin that contributes actions there (e.g. Custom Actions, or the Windows shell
+right-click menu). A section not yet in this list falls back to its natural position (built-in
+first, then plugin sections in whatever order they were contributed).
+
 Clicking a results-grid column header to sort by it is remembered only for as long as SwiftList
 keeps running — quitting the app (not just closing the window) resets sorting back to the default
 the next time you open it, unlike the column/sidebar order above which is saved permanently.

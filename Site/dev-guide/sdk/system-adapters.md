@@ -81,6 +81,8 @@ content source.
 interface IQuickNavigationProvider
 {
     string GroupName { get; }
+    Action<ISearchResult>? HeaderAction => null;
+    string? HeaderActionTooltip => null;
     bool CanProvide(ISearchResult result);
     IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu);
     void ExecuteCommand(ISearchResult result, uint commandId, IntPtr ownerHwnd);
@@ -92,5 +94,14 @@ interface IQuickNavigationProvider
 more than one quick-navigation provider active can tell which contributed which entries — the same
 role `IDynamicActionProvider.GroupName` plays for the actions menu.
 
+`HeaderAction` (optional, default `null`) adds a small button to that same root-level group header —
+for example, a bookmarking-style provider might use it for "add the current folder." It's invoked
+with the same `ISearchResult` `GetMenuItems` itself receives for the root level; `HeaderActionTooltip`
+sets the button's tooltip and is ignored when `HeaderAction` is null. A nested submenu (any depth
+below the root) has no host-rendered header of its own, so `HeaderAction`'s effect stops at the root —
+a provider wanting the same "+" button on a submenu returns a `DynamicMenuItem` with `IsHeader = true`
+(see below) as that submenu's own first item instead, with its own `OnExecute` playing the same role.
+
 `DynamicMenuItem` is the same model used by
-[`IDynamicActionProvider`](./core-search-actions#idynamicactionprovider).
+[`IDynamicActionProvider`](./core-search-actions#idynamicactionprovider), including its `IsHeader`
+flag for a submenu-level header row.

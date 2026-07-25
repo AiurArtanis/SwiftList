@@ -79,6 +79,8 @@ interface IInlineSearchAdapter
 interface IQuickNavigationProvider
 {
     string GroupName { get; }
+    Action<ISearchResult>? HeaderAction => null;
+    string? HeaderActionTooltip => null;
     bool CanProvide(ISearchResult result);
     IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu);
     void ExecuteCommand(ISearchResult result, uint commandId, IntPtr ownerHwnd);
@@ -89,5 +91,13 @@ interface IQuickNavigationProvider
 `GroupName`是显示在这个 provider 自己根层级条目上方的分组标题，方便同时有多个快速导航 provider
 时区分各条目分别来自哪一个——跟 `IDynamicActionProvider.GroupName` 在动作菜单里的作用一样。
 
+`HeaderAction`(可选，默认 `null`)会在同一个根层级分组标题上加一个小按钮——比如一个书签类的
+provider 可以用它做"添加当前文件夹"。回调参数用的是 `GetMenuItems` 在根层级收到的同一个
+`ISearchResult`;`HeaderActionTooltip` 设置这个按钮的提示文字，`HeaderAction` 为空时会被忽略。嵌
+套的子菜单(根层级以下的任意深度)没有宿主渲染的标题栏，所以 `HeaderAction` 的效果只到根层级为止
+——想在子菜单上做同样的"+"按钮，需要在该子菜单的第一项里返回一个 `IsHeader = true` 的
+`DynamicMenuItem`(见下文)，用它自己的 `OnExecute` 起同样的作用。
+
 `DynamicMenuItem` 与
-[`IDynamicActionProvider`](./core-search-actions#idynamicactionprovider) 用的是同一个模型。
+[`IDynamicActionProvider`](./core-search-actions#idynamicactionprovider) 用的是同一个模型，包括
+子菜单层级标题行用的 `IsHeader` 标记。

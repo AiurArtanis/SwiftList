@@ -181,12 +181,23 @@ start instead of racing your own `CanProvide`/`GetMenuItems` call, which follow 
 with no lead time of their own — must not block, so do any real work on a background thread.
 Default implementation is a no-op.
 
+`Priority` controls this provider's own section among the actions menu's dynamic (per-provider)
+groups: lower values appear first, default `0`. It's only a fallback, though — a user can drag/reorder
+these sections by hand under
+[Settings → General → Full Search Window](../../user-guide/settings/general#full-search-window), and
+a section they've explicitly ordered keeps that position regardless of `Priority`.
+
 ## Supporting models
 
 - **`SearchableItem`** / **`InstantResultItem`** — Title, Description, IconData, IconColor,
   ActionType (`"Copy"` / `"Execute"` / `"None"`), ActionArgument, TabCompletion.
 - **`DynamicMenuItem`** — Text, CommandId, IsSeparator, HasSubMenu, SubMenuHandle, IsDisabled,
-  HBitmapItem, OnExecute, ShortcutHint.
+  HBitmapItem, OnExecute, ShortcutHint, IsHeader. `IsHeader` renders the item as a non-clickable
+  section-header row (like a Quick Navigation submenu's own group name) instead of a normal row —
+  Text is the header label, and if `OnExecute` is also set, a small button appears at the header's
+  trailing edge invoking it; every other field is ignored when `IsHeader` is true. This is the
+  submenu-depth equivalent of [`IQuickNavigationProvider.HeaderAction`](./system-adapters#iquicknavigationprovider),
+  which only covers the root level.
 - **`SearchWindowType`** enum — `Main`, `Quick`, `Inline`. Lets an action or provider behave
   differently depending on which of the three windows (see the
   [User Manual](../../user-guide/getting-started#the-three-windows)) it's showing in.

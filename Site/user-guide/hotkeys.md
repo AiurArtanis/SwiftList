@@ -67,6 +67,15 @@ existing window pane to navigate within, so there a folder or file is opened dir
 double-clicking it would. Inside a file dialog specifically, clicking a file instead jumps the
 dialog to that file's folder — it deliberately never auto-confirms Open/Save on your behalf.
 
+The **Folder Cascader** plugin is what actually builds this menu. Beyond Favorites and History (each
+independently toggleable), it has its own configurable list of quick-access folders — from
+**Settings → Plugins → Folder Cascader → Configure**, add a folder's path and an optional display
+name, and give it a `Submenu` value (e.g. `Tools/Network`, `/`-separated for multiple levels) to nest
+it under a category instead of showing it at the root. Every level of the menu — the root and any
+nested category — also has a small **+** button on its own header: click it to add the folder you're
+currently browsing right there, pre-filled with its name, path, and that level's own submenu path
+(all still editable before confirming), without leaving the menu to open Settings.
+
 ## Hardcoded keys (not configurable)
 
 These always behave the same way regardless of your hotkey settings:
