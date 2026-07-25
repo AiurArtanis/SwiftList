@@ -37,6 +37,29 @@ public sealed class FavoriteSearchHelperTests
     }
 
     [TestMethod]
+    public void ComputeMatch_QueryOnlyMatchesUnrelatedParentFolderInPath_ReturnsNoMatch()
+    {
+        // "Program Files" is entirely incidental to what the favorite actually is -- a query that only
+        // happens to fuzzy-match letters scattered across the path, and not the favorite's own name,
+        // must not surface it (this used to match via the raw path being searched as a fallback).
+        var fav = new FavoriteItemSetting { Name = "", Path = @"C:\Program Files\SomeApp\readme.txt" };
+
+        var (isMatch, _) = FavoriteSearchHelper.ComputeMatch(fav, "program");
+
+        Assert.IsFalse(isMatch);
+    }
+
+    [TestMethod]
+    public void ComputeMatch_ExplicitNameSet_QueryMatchingOnlyPath_ReturnsNoMatch()
+    {
+        var fav = new FavoriteItemSetting { Name = "My Docs", Path = @"C:\Program Files\Documents" };
+
+        var (isMatch, _) = FavoriteSearchHelper.ComputeMatch(fav, "program");
+
+        Assert.IsFalse(isMatch);
+    }
+
+    [TestMethod]
     public void ComputeMatch_WebUrlFavoriteWithNoName_MatchesAgainstFullUrl()
     {
         var fav = new FavoriteItemSetting { Name = "", Path = "https://example.com/docs" };

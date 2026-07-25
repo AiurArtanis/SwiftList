@@ -26,13 +26,14 @@ public static class FavoriteSearchHelper
         return fav.Path;
     }
 
-    // The standard match+weight contract (FuzzyMatcher.ComputeBestMatch): display name first, then
-    // the raw path, via the same FzfPattern.Parse Core's real file search uses -- a multi-word query
-    // requires all its words to match somewhere, the same way it would against an indexed file name,
-    // instead of the old displayName.Contains/.Contains(Path)/MarkFuzzyMatch chain treating the whole
-    // query (spaces included) as one literal/fuzzy string.
+    // The standard match+weight contract (FuzzyMatcher.ComputeBestMatch), matched against the display
+    // name only -- matching against the raw path too used to let unrelated path segments (a parent
+    // folder like "Program Files" fuzzy-contributing letters to an unrelated query) surface a favorite
+    // with no real relevance to what was typed, and rank it above genuinely-matching favorites and other
+    // results. A favorite is something the user deliberately named or picked; searching for it should
+    // only need to match what it's actually called.
     internal static (bool IsMatch, double Weight) ComputeMatch(FavoriteItemSetting fav, string query)
-        => FuzzyMatcher.ComputeBestMatch(query, GetDisplayName(fav), new[] { fav.Path });
+        => FuzzyMatcher.ComputeBestMatch(query, GetDisplayName(fav));
 
     public static AppSearchResult CreateFavoriteUiResult(FavoriteItemSetting fav, string query, int index)
     {
