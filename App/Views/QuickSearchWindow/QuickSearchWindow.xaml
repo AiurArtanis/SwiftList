@@ -80,15 +80,14 @@
                              this tab (IsSelected drives the accent-blue/underline "active" look). -->
                         <StackPanel Margin="0,0,20,0">
                             <StackPanel Orientation="Horizontal">
-                                <Button Content="{Binding Label}" Command="{Binding SelectCommand}">
+                                <Button Content="{Binding Label}" Command="{Binding SelectCommand}"
+                                        FontSize="{Binding ScaledFontSize}" Padding="{Binding ScaledBottomPaddingThickness}">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Background" Value="Transparent"/>
                                             <Setter Property="BorderThickness" Value="0"/>
                                             <Setter Property="Cursor" Value="Hand"/>
                                             <Setter Property="Focusable" Value="False"/>
-                                            <Setter Property="FontSize" Value="14"/>
-                                            <Setter Property="Padding" Value="0,0,0,10"/>
                                             <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
                                             <Setter Property="Template">
                                                 <Setter.Value>
@@ -106,18 +105,17 @@
                                         </Style>
                                     </Button.Style>
                                 </Button>
-                                <Button Content="&#xE711;" Command="{Binding CloseCommand}" Margin="8,0,0,8"
+                                <Button Content="&#xE711;" Command="{Binding CloseCommand}" Margin="{Binding ScaledCloseButtonMarginThickness}"
+                                        Width="{Binding ScaledCloseButtonSize}" Height="{Binding ScaledCloseButtonSize}"
+                                        FontSize="{Binding ScaledCloseIconFontSize}"
                                         ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_CloseTabTooltip]}">
                                     <Button.Style>
                                         <Style TargetType="Button">
-                                            <Setter Property="Width" Value="16"/>
-                                            <Setter Property="Height" Value="16"/>
                                             <Setter Property="Padding" Value="0"/>
                                             <Setter Property="Background" Value="Transparent"/>
                                             <Setter Property="BorderThickness" Value="0"/>
                                             <Setter Property="Cursor" Value="Hand"/>
                                             <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
-                                            <Setter Property="FontSize" Value="9"/>
                                             <Setter Property="Foreground" Value="{DynamicResource TextSecondary2}"/>
                                             <Setter Property="Template">
                                                 <Setter.Value>
@@ -137,7 +135,7 @@
                                     </Button.Style>
                                 </Button>
                             </StackPanel>
-                            <Border Height="2" Background="{DynamicResource AccentBlue}" Margin="0,-2,0,0">
+                            <Border Height="{Binding ScaledUnderlineHeight}" Background="{DynamicResource AccentBlue}" Margin="{Binding ScaledUnderlineMarginThickness}">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Visibility" Value="Collapsed"/>

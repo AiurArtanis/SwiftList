@@ -93,6 +93,15 @@ public static class UiMetrics
     private static double _mainWindowHeight = DefaultMainWindowHeight;
 
     /// <summary>
+    /// Fires whenever Scale actually changes value -- lets an already-open window (whose bound rows
+    /// were built from a snapshot of the old scale, e.g. AppSearchResult/StartupPanelTabViewModel's own
+    /// Scaled* properties) refresh those bindings live instead of only picking up the new scale the
+    /// next time it happens to rebuild its content (e.g. the next search, or the next time the window
+    /// is shown).
+    /// </summary>
+    public static event Action? ScaleChanged;
+
+    /// <summary>
     /// Global UI scale factor. Result rows, fonts and icons multiply their
     /// base metrics by this value so they grow/shrink together with the
     /// user-configured search box height.
@@ -100,7 +109,13 @@ public static class UiMetrics
     public static double Scale
     {
         get => _scale;
-        set => _scale = Math.Clamp(value, 0.6, 1.8);
+        set
+        {
+            var clamped = Math.Clamp(value, 0.6, 1.8);
+            if (clamped == _scale) return;
+            _scale = clamped;
+            ScaleChanged?.Invoke();
+        }
     }
 
     /// <summary>

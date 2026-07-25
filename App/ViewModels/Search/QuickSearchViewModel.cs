@@ -48,6 +48,13 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
         // isn't empty) settles the panel onto what it should have shown once the service is genuinely
         // there, instead of staying stuck on whatever the cold-start attempt produced.
         Monitor.ServiceBecameReachable += () => Search.RefreshEmptyState();
+
+        // Settings changes push straight into UiMetrics.Scale (see SearchBarLayoutSettingsViewModel.
+        // Save()) with no reference back to whichever QuickSearchViewModel/window happens to be open --
+        // subscribing here is what lets an already-open window's rows/tabs actually resize the moment
+        // the setting is saved, instead of only picking up the new scale the next time this window is
+        // shown or a fresh search rebuilds its rows from scratch.
+        Services.UiMetrics.ScaleChanged += RefreshScaleBindings;
     }
 
     public SearchExecutionViewModel Search { get; }
@@ -199,17 +206,46 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
         ClockText = $" {now.ToString("d", culture)} {dayName} {now:HH:mm}";
     }
 
+    // Called when the window is actually shown (ShowWindow) -- pulls whatever the settings currently
+    // say (in case they changed while this window was hidden) and applies them. Live changes while the
+    // window is already open/visible go through RefreshScaleBindings via UiMetrics.ScaleChanged instead
+    // (see the constructor), since ApplyScaleFromSettings has already run by the time that fires.
     public void RefreshLayoutSettings()
     {
         Services.UiMetrics.ApplyScaleFromSettings();
+        RefreshScaleBindings();
+    }
+
+    // Re-notifies every binding whose value depends on UiMetrics.Scale, for whatever the CURRENT scale
+    // already is -- shared by RefreshLayoutSettings (window just shown) and UiMetrics.ScaleChanged
+    // (scale changed live while this window is already open). Deliberately does NOT call
+    // ApplyScaleFromSettings itself: that setter is exactly what raises ScaleChanged, so calling it from
+    // here too would recurse.
+    private void RefreshScaleBindings()
+    {
         OnPropertyChanged(nameof(SearchBarWidth));
         OnPropertyChanged(nameof(SearchBarHeight));
         OnPropertyChanged(nameof(ClockVisibility));
         UpdateClockText();
+
+        // Startup panel tabs and result rows both persist as long-lived objects across searches, unlike
+        // a freshly-typed search's own AppSearchResult rows, which get built AFTER a scale change and so
+        // pick it up on their own -- without this, an already-bound row/tab's Scaled* properties stay
+        // frozen at whatever they read when first created, so nothing on screen visibly resizes until
+        // the next search happens to rebuild it.
+        foreach (var tab in Search.StartupPanelTabs)
+        {
+            tab.RefreshScale();
+        }
+        foreach (var result in Search.Results)
+        {
+            result.RefreshScale();
+        }
     }
 
     public void Dispose()
     {
+        Services.UiMetrics.ScaleChanged -= RefreshScaleBindings;
         Monitor.StopStatusTimer();
         _searchService.Dispose();
         Search.Dispose();

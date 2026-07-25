@@ -31,7 +31,18 @@ public sealed class InlineSearchWindowLayoutManager
             // entirely: there's no separate number to drift out of sync with, because this IS what WPF
             // is about to render.
             var count = _window.ViewModel.Results.Count;
-            var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7);
+            var rowHeight = Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7);
+            // PathPreviewBorder (the truncated-path banner above the list, Grid.Row sibling of
+            // ResultsPanelControl -- see InlineSearchWindow.xaml) is never counted out of this 9-row
+            // budget, same as actionsHeaderHeight is never counted out of the actions list's own row
+            // budget in UpdateActionsLayout below: the banner's own footprint (varies with how long/
+            // wrapped the previewed path is) is never a whole multiple of one row's height, so reducing
+            // the row count to compensate always undershoots by close to a full row -- a bigger, more
+            // noticeable gap than just letting the banner add its own height on top, which the window's
+            // fixed 550px shell already has headroom for (see InlineSearchWindowPositioner's comment on
+            // content growing internally within that fixed height).
+            var maxAvailableHeight = 9 * rowHeight;
+
             var measureWidth = _window.ResultsPanelControl.ActualWidth > 0 ? _window.ResultsPanelControl.ActualWidth : 437;
             // A result-set change (e.g. ReconcileTo mutating item 0 in place and RemoveAt-ing the rest, see
             // SearchResultsReconciler) can leave the ListBox's own item-container generator not yet caught up
@@ -44,8 +55,24 @@ public sealed class InlineSearchWindowLayoutManager
             _window.LstResults.InvalidateMeasure();
             _window.UpdateLayout();
             _window.LstResults.Height = double.NaN;
-            _window.LstResults.Measure(new System.Windows.Size(measureWidth, maxAvailableHeight));
-            var resultsHeight = Math.Min(_window.LstResults.DesiredSize.Height, maxAvailableHeight);
+            // Measuring against maxAvailableHeight itself (rather than infinite/unconstrained height)
+            // was the actual bug behind the persistent trailing gap, present regardless of the banner:
+            // the ListBox's own template wraps its items in a ScrollViewer, and a ScrollViewer offered a
+            // finite available height reports THAT height back as its desired size (it's a scrollable
+            // container -- "I'll take whatever you give me and scroll internally" -- not "I'll shrink to
+            // just what my content needs"), regardless of whether the actual item count fills it. So
+            // DesiredSize.Height was silently just echoing maxAvailableHeight back on every call with
+            // fewer than a full budget's worth of items, reserving a full 9-row-equivalent height no
+            // matter how few rows were actually there. Measuring against infinity first forces the real,
+            // content-driven size; the cap is then applied afterward, purely to bound a genuinely-long list.
+            _window.LstResults.Measure(new System.Windows.Size(measureWidth, double.PositiveInfinity));
+            var desiredHeight = _window.LstResults.DesiredSize.Height;
+
+            // maxAvailableHeight is always an exact multiple of rowHeight (9 * rowHeight, unreduced by
+            // the banner above), so capping the real, content-driven desiredHeight at it can never leave
+            // a fractional-row remainder for the ListBox to render as unusable blank space.
+            var resultsHeight = Math.Min(desiredHeight, maxAvailableHeight);
+
             _window.LstResults.Height = resultsHeight;
             _window.ResultsPanelControl.Height = resultsHeight;
             // Forces layout to actually run right now, synchronously, instead of leaving WPF free to

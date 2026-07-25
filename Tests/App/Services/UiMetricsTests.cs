@@ -144,4 +144,62 @@ public sealed class UiMetricsTests
         Assert.IsGreaterThan(UiMetrics.ScaledSearchResultItemHeight, expectedFloor);
         Assert.AreEqual(expectedFloor, UiMetrics.ScaledNormalRowHeight);
     }
+
+    [TestMethod]
+    public void Scale_SetToDifferentValue_RaisesScaleChanged()
+    {
+        UiMetrics.Scale = 1.0;
+        var raised = false;
+        void Handler() => raised = true;
+        UiMetrics.ScaleChanged += Handler;
+        try
+        {
+            UiMetrics.Scale = 1.4;
+            Assert.IsTrue(raised);
+        }
+        finally
+        {
+            UiMetrics.ScaleChanged -= Handler;
+        }
+    }
+
+    [TestMethod]
+    public void Scale_SetToSameValue_DoesNotRaiseScaleChanged()
+    {
+        UiMetrics.Scale = 1.2;
+        var raised = false;
+        void Handler() => raised = true;
+        UiMetrics.ScaleChanged += Handler;
+        try
+        {
+            // Already exactly 1.2 -- an already-open window re-applying the same setting (e.g. Apply
+            // clicked without changing anything) shouldn't trigger a needless refresh of every bound row.
+            UiMetrics.Scale = 1.2;
+            Assert.IsFalse(raised);
+        }
+        finally
+        {
+            UiMetrics.ScaleChanged -= Handler;
+        }
+    }
+
+    [TestMethod]
+    public void Scale_SetToOutOfRangeValueClampingToSameCurrentValue_DoesNotRaiseScaleChanged()
+    {
+        UiMetrics.Scale = 0.6;
+        var raised = false;
+        void Handler() => raised = true;
+        UiMetrics.ScaleChanged += Handler;
+        try
+        {
+            // Clamps down to the same 0.6 the value is already at -- the comparison must happen AFTER
+            // clamping, not on the raw input, or this would incorrectly fire for a no-op change.
+            UiMetrics.Scale = 0.1;
+            Assert.IsFalse(raised);
+        }
+        finally
+        {
+            UiMetrics.ScaleChanged -= Handler;
+        }
+    }
 }

@@ -10,6 +10,14 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     protected virtual void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
 
+    // Every Scaled* property below reads UiMetrics live at get-time, but WPF only re-queries a binding
+    // when ITS OWN PropertyChanged fires for that property -- an existing row never picks up a change
+    // to UiMetrics.Scale on its own (a search's own newly-built rows do, since they're fresh objects
+    // constructed after the change). Called from UiMetrics.ScaleChanged subscribers (e.g.
+    // QuickSearchViewModel) so already-displayed rows resize live instead of only updating on the next
+    // search. Empty property name means "every property on this object changed".
+    public void RefreshScale() => OnPropertyChanged(string.Empty);
+
     public string Name { get; set; } = string.Empty;
     public string FullPath { get; set; } = string.Empty;
     public string ParentDir { get; set; } = string.Empty;

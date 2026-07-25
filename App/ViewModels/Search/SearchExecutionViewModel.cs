@@ -97,7 +97,19 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
     public bool IsActionsMode
     {
         get => _isActionsMode;
-        set => SetProperty(ref _isActionsMode, value);
+        set
+        {
+            // The startup panel's tab strip and the actions list are both stacked above/around the
+            // same results panel, but they read as two different modes -- browsing quick-access
+            // tabs/history vs. looking at one specific result's actions. Leaving the tab strip visible
+            // while actions are showing reads as if the tabs still apply to whatever's now on screen,
+            // when they don't. StartupPanelVisibility already factors this in below, so flipping
+            // IsActionsMode needs to re-notify it too.
+            if (SetProperty(ref _isActionsMode, value))
+            {
+                OnPropertyChanged(nameof(StartupPanelVisibility));
+            }
+        }
     }
 
     public string SearchQuery
@@ -156,8 +168,11 @@ public class SearchExecutionViewModel : ViewModelBase, IDisposable
     }
 
     // Startup Panel: shown above the results in the quick popup only, see StartupPanelController.
+    // Hidden while actions mode is showing (see IsActionsMode's own setter, which re-notifies this)
+    // even if the underlying panel itself would otherwise want to show -- the tab strip reads as
+    // belonging to the results list beneath it, not to a specific result's actions list.
     public ObservableCollection<StartupPanelTabViewModel> StartupPanelTabs => _startupPanel.Tabs;
-    public Visibility StartupPanelVisibility => _startupPanel.Visibility;
+    public Visibility StartupPanelVisibility => IsActionsMode ? Visibility.Collapsed : _startupPanel.Visibility;
     public void SelectNextStartupPanelTab() => _startupPanel.SelectNextTab();
     public void SelectPreviousStartupPanelTab() => _startupPanel.SelectPreviousTab();
 

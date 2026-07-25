@@ -126,6 +126,12 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
 
         _viewModel.Results.CollectionChanged += (s, e) => _layoutManager.QueueResultsLayoutUpdate();
 
+        // Row/tab heights change in place when the search bar height setting changes live (see
+        // QuickSearchViewModel's own UiMetrics.ScaleChanged subscription, which re-notifies each
+        // existing row/tab's Scaled* bindings) -- that's a per-item PropertyChanged, not a
+        // CollectionChanged, so the subscription above alone wouldn't resize the window to match.
+        Services.UiMetrics.ScaleChanged += () => _layoutManager.QueueResultsLayoutUpdate();
+
         KeywordHistoryController = new QuickSearchKeywordHistoryController(this);
 
         LstResults.SelectionChanged += (s, e) =>
