@@ -60,6 +60,10 @@ public class MouseHookService : IDisposable
     public event Action<int, int>? OnMouseClick;
     public event Action<int, int>? OnMouseDoubleClick;
     public event Action<int, int>? OnMouseMiddleClick;
+    // Separate from OnMouseClick (which also fires for this same button, for the existing
+    // click-outside-closes-menu wiring) -- carries the raw hook timestamp so KeyboardHookService can
+    // measure real elapsed time against a keystroke's own timestamp, not our processing latency.
+    public event Action<uint>? OnRightButtonDown;
 
     public void Start()
     {
@@ -114,6 +118,7 @@ public class MouseHookService : IDisposable
             else if (wParam == (IntPtr)WM_RBUTTONDOWN)
             {
                 var hookStruct = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+                OnRightButtonDown?.Invoke(hookStruct.time);
                 OnMouseClick?.Invoke(hookStruct.pt.x, hookStruct.pt.y);
             }
         }

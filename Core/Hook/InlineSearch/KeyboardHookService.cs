@@ -12,6 +12,10 @@ public class KeyboardHookService : IDisposable
     private UserSettings _settings = UserSettings.Load();
     private GlobalHotkeyDetector _hotkeyDetector;
 
+    private bool _hasPendingContextMenuTrigger;
+    private uint _lastContextMenuTriggerTime;
+    private const uint ContextMenuGraceMs = 400;
+
     public event Action? OnDoubleCtrl;
     public event Action<char>? OnCharacterTyped;
     public event Action? OnBackspacePressed;
@@ -38,6 +42,18 @@ public class KeyboardHookService : IDisposable
         _settings = UserSettings.ForceReload();
         _hotkeyDetector = new GlobalHotkeyDetector(_settings, _explorerTracker);
         Logger.Log("[KeyboardHookService] Hotkey settings reloaded.", LogLevel.Info);
+    }
+    // Wired from MouseHookService.OnRightButtonDown, and also called directly below for the VK_APPS
+    // (Menu) key. Windows needs real, non-zero time to build a context menu (shell extension
+    // IContextMenu handlers, etc.), so either trigger immediately followed by a menu mnemonic keypress
+    // can beat GUI_INMENUMODE becoming true -- this records the trigger so HandleInlineSearchKeys can
+    // give it a short grace window regardless.
+    public void NotifyRightButtonDown(uint time) => MarkPendingContextMenuTrigger(time);
+
+    private void MarkPendingContextMenuTrigger(uint time)
+    {
+        _hasPendingContextMenuTrigger = true;
+        _lastContextMenuTriggerTime = time;
     }
     public void Start()
     {
@@ -70,6 +86,18 @@ public class KeyboardHookService : IDisposable
             var hookStruct = Marshal.PtrToStructure<KeyboardNativeMethods.KBDLLHOOKSTRUCT>(lParam);
             var vkCode = (int)hookStruct.vkCode;
             var time = hookStruct.time;
+
+            // The physical Menu/context-menu key, and Shift+F10, both open a context menu just like a
+            // right-click does, with the same real, non-zero construction delay -- covered
+            // unconditionally here (not gated by shouldDisableAllHooks below), matching how the
+            // independent mouse hook's own right-click detection is never gated either. F10 arrives as
+            // WM_SYSKEYDOWN, which this outer condition already includes alongside WM_KEYDOWN.
+            var isShiftF10 = vkCode == KeyboardNativeMethods.VK_F10
+                && (KeyboardNativeMethods.GetKeyState(KeyboardNativeMethods.VK_SHIFT) & 0x8000) != 0;
+            if (vkCode == KeyboardNativeMethods.VK_APPS || isShiftF10)
+            {
+                MarkPendingContextMenuTrigger(time);
+            }
 
             // 1. Detect Toggle Window Hotkey
             // Fullscreen apps share the same gate as the process blacklist: it only suppresses the
@@ -179,6 +207,21 @@ public class KeyboardHookService : IDisposable
         if (hasGuiInfo && (guiInfo.flags & menuModeFlags) != 0)
         {
             return false;
+        }
+
+        // The menu isn't confirmed open yet, but a right-click or Menu-key press landed very recently --
+        // most likely the menu it opens just hasn't finished being built. Give it a short grace window
+        // before treating a fast trigger-then-mnemonic as inline-search input. Compared using the raw
+        // hook timestamps (both are the same GetTickCount-based clock) rather than wall-clock "now", so
+        // our own processing latency never inflates or shrinks the measured gap.
+        if (_hasPendingContextMenuTrigger)
+        {
+            var elapsedSinceTrigger = unchecked((int)hookStruct.time - (int)_lastContextMenuTriggerTime);
+            if (elapsedSinceTrigger >= 0 && elapsedSinceTrigger <= ContextMenuGraceMs)
+            {
+                return false;
+            }
+            _hasPendingContextMenuTrigger = false;
         }
 
         if (hasGuiInfo && guiInfo.hwndFocus != IntPtr.Zero)
