@@ -21,6 +21,14 @@ public class WindowSwitcherPlugin : IPlugin, IConfigurable
                 FieldType = ConfigFieldType.Text,
                 DefaultValue = "win",
                 RequireNonEmpty = true
+            },
+            new PluginConfigField
+            {
+                Key = "UseScreenshotIcons",
+                LabelKey = "WindowSwitcher_Config_UseScreenshotIconsLabel",
+                DescriptionKey = "WindowSwitcher_Config_UseScreenshotIconsDesc",
+                FieldType = ConfigFieldType.Boolean,
+                DefaultValue = true
             }
         }
     };

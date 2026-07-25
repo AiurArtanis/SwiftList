@@ -47,4 +47,11 @@ public class InstantResultItem
 
     /// <summary>Optional custom text to fill the search box with when Tab is pressed.</summary>
     public string? TabCompletion { get; set; }
+
+    /// <summary>
+    /// Optional pre-loaded icon as a GDI HBITMAP (Win32 handle), taking priority over IconData when
+    /// set. The host takes ownership and calls DeleteObject once it's done with it -- do not reuse or
+    /// free this handle yourself after handing it over. Mirrors SearchableItem.HBitmapIcon.
+    /// </summary>
+    public IntPtr HBitmapIcon { get; set; }
 }

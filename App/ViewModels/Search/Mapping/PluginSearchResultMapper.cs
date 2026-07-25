@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.InteropServices;
 using SwiftList.Core;
 using SwiftList.App.Services;
 
@@ -8,6 +9,36 @@ namespace SwiftList.App.ViewModels.Search.Mapping;
 
 public static class PluginSearchResultMapper
 {
+    [DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr hObject);
+
+    // Converts a provider's raw GDI HBITMAP into a frozen, thread-safe BitmapSource and immediately
+    // releases the GDI handle -- mirrors SearchableItemCache.MaterializeIcon's own "caller must
+    // DeleteObject" contract. Unlike that cache (which materializes once for a slow-changing static
+    // catalog), this runs on every AddInstantResults call, since InstantResultItem's bitmap is
+    // whatever the provider decided to hand over THIS keystroke (e.g. a live window thumbnail).
+    private static System.Windows.Media.ImageSource? MaterializeHBitmapIcon(IntPtr hBitmap)
+    {
+        try
+        {
+            var src = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                hBitmap, IntPtr.Zero,
+                System.Windows.Int32Rect.Empty,
+                System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+            src.Freeze();
+            return src;
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"[SearchResultMapper] Failed to materialize HBitmapIcon for instant result: {ex.Message}", LogLevel.Error);
+            return null;
+        }
+        finally
+        {
+            DeleteObject(hBitmap);
+        }
+    }
+
     public static void AddInstantResults(List<AppSearchResult> uiResults, string query, string? highlightQuery, bool isInlineWindow)
     {
         if (isInlineWindow)
@@ -49,7 +80,15 @@ public static class PluginSearchResultMapper
                     System.Windows.Media.ImageSource? iconOverride = null;
                     var iconPath = "";
 
-                    if (!string.IsNullOrWhiteSpace(item.IconData))
+                    if (item.HBitmapIcon != IntPtr.Zero)
+                    {
+                        // Takes priority over IconData -- a provider that hands over a real pre-loaded
+                        // bitmap (e.g. WindowSwitcher's window-content thumbnail) means it, regardless
+                        // of whatever static IconData/path fallback it also set for when no bitmap was
+                        // ready yet.
+                        iconOverride = MaterializeHBitmapIcon(item.HBitmapIcon);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(item.IconData))
                     {
                         if (item.IconData.StartsWith("path:", StringComparison.OrdinalIgnoreCase))
                         {

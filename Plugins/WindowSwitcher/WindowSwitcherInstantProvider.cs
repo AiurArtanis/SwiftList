@@ -29,6 +29,9 @@ public class WindowSwitcherInstantProvider : IInstantResultProvider
         }
     }
 
+    private static bool GetUseScreenshotIcons() =>
+        PluginSettingsService.GetSetting("SwiftList.Plugins.WindowSwitcher", "UseScreenshotIcons", true);
+
     // Lower tier ranks first: 0 = literal window-title match, 1 = literal process-name match, 2 =
     // literal PID match, 3 = fuzzy/alias fallback on title or process name. Title ranks first (unlike
     // ProcessManagerInstantProvider's own process-name-first tiering) since switching is a title-driven
@@ -122,10 +125,20 @@ public class WindowSwitcherInstantProvider : IInstantResultProvider
         var results = matches.Take(50);
 
         var pathKey = TranslationService.Get("WindowSwitcher_Path");
+        var useScreenshotIcons = GetUseScreenshotIcons();
 
         foreach (var (window, processName, path, _) in results)
         {
             var hasRealIcon = !string.IsNullOrEmpty(path) && !path.StartsWith("[");
+
+            // Zero unless a thumbnail is already cached for this window -- GetIconOrRefresh never
+            // blocks on PrintWindow itself (see WindowThumbnailCache's own comment): a cache miss
+            // kicks off a background capture and this call still falls back to the exe icon below for
+            // right now, upgrading to the real thumbnail a keystroke or two later via
+            // SearchRefreshService once the capture actually lands.
+            var hBitmapIcon = useScreenshotIcons
+                ? WindowThumbnailCache.GetIconOrRefresh(window.Handle, () => RefreshIfStillTriggered(keyword))
+                : IntPtr.Zero;
 
             yield return new InstantResultItem
             {
@@ -135,12 +148,26 @@ public class WindowSwitcherInstantProvider : IInstantResultProvider
                 // resolved (access denied, or the process exited between enumeration and this point).
                 IconData = hasRealIcon ? $"path:{path}" : "M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z",
                 IconColor = hasRealIcon ? null : "AccentBlue",
+                HBitmapIcon = hBitmapIcon,
                 ActionType = "Execute",
                 ActionArgument = $"activatewindow:{window.Handle.ToInt64()}",
                 TabCompletion = $"{keyword} {window.Title}"
             };
         }
     }
+
+    // Re-runs any active search still showing WindowSwitcher's own results once a background
+    // thumbnail capture completes, so the newly-cached icon actually appears without the user needing
+    // to retype anything. Broader than TranslationInstantProvider's own exact-text predicate (that
+    // provider's results are 1:1 with one exact query; this one's window LIST depends on everything
+    // currently matching), so this just re-checks "is this provider still triggered at all".
+    private static void RefreshIfStillTriggered(string keyword) =>
+        SearchRefreshService.RefreshIfMatches(currentQuery =>
+        {
+            var trimmed = currentQuery.Trim();
+            return string.Equals(trimmed, keyword, StringComparison.OrdinalIgnoreCase) ||
+                   trimmed.StartsWith(keyword + " ", StringComparison.OrdinalIgnoreCase);
+        });
 
     public bool[]? GetHighlightMask(string text, string query)
     {
