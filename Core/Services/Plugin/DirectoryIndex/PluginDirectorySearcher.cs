@@ -60,7 +60,19 @@ internal sealed class PluginDirectorySearcher
                 var files = await Task.Run(() =>
                 {
                     var opt = dir.Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-                    return Directory.EnumerateFiles(dir.Path, dir.FilterPattern, opt);
+                    // FilterPattern can list several patterns separated by ';' or ',' (e.g. "*.exe;*.lnk")
+                    // -- Directory.EnumerateFiles only ever accepts a single pattern, so each one is
+                    // enumerated separately and merged, deduped in case a file matches more than one.
+                    var seenFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var matched = new List<string>();
+                    foreach (var pattern in FilterPatternHelper.Split(dir.FilterPattern))
+                    {
+                        foreach (var file in Directory.EnumerateFiles(dir.Path, pattern, opt))
+                        {
+                            if (seenFiles.Add(file)) matched.Add(file);
+                        }
+                    }
+                    return matched;
                 }, token).ConfigureAwait(false);
 
                 foreach (var file in files)

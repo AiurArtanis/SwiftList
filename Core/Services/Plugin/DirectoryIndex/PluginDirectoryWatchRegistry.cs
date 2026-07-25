@@ -15,6 +15,16 @@ internal sealed class MonitoredDir
 /// which owns the actual local-vs-network query routing -- watching for changes and answering a search
 /// are different responsibilities that only share the registration list.
 /// </summary>
+internal static class FilterPatternHelper
+{
+    public static string[] Split(string filterPattern)
+    {
+        if (string.IsNullOrWhiteSpace(filterPattern)) return new[] { "*" };
+        var patterns = filterPattern.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return patterns.Length > 0 ? patterns : new[] { "*" };
+    }
+}
+
 internal sealed class PluginDirectoryWatchRegistry
 {
     private readonly ConcurrentDictionary<string, List<MonitoredDir>> _registrations = new(StringComparer.OrdinalIgnoreCase);
@@ -87,10 +97,16 @@ internal sealed class PluginDirectoryWatchRegistry
             var watcher = new FileSystemWatcher(fullPath)
             {
                 IncludeSubdirectories = recursive,
-                Filter = filterPattern,
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
                 EnableRaisingEvents = true
             };
+            // filterPattern can list several patterns separated by ';' or ',' (e.g. "*.exe;*.lnk") --
+            // the singular Filter property only ever accepts one, so each split pattern is added to the
+            // plural Filters collection instead (supported since .NET Core 3.0 for exactly this case).
+            foreach (var pattern in FilterPatternHelper.Split(filterPattern))
+            {
+                watcher.Filters.Add(pattern);
+            }
 
             FileSystemEventHandler handler = (s, e) => PluginSdk.Services.DirectoryIndexerService.NotifyDirectoryChanged(pluginId);
             RenamedEventHandler renamedHandler = (s, e) => PluginSdk.Services.DirectoryIndexerService.NotifyDirectoryChanged(pluginId);

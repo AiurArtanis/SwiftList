@@ -65,6 +65,53 @@ public sealed class FileFiltersSearchableItemProviderTests
     }
 
     [TestMethod]
+    public void GetSearchableItems_SemicolonSeparatedPatterns_MatchesEitherExtension()
+    {
+        using var dir = new TempDirectory();
+        File.WriteAllText(Path.Combine(dir.Path, "a.exe"), "x");
+        File.WriteAllText(Path.Combine(dir.Path, "b.lnk"), "x");
+        File.WriteAllText(Path.Combine(dir.Path, "c.txt"), "x");
+        ConfigureFilters(new() { new() { Enabled = true, Folders = { dir.Path }, FilterPattern = "*.exe;*.lnk" } });
+
+        using var provider = new FileFiltersSearchableItemProvider();
+        var items = provider.GetSearchableItems().ToList();
+
+        Assert.IsTrue(items.Any(i => i.Title == "a.exe"));
+        Assert.IsTrue(items.Any(i => i.Title == "b.lnk"));
+        Assert.IsFalse(items.Any(i => i.Title == "c.txt"));
+    }
+
+    [TestMethod]
+    public void GetSearchableItems_CommaSeparatedPatterns_MatchesEitherExtension()
+    {
+        using var dir = new TempDirectory();
+        File.WriteAllText(Path.Combine(dir.Path, "a.zip"), "x");
+        File.WriteAllText(Path.Combine(dir.Path, "b.img"), "x");
+        File.WriteAllText(Path.Combine(dir.Path, "c.txt"), "x");
+        ConfigureFilters(new() { new() { Enabled = true, Folders = { dir.Path }, FilterPattern = "*.zip,*.img" } });
+
+        using var provider = new FileFiltersSearchableItemProvider();
+        var items = provider.GetSearchableItems().ToList();
+
+        Assert.IsTrue(items.Any(i => i.Title == "a.zip"));
+        Assert.IsTrue(items.Any(i => i.Title == "b.img"));
+        Assert.IsFalse(items.Any(i => i.Title == "c.txt"));
+    }
+
+    [TestMethod]
+    public void SplitFilterPatterns_EmptyOrWhitespace_DefaultsToMatchAll()
+    {
+        CollectionAssert.AreEqual(new[] { "*" }, FileFiltersSearchableItemProvider.SplitFilterPatterns(""));
+        CollectionAssert.AreEqual(new[] { "*" }, FileFiltersSearchableItemProvider.SplitFilterPatterns("   "));
+    }
+
+    [TestMethod]
+    public void SplitFilterPatterns_MixedSeparatorsAndWhitespace_TrimsEachEntry()
+    {
+        CollectionAssert.AreEqual(new[] { "*.exe", "*.lnk", "*.bat" }, FileFiltersSearchableItemProvider.SplitFilterPatterns(" *.exe; *.lnk , *.bat "));
+    }
+
+    [TestMethod]
     public void GetSearchableItems_Subdirectories_AreIncludedRegardlessOfFilterPattern()
     {
         using var dir = new TempDirectory();

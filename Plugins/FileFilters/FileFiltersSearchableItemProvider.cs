@@ -128,12 +128,18 @@ public class FileFiltersSearchableItemProvider : ISearchableItemProvider, IDispo
             {
                 try
                 {
-                    // Scan directories for matching files
-                    var files = Directory.EnumerateFiles(root, filter.FilterPattern, SearchOption.AllDirectories);
-                    foreach (var file in files)
+                    // Scan directories for matching files. FilterPattern can list several patterns
+                    // separated by ';' or ',' (e.g. "*.exe;*.lnk") -- Directory.EnumerateFiles only ever
+                    // accepts a single pattern, so each one is enumerated separately and merged, with
+                    // seenFiles deduping a file that happens to match more than one of the patterns.
+                    var seenFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var pattern in SplitFilterPatterns(filter.FilterPattern))
                     {
-                        if (!string.IsNullOrEmpty(Path.GetFileName(file)))
-                            items.Add(BuildItem(file, "File"));
+                        foreach (var file in Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories))
+                        {
+                            if (!string.IsNullOrEmpty(Path.GetFileName(file)) && seenFiles.Add(file))
+                                items.Add(BuildItem(file, "File"));
+                        }
                     }
 
                     // Subfolders themselves are also searchable -- unlike files, these are never
@@ -155,6 +161,13 @@ public class FileFiltersSearchableItemProvider : ISearchableItemProvider, IDispo
         }
 
         return items;
+    }
+
+    internal static string[] SplitFilterPatterns(string filterPattern)
+    {
+        if (string.IsNullOrWhiteSpace(filterPattern)) return new[] { "*" };
+        var patterns = filterPattern.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return patterns.Length > 0 ? patterns : new[] { "*" };
     }
 
     public void Dispose()
