@@ -12,5 +12,7 @@
   <Project Path="Plugins/OneCommander/OneCommander.csproj" />
   <Project Path="Plugins/FileFilters/FileFilters.csproj" />
   <Project Path="Plugins/BrowserData/BrowserData.csproj" />
+  <Project Path="Plugins/ProcessManager/ProcessManager.csproj" />
+  <Project Path="Plugins/DirectoryOpus/DirectoryOpus.csproj" />
 
 </Solution>

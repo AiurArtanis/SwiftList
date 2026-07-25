@@ -45,8 +45,12 @@ public class DirectoryOpusInlineSearchAdapter : IInlineSearchAdapter
         if (focusedHwnd == IntPtr.Zero || string.IsNullOrEmpty(className))
             return false;
 
+        // Thumbnails/Tiles/Large Icons render the file list in a separate child window class
+        // ("dopus.iconfiledisplay") from Details/List's "dopus.filedisplay" -- confirmed via the
+        // targetFocus/className debug log (see HandleInlineSearchKeys) while focused in that mode.
         return className.Equals("dopus.filedisplay", StringComparison.OrdinalIgnoreCase) ||
-               className.Equals("dopus.filedisplaycontainer", StringComparison.OrdinalIgnoreCase);
+               className.Equals("dopus.filedisplaycontainer", StringComparison.OrdinalIgnoreCase) ||
+               className.Equals("dopus.iconfiledisplay", StringComparison.OrdinalIgnoreCase);
     }
 
     public bool CanShowQuickNav(IntPtr hwndUnderCursor, string classNameUnderCursor)
