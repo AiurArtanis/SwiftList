@@ -31,6 +31,10 @@ public class ActionMenuItem : INotifyPropertyChanged
     public bool IsSeparator { get; set; }
     public bool IsSectionHeader { get; set; }
     public string SectionTitle { get; set; } = string.Empty;
+    // Stable, non-localized id for a section header (see ActionMenuBuilder.BuildStaticGroupId/
+    // BuildDynamicGroupId) -- SectionTitle alone can't be persisted as a user-chosen order key, since
+    // it's already-translated display text that changes with the UI language.
+    public string SectionGroupId { get; set; } = string.Empty;
     public bool HasSubMenu { get; set; }
     public IntPtr SubMenuHandle { get; set; }
     public bool IsDisabled { get; set; }

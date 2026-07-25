@@ -3,6 +3,9 @@ using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 
 using SwiftList.App.Services.Plugin;
+using SwiftList.App.Helpers;
+using SwiftList.App.Services.PluginManagerCore;
+using SwiftList.App.ViewModels.Settings.Plugins;
 namespace SwiftList.App.Services.ShellMenu.ActionFlyout;
 
 internal static class ActionMenuBuilder
@@ -15,6 +18,19 @@ internal static class ActionMenuBuilder
 
     private static string CleanMenuText(string? text) =>
         MnemonicPattern.Replace(text ?? "", "").Replace("&", "");
+
+    // Stable, non-localized id for a static action-group section, persisted in
+    // UserSettings.ActionMenuGroupOrder -- groupKey is the already-resolved display string BuildStatic
+    // groups by (either action.GroupName or the built-in-label fallback), so it's compared against that
+    // same resolved label rather than re-deriving from raw action data.
+    internal static string BuildStaticGroupId(string groupKey, string builtinLabel) =>
+        groupKey == builtinLabel ? "__builtin__" : $"static::{groupKey}";
+
+    // Stable, non-localized id for a dynamic-provider section header, matching the same
+    // "{dllName}::{ComponentType}::{name}" scheme DisabledPluginComponents already uses for this
+    // provider (PluginLoaderHelper.MakeId), so no new id format is introduced.
+    internal static string BuildDynamicGroupId(IDynamicActionProvider provider) =>
+        PluginLoaderHelper.MakeId(ComponentFilter.GetDllName(provider), PluginComponentType.DynamicActionProvider, provider.GetType().Name);
 
     public static List<ActionMenuItem> Build(
         IReadOnlyList<AppSearchResult> selection,
@@ -60,6 +76,7 @@ internal static class ActionMenuBuilder
         // in the first place.
         var headerHeight = itemHeight;
 
+        var builtinLabel = TranslationManager.Instance["Action_BuiltinGroup"];
         var groupedActions = new Dictionary<string, List<PluginActionRegistration>>();
         foreach (var registration in PluginManager.Instance.Actions)
         {
@@ -69,7 +86,7 @@ internal static class ActionMenuBuilder
 
             if (action.CanExecute(selection))
             {
-                var group = string.IsNullOrWhiteSpace(action.GroupName) ? TranslationManager.Instance["Action_BuiltinGroup"] : action.GroupName;
+                var group = string.IsNullOrWhiteSpace(action.GroupName) ? builtinLabel : action.GroupName;
                 if (!groupedActions.TryGetValue(group, out var list))
                 {
                     list = new List<PluginActionRegistration>();
@@ -87,6 +104,7 @@ internal static class ActionMenuBuilder
             {
                 IsSectionHeader = true,
                 SectionTitle = kvp.Key,
+                SectionGroupId = BuildStaticGroupId(kvp.Key, builtinLabel),
                 ItemHeight = headerHeight
             });
 
@@ -137,8 +155,10 @@ internal static class ActionMenuBuilder
 
         if (hMenu == IntPtr.Zero)
         {
-            // Root: every dynamic provider (e.g. shell context menu), sorted by Priority descending.
-            foreach (var provider in PluginManager.Instance.DynamicActionProviders.OrderByDescending(p => p.Priority))
+            // Root: every dynamic provider (e.g. shell context menu), sorted by Priority ascending
+            // (lower values first, matching IDynamicActionProvider.Priority's own doc comment -- this
+            // was previously OrderByDescending, silently contradicting that doc).
+            foreach (var provider in PluginManager.Instance.DynamicActionProviders.OrderBy(p => p.Priority))
             {
                 if (provider.Keywords.Count > 0)
                     continue;
@@ -158,6 +178,7 @@ internal static class ActionMenuBuilder
                         {
                             IsSectionHeader = true,
                             SectionTitle = group,
+                            SectionGroupId = BuildDynamicGroupId(provider),
                             ItemHeight = headerHeight
                         });
 
@@ -274,7 +295,47 @@ internal static class ActionMenuBuilder
             finalItems.Add(current);
         }
 
-        return finalItems;
+        return ReorderRootSections(finalItems);
+    }
+
+    // Reorders contiguous sections (each starting at an IsSectionHeader item) according to the user's
+    // saved ActionMenuGroupOrder, most-preferred first. A section whose SectionGroupId isn't listed yet
+    // falls back to its current position -- relying on List.Sort/OrderBy being STABLE, so unlisted
+    // sections keep their natural discovery order (built-in first, then dynamic providers by Priority)
+    // relative to each other. Safe no-op for submenu-level lists, which have at most one trivial section
+    // with an empty SectionGroupId.
+    private static List<ActionMenuItem> ReorderRootSections(List<ActionMenuItem> items)
+    {
+        var headerIndexes = new List<int>();
+        for (var i = 0; i < items.Count; i++)
+        {
+            if (items[i].IsSectionHeader)
+                headerIndexes.Add(i);
+        }
+
+        if (headerIndexes.Count < 2)
+            return items;
+
+        var order = Core.UserSettings.Load().ActionMenuGroupOrder;
+
+        var sections = new List<List<ActionMenuItem>>();
+        for (var i = 0; i < headerIndexes.Count; i++)
+        {
+            var start = headerIndexes[i];
+            var end = i + 1 < headerIndexes.Count ? headerIndexes[i + 1] : items.Count;
+            sections.Add(items.GetRange(start, end - start));
+        }
+
+        var reordered = sections
+            .OrderBy(section =>
+            {
+                var rank = order.IndexOf(section[0].SectionGroupId);
+                return rank >= 0 ? rank : int.MaxValue;
+            })
+            .SelectMany(section => section)
+            .ToList();
+
+        return reordered;
     }
 
     private static System.Windows.Media.ImageSource? GetIconFromHBitmap(IntPtr hBitmap)

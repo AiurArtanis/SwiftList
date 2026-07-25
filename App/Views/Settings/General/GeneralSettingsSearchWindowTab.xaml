@@ -143,6 +143,55 @@
                     </Grid>
                 </Border>
             </DataTemplate>
+
+            <!-- Same shape as SidebarGroupOrderItemTemplate above, wired to ActionMenuGroupOrder's own
+                 Move Up/Down commands. -->
+            <DataTemplate x:Key="ActionMenuGroupOrderItemTemplate">
+                <Border BorderBrush="{DynamicResource SettingsRowBorderBrush}" BorderThickness="0,0,0,1" Padding="0,9">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Grid.Column="0" Width="24" Height="32" Margin="0,0,10,0" Background="Transparent" VerticalAlignment="Center" Cursor="SizeAll" helpers:DragReorder.IsHandle="True">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Ellipse Grid.Row="0" Grid.Column="0" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="0" Grid.Column="1" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="1" Grid.Column="0" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="1" Grid.Column="1" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="2" Grid.Column="0" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="2" Grid.Column="1" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                        </Grid>
+
+                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary2}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="&#xE74A;"
+                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_MoveUpTooltip]}"
+                                    Style="{StaticResource QuickNavIconButton}"
+                                    Command="{Binding DataContext.General.ActionMenuGroupOrder.MoveUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                            <Button Content="&#xE74B;"
+                                    ToolTip="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Favorites_MoveDownTooltip]}"
+                                    Style="{StaticResource QuickNavIconButton}"
+                                    Command="{Binding DataContext.General.ActionMenuGroupOrder.MoveDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -208,6 +257,23 @@
                            Style="{StaticResource SettingsHintText}" TextWrapping="Wrap" Margin="0,0,0,8"/>
 
                 <ItemsControl ItemsSource="{Binding General.SidebarGroupOrder.Items}" ItemTemplate="{StaticResource SidebarGroupOrderItemTemplate}" helpers:DragReorder.IsEnabled="True">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource SettingsCard}" Margin="0,12,0,0">
+            <StackPanel>
+                <TextBlock x:Name="RowActionMenuGroupOrderList" Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ActionMenuGroupOrderTitle]}"
+                           FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
+                <TextBlock Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_ActionMenuGroupOrderHint]}"
+                           Style="{StaticResource SettingsHintText}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                <ItemsControl ItemsSource="{Binding General.ActionMenuGroupOrder.Items}" ItemTemplate="{StaticResource ActionMenuGroupOrderItemTemplate}" helpers:DragReorder.IsEnabled="True">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <VirtualizingStackPanel />

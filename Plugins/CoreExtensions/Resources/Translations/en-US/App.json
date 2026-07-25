@@ -216,6 +216,8 @@
   "General_SidebarGroupOrderHint": "Reorder the filter groups (Type, Date Modified, and any plugin-added groups) shown in the full window's sidebar.",
   "General_ColumnOrderTitle": "Results Grid Column Order",
   "General_ColumnOrderHint": "Reorder the columns (Name, Path, Date Modified, and any plugin-added columns) shown in the full window's results grid.",
+  "General_ActionMenuGroupOrderTitle": "Actions Menu Section Order",
+  "General_ActionMenuGroupOrderHint": "Reorder the sections (built-in actions, Custom Actions, and any plugin-added sections) shown in the right-click actions menu.",
   "General_QuickNavTitle": "Quick Navigation",
   "General_QuickNavHint": "Choose which order each provider's entries appear in at the top level of the Quick Navigation menu (the popup triggered by double/middle-clicking empty space). Disabled providers aren't listed here since they never show in that menu.",
   "General_QuickNavListTitle": "Provider Order",

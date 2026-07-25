@@ -1,4 +1,6 @@
 using SwiftList.App.Services.ShellMenu.ActionFlyout;
+using SwiftList.PluginSdk.Abstractions;
+using SwiftList.PluginSdk.Abstractions.Plugins;
 
 namespace SwiftList.App.Tests.Services.ShellMenu.ActionFlyout;
 
@@ -7,7 +9,41 @@ public sealed class ActionMenuBuilderTests
 {
     private static ActionMenuItem Item(string text, bool hasSubMenu = false) => new() { Text = text, HasSubMenu = hasSubMenu };
     private static ActionMenuItem Separator() => new() { IsSeparator = true };
-    private static ActionMenuItem Header(string title) => new() { IsSectionHeader = true, SectionTitle = title };
+    private static ActionMenuItem Header(string title, string groupId = "") => new() { IsSectionHeader = true, SectionTitle = title, SectionGroupId = groupId };
+
+    private sealed class FakeDynamicActionProvider : IDynamicActionProvider
+    {
+        public string GroupName => "Custom Actions";
+        public bool CanProvide(IReadOnlyList<ISearchResult> results) => false;
+        public IEnumerable<DynamicMenuItem> GetMenuItems(IReadOnlyList<ISearchResult> results, IntPtr hMenu) => Enumerable.Empty<DynamicMenuItem>();
+        public void ExecuteCommand(IReadOnlyList<ISearchResult> results, uint commandId, IntPtr ownerHwnd) { }
+        public void ClearSession() { }
+    }
+
+    [TestMethod]
+    public void BuildStaticGroupId_MatchingBuiltinLabel_ReturnsBuiltinSentinel()
+    {
+        Assert.AreEqual("__builtin__", ActionMenuBuilder.BuildStaticGroupId("Common", "Common"));
+    }
+
+    [TestMethod]
+    public void BuildStaticGroupId_CustomGroup_ReturnsStaticPrefixedId()
+    {
+        Assert.AreEqual("static::Archive", ActionMenuBuilder.BuildStaticGroupId("Archive", "Common"));
+    }
+
+    [TestMethod]
+    public void BuildDynamicGroupId_IsStableAcrossCalls()
+    {
+        var provider = new FakeDynamicActionProvider();
+
+        var first = ActionMenuBuilder.BuildDynamicGroupId(provider);
+        var second = ActionMenuBuilder.BuildDynamicGroupId(provider);
+
+        Assert.AreEqual(first, second);
+        Assert.Contains("DynamicActionProvider", first);
+        Assert.Contains(nameof(FakeDynamicActionProvider), first);
+    }
 
     [TestMethod]
     public void FinalizeItems_NoDuplicates_ReturnsAllUnchanged()

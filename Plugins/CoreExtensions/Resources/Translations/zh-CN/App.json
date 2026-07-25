@@ -216,6 +216,8 @@
   "General_SidebarGroupOrderHint": "调整完整窗口侧边栏中筛选分组（类型、修改时间，以及插件新增的分组）的显示顺序。",
   "General_ColumnOrderTitle": "结果表格列顺序",
   "General_ColumnOrderHint": "调整完整窗口结果表格中列（名称、路径、修改时间，以及插件新增的列）的显示顺序。",
+  "General_ActionMenuGroupOrderTitle": "动作菜单分组顺序",
+  "General_ActionMenuGroupOrderHint": "调整右键动作菜单中各分组（内置动作、自定义动作，以及插件新增的分组）的显示顺序。",
   "General_QuickNavTitle": "快速导航",
   "General_QuickNavHint": "调整快速导航菜单（双击/中键点击空白处弹出的那个菜单）根层级里，各个提供者条目的先后顺序。已禁用的提供者不会出现在这里，因为它们本来就不会显示在那个菜单里。",
   "General_QuickNavListTitle": "提供者顺序",

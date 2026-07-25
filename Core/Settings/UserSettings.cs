@@ -114,6 +114,15 @@ public class UserSettings
     public List<string> ResultTypeOrder { get; set; } = new();
 
     /// <summary>
+    /// User-chosen display order for the Actions menu's own sections -- the built-in group ("__builtin__",
+    /// or "static::{GroupName}" for a static action that sets a custom GroupName) plus one id per
+    /// IDynamicActionProvider (e.g. the Custom Actions/自定义动作 group), most-preferred first. A section
+    /// whose id isn't listed here yet falls back to its natural position: built-in first, then dynamic
+    /// providers by ascending Priority -- see ActionMenuBuilder's own ordering.
+    /// </summary>
+    public List<string> ActionMenuGroupOrder { get; set; } = new();
+
+    /// <summary>
     /// Per-type trigger character for the quick window's exclusive result-type filter -- key is the
     /// same type-id ResultTypeOrder above uses, value is a single character (an entry is only present
     /// when the user actually configured one). When the FIRST character the user types matches a

@@ -42,6 +42,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         ResultTypeOrder = new ResultTypeOrderViewModel(userSettings);
         SidebarGroupOrder = new SidebarGroupOrderViewModel(userSettings);
         ColumnOrder = new ColumnOrderViewModel(userSettings);
+        ActionMenuGroupOrder = new ActionMenuGroupOrderViewModel(userSettings);
 
         _startWithWindows = userSettings.StartWithWindows;
         _autoCheckUpdates = userSettings.AutoCheckUpdates;
@@ -198,6 +199,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         ResultTypeOrder.Save();
         SidebarGroupOrder.Save();
         ColumnOrder.Save();
+        ActionMenuGroupOrder.Save();
 
         _userSettings.Save();
     }
@@ -209,4 +211,5 @@ public class GeneralSettingsViewModel : ViewModelBase
     public ResultTypeOrderViewModel ResultTypeOrder { get; }
     public SidebarGroupOrderViewModel SidebarGroupOrder { get; }
     public ColumnOrderViewModel ColumnOrder { get; }
+    public ActionMenuGroupOrderViewModel ActionMenuGroupOrder { get; }
 }
