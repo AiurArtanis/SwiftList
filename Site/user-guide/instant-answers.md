@@ -48,7 +48,7 @@ type often.
 
 | Keyword (default) | Plugin | What it searches |
 |---|---|---|
-| `ps` | Process Manager | Running processes by name — select one to kill it. |
+| `ps` | Process Manager | Running processes by name, PID, or window title (fuzzy/pinyin matches too) — select one to kill it. |
 | `tr` | Translation | Translates the typed text, auto-detecting source language and translating to/from your interface language. |
 | `bm` | Browser Data | Bookmarks and history from Chrome/Chromium-family and Firefox-family browser profiles you've added under that plugin's own settings. |
 | `set` | Core Extensions | Every setting in the app, fuzzy-matched by name — pick one to jump straight to it in Settings, highlighted. Type `set` with nothing after it to list every setting. |
@@ -65,6 +65,18 @@ g swiftlist github
 ```
 
 opens a Google search for "swiftlist github" in your browser.
+
+## File Filters
+
+Index specific folders under their own rule, configured entirely under **Settings → Plugins →
+File Filters → Configure**. Each rule has its own **Target Folders** list (scanned recursively),
+an **Extensions / Pattern** field (e.g. `*.exe;*.lnk` — several patterns separated by `;` or `,`
+are all matched; the default `*` matches every file), and an optional **Filter Name** shown in the
+result description. Subfolders are always included regardless of the pattern — only files are
+filtered by it.
+
+Add a **Shortcut Keyword** to gate a rule's matches behind a prefix, the same as the built-in
+keywords above, instead of always mixing them into the general index.
 
 ## Fully custom (you define the keyword)
 

@@ -48,6 +48,22 @@ width/height value, and make sure you're on the latest release.
   patterns, and regexes, and any of the three could be catching it unintentionally.
 - Check the drive it lives on is enabled under **Settings → Index → Local/Network Drives**.
 
+## Typing Chinese (or another IME language) into the inline window doesn't work
+
+The [inline window](./getting-started#the-three-windows) deliberately never takes real keyboard
+focus away from the window it's docked in — that's what lets you dismiss it and land exactly back
+where you were, with no focus flicker. An IME's composition (the candidate list, and the character
+it actually commits) only happens for whichever window holds *real* focus, though, which is always
+the docked-in app, never SwiftList — so there's no message SwiftList could intercept to capture
+what you typed. This is a structural limitation of how the inline window works, not a bug.
+
+Two options:
+
+- Type the pinyin romanization directly (no IME candidate popup needed) — SwiftList matches
+  Chinese filenames by pinyin automatically, see [Search Syntax](./search-syntax#chinese-filenames-pinyin-aliasing).
+- Use the [quick window](./getting-started#the-three-windows) instead (double-tap `Ctrl` by
+  default) — it's a real focused window, so IME composition works there normally.
+
 ## Still stuck?
 
 Check the **Service**, **App**, and **Hook** log tabs under
