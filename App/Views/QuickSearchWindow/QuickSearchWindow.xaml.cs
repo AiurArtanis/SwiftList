@@ -235,6 +235,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     public void ShowWindow(string? initialQuery) => _controller.ShowWindow(initialQuery);
     public void HideWindow() => _controller.HideWindow(true);
     public void HideWindowNoRestore() => _controller.HideWindow(false);
+    public void SuppressNextForegroundRestore() => _controller.SuppressNextRestore();
     public void ToggleVisibility() => _controller.ToggleVisibility();
     public void OpenFileOrFolderExternal(string path) => FileExecutor.OpenFileOrFolder(path, TxtSearch.Text, HideWindow);
     public void OpenFileOrFolderAsAdminExternal(string path) => FileExecutor.OpenFileOrFolderAsAdmin(path, TxtSearch.Text, HideWindow);

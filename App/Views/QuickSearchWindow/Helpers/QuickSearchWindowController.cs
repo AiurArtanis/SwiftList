@@ -33,6 +33,19 @@ public class QuickSearchWindowController
     // would still fire and hide the window moments after the user just re-summoned it.
     private int _visibilityOpToken;
 
+    // Set by a caller that's about to intentionally move focus to an external window itself as part of
+    // executing a result (e.g. WindowSwitcher's "activatewindow:" action -- see PluginActionExecutor).
+    // HideWindow's actual restore-focus step can be reached from THREE independent triggers -- this
+    // class's own HideWindow call, QuickSearchWindow.Window_Deactivated's safety net, and
+    // QuickSearchWindowForegroundWatcher's global foreground hook -- and whichever one happens to win
+    // the FinishHide race would otherwise restore focus to _lastActiveHwnd (whatever was foreground
+    // before this window was ever shown), undoing the freshly-activated target a beat later. Guarding
+    // FinishHide's own restore step once, here, covers all three without needing each caller to agree
+    // on which of them will actually fire first. Consumed (and cleared) the next time FinishHide runs,
+    // regardless of which trigger got there.
+    private bool _suppressNextRestore;
+    public void SuppressNextRestore() => _suppressNextRestore = true;
+
     // useAltTapBypass: see HookCommandHandler's ForceForeground case -- callers backed by very recent real
     // input on the Hook's own thread already (e.g. Quick Navigation's own mouse click) should pass false.
     public static void ForceForeground(IntPtr hwnd, bool useAltTapBypass = true)
@@ -247,7 +260,8 @@ public class QuickSearchWindowController
             InlineSearchManager.Instance.KeyboardHook.IsQuickSearchWindowVisible = false;
             InlineSearchManager.Instance.KeyboardHook.Start();
 
-            if (restoreFocus && _lastActiveHwnd != IntPtr.Zero) SetForegroundWindow(_lastActiveHwnd);
+            if (restoreFocus && !_suppressNextRestore && _lastActiveHwnd != IntPtr.Zero) SetForegroundWindow(_lastActiveHwnd);
+            _suppressNextRestore = false;
             _lastActiveHwnd = IntPtr.Zero;
 
             Task.Run(async () =>

@@ -80,6 +80,32 @@ public static class PluginActionExecutor
                         return true;
                     }
 
+                    if (arg.StartsWith("activatewindow:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var hwndStr = arg.Substring("activatewindow:".Length).Trim();
+                        if (long.TryParse(hwndStr, out var hwndValue) && hwndValue != 0)
+                        {
+                            // Bringing this target window forward is about to deactivate/hide our own
+                            // window through one of THREE independent paths (this method's own HideWindow
+                            // call above, QuickSearchWindow.Window_Deactivated's safety net, and
+                            // QuickSearchWindowForegroundWatcher's global foreground hook) -- whichever
+                            // one actually wins the FinishHide race would otherwise restore focus to
+                            // _lastActiveHwnd (whatever was foreground before SwiftList was ever shown),
+                            // undoing this activation a beat later. Suppress it up front, before
+                            // ForceForeground triggers any of them.
+                            (view as QuickSearchWindow)?.SuppressNextForegroundRestore();
+
+                            // Reuses the same ForceForeground the search window's own hotkey-activation
+                            // path uses to restore itself -- it's a generic "bring this HWND to the
+                            // foreground, bypassing Windows' foreground-lock restriction" mechanism, not
+                            // something specific to SwiftList's own windows. useAltTapBypass defaults to
+                            // true, matching a keyboard Enter press here rather than a click already
+                            // backed by very recent input on the Hook's own thread.
+                            Views.QuickSearchWindow.Helpers.QuickSearchWindowController.ForceForeground(new IntPtr(hwndValue));
+                        }
+                        return true;
+                    }
+
                     var runAsAdmin = false;
                     if (arg.StartsWith("runas:", StringComparison.OrdinalIgnoreCase))
                     {
