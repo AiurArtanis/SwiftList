@@ -31,6 +31,21 @@ public sealed class KeyboardUtilsTests
     public void GetKeyVirtualCode_OemKeys_ReturnExpectedCode(string key, int expected) => Assert.AreEqual(expected, KeyboardUtils.GetKeyVirtualCode(key));
 
     [TestMethod]
+    [DataRow("HOME", 0x24)]
+    [DataRow("END", 0x23)]
+    [DataRow("PAGEUP", 0x21)]
+    [DataRow("PRIOR", 0x21)]
+    [DataRow("PAGEDOWN", 0x22)]
+    [DataRow("NEXT", 0x22)]
+    [DataRow("INSERT", 0x2D)]
+    [DataRow("DELETE", 0x2E)]
+    [DataRow("LEFT", 0x25)]
+    [DataRow("UP", 0x26)]
+    [DataRow("RIGHT", 0x27)]
+    [DataRow("DOWN", 0x28)]
+    public void GetKeyVirtualCode_NavigationKeys_ReturnExpectedCode(string key, int expected) => Assert.AreEqual(expected, KeyboardUtils.GetKeyVirtualCode(key));
+
+    [TestMethod]
     public void GetKeyVirtualCode_IsCaseInsensitiveAndTrimmed()
     {
         Assert.AreEqual(0x20, KeyboardUtils.GetKeyVirtualCode("  space  "));

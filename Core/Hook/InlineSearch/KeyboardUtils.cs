@@ -29,6 +29,20 @@ internal static class KeyboardUtils
         if (key == "OEM6") return 0xDD;      // ]}
         if (key == "OEM7") return 0xDE;      // '"
 
+        // Navigation/editing keys -- same gap as the OEM keys above (see GitHub issue #153: "Alt+Home"
+        // configured as the toggle-window hotkey silently never matched, since Home had no mapping here
+        // and GetKeyVirtualCode returned 0).
+        if (key == "HOME") return 0x24;
+        if (key == "END") return 0x23;
+        if (key == "PAGEUP" || key == "PRIOR") return 0x21;
+        if (key == "PAGEDOWN" || key == "NEXT") return 0x22;
+        if (key == "INSERT") return 0x2D;
+        if (key == "DELETE") return 0x2E;
+        if (key == "LEFT") return 0x25;
+        if (key == "UP") return 0x26;
+        if (key == "RIGHT") return 0x27;
+        if (key == "DOWN") return 0x28;
+
         if (key.Length == 1 && key[0] >= 'A' && key[0] <= 'Z')
             return key[0];
         if (key.Length == 1 && key[0] >= '0' && key[0] <= '9')
