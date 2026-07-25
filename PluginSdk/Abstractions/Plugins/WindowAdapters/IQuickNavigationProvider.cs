@@ -24,6 +24,19 @@ public interface IQuickNavigationProvider : IPluginComponent
     string IPluginComponent.Name => GroupName;
 
     /// <summary>
+    /// Optional action shown as a small button in this provider's own root-level group header (see
+    /// <see cref="GroupName"/>) -- e.g. "add the current folder" for a bookmarking-style provider.
+    /// Null (the default) means no button is shown. Invoked with the same ISearchResult GetMenuItems
+    /// itself receives for the root level. A submenu-level equivalent exists too: see
+    /// <see cref="DynamicMenuItem.IsHeader"/> and its own OnExecute for headers a provider returns
+    /// from GetMenuItems directly, at any depth.
+    /// </summary>
+    Action<ISearchResult>? HeaderAction => null;
+
+    /// <summary>Tooltip for <see cref="HeaderAction"/>'s button. Ignored if HeaderAction is null.</summary>
+    string? HeaderActionTooltip => null;
+
+    /// <summary>
     /// Determines whether this provider can supply navigation items for the given search result.
     /// </summary>
     bool CanProvide(ISearchResult result);

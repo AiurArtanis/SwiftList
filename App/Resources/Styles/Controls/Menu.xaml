@@ -199,4 +199,50 @@
         </Setter>
     </Style>
 
+    <!-- Same look as QuickNavGroupHeaderStyle above, but for a header carrying an embedded action
+         button (see QuickNavigationMenu.CreateHeaderMenuItem): Header is a Grid (label + button), not
+         a plain string, so this needs a ContentPresenter instead of a TextBlock bound to it. Left
+         enabled/hit-test-visible (unlike the plain style) so the button can actually receive clicks:
+         the row's own StaysOpenOnClick=True (set in code, since it's an instance property, not
+         style-settable the same way) keeps a click on the label/background from closing the menu with
+         no button pressed. -->
+    <Style x:Key="QuickNavGroupHeaderWithActionStyle" TargetType="{x:Type MenuItem}">
+        <Setter Property="Height" Value="{x:Static services:UiMetrics.MinSectionHeaderHeight}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type MenuItem}">
+                    <ContentPresenter Content="{TemplateBinding Header}" Margin="8,0,4,0" VerticalAlignment="Center"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The header's own embedded "+" button: compact, borderless until hovered so it doesn't
+         compete visually with the header label next to it. -->
+    <Style x:Key="QuickNavHeaderActionButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="16"/>
+        <Setter Property="Height" Value="16"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" CornerRadius="4" Background="{TemplateBinding Background}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBackground}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

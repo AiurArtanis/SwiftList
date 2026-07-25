@@ -30,6 +30,12 @@ public class Provider : IQuickNavigationProvider
     // the plugin (FolderCascaderPlugin has no other component contributing quick-navigation items).
     public string GroupName => TranslationService.Get("FolderCascader_PluginName");
 
+    // Root-level equivalent of the "+" MenuBuilder.InsertCategoryHeader prepends to each nested
+    // category submenu -- the host renders this in the root group header itself (see
+    // QuickNavigationMenu.Show), since that header isn't something this plugin builds directly.
+    public Action<ISearchResult>? HeaderAction => result => MenuBuilder.PromptAndAddCurrentFolder(result.FullPath, "");
+    public string? HeaderActionTooltip => TranslationService.Get("FolderCascader_AddCurrentFolder");
+
     public bool CanProvide(ISearchResult result) => result != null && !string.IsNullOrEmpty(result.FullPath);
 
     public IEnumerable<DynamicMenuItem> GetMenuItems(ISearchResult result, IntPtr hMenu) =>

@@ -195,125 +195,15 @@ public sealed class MenuBuilderTests
     }
 
     [TestMethod]
-    public void AppendAddCurrentFolderItem_ExistingDirectory_AppendsItemWithOnExecuteNotCommandId()
+    public void GetMenuItems_RootLevel_NeverIncludesAHeaderOrStandaloneAddItem()
     {
-        var items = new List<DynamicMenuItem>();
-        var result = new FakeResult { FullPath = Path.GetTempPath() };
-
-        MenuBuilder.AppendAddCurrentFolderItem(items, result, Array.Empty<string>());
-
-        var added = items.Single();
-        Assert.IsNotNull(added.OnExecute);
-        // Must NOT use CommandId: the host resolves any allocated CommandId straight to its stored
-        // string and passes that to NavigateOrOpen as a literal path to shell-open (see
-        // QuickNavigationMenu.CreateMenuItem), before Provider.ExecuteCommand ever runs.
-        Assert.AreEqual(0u, added.CommandId);
-    }
-
-    [TestMethod]
-    public void AppendAddCurrentFolderItem_OnExecute_PromptsThenSavesTheActiveFolderAtTheGivenLevel()
-    {
-        PluginSdk.Services.PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
-            pluginId == "SwiftList.Plugins.FolderCascader" && key == "Folders" ? new List<FolderCascaderPlugin.FolderConfigItem>() : defaultValue;
-        List<FolderCascaderPlugin.FolderConfigItem>? saved = null;
-        PluginSdk.Services.PluginSettingsService.SetSettingFunc = (_, _, value) => saved = (List<FolderCascaderPlugin.FolderConfigItem>)value!;
-        // Simulates the user confirming the prompt with the pre-filled default name -- returns exactly
-        // what PluginFieldPromptWindow.ShowPrompt would for an unedited Text field's DefaultValue.
-        PluginSdk.Services.PluginPromptService.PromptFunc = (title, fields, initialValues) =>
-            fields.ToDictionary(f => f.Key, object? (f) => f.DefaultValue);
-        try
-        {
-            var items = new List<DynamicMenuItem>();
-            var result = new FakeResult { FullPath = Path.GetTempPath() };
-            MenuBuilder.AppendAddCurrentFolderItem(items, result, new[] { "Tools", "Network" });
-
-            items.Single().OnExecute!();
-
-            var added = saved!.Single();
-            Assert.AreEqual(Path.GetTempPath(), added.Path);
-            Assert.AreEqual("Tools/Network", added.SubMenu);
-        }
-        finally
-        {
-            PluginSdk.Services.PluginSettingsService.GetSettingFunc = null;
-            PluginSdk.Services.PluginSettingsService.SetSettingFunc = null;
-            PluginSdk.Services.PluginPromptService.PromptFunc = null;
-        }
-    }
-
-    [TestMethod]
-    public void AppendAddCurrentFolderItem_OnExecute_PromptCancelled_DoesNotSave()
-    {
-        var called = false;
-        PluginSdk.Services.PluginSettingsService.SetSettingFunc = (_, _, _) => called = true;
-        PluginSdk.Services.PluginPromptService.PromptFunc = (title, fields, initialValues) => null; // user cancelled
-        try
-        {
-            var items = new List<DynamicMenuItem>();
-            var result = new FakeResult { FullPath = Path.GetTempPath() };
-            MenuBuilder.AppendAddCurrentFolderItem(items, result, Array.Empty<string>());
-
-            items.Single().OnExecute!();
-
-            Assert.IsFalse(called);
-        }
-        finally
-        {
-            PluginSdk.Services.PluginSettingsService.SetSettingFunc = null;
-            PluginSdk.Services.PluginPromptService.PromptFunc = null;
-        }
-    }
-
-    [TestMethod]
-    public void AppendAddCurrentFolderItem_NonExistentDirectory_AddsNothing()
-    {
-        var items = new List<DynamicMenuItem>();
-        var result = new FakeResult { FullPath = @"Z:\definitely-not-a-real-swiftlist-dir" };
-
-        MenuBuilder.AppendAddCurrentFolderItem(items, result, Array.Empty<string>());
-
-        Assert.IsEmpty(items);
-    }
-
-    [TestMethod]
-    public void AppendAddCurrentFolderItem_EmptyFullPath_AddsNothing()
-    {
-        var items = new List<DynamicMenuItem>();
-        var result = new FakeResult { FullPath = "" };
-
-        MenuBuilder.AppendAddCurrentFolderItem(items, result, Array.Empty<string>());
-
-        Assert.IsEmpty(items);
-    }
-
-    [TestMethod]
-    public void AppendAddCurrentFolderItem_NonEmptyItemsWithoutTrailingSeparator_InsertsSeparatorFirst()
-    {
-        var items = new List<DynamicMenuItem> { new() { Text = "Existing" } };
-        var result = new FakeResult { FullPath = Path.GetTempPath() };
-
-        MenuBuilder.AppendAddCurrentFolderItem(items, result, Array.Empty<string>());
-
-        Assert.HasCount(3, items);
-        Assert.IsTrue(items[1].IsSeparator);
-    }
-
-    [TestMethod]
-    public void GetMenuItems_RootLevel_AddCurrentFolderComesBeforeFavoritesAndHistory()
-    {
+        // Root's own "+" comes from Provider.HeaderAction, rendered by the host directly into the
+        // group header row (see QuickNavigationMenu.Show) -- it's never one of GetMenuItems' own
+        // returned DynamicMenuItems the way a category submenu's header is.
         PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
-        {
-            if (pluginId != "SwiftList.Plugins.FolderCascader") return defaultValue;
-            return key switch
-            {
-                "Folders" => new List<FolderCascaderPlugin.FolderConfigItem> { Folder("Downloads", @"C:\Downloads") },
-                "ShowFavorites" => true,
-                "ShowHistory" => true,
-                _ => defaultValue
-            };
-        };
-        FavoritesService.GetFavoritesFunc = () => new[] { new FavoriteItem { Name = "MyFav", Path = @"C:\Fav" } };
-        HistoryService.GetHistoryEntriesFunc = () => new[] { new HistoryEntry("", @"C:\Hist", HistoryEntryKind.Folder, 0) };
+            pluginId == "SwiftList.Plugins.FolderCascader" && key == "Folders"
+                ? new List<FolderCascaderPlugin.FolderConfigItem> { Folder("Downloads", @"C:\Downloads") }
+                : defaultValue;
         try
         {
             var provider = new Provider();
@@ -321,19 +211,126 @@ public sealed class MenuBuilderTests
 
             var items = MenuBuilder.GetMenuItems(result, IntPtr.Zero, provider).ToList();
 
-            var addText = TranslationService.Get("FolderCascader_AddCurrentFolder");
-            var favoritesText = TranslationService.Get("FolderCascader_Favorites");
-            var addIndex = items.FindIndex(i => i.Text == addText);
-            var favoritesIndex = items.FindIndex(i => i.Text == favoritesText);
-            Assert.IsGreaterThanOrEqualTo(0, addIndex, "Add Current Folder item should be present");
-            Assert.IsGreaterThanOrEqualTo(0, favoritesIndex, "Favorites item should be present");
-            Assert.IsLessThan(favoritesIndex, addIndex, "Add Current Folder must come before Favorites/History, not after");
+            Assert.IsFalse(items.Any(i => i.IsHeader));
         }
         finally
         {
             PluginSettingsService.GetSettingFunc = null;
-            FavoritesService.GetFavoritesFunc = null;
-            HistoryService.GetHistoryEntriesFunc = null;
+        }
+    }
+
+    [TestMethod]
+    public void Provider_HeaderAction_IsWiredWithATooltip()
+    {
+        var provider = new Provider();
+
+        Assert.IsNotNull(provider.HeaderAction);
+        Assert.IsFalse(string.IsNullOrEmpty(provider.HeaderActionTooltip));
+    }
+
+    [TestMethod]
+    public void Provider_HeaderAction_PromptsThenSavesAtRootLevel()
+    {
+        PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
+            pluginId == "SwiftList.Plugins.FolderCascader" && key == "Folders" ? new List<FolderCascaderPlugin.FolderConfigItem>() : defaultValue;
+        List<FolderCascaderPlugin.FolderConfigItem>? saved = null;
+        PluginSettingsService.SetSettingFunc = (_, _, value) => saved = (List<FolderCascaderPlugin.FolderConfigItem>)value!;
+        PluginPromptService.PromptFunc = (title, fields, initialValues) =>
+            fields.ToDictionary(f => f.Key, object? (f) => f.DefaultValue);
+        try
+        {
+            var provider = new Provider();
+            var result = new FakeResult { FullPath = Path.GetTempPath() };
+
+            provider.HeaderAction!(result);
+
+            var added = saved!.Single();
+            Assert.AreEqual(Path.GetTempPath(), added.Path);
+            Assert.AreEqual("", added.SubMenu);
+        }
+        finally
+        {
+            PluginSettingsService.GetSettingFunc = null;
+            PluginSettingsService.SetSettingFunc = null;
+            PluginPromptService.PromptFunc = null;
+        }
+    }
+
+    [TestMethod]
+    public void GetMenuItems_CategoryLevel_FirstItemIsHeaderNamedAfterTheCategorysLastSegment()
+    {
+        PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
+            pluginId == "SwiftList.Plugins.FolderCascader" && key == "Folders"
+                ? new List<FolderCascaderPlugin.FolderConfigItem> { Folder("Router UI", @"C:\Net\Router", "Tools/Network") }
+                : defaultValue;
+        try
+        {
+            var provider = new Provider();
+            var handle = provider.AllocateHandle(MenuBuilder.EncodeCategoryPath(new[] { "Tools", "Network" }));
+            var result = new FakeResult { FullPath = Path.GetTempPath() };
+
+            var items = MenuBuilder.GetMenuItems(result, handle, provider).ToList();
+
+            var header = items[0];
+            Assert.IsTrue(header.IsHeader);
+            Assert.AreEqual("Network", header.Text);
+            Assert.IsNotNull(header.OnExecute);
+            Assert.IsTrue(items.Any(i => i.Text == "Router UI"));
+        }
+        finally
+        {
+            PluginSettingsService.GetSettingFunc = null;
+        }
+    }
+
+    [TestMethod]
+    public void GetMenuItems_EmptyCategoryLevel_StillGetsAHeader()
+    {
+        PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
+            pluginId == "SwiftList.Plugins.FolderCascader" && key == "Folders" ? new List<FolderCascaderPlugin.FolderConfigItem>() : defaultValue;
+        try
+        {
+            var provider = new Provider();
+            var handle = provider.AllocateHandle(MenuBuilder.EncodeCategoryPath(new[] { "Empty" }));
+            var result = new FakeResult { FullPath = Path.GetTempPath() };
+
+            var items = MenuBuilder.GetMenuItems(result, handle, provider).ToList();
+
+            Assert.IsTrue(items[0].IsHeader);
+            Assert.AreEqual("Empty", items[0].Text);
+            Assert.IsTrue(items.Any(i => i.IsDisabled));
+        }
+        finally
+        {
+            PluginSettingsService.GetSettingFunc = null;
+        }
+    }
+
+    [TestMethod]
+    public void GetMenuItems_CategoryLevel_HeaderOnExecute_PromptsThenSavesAtThatSubMenu()
+    {
+        PluginSettingsService.GetSettingFunc = (pluginId, key, defaultValue) =>
+            pluginId == "SwiftList.Plugins.FolderCascader" && key == "Folders" ? new List<FolderCascaderPlugin.FolderConfigItem>() : defaultValue;
+        List<FolderCascaderPlugin.FolderConfigItem>? saved = null;
+        PluginSettingsService.SetSettingFunc = (_, _, value) => saved = (List<FolderCascaderPlugin.FolderConfigItem>)value!;
+        PluginPromptService.PromptFunc = (title, fields, initialValues) =>
+            fields.ToDictionary(f => f.Key, object? (f) => f.DefaultValue);
+        try
+        {
+            var provider = new Provider();
+            var handle = provider.AllocateHandle(MenuBuilder.EncodeCategoryPath(new[] { "Tools", "Network" }));
+            var result = new FakeResult { FullPath = Path.GetTempPath() };
+            var items = MenuBuilder.GetMenuItems(result, handle, provider).ToList();
+
+            items[0].OnExecute!();
+
+            Assert.AreEqual("Tools/Network", saved!.Single().SubMenu);
+        }
+        finally
+        {
+            PluginSettingsService.GetSettingFunc = null;
+            PluginSettingsService.SetSettingFunc = null;
+            PluginPromptService.PromptFunc = null;
         }
     }
 

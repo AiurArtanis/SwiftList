@@ -62,7 +62,12 @@ public static class QuickNavigationMenu
 
             // Shown even when this is the only active provider (by request) -- same "always label the
             // group, not just when there's more than one" convention the actions menu already follows.
-            contextMenu.Items.Add(CreateGroupHeader(provider.GroupName));
+            var headerAction = provider.HeaderAction;
+            contextMenu.Items.Add(CreateGroupHeader(
+                provider.GroupName,
+                headerAction != null ? () => headerAction(dummyResult) : null,
+                provider.HeaderActionTooltip,
+                contextMenu));
 
             foreach (var item in providerItems)
                 // Root entries are navigation categories (Favorites/History/configured folders/drives), so
@@ -172,14 +177,83 @@ public static class QuickNavigationMenu
     // own section headers use (ActionMenuItemTemplate's SectionHeaderVisibility block), via a dedicated
     // style (QuickNavGroupHeaderStyle in Menu.xaml) since this popup's items are plain MenuItems, not
     // ActionMenuItemTemplate-driven rows.
-    internal static MenuItem CreateGroupHeader(string groupName) => new()
+    internal static MenuItem CreateGroupHeader(string groupName, Action? headerAction, string? headerActionTooltip, ContextMenu contextMenu) =>
+        CreateHeaderMenuItem(groupName, headerAction, headerActionTooltip, contextMenu);
+
+    // Shared by the root-level provider group header (Show()) and any DynamicMenuItem a provider marks
+    // IsHeader (CreateMenuItem below), so a submenu category header looks and behaves identically to
+    // the root one. Header set to a plain string with no action, or a Grid (label + button) once one
+    // is wired -- QuickNavGroupHeaderStyle's TemplateBinding only works for the former, hence the two
+    // separate styles in Menu.xaml.
+    private static MenuItem CreateHeaderMenuItem(string text, Action? headerAction, string? headerActionTooltip, ContextMenu contextMenu)
     {
-        Header = groupName,
-        Style = (Style)Application.Current.FindResource("QuickNavGroupHeaderStyle")
-    };
+        if (headerAction == null)
+        {
+            return new MenuItem
+            {
+                Header = text,
+                Style = (Style)Application.Current.FindResource("QuickNavGroupHeaderStyle")
+            };
+        }
+
+        var grid = new System.Windows.Controls.Grid();
+        grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = GridLength.Auto });
+
+        var textBlock = new System.Windows.Controls.TextBlock
+        {
+            Text = text,
+            Foreground = (System.Windows.Media.Brush)Application.Current.FindResource("AccentBlue"),
+            FontSize = 11,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        System.Windows.Controls.Grid.SetColumn(textBlock, 0);
+        grid.Children.Add(textBlock);
+
+        var button = new System.Windows.Controls.Button
+        {
+            Content = "\uE710", // Segoe MDL2 Assets "Add" glyph
+            Style = (Style)Application.Current.FindResource("QuickNavHeaderActionButtonStyle"),
+            ToolTip = headerActionTooltip
+        };
+        System.Windows.Controls.Grid.SetColumn(button, 1);
+        // Closes the menu and runs the action the same way triggerAction below does for any normal
+        // leaf item's OnExecute -- including the PlacementTarget.Hide() call, which turned out to
+        // matter here: without it, the prompt window PluginFieldPromptWindow.ShowInternal opens could
+        // still pick the popup's own (by-then-closing) helper window as its Owner, and WPF closes a
+        // window's owned windows right along with it -- the new prompt would flash open and
+        // immediately close again. Deferred to Background so the menu is fully gone by the time the
+        // action's own UI shows, matching every other item's click handling.
+        button.Click += (s, e) =>
+        {
+            e.Handled = true;
+            contextMenu.IsOpen = false;
+            (contextMenu.PlacementTarget as Window)?.Hide();
+            Application.Current.Dispatcher.BeginInvoke(headerAction, System.Windows.Threading.DispatcherPriority.Background);
+        };
+        grid.Children.Add(button);
+
+        return new MenuItem
+        {
+            Header = grid,
+            Focusable = false,
+            // A click anywhere on this row (not just the button) would otherwise close the whole menu
+            // per WPF's default leaf-MenuItem behavior, even though nothing was actually invoked --
+            // this keeps the row itself inert; the button's own handler above closes the menu on its
+            // own terms once headerAction has actually been dispatched.
+            StaysOpenOnClick = true,
+            Style = (Style)Application.Current.FindResource("QuickNavGroupHeaderWithActionStyle")
+        };
+    }
 
     internal static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, QuickNavTriggerContext trigger, bool enableRightClick = true, bool isRootItem = false)
     {
+        if (item.IsHeader)
+        {
+            return CreateHeaderMenuItem(item.Text, item.OnExecute, null, contextMenu);
+        }
+
         var menuItem = new MenuItem { Header = item.Text, IsEnabled = !item.IsDisabled, Focusable = !item.IsDisabled };
 
         if (item.HBitmapItem != IntPtr.Zero)

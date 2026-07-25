@@ -87,4 +87,12 @@ public class DynamicMenuItem
     /// </summary>
     public Action? OnExecute { get; set; }
     public string ShortcutHint { get; set; } = string.Empty;
+    /// <summary>
+    /// Renders as a non-clickable section header (like a Quick Navigation submenu's own group name)
+    /// instead of a normal row. Text is the header label; if OnExecute is also set, a small button
+    /// appears at the header's trailing edge invoking it (e.g. "add an entry to this category") --
+    /// clicking anywhere else on the header does nothing. HasSubMenu/CommandId/IsSeparator/IsDisabled/
+    /// HBitmapItem/IsActionable are ignored when this is true.
+    /// </summary>
+    public bool IsHeader { get; set; }
 }

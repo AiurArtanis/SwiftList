@@ -29,10 +29,6 @@ public static class MenuBuilder
                 AddFolderItems(items, folders, Array.Empty<string>(), provider);
             }
 
-            // Always immediately after your own configured folders, before Favorites/History -- those
-            // are separate, unrelated lists, and burying "Add" beneath them made it easy to miss.
-            AppendAddCurrentFolderItem(items, result, Array.Empty<string>());
-
             var showFavorites = PluginSettingsService.GetSetting(
                 "SwiftList.Plugins.FolderCascader",
                 "ShowFavorites",
@@ -196,7 +192,7 @@ public static class MenuBuilder
                 if (items.Count == 0)
                     items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_EmptyFolder"), IsDisabled = true });
 
-                AppendAddCurrentFolderItem(items, result, categoryPrefix);
+                InsertCategoryHeader(items, result, categoryPrefix);
             }
             else
             {
@@ -300,33 +296,21 @@ public static class MenuBuilder
 
     private const string CategoryPathPrefix = "foldercascader://category/";
 
-    // "Add current folder" only ever makes sense for a level backed by the editable Folders config --
-    // root and a user-defined SubMenu category -- never Favorites/History (their own separate lists)
-    // or a real filesystem folder being browsed (there's no SubMenu grouping concept to add it under).
-    // Gated on Directory.Exists per the user's own request: a fallback/placeholder active path (no
-    // Explorer window currently active) shouldn't offer to add itself.
-    //
-    // Uses OnExecute, not CommandId/AllocateCommand: the host resolves any allocated CommandId straight
-    // to its stored string and passes that to NavigateOrOpen as a literal path to shell-open, before
-    // Provider.ExecuteCommand ever runs (see QuickNavigationMenu.CreateMenuItem) -- fine for every other
-    // CommandId use in this file (they're all real, openable paths), but wrong for an action that isn't
-    // "open a path" at all.
-    internal static void AppendAddCurrentFolderItem(List<DynamicMenuItem> items, ISearchResult result, string[] prefix)
+    // Category submenus have no host-rendered header the way the root level does (see Provider.
+    // HeaderAction, wired into QuickNavigationMenu.Show's own per-provider group header) -- this is
+    // the plugin-owned equivalent for a nested level, prepended as the submenu's own first item so it
+    // reads as this level's title, not an ordinary row. Text is just the category's own last path
+    // segment ("Network" for "Tools/Network"), not the full prefix, matching how that same category
+    // shows up as a single "Network" entry one level up.
+    private static void InsertCategoryHeader(List<DynamicMenuItem> items, ISearchResult result, string[] prefix)
     {
-        if (string.IsNullOrEmpty(result.FullPath) || !Directory.Exists(result.FullPath))
-            return;
-
-        if (items.Count > 0 && !items.Last().IsSeparator)
-        {
-            items.Add(new DynamicMenuItem { IsSeparator = true });
-        }
         var folderPath = result.FullPath;
         var subMenu = string.Join("/", prefix);
-        items.Add(new DynamicMenuItem
+        items.Insert(0, new DynamicMenuItem
         {
-            Text = TranslationService.Get("FolderCascader_AddCurrentFolder"),
-            OnExecute = () => PromptAndAddCurrentFolder(folderPath, subMenu),
-            HBitmapItem = IconBitmapCache.AddHBitmap
+            IsHeader = true,
+            Text = prefix.Length > 0 ? prefix[^1] : string.Empty,
+            OnExecute = () => PromptAndAddCurrentFolder(folderPath, subMenu)
         });
     }
 
