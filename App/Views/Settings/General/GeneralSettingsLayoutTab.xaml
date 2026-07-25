@@ -61,7 +61,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <Grid Grid.Column="0" Width="24" Height="32" Margin="0,0,10,0" Background="Transparent" VerticalAlignment="Center" Cursor="SizeAll" helpers:DragReorder.IsHandle="True">
+                        <Grid Grid.Column="0" Width="18" Height="24" Margin="0,0,10,0" Background="Transparent" VerticalAlignment="Center" Cursor="SizeAll" helpers:DragReorder.IsHandle="True">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
@@ -71,12 +71,12 @@
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <Ellipse Grid.Row="0" Grid.Column="0" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
-                            <Ellipse Grid.Row="0" Grid.Column="1" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
-                            <Ellipse Grid.Row="1" Grid.Column="0" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
-                            <Ellipse Grid.Row="1" Grid.Column="1" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
-                            <Ellipse Grid.Row="2" Grid.Column="0" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
-                            <Ellipse Grid.Row="2" Grid.Column="1" Width="3" Height="3" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="0" Grid.Column="0" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="0" Grid.Column="1" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="1" Grid.Column="0" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="1" Grid.Column="1" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="2" Grid.Column="0" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
+                            <Ellipse Grid.Row="2" Grid.Column="1" Width="2.5" Height="2.5" Fill="{DynamicResource TextSecondary2}" Margin="1"/>
                         </Grid>
 
                         <TextBlock Grid.Column="1" Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"
