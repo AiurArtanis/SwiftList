@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>SwiftList.PluginSdk</AssemblyName>
     <RootNamespace>SwiftList.PluginSdk</RootNamespace>
-    <Version>1.3.9</Version>
+    <Version>1.4.0</Version>
     <GenerateDependencyFile>false</GenerateDependencyFile>
   </PropertyGroup>
 
