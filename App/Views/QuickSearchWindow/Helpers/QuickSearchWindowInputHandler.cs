@@ -176,7 +176,13 @@ public class QuickSearchWindowInputHandler
             if (num >= 0)
             {
                 var scrollViewer = WpfUiHelper.GetScrollViewer(_window.LstResults);
-                var firstVisible = scrollViewer != null ? (int)Math.Round(scrollViewer.VerticalOffset) : 0;
+                // LstResults scrolls by pixel (ScrollViewer.CanContentScroll="False", see ResultsControl.xaml),
+                // so VerticalOffset needs converting back to an item index -- same fix as
+                // QuickSearchShortcutHelper's own label-display logic already got; this is the separate
+                // execution-side lookup that maps the pressed digit back to an actual result.
+                var firstVisible = scrollViewer != null
+                    ? WpfUiHelper.GetFirstVisibleIndexFromPixelOffset(scrollViewer.VerticalOffset, UiMetrics.ScaledNormalRowHeight)
+                    : 0;
                 var shortcutIndex = 0;
                 for (var i = firstVisible; i < _window.LstResults.Items.Count; i++)
                 {
