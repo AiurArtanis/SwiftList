@@ -161,14 +161,10 @@ public class InlineSearchWindowInputHandler
     {
         if (num < 1 || num > 9) return;
         var scrollViewer = _layoutManager.GetScrollViewer(_window.LstResults);
-        // LstResults scrolls by pixel (ScrollViewer.CanContentScroll="False", see ResultsControl.xaml),
-        // so VerticalOffset needs converting back to an item index -- same fix as
-        // InlineSearchShortcutHelper's own label-display logic already got; this is the separate
+        // Mode-aware (see InlineSearchShortcutHelper's own comment) -- this is the separate
         // execution-side lookup that maps the pressed digit back to an actual result.
         var rowHeight = Math.Round(UiMetrics.SearchResultItemHeight * 0.7);
-        var firstVisible = scrollViewer != null
-            ? WpfUiHelper.GetFirstVisibleIndexFromPixelOffset(scrollViewer.VerticalOffset, rowHeight)
-            : 0;
+        var firstVisible = WpfUiHelper.GetFirstVisibleIndex(scrollViewer, rowHeight);
         var shortcutIndex = 1;
         for (var i = firstVisible; i < _window.LstResults.Items.Count; i++)
         {

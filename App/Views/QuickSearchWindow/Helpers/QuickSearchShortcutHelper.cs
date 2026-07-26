@@ -14,12 +14,10 @@ internal static class QuickSearchShortcutHelper
 {
     public static void UpdateShortcutHints(SwiftList.App.QuickSearchWindow window, ScrollViewer? scrollViewer)
     {
-        // LstResults has ScrollViewer.CanContentScroll="False" (see ResultsControl.xaml, needed so the
-        // tab-strip height budget can clip a partial row instead of leaving blank space), so VerticalOffset
-        // is in pixels, not items -- convert it back to an item index to find the first visible row.
-        var firstVisible = scrollViewer != null
-            ? WpfUiHelper.GetFirstVisibleIndexFromPixelOffset(scrollViewer.VerticalOffset, UiMetrics.ScaledNormalRowHeight)
-            : 0;
+        // LstResults toggles between item-based (virtualized -- VerticalOffset is already an item index)
+        // and pixel-based (VerticalOffset needs converting) scrolling depending on whether the current
+        // layout pass needs to clip a partial row -- see QuickSearchWindowLayoutManager.ApplyResultsLayout.
+        var firstVisible = WpfUiHelper.GetFirstVisibleIndex(scrollViewer, UiMetrics.ScaledNormalRowHeight);
         var shortcutIndex = 1;
 
         var selectMod = UserSettings.Load().Hotkeys.SelectJumpModifier;

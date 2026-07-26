@@ -118,4 +118,15 @@ public sealed class WpfUiHelperTests
     [TestMethod]
     public void GetFirstVisibleIndexFromPixelOffset_ZeroRowHeight_ReturnsZeroInsteadOfDividingByZero() =>
         Assert.AreEqual(0, WpfUiHelper.GetFirstVisibleIndexFromPixelOffset(100.0, 0.0));
+
+    // QuickSearchWindowLayoutManager toggles CanContentScroll at runtime (item-based/virtualized normally,
+    // pixel-based only while clipping a partial row to the tab-strip budget), so this must read whichever
+    // mode is CURRENTLY set rather than assuming one, or Ctrl+1-9 breaks the moment the other mode is
+    // active (this exact area has regressed twice already this way). A bare ScrollViewer never outside a
+    // real layout pass always reports VerticalOffset=0 (ScrollableHeight is 0 with no content, so
+    // ScrollToVerticalOffset has nothing to clamp into), which is why these only exercise the null case --
+    // the mode-dependent arithmetic itself is GetFirstVisibleIndexFromPixelOffset, already covered above.
+    [TestMethod]
+    public void GetFirstVisibleIndex_NullScrollViewer_ReturnsZero() =>
+        Assert.AreEqual(0, WpfUiHelper.GetFirstVisibleIndex(null, 58.0));
 }

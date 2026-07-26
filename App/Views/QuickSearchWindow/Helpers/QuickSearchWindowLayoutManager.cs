@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
@@ -83,11 +84,14 @@ internal sealed class QuickSearchWindowLayoutManager
     // MUST stay deferred (never call ApplyResultsLayout synchronously from a Results.CollectionChanged
     // handler -- see QuickSearchWindow.xaml.cs's own comment on that subscription for why: LstResults's
     // ItemContainerGenerator is also a CollectionChanged subscriber, and forcing a layout pass before it
-    // finishes reconciling the same notification throws). Send, not Render: real frame-level diagnostics
-    // caught a fully composited, wrong-height frame slipping through even at Render priority (high, but
-    // not "guaranteed before the very next paint" high) -- Send still waits for this synchronous call
-    // stack (and so the generator's own reconciliation) to finish first, but preempts the render/paint
-    // pass once it does, rather than queuing behind it like Render does.
+    // finishes reconciling the same notification throws). Render alone let a fully composited, wrong-
+    // height frame slip through in real frame-level diagnostics, so this needs to sit above it -- but
+    // Send (WPF's own input-dispatch priority) turned out to be one tier too aggressive: every keystroke's
+    // results update now competed directly with the NEXT keystroke's own dispatch, which is what made
+    // typing feel laggy. Normal sits between the two: still higher than Render (should still win the race
+    // against that same paint), but no longer contends with Send-tier input processing. Needs the same
+    // kind of real-world confirmation Send originally got -- re-add frame-level diagnostics if this turns
+    // out not to be high enough after all.
     public void QueueResultsLayoutUpdate()
     {
         if (Interlocked.Exchange(ref _layoutUpdateQueued, 1) == 1)
@@ -97,7 +101,7 @@ internal sealed class QuickSearchWindowLayoutManager
         {
             Interlocked.Exchange(ref _layoutUpdateQueued, 0);
             ApplyResultsLayout();
-        }), DispatcherPriority.Send);
+        }), DispatcherPriority.Normal);
     }
 
     // Runs the actual height computation immediately instead of deferring -- needed by
@@ -123,22 +127,40 @@ internal sealed class QuickSearchWindowLayoutManager
         // Same idea as UpdateActionsLayout reducing its own row budget by actionsHeaderHeight: the
         // startup panel's tab strip (Grid.Row="2") sits stacked above this list, so a full 9-row list
         // plus the tab strip would otherwise grow the window taller than a full list with no tab strip
-        // at all. LstResults now has ScrollViewer.CanContentScroll="False" (see ResultsControl.xaml),
-        // same as LstActions already did -- that switches it to pixel-based scrolling, so capping at a
-        // ceiling that isn't a whole multiple of the row height clips the last row's rendering at the
-        // boundary instead of leaving the leftover fraction as unrendered blank space underneath it.
+        // at all. The tab strip's own footprint is essentially never a whole multiple of the row height,
+        // so capping at this ceiling can leave a fractional-row remainder that a virtualized, item-based
+        // ListBox can't render (whole rows only) -- it'd show up as unrendered blank space below the last
+        // full row. LstResults switches to pixel-based scrolling (ScrollViewer.CanContentScroll="False",
+        // same as LstActions already does) ONLY for this one cap, so it clips the boundary row instead;
+        // every other pass (the overwhelmingly common case while actively typing, since the tab strip only
+        // shows for an empty query) keeps the WPF-default item-based virtualization, which only realizes
+        // the ~9 actually-visible rows instead of the full ~50-row result set.
+        var isClippingToNonRowMultiple = false;
         if (_window.StartupPanelTabStrip.Visibility == Visibility.Visible)
         {
             var tabStripMargin = _window.StartupPanelTabStrip.Margin;
             var tabStripFootprint = _window.StartupPanelTabStrip.ActualHeight + tabStripMargin.Top + tabStripMargin.Bottom;
             var maxAvailableHeight = 9 * UiMetrics.ScaledNormalRowHeight - tabStripFootprint;
-            resultsHeight = Math.Max(0.0, Math.Min(resultsHeight, maxAvailableHeight));
+            if (resultsHeight > maxAvailableHeight)
+            {
+                resultsHeight = Math.Max(0.0, maxAvailableHeight);
+                isClippingToNonRowMultiple = true;
+            }
         }
+        ScrollViewer.SetCanContentScroll(_window.LstResults, !isClippingToNonRowMultiple);
+
+        // Shortcut hints (Ctrl+1..9) depend on which rows are visible, not on the panel's own height, so
+        // they need refreshing on every call regardless of what's below -- but the SizeToContent toggle is
+        // a full window measure/arrange, and re-running it when the height hasn't actually moved (common
+        // while typing: narrowing an already 9+-result query keeps summing to the same 9-row total) was
+        // pure waste stacked on every keystroke's results update.
+        UpdateShortcutHints();
+
+        if (_window.LstResults.Height == resultsHeight && _window.ResultsPanelControl.Height == resultsHeight)
+            return;
 
         _window.LstResults.Height = resultsHeight;
         _window.ResultsPanelControl.Height = resultsHeight;
-
-        UpdateShortcutHints();
         _window.SizeToContent = SizeToContent.Manual;
         _window.SizeToContent = SizeToContent.WidthAndHeight;
     }
