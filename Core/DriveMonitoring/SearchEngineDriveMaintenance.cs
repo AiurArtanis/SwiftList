@@ -35,8 +35,9 @@ internal sealed class SearchEngineDriveMaintenance
         {
             var detected = VolumeHelper.DetectIndexableLocalDrives();
             var detectedSet = new HashSet<string>(detected, StringComparer.OrdinalIgnoreCase);
-            var cached = LocalDriveCacheLocator.ListCachedDrives(IndexCacheDir);
-            var visible = detected.Concat(cached).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(d => d).ToList();
+            var cachedEntries = LocalDriveCacheLocator.ListCachedDrives(IndexCacheDir);
+            var cachedPaths = cachedEntries.ToDictionary(e => e.Drive, e => e.Path, StringComparer.OrdinalIgnoreCase);
+            var visible = detected.Concat(cachedEntries.Select(e => e.Drive)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(d => d).ToList();
             var enabledIds = new HashSet<string>(_settings().LocalDrives, StringComparer.OrdinalIgnoreCase);
             var supported = enabledIds.Count == 0
                 ? detected
@@ -49,7 +50,7 @@ internal sealed class SearchEngineDriveMaintenance
                 var current = _indexer.Status.Drives.ToDictionary(d => d.Drive, StringComparer.OrdinalIgnoreCase);
                 var next = new List<UsnIndexer.DriveIndexStatus>();
                 foreach (var drive in visible)
-                    next.Add(DriveMaintenanceHelper.UpdateStatus(drive, detectedSet.Contains(drive), enabled.Contains(drive), IndexCacheDir, current, drivesToBuild));
+                    next.Add(DriveMaintenanceHelper.UpdateStatus(drive, detectedSet.Contains(drive), enabled.Contains(drive), IndexCacheDir, current, drivesToBuild, cachedPaths));
                 _indexer.Status.Drives = next;
             }
 

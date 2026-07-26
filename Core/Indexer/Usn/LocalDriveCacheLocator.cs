@@ -20,14 +20,21 @@ internal static class LocalDriveCacheLocator
             TryDelete(FileRecordStoreSerializer.GetBasePath(cacheDir, key) + ".idx");
     }
 
+    // Drive letter + the actual on-disk cache file path that was found for it. GetCachePath can't be
+    // used to recover this path for a drive that isn't currently present: it derives the filename from
+    // a live volume identity (VolumeHelper.GetVolumeIdentity), which requires the volume to be mounted
+    // to query. ListCachedDrives already has to open every .idx file to read its SourceKey anyway, so it
+    // carries the path it found that key at back to the caller instead of discarding it.
+    public readonly record struct CachedDriveEntry(string Drive, string Path);
+
     // Drives with an on-disk cache but not currently detected (unplugged, disconnected) still need a
     // status row -- otherwise they'd vanish from the list entirely instead of showing as "unavailable".
-    public static IReadOnlyList<string> ListCachedDrives(string cacheDir)
+    public static IReadOnlyList<CachedDriveEntry> ListCachedDrives(string cacheDir)
     {
         if (!Directory.Exists(cacheDir))
-            return Array.Empty<string>();
+            return Array.Empty<CachedDriveEntry>();
 
-        var drives = new List<string>();
+        var entries = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var path in Directory.EnumerateFiles(cacheDir, "*.idx"))
         {
             SnapshotFormat.Meta? meta;
@@ -50,10 +57,13 @@ internal static class LocalDriveCacheLocator
             {
                 var drive = NormalizeDrive(meta.SourceKey);
                 if (drive.Length == 1)
-                    drives.Add(drive);
+                    entries[drive] = path;
             }
         }
-        return drives.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(d => d, StringComparer.OrdinalIgnoreCase).ToList();
+        return entries
+            .Select(kvp => new CachedDriveEntry(kvp.Key, kvp.Value))
+            .OrderBy(e => e.Drive, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static void TryDelete(string path)
