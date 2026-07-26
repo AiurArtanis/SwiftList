@@ -13,268 +13,24 @@ public static class MenuBuilder
         IconBitmapCache.EnsureIcons();
 
         if (hMenu == IntPtr.Zero)
-        {
-            provider.ClearSession();
-            var items = new List<DynamicMenuItem>();
+            return MenuBuilderContentExtensions.BuildRootMenu(provider);
 
-            // Unpersisted falls back to FolderCascaderPlugin's own schema DefaultValue automatically
-            // -- see PluginManager.GetSettingFunc -- so there's no separate hardcoded default here.
-            var folders = PluginSettingsService.GetSetting(
-                "SwiftList.Plugins.FolderCascader",
-                "Folders",
-                new List<FolderCascaderPlugin.FolderConfigItem>());
+        if (!provider.TryGetPath(hMenu, out var path) || path == null)
+            return Enumerable.Empty<DynamicMenuItem>();
 
-            if (folders != null)
-            {
-                AddFolderItems(items, folders, Array.Empty<string>(), provider);
-            }
+        if (path == "foldercascader://history")
+            return MenuBuilderContentExtensions.BuildHistoryMenu(provider);
 
-            var showFavorites = PluginSettingsService.GetSetting(
-                "SwiftList.Plugins.FolderCascader",
-                "ShowFavorites",
-                true);
+        if (path == "foldercascader://favorites")
+            return MenuBuilderContentExtensions.BuildFavoritesMenu(provider);
 
-            var showHistory = PluginSettingsService.GetSetting(
-                "SwiftList.Plugins.FolderCascader",
-                "ShowHistory",
-                true);
+        if (TryDecodeCategoryPath(path, out var categoryPrefix))
+            return MenuBuilderContentExtensions.BuildCategoryMenu(result, categoryPrefix, provider);
 
-            var favoritesList = FavoritesService.GetFavorites()
-                 .Where(p => !string.IsNullOrEmpty(p.Path))
-                 .ToList();
-
-            if (showFavorites && favoritesList.Count > 0)
-            {
-                if (items.Count > 0 && !items.Last().IsSeparator)
-                {
-                    items.Add(new DynamicMenuItem { IsSeparator = true });
-                }
-                items.Add(new DynamicMenuItem
-                {
-                    Text = TranslationService.Get("FolderCascader_Favorites"),
-                    HasSubMenu = true,
-                    SubMenuHandle = provider.AllocateHandle("foldercascader://favorites"),
-                    HBitmapItem = IconBitmapCache.FavoritesHBitmap
-                });
-            }
-
-            if (showHistory && HistoryService.GetHistoryEntries().Take(30).ToList().Count > 0)
-            {
-                if (items.Count > 0 && !items.Last().IsSeparator)
-                {
-                    items.Add(new DynamicMenuItem { IsSeparator = true });
-                }
-                items.Add(new DynamicMenuItem
-                {
-                    Text = TranslationService.Get("FolderCascader_History"),
-                    HasSubMenu = true,
-                    SubMenuHandle = provider.AllocateHandle("foldercascader://history"),
-                    HBitmapItem = IconBitmapCache.HistoryHBitmap
-                });
-            }
-
-            while (items.Count > 0 && items.Last().IsSeparator)
-            {
-                items.RemoveAt(items.Count - 1);
-            }
-
-            return items;
-        }
-
-        if (provider.TryGetPath(hMenu, out var path) && path != null)
-        {
-            var items = new List<DynamicMenuItem>();
-            var favoritesList = FavoritesService.GetFavorites()
-                .Where(p => !string.IsNullOrEmpty(p.Path))
-                .ToList();
-
-            if (path == "foldercascader://history")
-            {
-                var recentEntries = HistoryService.GetHistoryEntries().Take(30).ToList();
-                foreach (var entry in recentEntries)
-                {
-                    var rpath = entry.Path;
-                    if (string.IsNullOrWhiteSpace(rpath)) continue;
-
-                    // An app-type entry is always a launchable leaf, never a browsable folder -- and
-                    // its path (a real exe path, or a virtual shell:AppsFolder\{AUMID} id) can't be
-                    // existence-checked with Directory.Exists/File.Exists the way a real path can.
-                    if (entry.Kind == HistoryEntryKind.Application)
-                    {
-                        items.Add(new DynamicMenuItem
-                        {
-                            Text = GetDisplayName(rpath, ""),
-                            CommandId = provider.AllocateCommand(rpath),
-                            HBitmapItem = IntPtr.Zero
-                        });
-                    }
-                    else if (Directory.Exists(rpath))
-                    {
-                        items.Add(new DynamicMenuItem
-                        {
-                            Text = GetDisplayName(rpath, ""),
-                            HasSubMenu = true,
-                            SubMenuHandle = provider.AllocateHandle(rpath),
-                            HBitmapItem = IntPtr.Zero
-                        });
-                    }
-                    else if (File.Exists(rpath))
-                    {
-                        items.Add(new DynamicMenuItem
-                        {
-                            Text = Path.GetFileName(rpath) + $" ({Path.GetDirectoryName(rpath)})",
-                            CommandId = provider.AllocateCommand(rpath),
-                            HBitmapItem = IntPtr.Zero
-                        });
-                    }
-                }
-                if (items.Count == 0)
-                    items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_NoHistory"), IsDisabled = true });
-            }
-            else if (path == "foldercascader://favorites")
-            {
-                foreach (var favItem in favoritesList)
-                {
-                    var favPath = favItem.Path;
-                    var isVirtual = favPath.StartsWith("::") || favPath.StartsWith("shell:");
-                    if (isVirtual || Directory.Exists(favPath))
-                    {
-                        items.Add(new DynamicMenuItem
-                        {
-                            Text = GetDisplayName(favPath, favItem.Name),
-                            HasSubMenu = true,
-                            SubMenuHandle = provider.AllocateHandle(favPath),
-                            HBitmapItem = IntPtr.Zero
-                        });
-                    }
-                    else if (File.Exists(favPath))
-                    {
-                        items.Add(new DynamicMenuItem
-                        {
-                            Text = string.IsNullOrWhiteSpace(favItem.Name) ? Path.GetFileName(favPath) : favItem.Name,
-                            CommandId = provider.AllocateCommand(favPath),
-                            HBitmapItem = IntPtr.Zero
-                        });
-                    }
-                    else if (IsWebUrl(favPath))
-                    {
-                        // Web-address favorite: a leaf command item. The host renders the globe icon and
-                        // opens it in the browser (both keyed off the http/https path).
-                        items.Add(new DynamicMenuItem
-                        {
-                            Text = string.IsNullOrWhiteSpace(favItem.Name) ? favPath : favItem.Name,
-                            CommandId = provider.AllocateCommand(favPath),
-                            HBitmapItem = IntPtr.Zero
-                        });
-                    }
-                }
-                if (items.Count == 0)
-                    items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_NoFavorites"), IsDisabled = true });
-            }
-            else if (TryDecodeCategoryPath(path, out var categoryPrefix))
-            {
-                // A submenu category node (see AddFolderItems), not a real filesystem path -- reload
-                // the same Folders setting the root level did and re-run the grouping logic scoped to
-                // this category's prefix, same as CustomCommandsQuickNavProvider re-partitions its own
-                // flat list on every submenu expansion instead of building a tree once up front.
-                var folders = PluginSettingsService.GetSetting(
-                    "SwiftList.Plugins.FolderCascader",
-                    "Folders",
-                    new List<FolderCascaderPlugin.FolderConfigItem>());
-                if (folders != null)
-                {
-                    AddFolderItems(items, folders, categoryPrefix, provider);
-                }
-                while (items.Count > 0 && items.Last().IsSeparator)
-                {
-                    items.RemoveAt(items.Count - 1);
-                }
-                if (items.Count == 0)
-                    items.Add(new DynamicMenuItem { Text = TranslationService.Get("FolderCascader_EmptyFolder"), IsDisabled = true });
-
-                InsertCategoryHeader(items, result, categoryPrefix);
-            }
-            else
-            {
-                try
-                {
-                    var scanPath = path;
-                    if (scanPath.StartsWith("::") || scanPath.StartsWith("shell:"))
-                    {
-                        var resolved = ShellPathHelper.TryResolveVirtualPath(scanPath);
-                        if (Directory.Exists(resolved))
-                        {
-                            scanPath = resolved;
-                        }
-                    }
-
-                    if (Directory.Exists(scanPath))
-                    {
-                        var subDirs = Directory.GetDirectories(scanPath)
-                            .Where(d =>
-                            {
-                                try { return (File.GetAttributes(d) & (FileAttributes.Hidden | FileAttributes.System)) == 0; }
-                                catch { return false; }
-                            })
-                            .OrderBy(d => d, StringComparer.OrdinalIgnoreCase).ToList();
-                        var subFiles = Directory.GetFiles(scanPath)
-                            .Where(f =>
-                            {
-                                try { return (File.GetAttributes(f) & (FileAttributes.Hidden | FileAttributes.System)) == 0; }
-                                catch { return false; }
-                            })
-                            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
-
-                        foreach (var dir in subDirs)
-                        {
-                            items.Add(new DynamicMenuItem
-                            {
-                                Text = Path.GetFileName(dir),
-                                HasSubMenu = true,
-                                SubMenuHandle = provider.AllocateHandle(dir),
-                                HBitmapItem = IntPtr.Zero
-                            });
-                        }
-                        foreach (var file in subFiles)
-                        {
-                            items.Add(new DynamicMenuItem
-                            {
-                                Text = Path.GetFileName(file),
-                                CommandId = provider.AllocateCommand(file),
-                                HBitmapItem = IntPtr.Zero
-                            });
-                        }
-                    }
-                    else if (scanPath.StartsWith("::") || scanPath.StartsWith("shell:"))
-                    {
-                        ShellEnumerator.EnumerateShellFolder(scanPath, items, provider);
-                    }
-
-                    if (items.Count == 0)
-                    {
-                        items.Add(new DynamicMenuItem
-                        {
-                            Text = TranslationService.Get("FolderCascader_EmptyFolder"),
-                            IsDisabled = true
-                        });
-                    }
-                }
-                catch
-                {
-                    items.Add(new DynamicMenuItem
-                    {
-                        Text = TranslationService.Get("FolderCascader_EmptyFolder"),
-                        IsDisabled = true
-                    });
-                }
-            }
-            return items;
-        }
-
-        return Enumerable.Empty<DynamicMenuItem>();
+        return MenuBuilderContentExtensions.BuildFolderBrowseMenu(path, provider);
     }
 
-    private static string GetDisplayName(string path, string customName)
+    internal static string GetDisplayName(string path, string customName)
     {
         if (!string.IsNullOrWhiteSpace(customName)) return customName;
         // "shell:" covers both the "shell:::{CLSID}" virtual-folder form and "shell:AppsFolder\{AUMID}"
@@ -290,7 +46,7 @@ public static class MenuBuilder
         catch { return path; }
     }
 
-    private static bool IsWebUrl(string path)
+    internal static bool IsWebUrl(string path)
         => Uri.TryCreate(path?.Trim(), UriKind.Absolute, out var uri)
            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
@@ -302,7 +58,7 @@ public static class MenuBuilder
     // reads as this level's title, not an ordinary row. Text is just the category's own last path
     // segment ("Network" for "Tools/Network"), not the full prefix, matching how that same category
     // shows up as a single "Network" entry one level up.
-    private static void InsertCategoryHeader(List<DynamicMenuItem> items, ISearchResult result, string[] prefix)
+    internal static void InsertCategoryHeader(List<DynamicMenuItem> items, ISearchResult result, string[] prefix)
     {
         var folderPath = result.FullPath;
         var subMenu = string.Join("/", prefix);
