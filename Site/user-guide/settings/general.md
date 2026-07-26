@@ -94,9 +94,11 @@ section per plugin that contributes actions there (e.g. Custom Actions, or the W
 right-click menu). A section not yet in this list falls back to its natural position (built-in
 first, then plugin sections in whatever order they were contributed).
 
-Clicking a results-grid column header to sort by it is remembered only for as long as SwiftList
-keeps running — quitting the app (not just closing the window) resets sorting back to the default
-the next time you open it, unlike the column/sidebar order above which is saved permanently.
+Clicking a results-grid column header cycles through three states: ascending, descending, then a
+third click resets it back to the default relevance-ranked order (the header's sort arrow
+disappears). This is remembered only for as long as SwiftList keeps running — quitting the app (not
+just closing the window) resets sorting back to the default the next time you open it, unlike the
+column/sidebar order above which is saved permanently.
 
 ## Preview
 
