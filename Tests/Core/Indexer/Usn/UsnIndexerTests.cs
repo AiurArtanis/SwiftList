@@ -75,10 +75,9 @@ public sealed class UsnIndexerTests
         Assert.AreEqual(1, item.Dirs);
     }
 
-    // Regression coverage for the leaked-monitor bug: every one of the three call sites that (re)start a
-    // drive's monitor (cold start, a manual per-drive rebuild, hot-plug recovery) now routes through
-    // RegisterDriveMonitor, which must stop whatever was previously registered for that drive rather than
-    // leaving it running alongside the new one.
+    // Regression coverage for the leaked-monitor bug: every call site that (re)starts a drive's monitor
+    // (cold start, hot-plug recovery) now routes through RegisterDriveMonitor, which must stop whatever
+    // was previously registered for that drive rather than leaving it running alongside the new one.
     [TestMethod]
     public void RegisterDriveMonitor_ReplacingAnExistingEntry_DisposesThePreviousOne()
     {
@@ -114,47 +113,6 @@ public sealed class UsnIndexerTests
         var replacement = new DisposableSpy();
         indexer.RegisterDriveMonitor("C", replacement);
         Assert.IsFalse(replacement.WasDisposed);
-    }
-
-    // Regression coverage: a non-journaled local drive's rebuild used to leave its FolderDriveMonitor
-    // running for the entire rebuild window, silently discarding whatever it detected once the rebuild
-    // finished and swapped in a freshly-built LiveIndex (the old one, and its in-memory delta, just got
-    // disposed). RemoveDriveMonitor is called right before a rebuild starts specifically to close that gap.
-    [TestMethod]
-    public void RemoveDriveMonitor_ExistingEntry_DisposesItAndClearsTheRegistry()
-    {
-        var indexer = new UsnIndexer();
-        var monitor = new DisposableSpy();
-        indexer.RegisterDriveMonitor("C", monitor);
-
-        indexer.RemoveDriveMonitor("C");
-
-        Assert.IsTrue(monitor.WasDisposed);
-
-        // The registry must be cleared, not just the entry disposed -- otherwise a later RegisterDriveMonitor
-        // for "C" would try to dispose an already-disposed stale entry again.
-        var replacement = new DisposableSpy();
-        indexer.RegisterDriveMonitor("C", replacement);
-        Assert.IsFalse(replacement.WasDisposed);
-    }
-
-    [TestMethod]
-    public void RemoveDriveMonitor_NoEntryRegistered_DoesNotThrow() =>
-        new UsnIndexer().RemoveDriveMonitor("C");
-
-    [TestMethod]
-    public void RemoveDriveMonitor_OnlyRemovesTheNamedDrive_LeavesOthersRunning()
-    {
-        var indexer = new UsnIndexer();
-        var driveC = new DisposableSpy();
-        var driveD = new DisposableSpy();
-        indexer.RegisterDriveMonitor("C", driveC);
-        indexer.RegisterDriveMonitor("D", driveD);
-
-        indexer.RemoveDriveMonitor("C");
-
-        Assert.IsTrue(driveC.WasDisposed);
-        Assert.IsFalse(driveD.WasDisposed);
     }
 
     private sealed class DisposableSpy : IDisposable

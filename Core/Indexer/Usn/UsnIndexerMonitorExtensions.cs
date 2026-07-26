@@ -20,26 +20,6 @@ internal static class UsnIndexerMonitorExtensions
         old?.Dispose();
     }
 
-    // Stops (without replacing) whatever monitor is currently registered for this one drive, if any --
-    // called right before a single-drive rebuild starts. A rebuild replaces this drive's LiveIndex
-    // wholesale once it finishes (see UsnIndexerBuildExtensions.OnDriveCompleted's DropDriveFromRuntime),
-    // discarding whatever in-memory delta a still-running old monitor had applied to the doomed old
-    // instance in the meantime -- for a non-journaled drive (FolderDriveMonitor), that delta was the ONLY
-    // record of any change detected during the rebuild, so it's gone for good once the old LiveIndex is
-    // disposed. Stopping the monitor before the rebuild starts instead means the fresh walk itself is the
-    // sole (and, since it reads live filesystem state as it walks, generally sufficient) source of truth
-    // for that window; the new monitor DriveMonitorFactory.EnsureMonitor registers once the rebuild
-    // finishes picks up everything from that point on. A USN-journal drive doesn't need this (its next
-    // monitor replays from the pre-scan watermark regardless -- see JournalReader.IndexDrive), but
-    // stopping it early here is harmless either way.
-    internal static void RemoveDriveMonitor(this UsnIndexer indexer, string drive)
-    {
-        IDisposable? old;
-        lock (indexer.LockObj)
-            indexer._driveMonitors.Remove(drive, out old);
-        old?.Dispose();
-    }
-
     // Stops every currently-registered monitor -- a full rebuild-from-scratch tearing down and restarting
     // everything, or final app shutdown.
     internal static void DisposeAllDriveMonitors(this UsnIndexer indexer)

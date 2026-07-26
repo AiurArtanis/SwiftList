@@ -177,10 +177,6 @@ internal sealed class SearchEngineDriveMaintenance
             _indexer.Status.ActiveDrives = new List<string> { drive };
         }
         _indexer.SetDriveState(drive, "indexing");
-        // Stop this drive's own currently-running monitor (if any) before the rebuild starts -- see
-        // UsnIndexer.RemoveDriveMonitor's own comment on why a still-running monitor over the rebuild
-        // window can otherwise lose whatever it detects.
-        _indexer.RemoveDriveMonitor(drive);
         var metadata = _indexer.BuildDrives(new[] { drive }, clearExisting: false, cacheDir: IndexCacheDir);
         if (metadata.Count == 0)
         {
@@ -189,6 +185,11 @@ internal sealed class SearchEngineDriveMaintenance
         }
 
         EnsureDriveMonitor(drive, metadata[0].JournalId, metadata[0].NextUsn);
+        // The drive's own monitor stayed alive throughout the rebuild (see
+        // UsnIndexerExtensions.ApplyFolderChange); if it detected a change it couldn't persist against
+        // the doomed old LiveIndex, queue one follow-up refresh so the next walk observes it.
+        if (_indexer.ConsumeMissedFolderChangeDuringRebuild(drive))
+            QueueDriveRebuild(drive);
     }
 
     private void EnsureDriveMonitor(string drive, ulong journalId, long nextUsn) =>

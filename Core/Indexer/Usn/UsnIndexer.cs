@@ -44,6 +44,10 @@ public class UsnIndexer : IDisposable
     internal readonly Dictionary<string, IDisposable> _driveMonitors = new(StringComparer.OrdinalIgnoreCase);
     // Debounces UsnIndexerExtensions.ApplyFolderChange's own disk persist -- see its own comment on why.
     internal readonly KeyedDebouncer<string> _folderChangeSaveDebounce = new(1000, StringComparer.OrdinalIgnoreCase);
+    // Drives whose FolderDriveMonitor detected a change while a rebuild was in progress for that same
+    // drive -- see UsnIndexerExtensions.ApplyFolderChange (sets it) and ConsumeMissedFolderChangeDuringRebuild
+    // (consumes it to queue one follow-up refresh once the rebuild finishes).
+    internal readonly HashSet<string> _missedFolderChangeDuringRebuild = new(StringComparer.OrdinalIgnoreCase);
 
     public IndexerStatus Status { get; } = new();
     public object LockObj => _lockObj;
