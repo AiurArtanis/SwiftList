@@ -80,6 +80,14 @@ internal sealed class QuickSearchWindowLayoutManager
         _window.SizeToContent = SizeToContent.WidthAndHeight;
     }
 
+    // MUST stay deferred (never call ApplyResultsLayout synchronously from a Results.CollectionChanged
+    // handler -- see QuickSearchWindow.xaml.cs's own comment on that subscription for why: LstResults's
+    // ItemContainerGenerator is also a CollectionChanged subscriber, and forcing a layout pass before it
+    // finishes reconciling the same notification throws). Send, not Render: real frame-level diagnostics
+    // caught a fully composited, wrong-height frame slipping through even at Render priority (high, but
+    // not "guaranteed before the very next paint" high) -- Send still waits for this synchronous call
+    // stack (and so the generator's own reconciliation) to finish first, but preempts the render/paint
+    // pass once it does, rather than queuing behind it like Render does.
     public void QueueResultsLayoutUpdate()
     {
         if (Interlocked.Exchange(ref _layoutUpdateQueued, 1) == 1)
@@ -88,42 +96,51 @@ internal sealed class QuickSearchWindowLayoutManager
         _window.Dispatcher.BeginInvoke(new Action(() =>
         {
             Interlocked.Exchange(ref _layoutUpdateQueued, 0);
+            ApplyResultsLayout();
+        }), DispatcherPriority.Send);
+    }
 
-            // Sum each visible row's own height rather than assuming a uniform row size -- a section
-            // header, the "show more" row, or a row whose icon forces it to grow past the base height
-            // (see MinHeight in ListBox.xaml) would otherwise throw off a single-height-times-count guess,
-            // leaving stray blank space (or clipping) at the bottom of the list.
-            var results = _window.ViewModel.Results;
-            var visibleCount = Math.Min(results.Count, 9);
+    // Runs the actual height computation immediately instead of deferring -- needed by
+    // QuickSearchWindowController.ShowWindow, which forces its own synchronous UpdateLayout() right after
+    // populating the startup panel, so this must run before that to avoid sizing the window to whatever
+    // Height it was last left at. Safe to call synchronously there (unlike from Results.CollectionChanged
+    // above) since it isn't itself running from inside that event's dispatch.
+    public void ApplyResultsLayout()
+    {
+        // Sum each visible row's own height rather than assuming a uniform row size -- a section
+        // header, the "show more" row, or a row whose icon forces it to grow past the base height
+        // (see MinHeight in ListBox.xaml) would otherwise throw off a single-height-times-count guess,
+        // leaving stray blank space (or clipping) at the bottom of the list.
+        var results = _window.ViewModel.Results;
+        var visibleCount = Math.Min(results.Count, 9);
 
-            double resultsHeight = 0;
-            for (var i = 0; i < visibleCount; i++)
-            {
-                resultsHeight += results[i].ScaledItemHeight;
-            }
+        double resultsHeight = 0;
+        for (var i = 0; i < visibleCount; i++)
+        {
+            resultsHeight += results[i].ScaledItemHeight;
+        }
 
-            // Same idea as UpdateActionsLayout reducing its own row budget by actionsHeaderHeight: the
-            // startup panel's tab strip (Grid.Row="2") sits stacked above this list, so a full 9-row list
-            // plus the tab strip would otherwise grow the window taller than a full list with no tab strip
-            // at all. LstResults now has ScrollViewer.CanContentScroll="False" (see ResultsControl.xaml),
-            // same as LstActions already did -- that switches it to pixel-based scrolling, so capping at a
-            // ceiling that isn't a whole multiple of the row height clips the last row's rendering at the
-            // boundary instead of leaving the leftover fraction as unrendered blank space underneath it.
-            if (_window.StartupPanelTabStrip.Visibility == Visibility.Visible)
-            {
-                var tabStripMargin = _window.StartupPanelTabStrip.Margin;
-                var tabStripFootprint = _window.StartupPanelTabStrip.ActualHeight + tabStripMargin.Top + tabStripMargin.Bottom;
-                var maxAvailableHeight = 9 * UiMetrics.ScaledNormalRowHeight - tabStripFootprint;
-                resultsHeight = Math.Max(0.0, Math.Min(resultsHeight, maxAvailableHeight));
-            }
+        // Same idea as UpdateActionsLayout reducing its own row budget by actionsHeaderHeight: the
+        // startup panel's tab strip (Grid.Row="2") sits stacked above this list, so a full 9-row list
+        // plus the tab strip would otherwise grow the window taller than a full list with no tab strip
+        // at all. LstResults now has ScrollViewer.CanContentScroll="False" (see ResultsControl.xaml),
+        // same as LstActions already did -- that switches it to pixel-based scrolling, so capping at a
+        // ceiling that isn't a whole multiple of the row height clips the last row's rendering at the
+        // boundary instead of leaving the leftover fraction as unrendered blank space underneath it.
+        if (_window.StartupPanelTabStrip.Visibility == Visibility.Visible)
+        {
+            var tabStripMargin = _window.StartupPanelTabStrip.Margin;
+            var tabStripFootprint = _window.StartupPanelTabStrip.ActualHeight + tabStripMargin.Top + tabStripMargin.Bottom;
+            var maxAvailableHeight = 9 * UiMetrics.ScaledNormalRowHeight - tabStripFootprint;
+            resultsHeight = Math.Max(0.0, Math.Min(resultsHeight, maxAvailableHeight));
+        }
 
-            _window.LstResults.Height = resultsHeight;
-            _window.ResultsPanelControl.Height = resultsHeight;
+        _window.LstResults.Height = resultsHeight;
+        _window.ResultsPanelControl.Height = resultsHeight;
 
-            UpdateShortcutHints();
-            _window.SizeToContent = SizeToContent.Manual;
-            _window.SizeToContent = SizeToContent.WidthAndHeight;
-        }), DispatcherPriority.ContextIdle);
+        UpdateShortcutHints();
+        _window.SizeToContent = SizeToContent.Manual;
+        _window.SizeToContent = SizeToContent.WidthAndHeight;
     }
 
     public void UpdateShortcutHints() =>
