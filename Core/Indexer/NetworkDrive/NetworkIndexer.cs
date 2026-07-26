@@ -28,7 +28,8 @@ public sealed class NetworkIndexer : IDisposable
         _watcherManager = new WatcherManager(
             (drive, reason) => _scheduler?.QueueRefreshDrive(drive, reason),
             drive => { lock (_gate) { _indexes.TryGetValue(drive, out var idx); return idx; } },
-            (drive, idx) => _publisher.PublishIncrementalUpdate(drive, idx)
+            (drive, idx) => _publisher.PublishIncrementalUpdate(drive, idx),
+            drive => _publisher.MarkMissedIfRescanning(drive)
         );
 
         _scheduler = new Scheduler(

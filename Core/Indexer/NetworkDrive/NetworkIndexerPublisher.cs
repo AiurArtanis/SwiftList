@@ -113,6 +113,31 @@ internal sealed class NetworkIndexerPublisher
             _queueRefresh(drive, "watcher change during rescan");
     }
 
+    // Mirrors UsnIndexerExtensions.MarkMissedIfRebuilding for local drives: decides -- synchronously, at
+    // the moment a watcher-detected change is actually applied to the in-memory index, not later when
+    // PublishIncrementalUpdate's own debounced timer happens to fire -- whether this drive is currently
+    // being rescanned, and flags the change as missed if so. Deciding this late (as PublishIncrementalUpdate
+    // used to do entirely on its own) left a gap: if the in-flight rescan finished before the debounce
+    // timer fired, OnRefreshFinished had already flipped this drive's status to "ready" and consumed
+    // (found empty) _missedDuringRescan by the time the stale check finally ran, so the change was never
+    // flagged -- and, since the state no longer read "indexing" either, PublishIncrementalUpdate's own
+    // guard below didn't skip it either, letting it persist a save built from the by-then-disposed old
+    // index (Count 0) and regress the freshly-finished drive's status back down. WatcherManager calls this
+    // before scheduling a debounced publish at all, so a change caught mid-rescan is flagged immediately
+    // and its publish is skipped from the start, closing that window regardless of how the debounce timer
+    // and the rescan's own completion happen to interleave.
+    public bool MarkMissedIfRescanning(string drive)
+    {
+        lock (_gate)
+        {
+            var isTracked = _statuses.TryGetValue(drive, out var status);
+            var isRescanning = isTracked && status!.State == "indexing";
+            if (isRescanning)
+                _missedDuringRescan.Add(drive);
+            return isRescanning;
+        }
+    }
+
     public void PublishIncrementalUpdate(string drive, NetworkIndex index)
     {
         // Same fix, same reason as UsnIndexer.UpdateDriveCounts's markReady guard: the watcher for this
@@ -124,11 +149,9 @@ internal sealed class NetworkIndexerPublisher
         // change against that stale base would overwrite the in-progress scan's own Items/State with the
         // old total and force the row back to "ready" mid-scan (the up/down flicker this guard exists to
         // prevent), AND could regress the on-disk cache back to older data if this save lands after a
-        // fresher checkpoint. Skipping here is safe for THIS write specifically (the rescan's own walk
-        // usually re-observes the same change independently once it finishes) -- but not guaranteed, so
-        // OnRefreshFinished consults _missedDuringRescan once that walk actually completes and queues a
-        // follow-up refresh if this flag was set, closing the gap for the cases where it doesn't. A
-        // routine update against a drive that ISN'T currently being (re)scanned still applies normally.
+        // fresher checkpoint. This is now mostly a safety net for a narrower timing: MarkMissedIfRescanning
+        // above already flags+skips a change detected WHILE a rescan is running; this still catches a
+        // change scheduled just BEFORE a rescan started, whose debounced publish then fires DURING it.
         bool skip;
         lock (_gate)
         {

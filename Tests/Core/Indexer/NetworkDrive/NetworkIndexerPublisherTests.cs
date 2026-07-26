@@ -189,6 +189,50 @@ public sealed class NetworkIndexerPublisherTests
         Assert.IsNull(publisher.ReleaseCachedIndex("Z"));
     }
 
+    // Regression coverage: MarkMissedIfRescanning is what WatcherManager now calls synchronously, right
+    // when a watcher-detected change is applied, instead of leaving the "was this drive being rescanned"
+    // decision to PublishIncrementalUpdate's own debounced timer -- which could fire after the rescan had
+    // already finished and moved the drive back to "ready", missing the flag entirely (see this method's
+    // own comment on WatcherManager for the full failure scenario this closes).
+    [TestMethod]
+    public void MarkMissedIfRescanning_DriveCurrentlyIndexing_FlagsItAndReturnsTrue()
+    {
+        var fixture = new Fixture();
+        fixture.Statuses["Z"] = new NetworkIndexStatus { Drive = "Z", State = "indexing" };
+        var publisher = fixture.CreatePublisher();
+
+        var result = publisher.MarkMissedIfRescanning("Z");
+
+        Assert.IsTrue(result);
+        // OnRefreshFinished is what consumes the flag -- exercise it here instead of reaching into the
+        // publisher's private HashSet, matching this test class's existing style.
+        publisher.OnRefreshFinished("Z", new NetworkIndex("Z"));
+        CollectionAssert.Contains(fixture.QueuedRefreshes.Select(r => r.Drive).ToList(), "Z");
+    }
+
+    [TestMethod]
+    public void MarkMissedIfRescanning_DriveReady_DoesNotFlagAndReturnsFalse()
+    {
+        var fixture = new Fixture();
+        fixture.Statuses["Z"] = new NetworkIndexStatus { Drive = "Z", State = "ready" };
+        var publisher = fixture.CreatePublisher();
+
+        var result = publisher.MarkMissedIfRescanning("Z");
+
+        Assert.IsFalse(result);
+        publisher.OnRefreshFinished("Z", new NetworkIndex("Z"));
+        Assert.IsEmpty(fixture.QueuedRefreshes);
+    }
+
+    [TestMethod]
+    public void MarkMissedIfRescanning_DriveNotTracked_ReturnsFalse()
+    {
+        var fixture = new Fixture();
+        var publisher = fixture.CreatePublisher();
+
+        Assert.IsFalse(publisher.MarkMissedIfRescanning("Z"));
+    }
+
     // Regression coverage for the network-drive item-count flicker: the watcher for a drive is live
     // throughout a re-scan (attached before that drive's own initial refresh is even queued -- see
     // Scheduler.StartRefresh), so a watcher-triggered incremental update landing mid-scan must not

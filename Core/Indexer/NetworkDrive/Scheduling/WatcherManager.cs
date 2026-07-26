@@ -8,6 +8,7 @@ internal class WatcherManager : IDisposable
     private readonly Action<string, string> _queueRefresh;
     private readonly Func<string, NetworkIndex?> _getIndex;
     private readonly Action<string, NetworkIndex> _onIncrementalUpdate;
+    private readonly Func<string, bool> _markMissedIfRescanning;
     private volatile bool _disposed;
 
     // Every raw FileSystemWatcher event that changed the in-memory index used to trigger _onIncrementalUpdate
@@ -23,11 +24,13 @@ internal class WatcherManager : IDisposable
     public WatcherManager(
         Action<string, string> queueRefresh,
         Func<string, NetworkIndex?> getIndex,
-        Action<string, NetworkIndex> onIncrementalUpdate)
+        Action<string, NetworkIndex> onIncrementalUpdate,
+        Func<string, bool> markMissedIfRescanning)
     {
         _queueRefresh = queueRefresh;
         _getIndex = getIndex;
         _onIncrementalUpdate = onIncrementalUpdate;
+        _markMissedIfRescanning = markMissedIfRescanning;
     }
 
     public void EnsureWatcher(string drive)
@@ -163,7 +166,12 @@ internal class WatcherManager : IDisposable
             if (changed)
             {
                 Logger.Log($"[WatcherManager] Incremental {changeType} applied on {drive}: {logicalPath}; items={index.Count}", LogLevel.Debug);
-                SchedulePublish(drive, index);
+                // Checked synchronously, right here, rather than leaving it to PublishIncrementalUpdate's
+                // own debounced timer to discover later -- see NetworkIndexerPublisher.MarkMissedIfRescanning's
+                // own comment for why the late-only check could miss this drive's rescan finishing (and
+                // the missed flag with it) inside the debounce window.
+                if (!_markMissedIfRescanning(drive))
+                    SchedulePublish(drive, index);
             }
         }
         catch (Exception ex)
@@ -196,7 +204,8 @@ internal class WatcherManager : IDisposable
             if (changed)
             {
                 Logger.Log($"[WatcherManager] Incremental Rename applied on {drive}: {logicalOldPath} -> {logicalNewPath}; items={index.Count}", LogLevel.Debug);
-                SchedulePublish(drive, index);
+                if (!_markMissedIfRescanning(drive))
+                    SchedulePublish(drive, index);
             }
         }
         catch (Exception ex)
