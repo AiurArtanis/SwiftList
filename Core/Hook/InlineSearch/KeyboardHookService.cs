@@ -3,18 +3,23 @@ using System.Text;
 
 namespace SwiftList.Core.Hook.InlineSearch;
 
+// The raw key-code-to-inline-search-event translation logic lives in
+// KeyboardHookServiceInlineSearchExtensions.cs (extension methods, matching TreeBuilder's own
+// Checkpoint/Diff extension split) instead of a partial class, to keep this file under the project's
+// line limit. That extension needs access to this service's settings/tracker/context-menu-grace state,
+// so those fields are `internal` rather than `private`.
 public class KeyboardHookService : IDisposable
 {
     private IntPtr _hookId = IntPtr.Zero;
     private KeyboardNativeMethods.LowLevelKeyboardProc? _proc;
-    private readonly ExplorerTracker _explorerTracker;
+    internal readonly ExplorerTracker _explorerTracker;
 
-    private UserSettings _settings = UserSettings.Load();
+    internal UserSettings _settings = UserSettings.Load();
     private GlobalHotkeyDetector _hotkeyDetector;
 
-    private bool _hasPendingContextMenuTrigger;
-    private uint _lastContextMenuTriggerTime;
-    private const uint ContextMenuGraceMs = 400;
+    internal bool _hasPendingContextMenuTrigger;
+    internal uint _lastContextMenuTriggerTime;
+    internal const uint ContextMenuGraceMs = 400;
 
     public event Action? OnDoubleCtrl;
     public event Action<char>? OnCharacterTyped;
@@ -26,6 +31,20 @@ public class KeyboardHookService : IDisposable
     public event Action? OnLeftPressed;
     public event Action? OnRightPressed;
     public event Action<int>? OnCtrlNumberPressed;
+
+    // Trampolines letting KeyboardHookServiceInlineSearchExtensions raise these events on this
+    // instance's behalf -- C# event accessors can only be invoked from the declaring class itself, even
+    // for an `internal` event, so a caller outside it needs one of these. Matches ExplorerTracker's own
+    // RaiseExplorerActivated/RaisePathCaptured/RaiseError trampolines.
+    internal void RaiseCharacterTyped(char ch) => OnCharacterTyped?.Invoke(ch);
+    internal void RaiseBackspacePressed() => OnBackspacePressed?.Invoke();
+    internal void RaiseEscapePressed() => OnEscapePressed?.Invoke();
+    internal void RaiseEnterPressed() => OnEnterPressed?.Invoke();
+    internal void RaiseUpPressed() => OnUpPressed?.Invoke();
+    internal void RaiseDownPressed() => OnDownPressed?.Invoke();
+    internal void RaiseLeftPressed() => OnLeftPressed?.Invoke();
+    internal void RaiseRightPressed() => OnRightPressed?.Invoke();
+    internal void RaiseCtrlNumberPressed(int num) => OnCtrlNumberPressed?.Invoke(num);
 
     public bool IsQuickSearchWindowVisible { get; set; }
     public bool IsInlineSearchVisible { get; set; }
@@ -169,192 +188,12 @@ public class KeyboardHookService : IDisposable
                 return KeyboardNativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
             }
             // 4. Handle Inline Search key events
-            if (!shouldDisableAllHooks && HandleInlineSearchKeys(vkCode, hookStruct, fgHwnd))
+            if (!shouldDisableAllHooks && this.HandleInlineSearchKeys(vkCode, hookStruct, fgHwnd))
             {
                 return (IntPtr)1;
             }
         }
         return KeyboardNativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
-    }
-    private bool HandleInlineSearchKeys(int vkCode, KeyboardNativeMethods.KBDLLHOOKSTRUCT hookStruct, IntPtr fgHwnd)
-    {
-        // A synthesized key event (SendInput/keybd_event) from some other process -- e.g. a
-        // third-party automation tool's own virtual-key hotkey scheme (reported: Quicker's Right-Ctrl
-        // + number combo) -- was otherwise indistinguishable from the user's own typing, so it got
-        // swallowed as inline-search input (or as a "jump to result N" shortcut, if it happened to
-        // match SelectJumpModifier) instead of reaching whatever it was actually meant for.
-        if ((hookStruct.flags & KeyboardNativeMethods.LLKHF_INJECTED) != 0)
-        {
-            return false;
-        }
-
-        var targetFocus = fgHwnd;
-        var threadId = KeyboardNativeMethods.GetWindowThreadProcessId(fgHwnd, out var fgPid);
-        var guiInfo = new KeyboardNativeMethods.GUITHREADINFO
-        {
-            cbSize = Marshal.SizeOf<KeyboardNativeMethods.GUITHREADINFO>()
-        };
-        var hasGuiInfo = KeyboardNativeMethods.GetGUIThreadInfo(threadId, ref guiInfo);
-
-        // A context/system menu (right-click menu, title-bar menu, or a submenu of either) is
-        // currently open. Explorer doesn't move keyboard focus to the menu HWND while it's up --
-        // guiInfo.hwndFocus below still resolves to whatever control opened it -- so without this,
-        // a menu mnemonic/accelerator keypress (e.g. "r" for Properties) got swallowed as the first
-        // inline-search character instead of reaching the menu.
-        const uint menuModeFlags = KeyboardNativeMethods.GUI_INMENUMODE
-            | KeyboardNativeMethods.GUI_SYSTEMMENUMODE
-            | KeyboardNativeMethods.GUI_POPUPMENUMODE;
-        if (hasGuiInfo && (guiInfo.flags & menuModeFlags) != 0)
-        {
-            return false;
-        }
-
-        // The menu isn't confirmed open yet, but a right-click or Menu-key press landed very recently --
-        // most likely the menu it opens just hasn't finished being built. Give it a short grace window
-        // before treating a fast trigger-then-mnemonic as inline-search input. Compared using the raw
-        // hook timestamps (both are the same GetTickCount-based clock) rather than wall-clock "now", so
-        // our own processing latency never inflates or shrinks the measured gap.
-        if (_hasPendingContextMenuTrigger)
-        {
-            var elapsedSinceTrigger = unchecked((int)hookStruct.time - (int)_lastContextMenuTriggerTime);
-            if (elapsedSinceTrigger >= 0 && elapsedSinceTrigger <= ContextMenuGraceMs)
-            {
-                return false;
-            }
-            _hasPendingContextMenuTrigger = false;
-        }
-
-        if (hasGuiInfo && guiInfo.hwndFocus != IntPtr.Zero)
-        {
-            targetFocus = guiInfo.hwndFocus;
-        }
-        var sbClass = new StringBuilder(256);
-        KeyboardNativeMethods.GetClassName(targetFocus, sbClass, sbClass.Capacity);
-        var className = sbClass.ToString();
-
-        var processName = ForegroundProcessGate.GetProcessNameWithoutExtension(fgPid);
-
-        Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: targetFocus=0x{0:X}, className={1}, processName={2}", targetFocus.ToInt64(), className, processName), LogLevel.Debug);
-
-        if (_explorerTracker.ActiveInlineAdapter == null)
-        {
-            var matched = PluginSdk.Registries.InlineSearchAdapterRegistry.GetMatchingAdapter(targetFocus, className, processName);
-            if (matched != null)
-            {
-                _explorerTracker.SetActiveInlineAdapterDirectly(matched, targetFocus);
-            }
-        }
-        var isAdapterActive = _explorerTracker.ActiveInlineAdapter != null;
-        Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: isAdapterActive={0}, ActiveInlineAdapter={1}", isAdapterActive, _explorerTracker.ActiveInlineAdapter?.GetType().Name ?? "null"), LogLevel.Debug);
-        if (IsInlineSearchVisible || isAdapterActive)
-        {
-            if (!IsInlineSearchVisible && isAdapterActive)
-            {
-                var canTrigger = _explorerTracker.ActiveInlineAdapter!.CanTrigger(targetFocus, className);
-                Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: CanTrigger={0}", canTrigger), LogLevel.Debug);
-                if (!canTrigger)
-                {
-                    return false;
-                }
-            }
-            var isIndexModifierDown = !string.IsNullOrEmpty(_settings.Hotkeys.SelectJumpModifier)
-                && KeyboardUtils.CheckModifiersMatchOnly(_settings.Hotkeys.SelectJumpModifier);
-            if (isIndexModifierDown && IsInlineSearchVisible)
-            {
-                var num = -1;
-                if (vkCode >= 0x31 && vkCode <= 0x39)
-                    num = vkCode - 0x31 + 1;
-                else if (vkCode >= 0x61 && vkCode <= 0x69)
-                    num = vkCode - 0x61 + 1;
-
-                if (num >= 1 && num <= 9)
-                {
-                    OnCtrlNumberPressed?.Invoke(num);
-                    return true; // Consume
-                }
-            }
-            var ctrlDown = (KeyboardNativeMethods.GetKeyState(0x11) & 0x8000) != 0;
-            var altDown = (KeyboardNativeMethods.GetKeyState(0x12) & 0x8000) != 0;
-            var winDown = (KeyboardNativeMethods.GetKeyState(0x5B) & 0x8000) != 0 ||
-                           (KeyboardNativeMethods.GetKeyState(0x5C) & 0x8000) != 0;
-            if (ctrlDown || altDown || winDown)
-            {
-                return false;
-            }
-            if (vkCode == KeyboardNativeMethods.VK_ESCAPE)
-            {
-                if (IsInlineSearchVisible)
-                {
-                    OnEscapePressed?.Invoke();
-                    return true;
-                }
-                return false;
-            }
-            if (vkCode == KeyboardNativeMethods.VK_BACK && IsInlineSearchVisible)
-            {
-                OnBackspacePressed?.Invoke();
-                return true;
-            }
-            if (vkCode == KeyboardNativeMethods.VK_RETURN && IsInlineSearchVisible)
-            {
-                OnEnterPressed?.Invoke();
-                return true;
-            }
-            if (vkCode == KeyboardNativeMethods.VK_UP && IsInlineSearchVisible)
-            {
-                OnUpPressed?.Invoke();
-                return true;
-            }
-            if (vkCode == KeyboardNativeMethods.VK_DOWN && IsInlineSearchVisible)
-            {
-                OnDownPressed?.Invoke();
-                return true;
-            }
-            if (vkCode == KeyboardNativeMethods.VK_LEFT && IsInlineSearchVisible)
-            {
-                OnLeftPressed?.Invoke();
-                return true;
-            }
-            if (vkCode == KeyboardNativeMethods.VK_RIGHT && IsInlineSearchVisible)
-            {
-                OnRightPressed?.Invoke();
-                return true;
-            }
-            if (vkCode == KeyboardNativeMethods.VK_TAB)
-            {
-                return false;
-            }
-            var isTriggerKey = (vkCode == KeyboardNativeMethods.VK_PROCESSKEY) ||
-                                (vkCode >= 0x41 && vkCode <= 0x5A) ||
-                                (vkCode >= 0x30 && vkCode <= 0x39) ||
-                                (vkCode >= 0x60 && vkCode <= 0x69);
-
-            if (isTriggerKey)
-            {
-                // When an IME is composing, ignore what/how many keys are pressed: just pop the (empty)
-                // inline window and keep swallowing keys until focus is taken. Never let them through to
-                // the host window (which would drive the system's default IME composition popup instead).
-                var imeOn = vkCode == KeyboardNativeMethods.VK_PROCESSKEY || KeyboardUtils.IsImeActive(fgHwnd);
-                if (imeOn)
-                {
-                    if (!IsInlineSearchVisible)
-                    {
-                        OnCharacterTyped?.Invoke('\0');
-                    }
-                    return true;
-                }
-
-                if (!IsInlineSearchVisible)
-                {
-                    // No IME: inject the first typed character as before; later keys go to the focused box.
-                    var ch = KeyboardUtils.GetUnicodeChar(hookStruct);
-                    OnCharacterTyped?.Invoke(ch);
-                    return true;
-                }
-                return false;
-            }
-        }
-        return false;
     }
     public void Dispose() => Stop();
 
