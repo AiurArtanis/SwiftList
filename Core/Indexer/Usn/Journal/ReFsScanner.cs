@@ -186,9 +186,13 @@ public static class ReFsScanner
 
         const int bufSize = 1024 * 1024;
         var buf = Marshal.AllocHGlobal(bufSize);
+        var enumerationFailed = false;
         try
         {
-            // Loop until GetFileInformationByHandleEx returns false (ERROR_NO_MORE_FILES).
+            // Loop until GetFileInformationByHandleEx returns false. A false return is only a normal
+            // end-of-directory when the last Win32 error is ERROR_NO_MORE_FILES -- any other code (access
+            // denied, directory deleted mid-scan, etc.) is a real failure partway through enumeration, so
+            // the entries already added to `items` below may be an incomplete listing of this directory.
             // The original code only called it once, missing entries in large directories.
             while (Win32Api.GetFileInformationByHandleEx(dirHandle, Win32Api.FileIdExtdDirectoryInfo, buf, bufSize))
             {
@@ -233,13 +237,25 @@ public static class ReFsScanner
                     cur += (int)nextOff;
                 }
             }
+
+            // Captured immediately after the loop exits, before FreeHGlobal or anything else can touch
+            // the thread's last-error slot -- ERROR_NO_MORE_FILES is the only "this was a normal end of
+            // directory" code; anything else means the entries already added above are a partial listing.
+            if (Marshal.GetLastWin32Error() != Win32Api.ERROR_NO_MORE_FILES)
+            {
+                enumerationFailed = true;
+                Interlocked.Increment(ref errors);
+            }
         }
         finally { Marshal.FreeHGlobal(buf); }
 
         // dirId's own entry (if it has one -- the root doesn't) was added by whichever parent discovered
         // it, with Listed defaulted to false; now that its own children are fully gathered, mark it the
         // same way a reused directory is marked above, so a LATER scan's diff baseline can trust IT too.
-        if (items.TryGetValue(dirId, out var listedSelf))
+        // Skipped on a real enumeration failure (see above) -- this directory's own listing may be
+        // incomplete, so it must stay un-Listed for a future rebuild to retry, same as the
+        // dirHandle.IsInvalid case above.
+        if (!enumerationFailed && items.TryGetValue(dirId, out var listedSelf))
             items.TryUpdate(dirId, listedSelf with { Listed = true }, listedSelf);
     }
 

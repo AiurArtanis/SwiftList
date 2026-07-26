@@ -25,6 +25,7 @@ public static class Win32Api
     public const uint ERROR_HANDLE_EOF = 38;
     public const int ERROR_INVALID_HANDLE = 6;
     public const int ERROR_NOT_READY = 21;
+    public const int ERROR_NO_MORE_FILES = 18;
     public const int ERROR_DEVICE_NOT_CONNECTED = 1167;
 
     public const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
