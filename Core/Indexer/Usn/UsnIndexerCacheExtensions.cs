@@ -110,7 +110,23 @@ public static class UsnIndexerCacheExtensions
     public static bool IsDriveIndexComplete(this UsnIndexer indexer, string drive)
     {
         lock (indexer.LockObj)
-            return indexer._driveMetadata.TryGetValue(drive, out var metadata) && metadata.IsComplete;
+        {
+            if (!indexer._driveMetadata.TryGetValue(drive, out var metadata))
+                return false;
+
+            // True NTFS ($MFT, via MftIndexScanner) has no partial/checkpoint output at all -- it's always
+            // either a fully-finished result or nothing (no result ever gets cached), so its cache is
+            // trivially always complete regardless of what IsComplete says. Checking the metadata's own
+            // FileSystemType (not a fresh VolumeHelper.GetFileSystemType(drive) call) also means an
+            // EXISTING NTFS cache written before this field existed -- IsComplete defaults to false on
+            // anything that never explicitly set it -- doesn't trigger a needless full $MFT re-scan the
+            // first time this check ships; only ReFS/non-journal drives, which can genuinely be
+            // incomplete, pay that one-time cost.
+            if (metadata.FileSystemType.Equals("NTFS", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return metadata.IsComplete;
+        }
     }
 
     public static void DropDriveFromRuntime(this UsnIndexer indexer, string drive)

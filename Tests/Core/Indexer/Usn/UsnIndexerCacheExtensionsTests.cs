@@ -25,7 +25,7 @@ public sealed class UsnIndexerCacheExtensionsTests
     public void IsDriveIndexComplete_MetadataMarkedIncomplete_ReturnsFalse()
     {
         var indexer = new UsnIndexer();
-        indexer._driveMetadata["C"] = new UsnIndexer.DriveRuntimeMetadata { IsComplete = false };
+        indexer._driveMetadata["C"] = new UsnIndexer.DriveRuntimeMetadata { IsComplete = false, FileSystemType = "ReFS" };
 
         Assert.IsFalse(indexer.IsDriveIndexComplete("C"));
     }
@@ -35,9 +35,32 @@ public sealed class UsnIndexerCacheExtensionsTests
     {
         var indexer = new UsnIndexer();
         indexer._driveMetadata["C"] = new UsnIndexer.DriveRuntimeMetadata { IsComplete = true };
-        indexer._driveMetadata["D"] = new UsnIndexer.DriveRuntimeMetadata { IsComplete = false };
+        indexer._driveMetadata["D"] = new UsnIndexer.DriveRuntimeMetadata { IsComplete = false, FileSystemType = "ReFS" };
 
         Assert.IsTrue(indexer.IsDriveIndexComplete("C"));
         Assert.IsFalse(indexer.IsDriveIndexComplete("D"));
+    }
+
+    // Regression coverage: true NTFS ($MFT, via MftIndexScanner) never produces partial/checkpoint output
+    // -- it's always either a fully-finished result or nothing -- so its cache must be treated as always
+    // complete regardless of what IsComplete says. This is also what protects an EXISTING NTFS cache
+    // written before this field existed (IsComplete defaults to false on anything that never set it) from
+    // triggering a needless full $MFT re-scan the first time this check ships.
+    [TestMethod]
+    public void IsDriveIndexComplete_NtfsMetadataMarkedIncomplete_StillReturnsTrue()
+    {
+        var indexer = new UsnIndexer();
+        indexer._driveMetadata["C"] = new UsnIndexer.DriveRuntimeMetadata { IsComplete = false, FileSystemType = "NTFS" };
+
+        Assert.IsTrue(indexer.IsDriveIndexComplete("C"));
+    }
+
+    [TestMethod]
+    public void IsDriveIndexComplete_NtfsFileSystemTypeIsCaseInsensitive()
+    {
+        var indexer = new UsnIndexer();
+        indexer._driveMetadata["C"] = new UsnIndexer.DriveRuntimeMetadata { IsComplete = false, FileSystemType = "ntfs" };
+
+        Assert.IsTrue(indexer.IsDriveIndexComplete("C"));
     }
 }
