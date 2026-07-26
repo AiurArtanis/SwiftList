@@ -14,7 +14,12 @@ internal static class DriveRecovery
     {
         Logger.Log($"[SearchEngine] Restoring newly available drive {drive} from cache if possible.");
         var cached = indexer.TryLoadDriveFromCache(cacheDir, drive);
-        if (cached.HasValue)
+        // A cache from a scan interrupted before finishing (crash/restart mid-walk, not a graceful Stop)
+        // must not be mistaken for "restored, nothing more to do" -- see UsnIndexer.IsDriveIndexComplete's
+        // own comment. Skips straight past the catch-up/folder-restore short-circuits below to the rebuild
+        // at the bottom, WITHOUT dropping the runtime first (unlike the catch-up-failed case), so that
+        // rebuild picks up this incomplete LiveIndex as a TreeDiffBaseline resume point.
+        if (cached.HasValue && indexer.IsDriveIndexComplete(drive))
         {
             if (!VolumeHelper.SupportsUsnJournal(drive))
             {
@@ -32,10 +37,11 @@ internal static class DriveRecovery
                 Logger.Log($"[SearchEngine] Restored drive {drive} from cache and USN catch-up.");
                 return;
             }
-        }
 
-        if (cached.HasValue)
+            // Catch-up failed (journal mismatch/error) -- this cache can't be trusted even as a diff
+            // baseline, unlike the "merely incomplete" case above, so drop it before rebuilding.
             indexer.DropDriveFromRuntime(drive);
+        }
 
         Logger.Log($"[SearchEngine] Cache restore unavailable for drive {drive}; rebuilding this drive only.");
         // Only a journal-backed drive's monitor needs stopping before its own rebuild starts -- see

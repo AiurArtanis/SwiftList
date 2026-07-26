@@ -101,6 +101,18 @@ public static class UsnIndexerCacheExtensions
         }
     }
 
+    // Whether the drive's currently-loaded runtime metadata came from a genuinely finished scan, as
+    // opposed to a mid-walk checkpoint or a scan interrupted before finishing -- the local-drive
+    // counterpart of NetworkIndexer.Configure's own IsComplete check, which is what lets network drives
+    // automatically resume an interrupted scan on the next cold start instead of silently treating a
+    // partial cache as the final answer. False (not just "unknown") for a drive with no loaded metadata
+    // at all, so a caller can use this directly without a separate "is it even loaded" check first.
+    public static bool IsDriveIndexComplete(this UsnIndexer indexer, string drive)
+    {
+        lock (indexer.LockObj)
+            return indexer._driveMetadata.TryGetValue(drive, out var metadata) && metadata.IsComplete;
+    }
+
     public static void DropDriveFromRuntime(this UsnIndexer indexer, string drive)
     {
         // Cancels (not fires) any pending debounced ApplyFolderChange save for this drive -- letting it
@@ -149,6 +161,7 @@ public static class UsnIndexerCacheExtensions
             RootId = snapshot.RootId,
             JournalId = snapshot.JournalId,
             NextUsn = snapshot.NextUsn,
+            IsComplete = snapshot.IsComplete,
         };
         if (!IsCurrentVolumeCache(drive, metadata))
         {

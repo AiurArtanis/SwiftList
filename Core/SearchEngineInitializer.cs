@@ -90,6 +90,15 @@ internal class SearchEngineInitializer
                 for (var i = 0; i < cachedMetadata.Count; i++)
                 {
                     var meta = cachedMetadata[i];
+                    // An incomplete cache (a checkpoint from a scan interrupted by a crash/restart before
+                    // it finished) must not be mistaken for "nothing more to do" -- leaving it OUT of
+                    // updatedMetadata here means it falls into missingDrives below and gets a real rebuild,
+                    // same as NetworkIndexer.Configure's own IsComplete-gated resume for network drives.
+                    // Its LiveIndex stays in _recordIndexes (nothing here drops it), so that rebuild picks
+                    // it up as a TreeDiffBaseline resume point instead of starting fully from scratch.
+                    if (!_indexer.IsDriveIndexComplete(meta.Drive))
+                        continue;
+
                     if (!VolumeHelper.SupportsUsnJournal(meta.Drive))
                     {
                         updatedMetadata.Add(meta);
@@ -118,7 +127,7 @@ internal class SearchEngineInitializer
                     var missingDrives = supportedDrives.Where(d => !loadedDrives.Contains(d)).ToList();
                     if (missingDrives.Count > 0)
                     {
-                        Logger.Log($"[SearchEngineInitializer] Building missing per-drive indices: {string.Join(", ", missingDrives)}");
+                        Logger.Log($"[SearchEngineInitializer] Building missing/incomplete per-drive indices: {string.Join(", ", missingDrives)}");
                         var missingMetadata = _indexer.BuildDrives(missingDrives, clearExisting: false, cacheDir: _indexCacheDir);
                         monitorsToStart.AddRange(missingMetadata);
                     }

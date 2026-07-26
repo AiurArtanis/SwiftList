@@ -46,9 +46,14 @@ public static class ReFsScanner
         stopwatch.Stop();
         var rate = stopwatch.Elapsed.TotalSeconds > 0 ? items.Count / stopwatch.Elapsed.TotalSeconds : items.Count;
         Logger.Log($"[ReFsScanner] Drive {drive}: directory-id BFS complete ({items.Count} items, {stopwatch.Elapsed.TotalSeconds:F2}s, {rate:F0} items/s).");
+        var store = IndexCacheManager.CreateStoreFromDriveData(drive, rootFrn, items, nextUsn, journalId);
+        // Unlike a checkpoint's own store (built the same way, via ReFsScannerCheckpointExtensions --
+        // deliberately left false there), this is the walk's actual final result: only reached once
+        // ScanParallel's Task.WaitAll returns without throwing, i.e. every enqueued directory finished.
+        store.IsComplete = true;
         return new UsnDriveIndexResult
         {
-            Store = IndexCacheManager.CreateStoreFromDriveData(drive, rootFrn, items, nextUsn, journalId),
+            Store = store,
             NextUsn = nextUsn,
             JournalId = journalId,
             IsSortedById = false

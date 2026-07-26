@@ -156,6 +156,29 @@ public sealed class UsnIndexerTests
         Assert.IsFalse(driveD.WasDisposed);
     }
 
+    // Regression coverage: IsComplete must survive the FileRecordStore -> DriveRuntimeMetadata trip, since
+    // UsnIndexerCacheExtensions.IsDriveIndexComplete (the local-drive counterpart of NetworkIndexer.Configure's
+    // own IsComplete-gated cold-start resume) reads it off THIS metadata, not the store directly.
+    [TestMethod]
+    public void CreateMetadata_StoreIsComplete_PropagatesToMetadata()
+    {
+        var store = new FileRecordStore { IsComplete = true };
+
+        var metadata = UsnIndexer.CreateMetadata(store);
+
+        Assert.IsTrue(metadata.IsComplete);
+    }
+
+    [TestMethod]
+    public void CreateMetadata_StoreNotComplete_PropagatesToMetadata()
+    {
+        var store = new FileRecordStore { IsComplete = false };
+
+        var metadata = UsnIndexer.CreateMetadata(store);
+
+        Assert.IsFalse(metadata.IsComplete);
+    }
+
     private sealed class DisposableSpy : IDisposable
     {
         public bool WasDisposed { get; private set; }

@@ -121,6 +121,10 @@ internal static class MftIndexScanner
         }
 
         Logger.Log($"[MftIndexScanner] Drive {drive} $MFT scan complete: {records.Count - 1} rows (files={files}, dirs={dirs}).");
+        // Unlike TreeBuilder/ReFsScanner, this scan has no partial/checkpoint output at all -- it's a
+        // single-pass sequential parse that either returns a fully-finished store or null (see the
+        // early-return guards above), so unconditionally true here is always correct, never optimistic.
+        store.IsComplete = true;
         return new UsnDriveIndexResult
         {
             Store = store,

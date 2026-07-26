@@ -64,6 +64,10 @@ public class UsnIndexer : IDisposable
         public UInt128 RootId { get; init; }
         public ulong JournalId { get; set; }
         public long NextUsn { get; set; }
+        // False for a mid-walk checkpoint or a scan interrupted before finishing -- see
+        // UsnIndexerCacheExtensions.IsDriveIndexComplete, the local-drive counterpart of
+        // NetworkIndexer.Configure's own IsComplete-gated cold-start resume.
+        public bool IsComplete { get; init; }
     }
 
 
@@ -172,7 +176,8 @@ public class UsnIndexer : IDisposable
         VolumeSerialNumber = store.VolumeSerialNumber,
         RootId = store.RootId,
         JournalId = store.JournalId,
-        NextUsn = store.NextUsn
+        NextUsn = store.NextUsn,
+        IsComplete = store.IsComplete
     };
 
     private static UInt128 ToSourceLocalId(UInt128 value) => value;
