@@ -258,7 +258,15 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
     private void RenderFinal(List<AppSearchResult> finalResults)
     {
-        FilteredResults.ReplaceRange(finalResults);
+        // ReplaceRange's single Reset notification makes WPF discard and regenerate every LstGridResults
+        // container from the top on every keystroke -- Quick/Inline hit this same cost long ago and fixed
+        // it via SearchResultsReconciler.Replace (row-by-row Replace/Add/Remove, recycling containers
+        // instead of tearing them down); this had never been ported to the full window's own render path.
+        // No selection-preserving currentSelection/setSelection pair like that reconciler uses: this
+        // window has no VM-level "selected result" property to preserve in the first place (ResultsControl
+        // .xaml.cs's own shared OnCollectionChanged already resets ActiveListBox.SelectedIndex on every
+        // change here, same as it always has).
+        FilteredResults.ReconcileTo(finalResults, SearchResultsReconciler.ItemsEqual);
         ResultCountText = string.Format(TranslationManager.Instance["Search_Total"], finalResults.Count);
         OnPropertyChanged(nameof(ShowNoResultsHint));
         OnPropertyChanged(nameof(ShowWelcomeHint));

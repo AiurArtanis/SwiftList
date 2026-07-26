@@ -36,7 +36,9 @@ internal static class SearchResultsReconciler
         setSelection(firstSelectable);
     }
 
-    private static bool ItemsEqual(AppSearchResult a, AppSearchResult b) =>
+    // Internal (not private) so SearchViewModel.RenderFinal can reconcile FilteredResults with this
+    // exact same row-identity check, instead of maintaining a second definition that could drift.
+    internal static bool ItemsEqual(AppSearchResult a, AppSearchResult b) =>
         string.Equals(a.FullPath, b.FullPath, StringComparison.OrdinalIgnoreCase) &&
         string.Equals(a.Name, b.Name, StringComparison.Ordinal) &&
         string.Equals(a.ResultKind, b.ResultKind, StringComparison.Ordinal) &&
