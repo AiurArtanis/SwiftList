@@ -157,6 +157,11 @@ internal static class ResultsControlColumns
         try
         {
             vm.SortByColumn(columnId);
+            // Reads CurrentSortColumn back rather than assuming it's still `columnId`: a third click on
+            // the same column resets SortByColumn's own state back to the default relevance order, and
+            // the header repaint below needs to reflect THAT (no arrow anywhere), not "the column that
+            // was just clicked" -- which is what would otherwise incorrectly keep painting an arrow on it.
+            string currentSortColumn = vm.CurrentSortColumn;
             bool isAsc = vm.IsSortAscending;
 
             if (lstGridResults.View is not GridView gridView) return;
@@ -166,7 +171,7 @@ internal static class ResultsControlColumns
                 var id = ColumnIdentity.GetId(col);
                 if (string.IsNullOrEmpty(id)) continue;
 
-                col.Header = id == columnId
+                col.Header = id == currentSortColumn
                     ? ResolveFreshHeaderText(id) + (isAsc ? " ▲" : " ▼")
                     : ResolveFreshHeaderText(id);
             }

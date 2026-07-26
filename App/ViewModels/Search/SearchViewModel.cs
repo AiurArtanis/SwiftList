@@ -217,15 +217,7 @@ public class SearchViewModel : ViewModelBase, IDisposable
 
     public void SortByColumn(string columnId)
     {
-        if (_currentSortColumn == columnId)
-        {
-            _isSortAscending = !_isSortAscending;
-        }
-        else
-        {
-            _currentSortColumn = columnId;
-            _isSortAscending = true;
-        }
+        (_currentSortColumn, _isSortAscending) = SearchResultSortCycle.Advance(_currentSortColumn, _isSortAscending, columnId);
         SearchResultSortMemory.CurrentSortColumn = _currentSortColumn;
         SearchResultSortMemory.IsSortAscending = _isSortAscending;
         ApplyFiltersAndRender();
