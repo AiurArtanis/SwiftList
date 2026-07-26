@@ -2,14 +2,21 @@ using System.Runtime.InteropServices;
 using SwiftList.Core.Indexer.Mft;
 
 using SwiftList.Core.DriveMonitoring;
+using SwiftList.Core.Indexer.NetworkDrive.Walk;
 namespace SwiftList.Core.Indexer.Usn.Journal;
 
 public class JournalReader
 {
-    // token and previousStore only apply to the ReFS branch below -- MftIndexScanner (raw $MFT parse, not
-    // a walk) has no natural interruption point and no diff-reuse capability, both out of scope for the
-    // same reason: it's not a walk. A Stop request or a previous store's baseline are both no-ops for NTFS.
-    internal UsnDriveIndexResult? IndexDrive(string drive, FileRecordStore? previousStore = null, Action<int, int>? onProgress = null, CancellationToken token = default)
+    // token, previousStore, and onCheckpoint only apply to the ReFS branch below -- MftIndexScanner (raw
+    // $MFT parse, not a walk) has no natural interruption point and no diff-reuse/checkpoint capability,
+    // all out of scope for the same reason: it's not a walk. A Stop request, a previous store's baseline,
+    // or mid-walk checkpoint publishing are all no-ops for NTFS.
+    internal UsnDriveIndexResult? IndexDrive(
+        string drive,
+        FileRecordStore? previousStore = null,
+        Action<int, int>? onProgress = null,
+        Action<FileRecordStore, NetworkDriveWalkStats>? onCheckpoint = null,
+        CancellationToken token = default)
     {
         Logger.Log($"[JournalReader] Indexing drive {drive}...");
         var volumePath = $"\\\\.\\{drive}:";
@@ -92,7 +99,7 @@ public class JournalReader
 
         if (fsType.Equals("ReFS", StringComparison.OrdinalIgnoreCase))
         {
-            return ReFsScanner.ScanDrive(drive, handle, rootFrn.Value, journalId, nextUsn, previousStore, onProgress, token);
+            return ReFsScanner.ScanDrive(drive, handle, rootFrn.Value, journalId, nextUsn, previousStore, onProgress, onCheckpoint, token);
         }
 
         // NTFS: parse the raw $MFT so hard links are fully indexed (one row per link).

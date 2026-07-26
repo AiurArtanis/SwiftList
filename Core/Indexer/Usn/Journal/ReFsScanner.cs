@@ -23,6 +23,7 @@ public static class ReFsScanner
         long nextUsn,
         FileRecordStore? previousStore = null,
         Action<int, int>? onProgress = null,
+        Action<FileRecordStore, NetworkDriveWalkStats>? onCheckpoint = null,
         CancellationToken token = default)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -35,11 +36,12 @@ public static class ReFsScanner
         try { rootLastWriteTime = FileTimeHelper.ToUnixSeconds(Directory.GetLastWriteTimeUtc($"{drive}:\\")); } catch { }
 
         var diffBaseline = TreeDiffBaseline.From(previousStore);
+        var checkpointState = new ReFsCheckpointState(drive, rootFrn, nextUsn, journalId, onCheckpoint);
 
         // Slow path: parallel BFS via OpenFileById + GetFileInformationByHandleEx.
         // ponytail: O(N) I/O-bound scan; upgrade path = a documented ReFS full-enum API.
         Logger.Log($"[ReFsScanner] Drive {drive}: using ReFS directory-id BFS.");
-        var items = ScanParallel(volumeHandle, rootFrn, rootLastWriteTime, diffBaseline, onProgress, token);
+        var items = ScanParallel(volumeHandle, rootFrn, rootLastWriteTime, diffBaseline, checkpointState, onProgress, token);
         if (items == null)
             return null;
 
@@ -59,7 +61,7 @@ public static class ReFsScanner
     // Workers await new items (no spin); termination via channel.Writer.TryComplete() when inFlight hits 0.
     private static Dictionary<UInt128, ReFsItem>? ScanParallel(
         SafeFileHandle volumeHandle, UInt128 rootFrn, uint rootLastWriteTime, TreeDiffBaseline? diffBaseline,
-        Action<int, int>? onProgress, CancellationToken token)
+        ReFsCheckpointState checkpointState, Action<int, int>? onProgress, CancellationToken token)
     {
         var items = new ConcurrentDictionary<UInt128, ReFsItem>(8, 32768);
         var channel = Channel.CreateUnbounded<UInt128>(new UnboundedChannelOptions { SingleReader = false });
@@ -77,7 +79,7 @@ public static class ReFsScanner
             {
                 Interlocked.Increment(ref inFlight);
                 channel.Writer.TryWrite(subId);
-            });
+            }, checkpointState);
             if (Interlocked.Decrement(ref inFlight) == 0)
                 channel.Writer.TryComplete();
         }
@@ -94,7 +96,7 @@ public static class ReFsScanner
                 await foreach (var dirId in channel.Reader.ReadAllAsync(token))
                 {
                     token.ThrowIfCancellationRequested();
-                    ProcessDir(volumeHandle, dirId, items, diffBaseline, onProgress, ref files, ref dirs, subId =>
+                    ProcessDir(volumeHandle, dirId, items, diffBaseline, checkpointState, onProgress, ref files, ref dirs, subId =>
                     {
                         Interlocked.Increment(ref inFlight);
                         channel.Writer.TryWrite(subId);
@@ -135,6 +137,7 @@ public static class ReFsScanner
         UInt128 dirId,
         ConcurrentDictionary<UInt128, ReFsItem> items,
         TreeDiffBaseline? diffBaseline,
+        ReFsCheckpointState checkpointState,
         Action<int, int>? onProgress,
         ref int files,
         ref int dirs,
@@ -143,7 +146,7 @@ public static class ReFsScanner
         if (diffBaseline != null && items.TryGetValue(dirId, out var self)
             && diffBaseline.TryGetUnchangedChildren(dirId, FileTimeHelper.FileTimeToUnixSeconds(self.LastWriteTimeUtc), out var cachedChildren))
         {
-            CopyReusedChildren(cachedChildren, dirId, items, ref files, ref dirs, onSubdir);
+            CopyReusedChildren(cachedChildren, dirId, items, ref files, ref dirs, onSubdir, checkpointState);
             items.TryUpdate(dirId, self with { Listed = true }, self);
             onProgress?.Invoke(Volatile.Read(ref files), Volatile.Read(ref dirs));
             return;
@@ -201,6 +204,8 @@ public static class ReFsScanner
 
                             if ((items.Count & 4095) == 0)
                                 onProgress?.Invoke(Volatile.Read(ref files), Volatile.Read(ref dirs));
+
+                            checkpointState.MaybeCheckpoint(items);
                         }
                     }
                     if (nextOff == 0) break;
@@ -230,7 +235,8 @@ public static class ReFsScanner
         ConcurrentDictionary<UInt128, ReFsItem> items,
         ref int files,
         ref int dirs,
-        Action<UInt128> onSubdir)
+        Action<UInt128> onSubdir,
+        ReFsCheckpointState? checkpointState = null)
     {
         foreach (var child in cachedChildren)
         {
@@ -254,6 +260,8 @@ public static class ReFsScanner
             {
                 Interlocked.Increment(ref files);
             }
+
+            checkpointState.MaybeCheckpoint(items);
         }
     }
 

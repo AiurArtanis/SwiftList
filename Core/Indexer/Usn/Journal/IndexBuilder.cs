@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using SwiftList.Core.Indexer.NetworkDrive.Walk;
 
 namespace SwiftList.Core.Indexer.Usn.Journal;
 
@@ -15,7 +16,8 @@ internal static class IndexBuilder
         Action<double> onCompleted,
         Func<string, CancellationToken>? getToken = null,
         Action<string>? onDriveCancelled = null,
-        Func<string, FileRecordStore?>? getPreviousStore = null)
+        Func<string, FileRecordStore?>? getPreviousStore = null,
+        Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken>? onDriveCheckpoint = null)
     {
         getToken ??= _ => CancellationToken.None;
         getPreviousStore ??= _ => null;
@@ -35,7 +37,8 @@ internal static class IndexBuilder
             {
                 var fs = VolumeHelper.GetFileSystemType(drive);
                 if (fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase))
-                    indexResults[i] = (drive, reader.IndexDrive(drive, getPreviousStore(drive), (files, dirs) => onDriveProgress(drive, files, dirs), token));
+                    indexResults[i] = (drive, reader.IndexDrive(drive, getPreviousStore(drive), (files, dirs) => onDriveProgress(drive, files, dirs),
+                        onDriveCheckpoint == null ? null : (store, stats) => onDriveCheckpoint(drive, store, stats, token), token));
                 else
                     folderResults[i] = (drive, buildFolderDrive(drive, (files, dirs) => onDriveProgress(drive, files, dirs), token));
             }

@@ -99,7 +99,11 @@ public static class UsnIndexerBuildExtensions
             {
                 lock (indexer.LockObj)
                     return indexer._recordIndexes.TryGetValue(drive, out var live) ? live.ToStore() : null;
-            }
+            },
+            // ReFsScanner's own mid-walk checkpoint -- reuses the same publisher the non-USN local-drive
+            // path above does (PublishLocalDriveCheckpoint doesn't care about SourceKind/IdKind, only about
+            // writing a store and swapping a fresh LiveIndex in). A no-op for NTFS/$MFT (see JournalReader).
+            (drive, checkpointStore, _, token) => indexer.PublishLocalDriveCheckpoint(cacheDir, drive, checkpointStore, token)
         );
     }
 
