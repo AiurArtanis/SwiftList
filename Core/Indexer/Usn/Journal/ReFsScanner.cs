@@ -39,7 +39,7 @@ public static class ReFsScanner
         // Slow path: parallel BFS via OpenFileById + GetFileInformationByHandleEx.
         // ponytail: O(N) I/O-bound scan; upgrade path = a documented ReFS full-enum API.
         Logger.Log($"[ReFsScanner] Drive {drive}: using ReFS directory-id BFS.");
-        var items = ScanParallel(volumeHandle, rootFrn, rootLastWriteTime, diffBaseline, checkpointState, onProgress, token);
+        var items = ScanParallel(volumeHandle, rootFrn, rootLastWriteTime, diffBaseline, checkpointState, onProgress, token, out var errors);
         if (items == null)
             return null;
 
@@ -50,7 +50,13 @@ public static class ReFsScanner
         // Unlike a checkpoint's own store (built the same way, via ReFsScannerCheckpointExtensions --
         // deliberately left false there), this is the walk's actual final result: only reached once
         // ScanParallel's Task.WaitAll returns without throwing, i.e. every enqueued directory finished.
+        // Marked complete regardless of `errors` -- same reasoning as NetworkIndex/LocalDriveWalkBuilder
+        // (see DriveRefreshRunner.RefreshDrive's own comment on why gating this on zero errors would make
+        // it functionally never become true); a directory that failed to open just stays un-Listed for a
+        // future rebuild to retry, same as those two.
         store.IsComplete = true;
+        if (errors > 0)
+            Logger.Log($"[ReFsScanner] {drive}: finished with {errors} directory open error(s) -- marking complete anyway; affected directories stay un-Listed for a future manual rebuild to retry.", LogLevel.Warn);
         return new UsnDriveIndexResult
         {
             Store = store,
@@ -64,12 +70,13 @@ public static class ReFsScanner
     // Workers await new items (no spin); termination via channel.Writer.TryComplete() when inFlight hits 0.
     private static Dictionary<UInt128, ReFsItem>? ScanParallel(
         SafeFileHandle volumeHandle, UInt128 rootFrn, uint rootLastWriteTime, TreeDiffBaseline? diffBaseline,
-        ReFsCheckpointState checkpointState, Action<int, int>? onProgress, CancellationToken token)
+        ReFsCheckpointState checkpointState, Action<int, int>? onProgress, CancellationToken token, out int errors)
     {
         var items = new ConcurrentDictionary<UInt128, ReFsItem>(8, 32768);
         var channel = Channel.CreateUnbounded<UInt128>(new UnboundedChannelOptions { SingleReader = false });
         var files = 0;
         var dirs = 0;
+        var errorCount = 0;
         var inFlight = 1;
 
         // The root has no ReFsItem of its own (only its children do, added by whichever ProcessDir call
@@ -99,7 +106,7 @@ public static class ReFsScanner
                 await foreach (var dirId in channel.Reader.ReadAllAsync(token))
                 {
                     token.ThrowIfCancellationRequested();
-                    ProcessDir(volumeHandle, dirId, items, diffBaseline, checkpointState, onProgress, ref files, ref dirs, subId =>
+                    ProcessDir(volumeHandle, dirId, items, diffBaseline, checkpointState, onProgress, ref files, ref dirs, ref errorCount, subId =>
                     {
                         Interlocked.Increment(ref inFlight);
                         channel.Writer.TryWrite(subId);
@@ -123,9 +130,11 @@ public static class ReFsScanner
         catch (Exception ex)
         {
             Logger.Log($"[ReFsScanner] Parallel BFS error: {ex.Message}", LogLevel.Error);
+            errors = Volatile.Read(ref errorCount);
             return null;
         }
 
+        errors = Volatile.Read(ref errorCount);
         return new Dictionary<UInt128, ReFsItem>(items);
     }
 
@@ -144,6 +153,7 @@ public static class ReFsScanner
         Action<int, int>? onProgress,
         ref int files,
         ref int dirs,
+        ref int errors,
         Action<UInt128> onSubdir)
     {
         if (diffBaseline != null && items.TryGetValue(dirId, out var self)
@@ -164,7 +174,15 @@ public static class ReFsScanner
         using var dirHandle = Win32Api.OpenFileById(volumeHandle, ref desc,
             1, Win32Api.FILE_SHARE_READ | Win32Api.FILE_SHARE_WRITE | 4,
             IntPtr.Zero, Win32Api.FILE_FLAG_BACKUP_SEMANTICS);
-        if (dirHandle.IsInvalid) return;
+        if (dirHandle.IsInvalid)
+        {
+            // Same "count it, leave the directory un-Listed, move on" shape as
+            // TreeBuilder.WalkDirectory's own CountError(ref _enumerateErrors) -- this directory (deleted
+            // out from under the scan, permission-denied, etc.) never reaches the Listed marking below, so
+            // a future rebuild retries it; this counter only feeds the completion-time diagnostic log.
+            Interlocked.Increment(ref errors);
+            return;
+        }
 
         const int bufSize = 1024 * 1024;
         var buf = Marshal.AllocHGlobal(bufSize);

@@ -57,9 +57,16 @@ internal static class LocalDriveWalkBuilder
 
         var diffBaseline = TreeDiffBaseline.From(previousStore);
         var builder = new TreeBuilder(store, root, root, NoFiltering, token, onProgress, onCheckpoint, diffBaseline, recheckExclusions: false);
-        builder.Run();
+        var stats = builder.Run();
 
+        // Reaching here without cancellation only means TreeBuilder.Run() drained its queue -- NOT that
+        // every directory's real contents were captured; a directory that failed to enumerate stays
+        // un-Listed for a future rebuild to retry regardless (see TreeBuilder.WalkDirectory). Marking
+        // complete anyway mirrors NetworkIndex's own reasoning -- see DriveRefreshRunner.RefreshDrive's own
+        // comment on why gating this on Errors == 0 would make it functionally never become true.
         store.IsComplete = true;
+        if (stats.Errors > 0)
+            Logger.Log($"[LocalDriveWalkBuilder] {drive}: finished with {stats.Errors} error(s) ({stats.EnumerateErrors} enumerate, {stats.AttributeErrors} attribute) -- marking complete anyway; affected directories stay un-Listed for a future manual rebuild to retry.", LogLevel.Warn);
         return store;
     }
 }
