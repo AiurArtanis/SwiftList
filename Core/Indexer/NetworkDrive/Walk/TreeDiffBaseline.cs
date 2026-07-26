@@ -58,6 +58,27 @@ internal sealed class TreeDiffBaseline
 
     public bool TryGetUnchangedChildren(string physicalPath, UInt128 directoryId, out IEnumerable<FileRecord> children)
     {
+        uint liveMtime;
+        try
+        {
+            liveMtime = FileTimeHelper.ToUnixSeconds(Directory.GetLastWriteTimeUtc(physicalPath));
+        }
+        catch
+        {
+            children = Enumerable.Empty<FileRecord>();
+            return false;
+        }
+
+        return TryGetUnchangedChildren(directoryId, liveMtime, out children);
+    }
+
+    // Path-free overload for callers that already know a directory's live mtime some other way than
+    // stat-ing a path -- e.g. ReFsScanner, which walks purely by file ID (OpenFileById) and already reads
+    // each directory's own LastWriteTimeUtc off its PARENT's GetFileInformationByHandleEx listing at the
+    // moment it's discovered, with no path string ever built. The comparison itself doesn't care how the
+    // ID was derived (path hash or a real file reference number) or how the live mtime was obtained.
+    public bool TryGetUnchangedChildren(UInt128 directoryId, uint liveMtimeUnixSeconds, out IEnumerable<FileRecord> children)
+    {
         children = Enumerable.Empty<FileRecord>();
 
         if (!_indexById.TryGetValue(directoryId, out var recordIndex))
@@ -67,17 +88,7 @@ internal sealed class TreeDiffBaseline
         if (!record.IsDirectory || (record.Flags & FileRecordFlags.Listed) == 0)
             return false;
 
-        uint liveMtime;
-        try
-        {
-            liveMtime = FileTimeHelper.ToUnixSeconds(Directory.GetLastWriteTimeUtc(physicalPath));
-        }
-        catch
-        {
-            return false;
-        }
-
-        if (liveMtime != record.LastWriteTimeUnixSeconds)
+        if (liveMtimeUnixSeconds != record.LastWriteTimeUnixSeconds)
             return false;
 
         children = EnumerateChildren(directoryId);

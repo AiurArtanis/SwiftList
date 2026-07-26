@@ -111,6 +111,35 @@ public sealed class TreeDiffBaselineTests
         Assert.AreEqual("second", list[0].Name);
     }
 
+    // Path-free overload -- used by ReFsScanner, which walks purely by file ID and already knows a
+    // directory's live mtime from its parent's own listing, with no path string ever built.
+    [TestMethod]
+    public void TryGetUnchangedChildren_PathFreeOverload_MtimeMatches_ReturnsChildren()
+    {
+        var store = new FileRecordStore();
+        store.Records.Add(new FileRecord(1, 1, "", FileRecordFlags.Directory | FileRecordFlags.Listed, lastWriteTimeUnixSeconds: 42));
+        store.Records.Add(new FileRecord(2, 1, "child.txt", FileRecordFlags.None));
+
+        var baseline = TreeDiffBaseline.From(store)!;
+        var found = baseline.TryGetUnchangedChildren(directoryId: 1, liveMtimeUnixSeconds: 42, out var children);
+
+        Assert.IsTrue(found);
+        CollectionAssert.AreEqual(new[] { "child.txt" }, children.Select(c => c.Name).ToList());
+    }
+
+    [TestMethod]
+    public void TryGetUnchangedChildren_PathFreeOverload_MtimeMismatch_ReturnsFalse()
+    {
+        var store = new FileRecordStore();
+        store.Records.Add(new FileRecord(1, 1, "", FileRecordFlags.Directory | FileRecordFlags.Listed, lastWriteTimeUnixSeconds: 42));
+
+        var baseline = TreeDiffBaseline.From(store)!;
+        var found = baseline.TryGetUnchangedChildren(directoryId: 1, liveMtimeUnixSeconds: 99, out var children);
+
+        Assert.IsFalse(found);
+        Assert.IsEmpty(children.ToList());
+    }
+
     private sealed class TempDirectory : IDisposable
     {
         public string Path { get; } = Directory.CreateTempSubdirectory("swiftlist-tests-").FullName;

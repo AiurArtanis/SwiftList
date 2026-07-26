@@ -14,9 +14,11 @@ internal static class IndexBuilder
         Action<string, UsnDriveIndexResult, int, int> onDriveCompleted,
         Action<double> onCompleted,
         Func<string, CancellationToken>? getToken = null,
-        Action<string>? onDriveCancelled = null)
+        Action<string>? onDriveCancelled = null,
+        Func<string, FileRecordStore?>? getPreviousStore = null)
     {
         getToken ??= _ => CancellationToken.None;
+        getPreviousStore ??= _ => null;
         var stopWatch = Stopwatch.StartNew();
         var monitorsToStart = new List<(string Drive, ulong JournalId, long NextUsn)>();
 
@@ -33,7 +35,7 @@ internal static class IndexBuilder
             {
                 var fs = VolumeHelper.GetFileSystemType(drive);
                 if (fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase))
-                    indexResults[i] = (drive, reader.IndexDrive(drive, (files, dirs) => onDriveProgress(drive, files, dirs), token));
+                    indexResults[i] = (drive, reader.IndexDrive(drive, getPreviousStore(drive), (files, dirs) => onDriveProgress(drive, files, dirs), token));
                 else
                     folderResults[i] = (drive, buildFolderDrive(drive, (files, dirs) => onDriveProgress(drive, files, dirs), token));
             }

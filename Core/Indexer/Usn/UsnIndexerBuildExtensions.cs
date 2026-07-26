@@ -92,7 +92,14 @@ public static class UsnIndexerBuildExtensions
                 Win32Api.TrimWorkingSet();
             },
             getToken,
-            onDriveCancelled
+            onDriveCancelled,
+            // Feeds ReFsScanner's own diff-reuse (see JournalReader.IndexDrive) -- a no-op for NTFS/$MFT
+            // and never called for a non-journal drive (that's buildFolderDrive's own inline lookup above).
+            drive =>
+            {
+                lock (indexer.LockObj)
+                    return indexer._recordIndexes.TryGetValue(drive, out var live) ? live.ToStore() : null;
+            }
         );
     }
 

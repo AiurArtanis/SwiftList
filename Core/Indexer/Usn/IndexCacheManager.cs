@@ -27,11 +27,20 @@ internal static class IndexCacheManager
             store.VolumeSerialNumber = identity.Value.SerialNumber;
         }
 
+        // Real root mtime (an ordinary path stat -- the root itself always has one, even for a scanner
+        // like ReFsScanner that otherwise walks purely by file ID) plus Listed: by the time any caller of
+        // this method has a completed store to return, the root's own children were necessarily gathered
+        // one way or another (freshly enumerated or reused from a previous pass) -- see
+        // TreeDiffBaseline.TryGetUnchangedChildren, which ReFsScanner now consults using both of these.
+        uint rootLastWriteTime = 0;
+        try { rootLastWriteTime = FileTimeHelper.ToUnixSeconds(Directory.GetLastWriteTimeUtc($"{drive}:\\")); } catch { }
+
         store.Records.Add(new FileRecord(
             store.RootId,
             store.RootId,
             string.Empty,
-            FileRecordFlags.Directory | FileRecordFlags.SourceRoot));
+            FileRecordFlags.Directory | FileRecordFlags.SourceRoot | FileRecordFlags.Listed,
+            lastWriteTimeUnixSeconds: rootLastWriteTime));
         return store;
     }
 
