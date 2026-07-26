@@ -158,19 +158,42 @@ public static class UsnIndexerExtensions
         lock (indexer.LockObj)
         {
             if (!indexer._recordIndexes.TryGetValue(drive, out live))
+            {
+                // A rebuild in progress for this drive briefly removes its old LiveIndex from this
+                // dictionary before the fresh one is swapped in (see
+                // UsnIndexerBuildExtensions.OnDriveCompleted) -- a change landing in that narrow window
+                // has nothing left to apply to, but must still be flagged as missed rather than silently
+                // dropped, same as the two cases below. Already inside the lock this method needs.
+                MarkMissedIfRebuilding(indexer, drive);
                 return;
+            }
         }
 
         var root = $"{drive}:\\";
         var normalizedPath = PathHelpers.NormalizePath(path, Directory.Exists(path));
         var changed = false;
 
-        live.Mutate((snapshot, delta) => changed = changeType switch
+        try
         {
-            WatcherChangeTypes.Deleted => DeltaPathApplier.ApplyDeleted(delta, normalizedPath),
-            WatcherChangeTypes.Renamed when !string.IsNullOrWhiteSpace(oldPath) => DeltaPathApplier.ApplyRenamed(delta, (UInt128)1, root, oldPath, normalizedPath),
-            _ => DeltaPathApplier.ApplyCreatedOrChanged(delta, (UInt128)1, root, normalizedPath),
-        });
+            live.Mutate((snapshot, delta) => changed = changeType switch
+            {
+                WatcherChangeTypes.Deleted => DeltaPathApplier.ApplyDeleted(delta, normalizedPath),
+                WatcherChangeTypes.Renamed when !string.IsNullOrWhiteSpace(oldPath) => DeltaPathApplier.ApplyRenamed(delta, (UInt128)1, root, oldPath, normalizedPath),
+                _ => DeltaPathApplier.ApplyCreatedOrChanged(delta, (UInt128)1, root, normalizedPath),
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // `live` was disposed by a concurrent rebuild finishing for this same drive in the narrow,
+            // unlocked window between the TryGetValue lookup above and this call (LiveIndex.Mutate's own
+            // write lock throws once LiveIndex.Dispose has already torn it down) -- keeping this drive's
+            // monitor running through its own rebuild (rather than stopping it beforehand) makes this
+            // race newly reachable. Nothing left to apply this change to; flag it as missed instead of
+            // letting the exception escape into whatever thread the FolderDriveMonitor callback runs on.
+            lock (indexer.LockObj)
+                MarkMissedIfRebuilding(indexer, drive);
+            return;
+        }
         if (!changed)
             return;
 
@@ -179,10 +202,7 @@ public static class UsnIndexerExtensions
         {
             indexer.UpdateTotalsFromRuntime();
             indexer.UpdateDriveCounts(drive);
-            var item = indexer.Status.Drives.FirstOrDefault(d => d.Drive.Equals(drive, StringComparison.OrdinalIgnoreCase));
-            isRebuilding = item != null && item.State == "indexing";
-            if (isRebuilding)
-                indexer._missedFolderChangeDuringRebuild.Add(drive);
+            isRebuilding = MarkMissedIfRebuilding(indexer, drive);
         }
         SearchCoordinator.ClearCaches();
         // While this drive is being rebuilt, its FolderDriveMonitor stays alive (mirroring
@@ -204,6 +224,21 @@ public static class UsnIndexerExtensions
         indexer.PublishStatusChanged();
     }
 
+    // Caller must already hold indexer.LockObj. Flags `drive` as having missed a change during its
+    // current rebuild (if State == "indexing" right now) and returns whether it did -- shared by
+    // ApplyFolderChange's three "nothing to apply this change to" cases (drive not tracked at all,
+    // caught a concurrent LiveIndex disposal, or applied successfully but the drive turned out to be
+    // rebuilding) and by the normal in-progress path that still needs the bool to decide whether to skip
+    // the persist below.
+    private static bool MarkMissedIfRebuilding(UsnIndexer indexer, string drive)
+    {
+        var item = indexer.Status.Drives.FirstOrDefault(d => d.Drive.Equals(drive, StringComparison.OrdinalIgnoreCase));
+        var isRebuilding = item != null && item.State == "indexing";
+        if (isRebuilding)
+            indexer._missedFolderChangeDuringRebuild.Add(drive);
+        return isRebuilding;
+    }
+
     // Consumes (clears) the "a change was detected while this drive was being rebuilt" flag set by
     // ApplyFolderChange above. Called once by the rebuild's own caller (SearchEngineDriveMaintenance/
     // DriveRecovery) right after BuildDrives returns and the fresh LiveIndex is already swapped in and
@@ -218,10 +253,25 @@ public static class UsnIndexerExtensions
 
     public static void SaveDriveSnapshot(this UsnIndexer indexer, string drive, LiveIndex live)
     {
-        if (!indexer._driveMetadata.TryGetValue(drive, out var metadata))
-            return;
+        UsnIndexer.DriveRuntimeMetadata? metadata;
+        lock (indexer.LockObj)
+        {
+            if (!indexer._driveMetadata.TryGetValue(drive, out metadata))
+                return;
+        }
 
         var cacheDir = Path.Combine(Logger.UserDataDir, "indexes");
-        live.Compact(LocalDriveCacheLocator.GetCachePath(cacheDir, drive), new CompactionStamp(metadata.JournalId, metadata.NextUsn), force: true);
+        try
+        {
+            live.Compact(LocalDriveCacheLocator.GetCachePath(cacheDir, drive), new CompactionStamp(metadata.JournalId, metadata.NextUsn), force: true);
+        }
+        catch (ObjectDisposedException)
+        {
+            // This runs on a KeyedDebouncer Timer callback up to a second after ApplyFolderChange
+            // scheduled it -- DropDriveFromRuntime's own Cancel only stops a timer that hasn't fired yet;
+            // one already mid-flight (past the dictionary lookup above, about to call Compact) when a
+            // rebuild's Dispose() runs isn't stopped by it. Nothing to persist: a rebuild replacing this
+            // drive's LiveIndex already supersedes whatever this stale save would have written.
+        }
     }
 }

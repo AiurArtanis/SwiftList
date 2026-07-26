@@ -115,6 +115,47 @@ public sealed class UsnIndexerTests
         Assert.IsFalse(replacement.WasDisposed);
     }
 
+    // Regression coverage: a journal-backed drive's manual rebuild stops its own monitor first (see
+    // SearchEngineDriveMaintenance.ForceRebuildDrive / DriveRecovery.RestoreOrRebuild, both gated on
+    // DriveRecovery.SupportsJournal) so its UsnMonitor can't call ApplyUsnRecords against the old
+    // LiveIndex in the narrow window OnDriveCompleted disposes it in.
+    [TestMethod]
+    public void RemoveDriveMonitor_ExistingEntry_DisposesItAndClearsTheRegistry()
+    {
+        var indexer = new UsnIndexer();
+        var monitor = new DisposableSpy();
+        indexer.RegisterDriveMonitor("C", monitor);
+
+        indexer.RemoveDriveMonitor("C");
+
+        Assert.IsTrue(monitor.WasDisposed);
+
+        // The registry must be cleared, not just the entry disposed -- otherwise a later RegisterDriveMonitor
+        // for "C" would try to dispose an already-disposed stale entry again.
+        var replacement = new DisposableSpy();
+        indexer.RegisterDriveMonitor("C", replacement);
+        Assert.IsFalse(replacement.WasDisposed);
+    }
+
+    [TestMethod]
+    public void RemoveDriveMonitor_NoEntryRegistered_DoesNotThrow() =>
+        new UsnIndexer().RemoveDriveMonitor("C");
+
+    [TestMethod]
+    public void RemoveDriveMonitor_OnlyRemovesTheNamedDrive_LeavesOthersRunning()
+    {
+        var indexer = new UsnIndexer();
+        var driveC = new DisposableSpy();
+        var driveD = new DisposableSpy();
+        indexer.RegisterDriveMonitor("C", driveC);
+        indexer.RegisterDriveMonitor("D", driveD);
+
+        indexer.RemoveDriveMonitor("C");
+
+        Assert.IsTrue(driveC.WasDisposed);
+        Assert.IsFalse(driveD.WasDisposed);
+    }
+
     private sealed class DisposableSpy : IDisposable
     {
         public bool WasDisposed { get; private set; }

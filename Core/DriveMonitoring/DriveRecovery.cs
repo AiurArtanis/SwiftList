@@ -37,6 +37,11 @@ internal static class DriveRecovery
             indexer.DropDriveFromRuntime(drive);
 
         Logger.Log($"[SearchEngine] Cache restore unavailable for drive {drive}; rebuilding this drive only.");
+        // Only a journal-backed drive's monitor needs stopping before its own rebuild starts -- see
+        // UsnIndexer.RemoveDriveMonitor's own comment on why a non-journal drive deliberately does NOT do
+        // this instead.
+        if (SupportsJournal(drive))
+            indexer.RemoveDriveMonitor(drive);
         var metadata = indexer.BuildDrives(new[] { drive }, clearExisting: false, cacheDir: cacheDir);
         if (metadata.Count == 0)
         {
@@ -49,12 +54,13 @@ internal static class DriveRecovery
 
         // The drive's own monitor stayed alive throughout the rebuild (see
         // UsnIndexerExtensions.ApplyFolderChange); if it detected a change it couldn't persist against
-        // the doomed old LiveIndex, queue one follow-up refresh so the next walk observes it.
+        // the doomed old LiveIndex, queue one follow-up refresh so the next walk observes it. A journal
+        // drive (monitor already stopped above) never sets this flag in the first place.
         if (indexer.ConsumeMissedFolderChangeDuringRebuild(drive))
             onReindexRequired?.Invoke(drive);
     }
 
-    private static bool SupportsJournal(string drive)
+    internal static bool SupportsJournal(string drive)
     {
         var fs = VolumeHelper.GetFileSystemType(drive);
         return fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase);
