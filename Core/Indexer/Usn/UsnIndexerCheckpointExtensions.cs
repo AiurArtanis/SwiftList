@@ -36,8 +36,19 @@ internal static class UsnIndexerCheckpointExtensions
         LiveIndex? currentBeforeSave;
         lock (indexer.LockObj)
             indexer._recordIndexes.TryGetValue(drive, out currentBeforeSave);
-        if (currentBeforeSave != null && currentBeforeSave.IsComplete)
-            return;
+        try
+        {
+            if (currentBeforeSave != null && currentBeforeSave.IsComplete)
+                return;
+        }
+        catch (ObjectDisposedException)
+        {
+            // Mirrors ApplyFolderChange's own catch for the identical race: currentBeforeSave was disposed
+            // by a concurrent DropDriveFromRuntime (e.g. the drive's cache got deleted, or a catch-up
+            // failure dropped it as untrustworthy) in the unlocked window between the lookup above and this
+            // read. Nothing left to protect -- fall through and checkpoint normally rather than letting this
+            // propagate up and fail the whole rebuild.
+        }
 
         var path = LocalDriveCacheLocator.GetCachePath(cacheDir, drive);
         SnapshotWriter.Write(store, path);

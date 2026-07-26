@@ -93,6 +93,44 @@ public sealed class UsnIndexerCheckpointExtensionsTests
         Assert.AreEqual(0, files);
     }
 
+    // Regression coverage: the "don't regress a complete cache" guard above reads currentBeforeSave.IsComplete
+    // outside the lock that looked it up -- a concurrent DropDriveFromRuntime (e.g. the user deletes this
+    // drive's cache, or a catch-up failure drops it as untrustworthy) disposing that exact LiveIndex in that
+    // window used to propagate ObjectDisposedException out of this method and fail the whole rebuild, unlike
+    // every other disposed-instance race in this file, which falls through gracefully.
+    [TestMethod]
+    public void PublishLocalDriveCheckpoint_ExistingIndexDisposedConcurrently_FallsThroughInsteadOfThrowing()
+    {
+        using var cacheDir = new TempDirectory();
+        var oldFixture = LiveIndexFixture.Build("C", new[] { LiveIndexFixture.Root() }, isComplete: true);
+        try
+        {
+            var indexer = new UsnIndexer();
+            indexer._recordIndexes["C"] = oldFixture.Index;
+            indexer.Status.Drives.Add(new UsnIndexer.DriveIndexStatus { Drive = "C", State = "indexing" });
+
+            // Simulates DropDriveFromRuntime running in the unlocked window between
+            // PublishLocalDriveCheckpoint's lookup and its IsComplete read -- it removes AND disposes this
+            // exact instance together under its own lock, same as the real method does, so `old` below
+            // finds nothing left to double-dispose.
+            indexer._recordIndexes.Remove("C");
+            oldFixture.Index.Dispose();
+
+            var checkpointStore = new FileRecordStore { SourceKey = "C", SourceKind = FileRecordSourceKind.LocalMft, IdKind = FileRecordIdKind.SourceLocalId64, RootId = 1 };
+            checkpointStore.Records.Add(new FileRecord(1, 1, "", FileRecordFlags.Directory | FileRecordFlags.SourceRoot));
+
+            indexer.PublishLocalDriveCheckpoint(cacheDir.Path, "C", checkpointStore, CancellationToken.None);
+
+            // Fell through and checkpointed normally instead of throwing.
+            Assert.AreNotSame(oldFixture.Index, indexer._recordIndexes["C"]);
+            indexer._recordIndexes["C"].Dispose();
+        }
+        finally
+        {
+            try { oldFixture.Dispose(); } catch { }
+        }
+    }
+
     [TestMethod]
     public void PublishLocalDriveCheckpoint_DriveNotTracked_DisposesTheNewIndexWithoutThrowing()
     {
