@@ -94,6 +94,10 @@ When interacting with this repository, performing code modification, compilation
         git add <PathToProjectOrSolution>
         git commit -m "bump: version vX.Y.Z"
         ```
+        **Single version number, even for a multi-project bump**: when several projects (App, Core, a
+        plugin, ...) are bumped together in this one commit, the message still uses exactly one
+        `vX.Y.Z` — the App version, matching the tag in step 4 — never an enumerated per-project
+        listing like `"chore: bump App to X, Core to Y, Plugin to Z"`.
      4. Tag the commit with the version number (prefixed with `v`):
         ```bash
         git tag vX.Y.Z
