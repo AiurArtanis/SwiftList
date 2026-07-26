@@ -9,7 +9,8 @@ internal static class DriveRecovery
         string cacheDir,
         string drive,
         CancellationToken token,
-        Action<string>? onReindexRequired)
+        Action<string>? onReindexRequired,
+        CancellationToken rebuildToken = default)
     {
         Logger.Log($"[SearchEngine] Restoring newly available drive {drive} from cache if possible.");
         var cached = indexer.TryLoadDriveFromCache(cacheDir, drive);
@@ -42,10 +43,14 @@ internal static class DriveRecovery
         // this instead.
         if (SupportsJournal(drive))
             indexer.RemoveDriveMonitor(drive);
-        var metadata = indexer.BuildDrives(new[] { drive }, clearExisting: false, cacheDir: cacheDir);
+        var wasCancelled = false;
+        var metadata = indexer.BuildDrives(new[] { drive }, clearExisting: false, cacheDir: cacheDir,
+            getToken: _ => rebuildToken, onDriveCancelled: _ => wasCancelled = true);
         if (metadata.Count == 0)
         {
-            indexer.SetDriveState(drive, "failed");
+            // A Stop request reverts to "cached" (mirrors NetworkIndexer's own CancelDrive), not "failed"
+            // -- the user asked for this, it isn't an error.
+            indexer.SetDriveState(drive, wasCancelled ? "cached" : "failed");
             return;
         }
 

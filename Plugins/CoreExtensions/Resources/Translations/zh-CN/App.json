@@ -294,6 +294,7 @@
   "Local_StateFailed": "失败",
   "Local_StateError": "错误",
   "Local_StateIdle": "空闲",
+  "Local_StateCached": "已缓存",
   "Local_StrategyMftUsn": "MFT + USN",
   "Local_StrategyDisabled": "未启用",
   "Local_KindLocalNtfs": "本地 NTFS",

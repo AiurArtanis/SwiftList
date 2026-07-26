@@ -8,7 +8,7 @@ public sealed class TreeBuilderDiffExtensionsTests
     private static TreeBuilder CreateBuilder(string root, TreeDiffBaseline? diffBaseline = null, bool recheckExclusions = false) => new(
         new FileRecordStore(), root, root,
         new WalkOptions([], [], [], MaxDepth: 0, WorkerCount: 1, UseIgnoreFiles: false),
-        CancellationToken.None, _ => { }, onCheckpoint: null, diffBaseline, recheckExclusions);
+        CancellationToken.None, (_, _) => { }, onCheckpoint: null, diffBaseline, recheckExclusions);
 
     [TestMethod]
     public void RegisterDirectoryIndices_OnlyIndexesDirectoryRecords()

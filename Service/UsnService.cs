@@ -25,7 +25,7 @@ public class UsnService : ServiceBase
         Logger.Log("[UsnService] Service Starting...");
         try
         {
-            // Local-drive scanning (USN/MFT/ReFS full builds, the non-USN FolderDriveScanner fallback,
+            // Local-drive scanning (USN/MFT/ReFS full builds, the non-USN LocalDriveWalkBuilder fallback,
             // and their FileSystemWatcher-based file monitors) all run in this same process. Unlike
             // network-drive indexing, they're already isolated from the App's own ThreadPool by being in
             // a separate process, but their threads still compete for physical CPU with the App's UI

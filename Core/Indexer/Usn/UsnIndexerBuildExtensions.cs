@@ -18,7 +18,9 @@ public static class UsnIndexerBuildExtensions
         this UsnIndexer indexer,
         IReadOnlyList<string> drives,
         bool clearExisting,
-        string? cacheDir = null)
+        string? cacheDir = null,
+        Func<string, CancellationToken>? getToken = null,
+        Action<string>? onDriveCancelled = null)
     {
         lock (indexer.LockObj)
         {
@@ -66,8 +68,15 @@ public static class UsnIndexerBuildExtensions
             drives,
             indexer.SetDriveState,
             indexer.UpdateDriveProgress,
-            (drive, onProgress) => FolderDriveScanner.BuildStreaming(drive, onProgress, CancellationToken.None),
-            (drive, result, progress, index) => OnDriveCompleted(indexer, cacheDir, drive, result.Store, progress),
+            (drive, onProgress, token) =>
+            {
+                FileRecordStore? previousStore;
+                lock (indexer.LockObj)
+                    previousStore = indexer._recordIndexes.TryGetValue(drive, out var live) ? live.ToStore() : null;
+                return LocalDriveWalkBuilder.Build(drive, $"{drive}:\\", previousStore, onProgress ?? ((_, _) => { }), token,
+                    onCheckpoint: (checkpointStore, _) => indexer.PublishLocalDriveCheckpoint(cacheDir, drive, checkpointStore, token));
+            },
+            (drive, result, progress, index) => OnDriveCompleted(indexer, cacheDir, drive, result, progress),
             (drive, result, progress, index) => OnDriveCompleted(indexer, cacheDir, drive, result.Store, progress),
             elapsedSeconds =>
             {
@@ -81,7 +90,9 @@ public static class UsnIndexerBuildExtensions
 
                 GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
                 Win32Api.TrimWorkingSet();
-            }
+            },
+            getToken,
+            onDriveCancelled
         );
     }
 

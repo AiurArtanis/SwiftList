@@ -12,7 +12,13 @@ internal sealed class SearchEngineDriveMaintenance
     private readonly Func<CancellationToken> _token;
     private readonly Func<bool> _isRebuilding;
     private readonly Action _onActivityCompleted;
-    private readonly HashSet<string> _pendingDriveRebuilds = new(StringComparer.OrdinalIgnoreCase);
+    internal readonly HashSet<string> _pendingDriveRebuilds = new(StringComparer.OrdinalIgnoreCase);
+    // One CancellationTokenSource per in-flight rebuild -- guarded by the same lock as
+    // _pendingDriveRebuilds since a CTS should exist for exactly the lifetime a drive is in that set.
+    // Lets CancelDriveRebuild (SearchEngineDriveMaintenanceCancellationExtensions.cs) stop a single
+    // drive's own rebuild without touching the app-wide lifetime token (_token()) every other drive's
+    // monitor also derives from. internal rather than private so that extension method can reach it.
+    internal readonly Dictionary<string, CancellationTokenSource> _activeRebuildCts = new(StringComparer.OrdinalIgnoreCase);
     public bool HasPendingRebuilds { get { lock (_pendingDriveRebuilds) return _pendingDriveRebuilds.Count > 0; } }
 
     public SearchEngineDriveMaintenance(
@@ -146,12 +152,15 @@ internal sealed class SearchEngineDriveMaintenance
 
     private void RebuildDrive(string drive, bool forceRebuild)
     {
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(_token());
+        lock (_pendingDriveRebuilds)
+            _activeRebuildCts[drive] = cts;
         try
         {
             if (forceRebuild)
-                ForceRebuildDrive(drive);
+                ForceRebuildDrive(drive, cts.Token);
             else
-                DriveRecovery.RestoreOrRebuild(_indexer, IndexCacheDir, drive, _token(), QueueDriveRebuild);
+                DriveRecovery.RestoreOrRebuild(_indexer, IndexCacheDir, drive, _token(), QueueDriveRebuild, cts.Token);
         }
         catch (Exception ex)
         {
@@ -161,13 +170,17 @@ internal sealed class SearchEngineDriveMaintenance
         finally
         {
             lock (_pendingDriveRebuilds)
+            {
                 _pendingDriveRebuilds.Remove(drive);
+                if (_activeRebuildCts.Remove(drive, out var current) && ReferenceEquals(current, cts))
+                    cts.Dispose();
+            }
             UpdateMaintenanceBusyState();
             _onActivityCompleted();
         }
     }
 
-    private void ForceRebuildDrive(string drive)
+    private void ForceRebuildDrive(string drive, CancellationToken token)
     {
         Logger.Log($"[SearchEngine] Rebuilding drive {drive} by client request.");
         lock (_indexer.LockObj)
@@ -182,10 +195,14 @@ internal sealed class SearchEngineDriveMaintenance
         // this instead.
         if (DriveRecovery.SupportsJournal(drive))
             _indexer.RemoveDriveMonitor(drive);
-        var metadata = _indexer.BuildDrives(new[] { drive }, clearExisting: false, cacheDir: IndexCacheDir);
+        var wasCancelled = false;
+        var metadata = _indexer.BuildDrives(new[] { drive }, clearExisting: false, cacheDir: IndexCacheDir,
+            getToken: _ => token, onDriveCancelled: _ => wasCancelled = true);
         if (metadata.Count == 0)
         {
-            _indexer.SetDriveState(drive, "failed");
+            // A Stop request reverts to "cached" (mirrors NetworkIndexer's own CancelDrive), not "failed"
+            // -- the user asked for this, it isn't an error.
+            _indexer.SetDriveState(drive, wasCancelled ? "cached" : "failed");
             return;
         }
 

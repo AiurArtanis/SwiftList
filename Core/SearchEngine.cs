@@ -101,6 +101,8 @@ public class SearchEngine : IDisposable
 
     public bool DeleteDriveIndex(string drive) => _drives.DeleteDriveIndex(drive);
 
+    public bool CancelDriveIndex(string drive) => _drives.CancelDriveRebuild(drive);
+
     public MachineSettings GetMachineSettings() => _machineSettings;
 
     public void UpdateMachineSettings(MachineSettings settings)

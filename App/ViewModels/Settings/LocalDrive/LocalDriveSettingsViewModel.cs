@@ -120,8 +120,15 @@ public class LocalDriveSettingsViewModel : ViewModelBase
             var hasCache = !string.IsNullOrWhiteSpace(drive.CachePath) && File.Exists(drive.CachePath);
             TrackPendingRebuild(drive);
 
-            item.RowAction = appliedEnabled ? LocalDriveRowAction.Rebuild : hasCache ? LocalDriveRowAction.Delete : LocalDriveRowAction.None;
-            item.CanRunRowAction = _pendingRowRebuilds.Count == 0 && (item.RowAction == LocalDriveRowAction.Delete || CanRebuild && item.RowAction == LocalDriveRowAction.Rebuild);
+            // A journal-backed (true NTFS/$MFT) rebuild has no cancellation support -- MftIndexScanner is a
+            // raw $MFT parse, not a walk, with no natural interruption point. Every other kind (ReFS, the
+            // non-journal LocalDriveWalkBuilder fallback) does, so Stop only shows for those. drive.Kind is
+            // read here BEFORE it gets overwritten with its translated display form below.
+            var canStop = drive.State == "indexing" && !string.Equals(drive.Kind, "NTFS", StringComparison.OrdinalIgnoreCase);
+            item.RowAction = canStop ? LocalDriveRowAction.Stop
+                : appliedEnabled ? LocalDriveRowAction.Rebuild : hasCache ? LocalDriveRowAction.Delete : LocalDriveRowAction.None;
+            item.CanRunRowAction = item.RowAction == LocalDriveRowAction.Stop
+                || (_pendingRowRebuilds.Count == 0 && (item.RowAction == LocalDriveRowAction.Delete || CanRebuild && item.RowAction == LocalDriveRowAction.Rebuild));
             item.CanEditEnabled = isPresent && IsDriveCheckboxEnabled;
             item.CachePath = drive.CachePath;
             item.Kind = drive.Kind == "LocalNtfs" ? TranslationManager.Instance["Local_KindLocalNtfs"] : drive.Kind;
@@ -149,7 +156,8 @@ public class LocalDriveSettingsViewModel : ViewModelBase
         IsDriveCheckboxEnabled = IsUserAdmin && isServiceReady && !isBusy;
         foreach (var drive in LocalDrives)
         {
-            drive.CanRunRowAction = !isBusy && (drive.RowAction == LocalDriveRowAction.Delete || CanRebuild && drive.RowAction == LocalDriveRowAction.Rebuild);
+            drive.CanRunRowAction = drive.RowAction == LocalDriveRowAction.Stop
+                || (!isBusy && (drive.RowAction == LocalDriveRowAction.Delete || CanRebuild && drive.RowAction == LocalDriveRowAction.Rebuild));
             drive.CanEditEnabled = drive.State != TranslationManager.Instance["Local_DriveUnavailable"] && IsDriveCheckboxEnabled;
         }
         if (!isServiceReady)
@@ -232,6 +240,14 @@ public class LocalDriveSettingsViewModel : ViewModelBase
             item.CanRunRowAction = false;
             item.CanEditEnabled = !isUnavailable && IsDriveCheckboxEnabled;
         }
+        else if (item.RowAction == LocalDriveRowAction.Stop)
+        {
+            // Don't touch item.State/RowAction here -- the next status poll re-derives both from whatever
+            // CancelDriveRebuild actually settles the service on, mirroring the network tab's own Stop.
+            _pendingRowRebuilds.Remove(item.Drive);
+            _observedRowRebuilds.Remove(item.Drive);
+            await _searchService.CancelDriveIndexAsync(item.Drive);
+        }
 
         _onTriggerFastRefresh?.Invoke();
     }
@@ -254,7 +270,7 @@ public class LocalDriveSettingsViewModel : ViewModelBase
         {
             _observedRowRebuilds.Add(drive.Drive);
         }
-        else if (drive.State is "ready" or "failed" or "disabled" or "unavailable")
+        else if (drive.State is "ready" or "failed" or "disabled" or "unavailable" or "cached")
         {
             _pendingRowRebuilds.Remove(drive.Drive);
             _observedRowRebuilds.Remove(drive.Drive);

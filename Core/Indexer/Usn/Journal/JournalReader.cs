@@ -6,7 +6,10 @@ namespace SwiftList.Core.Indexer.Usn.Journal;
 
 public class JournalReader
 {
-    internal UsnDriveIndexResult? IndexDrive(string drive, Action<int, int>? onProgress = null)
+    // token only applies to the ReFS branch below -- MftIndexScanner (raw $MFT parse, not a walk) has no
+    // natural interruption point and is out of scope for real cancellation; a Stop request against an NTFS
+    // drive has nothing to cancel here.
+    internal UsnDriveIndexResult? IndexDrive(string drive, Action<int, int>? onProgress = null, CancellationToken token = default)
     {
         Logger.Log($"[JournalReader] Indexing drive {drive}...");
         var volumePath = $"\\\\.\\{drive}:";
@@ -89,7 +92,7 @@ public class JournalReader
 
         if (fsType.Equals("ReFS", StringComparison.OrdinalIgnoreCase))
         {
-            return ReFsScanner.ScanDrive(drive, handle, rootFrn.Value, journalId, nextUsn, onProgress);
+            return ReFsScanner.ScanDrive(drive, handle, rootFrn.Value, journalId, nextUsn, onProgress, token);
         }
 
         // NTFS: parse the raw $MFT so hard links are fully indexed (one row per link).

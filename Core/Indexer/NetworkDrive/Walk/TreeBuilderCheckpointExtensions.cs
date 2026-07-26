@@ -33,7 +33,7 @@ internal static class TreeBuilderCheckpointExtensions
 
         try
         {
-            builder._onProgress(indexedItems);
+            builder._onProgress(Volatile.Read(ref builder._indexedFiles), Volatile.Read(ref builder._indexedDirs));
             builder._onCheckpoint(CloneStore(builder), CurrentStats(builder));
             // Double the gap before the NEXT checkpoint (capped) -- see TreeBuilder.MaxCheckpointBatchSize's
             // own comment for why a flat interval is O(n^2) total write volume on a full rebuild.

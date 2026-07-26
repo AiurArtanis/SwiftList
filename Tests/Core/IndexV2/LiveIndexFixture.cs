@@ -43,7 +43,7 @@ internal sealed class LiveIndexFixture : IDisposable
     }
 
     // The conventional self-parented root row every fixture needs at id 1 (see NetworkIndex.Build /
-    // FolderDriveScanner.Build / IndexCacheManager.CreateEmptyStore for the same convention elsewhere).
+    // LocalDriveWalkBuilder.Build / IndexCacheManager.CreateEmptyStore for the same convention elsewhere).
     public static FileRecord Root() => new(1, 1, "", FileRecordFlags.Directory | FileRecordFlags.SourceRoot);
 
     public void Dispose()

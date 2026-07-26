@@ -19,6 +19,7 @@ public static class SearchRequestBinarySerializer
                 break;
             case SearchRequestId.RebuildDrive:
             case SearchRequestId.DeleteDriveIndex:
+            case SearchRequestId.CancelDriveIndex:
                 payloadSize += GetStringByteCount(msg.Drive) + 5;
                 break;
             case SearchRequestId.Search:
@@ -53,6 +54,7 @@ public static class SearchRequestBinarySerializer
                     break;
                 case SearchRequestId.RebuildDrive:
                 case SearchRequestId.DeleteDriveIndex:
+                case SearchRequestId.CancelDriveIndex:
                     WriteString(span, ref offset, msg.Drive);
                     break;
                 case SearchRequestId.Search:
@@ -128,6 +130,7 @@ public static class SearchRequestBinarySerializer
                 break;
             case SearchRequestId.RebuildDrive:
             case SearchRequestId.DeleteDriveIndex:
+            case SearchRequestId.CancelDriveIndex:
                 msg.Drive = ReadString(payload, ref offset);
                 break;
             case SearchRequestId.Search:

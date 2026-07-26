@@ -45,6 +45,14 @@ public static class SearchServiceManagementExtensions
         return resp.Kind == PipeResponseKind.Ok;
     }
 
+    // Local drive rebuilds run in the elevated --service process (unlike network drives' in-process
+    // CancelNetworkDriveIndex), so a Stop request has to go over the pipe like Rebuild/Delete do.
+    public static async Task<bool> CancelDriveIndexAsync(this SearchService service, string drive, CancellationToken token = default)
+    {
+        var resp = await service.SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.CancelDriveIndex, Drive = drive }, token).ConfigureAwait(false);
+        return resp.Kind == PipeResponseKind.Ok;
+    }
+
     public static async Task<MachineSettings> GetMachineSettingsAsync(this SearchService service, CancellationToken token = default)
     {
         var resp = await service.SendPipeCommandAsync(new SearchRequestMessage { Id = SearchRequestId.GetMachineSettings }, token).ConfigureAwait(false);

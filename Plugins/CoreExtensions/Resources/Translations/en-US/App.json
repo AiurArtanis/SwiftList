@@ -294,6 +294,7 @@
   "Local_StateFailed": "Failed",
   "Local_StateError": "Error",
   "Local_StateIdle": "Idle",
+  "Local_StateCached": "Cached",
   "Local_StrategyMftUsn": "MFT + USN",
   "Local_StrategyDisabled": "Disabled",
   "Local_KindLocalNtfs": "Local NTFS",

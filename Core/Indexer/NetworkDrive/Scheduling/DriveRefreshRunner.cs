@@ -54,7 +54,7 @@ internal static class DriveRefreshRunner
                 token,
                 // Fires every ~1024 items; unguarded, this can race past CancelDrive's "cached" revert
                 // and clobber it back to "indexing" -- what made the Stop button lose that race sometimes.
-                count => { if (!token.IsCancellationRequested) setStatus(drive, "indexing", count, null); },
+                (files, dirs) => { if (!token.IsCancellationRequested) setStatus(drive, "indexing", files + dirs, null); },
                 (store, stats) => onPublishCheckpoint(drive, store, stats, token),
                 previousStore,
                 beforeFinalWrite: () => releaseCachedIndex(drive));

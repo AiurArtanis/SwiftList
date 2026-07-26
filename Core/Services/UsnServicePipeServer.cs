@@ -131,7 +131,7 @@ public sealed class UsnServicePipeServer : IDisposable
                         break;
                     }
 
-                    var response = ProcessClientRequest(request, token);
+                    var response = UsnServicePipeRequestProcessor.Process(_engine, request, token);
 
                     if (verboseLog)
                         Logger.Log($"[PipeServer] Sending response: {response.Kind}...", LogLevel.Debug);
@@ -189,95 +189,6 @@ public sealed class UsnServicePipeServer : IDisposable
         {
             _engine.StatusChanged -= Handler;
             signal.Dispose();
-        }
-    }
-
-    private PipeResponse ProcessClientRequest(SearchRequestMessage msg, CancellationToken token)
-    {
-        try
-        {
-            token.ThrowIfCancellationRequested();
-            switch (msg.Id)
-            {
-                case SearchRequestId.Ping:
-                    return new PipeResponse { Kind = PipeResponseKind.Ok };
-
-                case SearchRequestId.Status:
-                    var status = _engine?.GetStatus();
-                    return new PipeResponse
-                    {
-                        Kind = PipeResponseKind.Status,
-                        Status = status ?? new Indexer.Usn.UsnIndexer.IndexerStatus { State = "error" }
-                    };
-
-                case SearchRequestId.Rebuild:
-                    Logger.Log("[UsnService] Received REBUILD request from client.");
-                    _engine?.InitializeOrLoadIndex(true);
-                    return new PipeResponse { Kind = PipeResponseKind.Ok };
-
-                case SearchRequestId.Initialize:
-                    Logger.Log("[UsnService] Received INITIALIZE request from client.");
-                    _engine?.InitializeOrLoadIndex(false);
-                    return new PipeResponse { Kind = PipeResponseKind.Ok };
-
-                case SearchRequestId.RebuildDrive:
-                    var drive = msg.Drive ?? string.Empty;
-                    Logger.Log($"[UsnService] Received REBUILD_DRIVE request from client: {drive}");
-                    return _engine?.RebuildDriveIndex(drive) == true
-                        ? new PipeResponse { Kind = PipeResponseKind.Ok }
-                        : new PipeResponse { Kind = PipeResponseKind.Error, Message = "Invalid or disabled drive" };
-
-                case SearchRequestId.DeleteDriveIndex:
-                    var deleteDrive = msg.Drive ?? string.Empty;
-                    Logger.Log($"[UsnService] Received DELETE_DRIVE_INDEX request from client: {deleteDrive}");
-                    return _engine?.DeleteDriveIndex(deleteDrive) == true
-                        ? new PipeResponse { Kind = PipeResponseKind.Ok }
-                        : new PipeResponse { Kind = PipeResponseKind.Error, Message = "Invalid drive" };
-
-                case SearchRequestId.GetMachineSettings:
-                    return new PipeResponse
-                    {
-                        Kind = PipeResponseKind.MachineSettings,
-                        MachineSettings = _engine?.GetMachineSettings() ?? new MachineSettings()
-                    };
-
-                case SearchRequestId.SetMachineSettings:
-                    var settings = msg.MachineSettings;
-                    if (settings == null)
-                        return new PipeResponse { Kind = PipeResponseKind.Error, Message = "Invalid settings" };
-                    Logger.Log("[UsnService] Received SET_MACHINE_SETTINGS request.");
-                    _engine?.UpdateMachineSettings(settings);
-                    return new PipeResponse { Kind = PipeResponseKind.Ok };
-
-                case SearchRequestId.GetFileMetadata:
-                    var paths = msg.FilePaths ?? new List<string>();
-                    var metadata = _engine?.GetFileMetadataBatch(paths) ?? new Dictionary<string, FileMetadataEntry>();
-                    return new PipeResponse { Kind = PipeResponseKind.FileMetadata, FileMetadata = metadata };
-
-                case SearchRequestId.GetRecentFiles:
-                    var directories = msg.Directories ?? new List<string>();
-                    var recentFiles = _engine?.GetRecentFiles(directories, msg.Limit, msg.MaxAgeMinutes) ?? new List<SearchResult>();
-                    return new PipeResponse { Kind = PipeResponseKind.RecentFiles, RecentFiles = recentFiles };
-
-                case SearchRequestId.ClearServiceLog:
-                    Logger.ClearCurrentLog();
-                    return new PipeResponse { Kind = PipeResponseKind.Ok };
-
-                case SearchRequestId.ClearPathCaches:
-                    _engine?.ClearPathCaches();
-                    return new PipeResponse { Kind = PipeResponseKind.Ok };
-            }
-
-            return new PipeResponse { Kind = PipeResponseKind.Error, Message = "Unknown command" };
-        }
-        catch (OperationCanceledException)
-        {
-            return new PipeResponse { Kind = PipeResponseKind.Error, Message = "Cancelled" };
-        }
-        catch (Exception ex)
-        {
-            Logger.Log($"[UsnService] Error processing request {msg.Id}: {ex.Message}", LogLevel.Error);
-            return new PipeResponse { Kind = PipeResponseKind.Error, Message = ex.Message };
         }
     }
 

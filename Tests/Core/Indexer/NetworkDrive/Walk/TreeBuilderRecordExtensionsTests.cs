@@ -12,7 +12,7 @@ public sealed class TreeBuilderRecordExtensionsTests
     private static TreeBuilder CreateBuilder(string root) => new(
         new FileRecordStore(), root, root,
         new WalkOptions([], [], [], MaxDepth: 0, WorkerCount: 1, UseIgnoreFiles: false),
-        CancellationToken.None, _ => { });
+        CancellationToken.None, (_, _) => { });
 
     [TestMethod]
     public void TryCreateRecord_RegularFile_ReturnsSuccessWithFileMetadata()

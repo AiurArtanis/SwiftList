@@ -7,18 +7,18 @@ public sealed class TreeBuilderCheckpointExtensionsTests
 {
     private static TreeBuilder CreateBuilder(
         string root,
-        Action<int>? onProgress = null,
+        Action<int, int>? onProgress = null,
         Action<FileRecordStore, NetworkDriveWalkStats>? onCheckpoint = null) => new(
         new FileRecordStore(), root, root,
         new WalkOptions([], [], [], MaxDepth: 0, WorkerCount: 1, UseIgnoreFiles: false),
-        CancellationToken.None, onProgress ?? (_ => { }), onCheckpoint);
+        CancellationToken.None, onProgress ?? ((_, _) => { }), onCheckpoint);
 
     [TestMethod]
     public void MaybeCheckpoint_NoOnCheckpointCallback_NeverFiresProgressEither()
     {
         using var dir = new TempDirectory();
         var progressCalls = 0;
-        var builder = CreateBuilder(dir.Path, onProgress: _ => progressCalls++, onCheckpoint: null);
+        var builder = CreateBuilder(dir.Path, onProgress: (_, _) => progressCalls++, onCheckpoint: null);
 
         for (var i = 0; i < TreeBuilder.CheckpointBatchSize + 10; i++)
             builder.MaybeCheckpoint(i);

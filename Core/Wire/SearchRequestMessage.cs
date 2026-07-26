@@ -17,7 +17,8 @@ public enum SearchRequestId : byte
     ClearServiceLog = 12,
     GetRecentFiles = 13,
     ClearPathCaches = 14,
-    LaunchHook = 15
+    LaunchHook = 15,
+    CancelDriveIndex = 16
 }
 
 public struct SearchRequestMessage

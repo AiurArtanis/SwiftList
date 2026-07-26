@@ -30,7 +30,7 @@ internal sealed class TreeBuilder
     private readonly string _physicalRoot;
     internal readonly WalkFilter _filter;
     internal readonly CancellationToken _token;
-    internal readonly Action<int> _onProgress;
+    internal readonly Action<int, int> _onProgress;
     internal readonly Action<FileRecordStore, NetworkDriveWalkStats>? _onCheckpoint;
     private readonly Channel<WorkItem> _pending;
     internal readonly object _recordsGate = new();
@@ -39,6 +39,10 @@ internal sealed class TreeBuilder
     private int _pendingDirectories;
     internal int _countSinceProgress;
     internal int _indexedItems;
+    // Live files/dirs split of _indexedItems, for progress display -- _indexedItems itself stays the
+    // single source of truth for the checkpoint threshold and the diagnostic log in Run().
+    internal int _indexedFiles;
+    internal int _indexedDirs;
     internal int _skippedItems;
     internal int _errors;
     internal int _enumerateErrors;
@@ -66,7 +70,7 @@ internal sealed class TreeBuilder
         string physicalRoot,
         WalkOptions options,
         CancellationToken token,
-        Action<int> onProgress,
+        Action<int, int> onProgress,
         Action<FileRecordStore, NetworkDriveWalkStats>? onCheckpoint = null,
         TreeDiffBaseline? diffBaseline = null,
         bool recheckExclusions = false)
@@ -183,6 +187,7 @@ internal sealed class TreeBuilder
                 FlushRecords(batch);
 
             var indexedItems = Interlocked.Increment(ref _indexedItems);
+            if (isDirectory) Interlocked.Increment(ref _indexedDirs); else Interlocked.Increment(ref _indexedFiles);
 
             if (isDirectory && _filter.ShouldDescend(logicalFullPath, record.Attributes, current.Depth + 1, ignoreRules))
             {
@@ -197,7 +202,7 @@ internal sealed class TreeBuilder
             if (Interlocked.Increment(ref _countSinceProgress) >= ProgressBatchSize)
             {
                 Interlocked.Exchange(ref _countSinceProgress, 0);
-                _onProgress(indexedItems);
+                _onProgress(Volatile.Read(ref _indexedFiles), Volatile.Read(ref _indexedDirs));
             }
 
             this.MaybeCheckpoint(indexedItems);

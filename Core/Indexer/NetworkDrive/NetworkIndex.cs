@@ -105,7 +105,7 @@ internal sealed class NetworkIndex : IDisposable
         string physicalRoot,
         WalkOptions options,
         CancellationToken token,
-        Action<int> onProgress,
+        Action<int, int> onProgress,
         Action<FileRecordStore, NetworkDriveWalkStats>? onCheckpoint = null,
         FileRecordStore? previousStore = null,
         Action? beforeFinalWrite = null)
@@ -154,7 +154,9 @@ internal sealed class NetworkIndex : IDisposable
         var index = FromStore(store, stats);
         index.RootId = rootId;
         index.ExclusionRulesFingerprint = fingerprint;
-        onProgress(index.Count);
+        // NetworkIndexStatus.Items has no files/dirs split to preserve -- report the true final total under
+        // "files" so every existing status consumer sees the same number it always did.
+        onProgress(index.Count, 0);
         return index;
     }
 

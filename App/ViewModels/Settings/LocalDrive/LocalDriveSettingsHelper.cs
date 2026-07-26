@@ -7,7 +7,8 @@ public enum LocalDriveRowAction
 {
     None,
     Rebuild,
-    Delete
+    Delete,
+    Stop
 }
 
 public static class LocalDriveSettingsHelper
@@ -23,6 +24,9 @@ public static class LocalDriveSettingsHelper
         "failed" => TranslationManager.Instance["Local_StateFailed"],
         "error" => TranslationManager.Instance["Local_StateError"],
         "idle" => TranslationManager.Instance["Local_StateIdle"],
+        // What a rebuild reverts to when the user clicks Stop mid-rebuild -- mirrors NetworkIndexer's own
+        // CancelDrive, which always reverts to "cached" too.
+        "cached" => TranslationManager.Instance["Local_StateCached"],
         _ => state
     };
 }
@@ -75,6 +79,8 @@ public class LocalDriveSettingsItem : ViewModelBase
     {
         LocalDriveRowAction.Rebuild => TranslationManager.Instance["Local_RowRebuildBtn"],
         LocalDriveRowAction.Delete => TranslationManager.Instance["Local_RowDeleteBtn"],
+        // Reuses the network tab's own key rather than duplicating an identical "Stop" string.
+        LocalDriveRowAction.Stop => TranslationManager.Instance["Network_RowStopBtn"],
         _ => string.Empty
     };
 

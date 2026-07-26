@@ -18,7 +18,8 @@ public static class ReFsScanner
         UInt128 rootFrn,
         ulong journalId,
         long nextUsn,
-        Action<int, int>? onProgress = null)
+        Action<int, int>? onProgress = null,
+        CancellationToken token = default)
     {
         var stopwatch = Stopwatch.StartNew();
         Logger.Log($"[ReFsScanner] Starting ReFS initial scan for drive {drive}...");
@@ -26,7 +27,7 @@ public static class ReFsScanner
         // Slow path: parallel BFS via OpenFileById + GetFileInformationByHandleEx.
         // ponytail: O(N) I/O-bound scan; upgrade path = a documented ReFS full-enum API.
         Logger.Log($"[ReFsScanner] Drive {drive}: using ReFS directory-id BFS.");
-        var items = ScanParallel(volumeHandle, rootFrn, onProgress);
+        var items = ScanParallel(volumeHandle, rootFrn, onProgress, token);
         if (items == null)
             return null;
 
@@ -45,7 +46,7 @@ public static class ReFsScanner
     // Slow path: parallel BFS using Channel<UInt128> as the work queue.
     // Workers await new items (no spin); termination via channel.Writer.TryComplete() when inFlight hits 0.
     private static Dictionary<UInt128, ReFsItem>? ScanParallel(
-        SafeFileHandle volumeHandle, UInt128 rootFrn, Action<int, int>? onProgress)
+        SafeFileHandle volumeHandle, UInt128 rootFrn, Action<int, int>? onProgress, CancellationToken token)
     {
         var items = new ConcurrentDictionary<UInt128, ReFsItem>(8, 32768);
         var channel = Channel.CreateUnbounded<UInt128>(new UnboundedChannelOptions { SingleReader = false });
@@ -59,8 +60,9 @@ public static class ReFsScanner
             var workerCount = Math.Min(8, Environment.ProcessorCount);
             var tasks = Enumerable.Range(0, workerCount).Select(_ => Task.Run(async () =>
             {
-                await foreach (var dirId in channel.Reader.ReadAllAsync())
+                await foreach (var dirId in channel.Reader.ReadAllAsync(token))
                 {
+                    token.ThrowIfCancellationRequested();
                     ProcessDir(volumeHandle, dirId, items, onProgress, ref files, ref dirs, subId =>
                     {
                         Interlocked.Increment(ref inFlight);
@@ -70,9 +72,17 @@ public static class ReFsScanner
                     if (Interlocked.Decrement(ref inFlight) == 0)
                         channel.Writer.TryComplete();
                 }
-            })).ToArray();
+            }, token)).ToArray();
 
-            Task.WaitAll(tasks);
+            Task.WaitAll(tasks, token);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is OperationCanceledException))
+        {
+            throw new OperationCanceledException(token);
         }
         catch (Exception ex)
         {
