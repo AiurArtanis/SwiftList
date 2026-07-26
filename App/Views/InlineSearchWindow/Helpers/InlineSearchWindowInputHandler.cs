@@ -14,6 +14,7 @@ public class InlineSearchWindowInputHandler
     private readonly InlineSearchWindowLayoutManager _layoutManager;
     private bool _suppressExplorerSelectionSync;
     private bool _userNavigatedSinceLastQuery;
+    private int _selectionSyncQueued;
 
     public void ResetUserNavigation() => _userNavigatedSinceLastQuery = false;
 
@@ -243,8 +244,19 @@ public class InlineSearchWindowInputHandler
     {
         _suppressExplorerSelectionSync = true;
 
+        // ReconcileTo fires one CollectionChanged per differing row (Replace/Add/Remove), not one Reset
+        // -- every one of those reaches this method. Without a coalescing guard, per-keystroke timing
+        // diagnostics showed a single result-set update queuing 20-40+ of these ContextIdle callbacks
+        // back to back, each one redundantly re-running the auto-select-first-result loop AND a real IPC
+        // SendMessage to the Hook process in SyncExplorerSelection below -- individually cheap
+        // (sub-millisecond each) but the sheer count of queued dispatcher operations was the actual
+        // source of the typing lag, not any single expensive call.
+        if (Interlocked.Exchange(ref _selectionSyncQueued, 1) == 1)
+            return;
+
         _window.Dispatcher.BeginInvoke(new Action(() =>
         {
+            Interlocked.Exchange(ref _selectionSyncQueued, 0);
             _suppressExplorerSelectionSync = false;
 
             // Auto-select the first valid result if nothing is selected or if user has not navigated yet
