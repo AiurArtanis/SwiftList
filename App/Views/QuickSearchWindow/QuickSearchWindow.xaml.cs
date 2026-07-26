@@ -6,6 +6,7 @@ using SwiftList.Core;
 using SwiftList.App.Services;
 using SwiftList.App.Views.QuickSearchWindow;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using TextBox = System.Windows.Controls.TextBox;
 using TextBlock = System.Windows.Controls.TextBlock;
 using Border = System.Windows.Controls.Border;
@@ -50,6 +51,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         _layoutManager = new QuickSearchWindowLayoutManager(this);
         _resultExecutor = new QuickSearchWindowResultExecutor(this);
         _lifecycle = new QuickSearchWindowLifecycle(this, () => _trayService?.HandleTaskbarCreated());
+        _borderDragTracker = new WindowDragTracker(this);
         InitializeChildControls();
     }
 
@@ -233,13 +235,34 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         timer.Start();
     }
 
+    // Manual drag instead of DragMove(): DragMove()'s native move loop is a blocking modal call with no
+    // way to query or constrain it mid-drag, but pressing/releasing Ctrl during the drag needs to take
+    // effect immediately (constrain to vertical-only movement while held) -- see WindowDragTracker.
+    private readonly WindowDragTracker _borderDragTracker;
+
     private void Border_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton == MouseButton.Left)
-        {
-            this.DragMove();
-            SaveWindowPosition();
-        }
+        if (e.ChangedButton != MouseButton.Left) return;
+
+        if (sender is IInputElement el) el.CaptureMouse();
+        _borderDragTracker.Start(PointToScreen(e.GetPosition(this)));
+    }
+
+    private void Border_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_borderDragTracker.IsDragging || e.LeftButton != MouseButtonState.Pressed)
+            return;
+
+        _borderDragTracker.Update(PointToScreen(e.GetPosition(this)));
+    }
+
+    private void Border_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_borderDragTracker.IsDragging) return;
+
+        _borderDragTracker.End();
+        if (sender is IInputElement el) el.ReleaseMouseCapture();
+        SaveWindowPosition();
     }
 
     private void SaveWindowPosition()
