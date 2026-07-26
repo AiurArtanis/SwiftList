@@ -11,7 +11,6 @@ internal sealed class SearchEngineDriveMaintenance
     private readonly Func<MachineSettings> _settings;
     private readonly Func<CancellationToken> _token;
     private readonly Func<bool> _isRebuilding;
-    private readonly Action<IDisposable> _addMonitor;
     private readonly Action _onActivityCompleted;
     private readonly HashSet<string> _pendingDriveRebuilds = new(StringComparer.OrdinalIgnoreCase);
     public bool HasPendingRebuilds { get { lock (_pendingDriveRebuilds) return _pendingDriveRebuilds.Count > 0; } }
@@ -21,14 +20,12 @@ internal sealed class SearchEngineDriveMaintenance
         Func<MachineSettings> settings,
         Func<CancellationToken> token,
         Func<bool> isRebuilding,
-        Action<IDisposable> addMonitor,
         Action onActivityCompleted)
     {
         _indexer = indexer;
         _settings = settings;
         _token = token;
         _isRebuilding = isRebuilding;
-        _addMonitor = addMonitor;
         _onActivityCompleted = onActivityCompleted;
     }
 
@@ -153,7 +150,7 @@ internal sealed class SearchEngineDriveMaintenance
             if (forceRebuild)
                 ForceRebuildDrive(drive);
             else
-                DriveRecovery.RestoreOrRebuild(_indexer, IndexCacheDir, drive, _token(), QueueDriveRebuild, _addMonitor);
+                DriveRecovery.RestoreOrRebuild(_indexer, IndexCacheDir, drive, _token(), QueueDriveRebuild);
         }
         catch (Exception ex)
         {
@@ -189,19 +186,8 @@ internal sealed class SearchEngineDriveMaintenance
         EnsureDriveMonitor(drive, metadata[0].JournalId, metadata[0].NextUsn);
     }
 
-    private void EnsureDriveMonitor(string drive, ulong journalId, long nextUsn)
-    {
-        var fs = VolumeHelper.GetFileSystemType(drive);
-        if (fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase))
-        {
-            new UsnMonitor(drive, journalId, nextUsn, _indexer, _token(), QueueDriveRebuild).Start();
-            return;
-        }
-
-        var monitor = new FolderDriveMonitor(drive, (changeType, path, oldPath) => _indexer.ApplyFolderChange(drive, changeType, path, oldPath), _token());
-        monitor.Start();
-        _addMonitor(monitor);
-    }
+    private void EnsureDriveMonitor(string drive, ulong journalId, long nextUsn) =>
+        DriveMonitorFactory.EnsureMonitor(_indexer, drive, journalId, nextUsn, _token(), QueueDriveRebuild);
 
     private void PopulateCountsFromCache()
     {

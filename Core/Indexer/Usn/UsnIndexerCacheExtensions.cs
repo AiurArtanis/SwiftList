@@ -59,7 +59,7 @@ public static class UsnIndexerCacheExtensions
                 indexer.Status.TotalDirs += dirs;
                 indexer.Status.ActiveDrives.Add(item.Drive);
                 metadata.Add((item.Drive, item.JournalId, item.NextUsn));
-                indexer.UpdateDriveCounts(item.Drive);
+                indexer.UpdateDriveCounts(item.Drive, markReady: true);
             }
 
             if (metadata.Count > 0)
@@ -96,7 +96,7 @@ public static class UsnIndexerCacheExtensions
             indexer.Status.TotalDirs = totals.Sum(t => t.Dirs);
             indexer.Status.State = "ready";
             indexer.Status.Progress = 100;
-            indexer.UpdateDriveCounts(drive);
+            indexer.UpdateDriveCounts(drive, markReady: true);
             return (metadata.JournalId, metadata.NextUsn);
         }
     }

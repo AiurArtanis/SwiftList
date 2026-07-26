@@ -9,8 +9,7 @@ internal static class DriveRecovery
         string cacheDir,
         string drive,
         CancellationToken token,
-        Action<string>? onReindexRequired,
-        Action<IDisposable> addMonitor)
+        Action<string>? onReindexRequired)
     {
         Logger.Log($"[SearchEngine] Restoring newly available drive {drive} from cache if possible.");
         var cached = indexer.TryLoadDriveFromCache(cacheDir, drive);
@@ -19,7 +18,7 @@ internal static class DriveRecovery
             if (!SupportsJournal(drive))
             {
                 TrySaveDriveCache(indexer, cacheDir, new() { (drive, cached.Value.JournalId, cached.Value.NextUsn) }, drive, "folder restore");
-                StartFolderMonitor(indexer, drive, onReindexRequired, addMonitor, token);
+                DriveMonitorFactory.EnsureMonitor(indexer, drive, cached.Value.JournalId, cached.Value.NextUsn, token, onReindexRequired);
                 Logger.Log($"[SearchEngine] Restored folder-scan drive {drive} from cache.");
                 return;
             }
@@ -28,7 +27,7 @@ internal static class DriveRecovery
             if (nextUsn >= 0)
             {
                 TrySaveDriveCache(indexer, cacheDir, new() { (drive, cached.Value.JournalId, nextUsn) }, drive, "USN catch-up");
-                new UsnMonitor(drive, cached.Value.JournalId, nextUsn, indexer, token, onReindexRequired).Start();
+                DriveMonitorFactory.EnsureMonitor(indexer, drive, cached.Value.JournalId, nextUsn, token, onReindexRequired);
                 Logger.Log($"[SearchEngine] Restored drive {drive} from cache and USN catch-up.");
                 return;
             }
@@ -46,25 +45,13 @@ internal static class DriveRecovery
         }
 
         foreach (var (builtDrive, journalId, nextUsn) in metadata)
-        {
-            if (SupportsJournal(builtDrive))
-                new UsnMonitor(builtDrive, journalId, nextUsn, indexer, token, onReindexRequired).Start();
-            else
-                StartFolderMonitor(indexer, builtDrive, onReindexRequired, addMonitor, token);
-        }
+            DriveMonitorFactory.EnsureMonitor(indexer, builtDrive, journalId, nextUsn, token, onReindexRequired);
     }
 
     private static bool SupportsJournal(string drive)
     {
         var fs = VolumeHelper.GetFileSystemType(drive);
         return fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static void StartFolderMonitor(UsnIndexer indexer, string drive, Action<string>? onReindexRequired, Action<IDisposable> addMonitor, CancellationToken token)
-    {
-        var monitor = new FolderDriveMonitor(drive, (changeType, path, oldPath) => indexer.ApplyFolderChange(drive, changeType, path, oldPath), token);
-        monitor.Start();
-        addMonitor(monitor);
     }
 
     private static void TrySaveDriveCache(

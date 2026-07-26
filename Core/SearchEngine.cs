@@ -23,7 +23,6 @@ public class SearchEngine : IDisposable
     private long _lastDriveDetectTime = 0;
     private readonly object _trimLock = new();
     private readonly Timer? _idleTimer;
-    private readonly List<IDisposable> _folderMonitors = new();
 
     public SearchEngine()
     {
@@ -32,7 +31,6 @@ public class SearchEngine : IDisposable
             () => _machineSettings,
             () => _cts?.Token ?? CancellationToken.None,
             () => _isRebuilding,
-            AddFolderMonitor,
             TryReleaseRuntimeAfterActivity);
         _idleTimer = new Timer(OnIdleTimerTick, null, 3000, 3000);
     }
@@ -189,10 +187,10 @@ public class SearchEngine : IDisposable
             // Cancel any active monitors
             _cts?.Cancel();
             _cts?.Dispose();
-            DisposeFolderMonitors();
+            _indexer.DisposeAllDriveMonitors();
             _cts = new CancellationTokenSource();
 
-            var initializer = new SearchEngineInitializer(_indexer, IndexCacheDir, _drives.QueueDriveRebuild, AddFolderMonitor);
+            var initializer = new SearchEngineInitializer(_indexer, IndexCacheDir, _drives.QueueDriveRebuild);
             initializer.Run(forceRebuild, _cts, isRebuilding =>
             {
                 lock (_startLock)
@@ -210,7 +208,7 @@ public class SearchEngine : IDisposable
         _idleTimer?.Dispose();
         _cts?.Cancel();
         _cts?.Dispose();
-        DisposeFolderMonitors();
+        _indexer.DisposeAllDriveMonitors();
         lock (_searchLock)
         {
             _searchCts?.Cancel();
@@ -219,22 +217,6 @@ public class SearchEngine : IDisposable
             _searchDirCts?.Dispose();
         }
         GC.SuppressFinalize(this);
-    }
-
-    private void AddFolderMonitor(IDisposable monitor)
-    {
-        lock (_folderMonitors)
-            _folderMonitors.Add(monitor);
-    }
-
-    private void DisposeFolderMonitors()
-    {
-        lock (_folderMonitors)
-        {
-            foreach (var monitor in _folderMonitors)
-                monitor.Dispose();
-            _folderMonitors.Clear();
-        }
     }
 
     private void TryReleaseRuntimeAfterActivity()

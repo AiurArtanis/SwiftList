@@ -1,0 +1,124 @@
+using SwiftList.Core.Indexer.Usn;
+using SwiftList.Core.Tests.IndexV2;
+
+namespace SwiftList.Core.Tests.Indexer.Usn;
+
+[TestClass]
+public sealed class UsnIndexerTests
+{
+    // Regression coverage for the item-count flicker: a drive's own USN/folder monitor stays alive for
+    // the drive's ENTIRE rebuild (nothing stops it beforehand -- see EnsureDriveMonitor), and
+    // _recordIndexes[drive] still points at the OLD index for that whole window (BuildDrives only swaps
+    // in the fresh one at completion). A stray journal/folder-change notification arriving mid-rebuild
+    // must not stomp the in-progress scan's own reported Files/Dirs with the old index's totals, or flip
+    // the row back to "ready" early.
+    [TestMethod]
+    public void UpdateDriveCounts_DriveCurrentlyIndexingWithoutMarkReady_LeavesProgressUntouched()
+    {
+        using var fixture = LiveIndexFixture.Build("C", new[]
+        {
+            LiveIndexFixture.Root(),
+            new FileRecord(2, 1, "old-file.txt", FileRecordFlags.None),
+        });
+
+        var indexer = new UsnIndexer();
+        indexer._recordIndexes["C"] = fixture.Index;
+        indexer.Status.Drives.Add(new UsnIndexer.DriveIndexStatus { Drive = "C", State = "indexing", Files = 500, Dirs = 50 });
+
+        indexer.UpdateDriveCounts("C");
+
+        var item = indexer.Status.Drives.Single(d => d.Drive == "C");
+        Assert.AreEqual("indexing", item.State);
+        Assert.AreEqual(500, item.Files);
+        Assert.AreEqual(50, item.Dirs);
+    }
+
+    [TestMethod]
+    public void UpdateDriveCounts_MarkReadyTrue_UpdatesCountsAndStateEvenWhileIndexing()
+    {
+        using var fixture = LiveIndexFixture.Build("C", new[]
+        {
+            LiveIndexFixture.Root(),
+            new FileRecord(2, 1, "new-file.txt", FileRecordFlags.None),
+        });
+
+        var indexer = new UsnIndexer();
+        indexer._recordIndexes["C"] = fixture.Index;
+        indexer.Status.Drives.Add(new UsnIndexer.DriveIndexStatus { Drive = "C", State = "indexing", Files = 500, Dirs = 50 });
+
+        indexer.UpdateDriveCounts("C", markReady: true);
+
+        var item = indexer.Status.Drives.Single(d => d.Drive == "C");
+        Assert.AreEqual("ready", item.State);
+        Assert.AreEqual(1, item.Files);
+        Assert.AreEqual(1, item.Dirs);
+    }
+
+    [TestMethod]
+    public void UpdateDriveCounts_DriveNotIndexing_UpdatesNormallyWithoutMarkReady()
+    {
+        using var fixture = LiveIndexFixture.Build("C", new[]
+        {
+            LiveIndexFixture.Root(),
+            new FileRecord(2, 1, "file.txt", FileRecordFlags.None),
+        });
+
+        var indexer = new UsnIndexer();
+        indexer._recordIndexes["C"] = fixture.Index;
+        indexer.Status.Drives.Add(new UsnIndexer.DriveIndexStatus { Drive = "C", State = "unknown", Files = 0, Dirs = 0 });
+
+        indexer.UpdateDriveCounts("C");
+
+        var item = indexer.Status.Drives.Single(d => d.Drive == "C");
+        Assert.AreEqual("ready", item.State);
+        Assert.AreEqual(1, item.Files);
+        Assert.AreEqual(1, item.Dirs);
+    }
+
+    // Regression coverage for the leaked-monitor bug: every one of the three call sites that (re)start a
+    // drive's monitor (cold start, a manual per-drive rebuild, hot-plug recovery) now routes through
+    // RegisterDriveMonitor, which must stop whatever was previously registered for that drive rather than
+    // leaving it running alongside the new one.
+    [TestMethod]
+    public void RegisterDriveMonitor_ReplacingAnExistingEntry_DisposesThePreviousOne()
+    {
+        var indexer = new UsnIndexer();
+        var first = new DisposableSpy();
+        var second = new DisposableSpy();
+
+        indexer.RegisterDriveMonitor("C", first);
+        Assert.IsFalse(first.WasDisposed);
+
+        indexer.RegisterDriveMonitor("C", second);
+
+        Assert.IsTrue(first.WasDisposed);
+        Assert.IsFalse(second.WasDisposed);
+    }
+
+    [TestMethod]
+    public void DisposeAllDriveMonitors_DisposesEveryRegisteredDriveAndClearsTheRegistry()
+    {
+        var indexer = new UsnIndexer();
+        var driveC = new DisposableSpy();
+        var driveD = new DisposableSpy();
+        indexer.RegisterDriveMonitor("C", driveC);
+        indexer.RegisterDriveMonitor("D", driveD);
+
+        indexer.DisposeAllDriveMonitors();
+
+        Assert.IsTrue(driveC.WasDisposed);
+        Assert.IsTrue(driveD.WasDisposed);
+
+        // The registry must be cleared, not just its contents disposed -- otherwise a later
+        // RegisterDriveMonitor for "C" would try to dispose an already-disposed stale entry again.
+        var replacement = new DisposableSpy();
+        indexer.RegisterDriveMonitor("C", replacement);
+        Assert.IsFalse(replacement.WasDisposed);
+    }
+
+    private sealed class DisposableSpy : IDisposable
+    {
+        public bool WasDisposed { get; private set; }
+        public void Dispose() => WasDisposed = true;
+    }
+}

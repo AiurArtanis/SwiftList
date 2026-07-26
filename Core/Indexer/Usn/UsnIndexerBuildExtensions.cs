@@ -112,7 +112,7 @@ public static class UsnIndexerBuildExtensions
             indexer.Status.TotalFiles = totals.Sum(t => t.Files);
             indexer.Status.TotalDirs = totals.Sum(t => t.Dirs);
             indexer.Status.Progress = progress;
-            indexer.UpdateDriveCounts(drive);
+            indexer.UpdateDriveCounts(drive, markReady: true);
         }
     }
 }

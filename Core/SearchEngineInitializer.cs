@@ -8,18 +8,15 @@ internal class SearchEngineInitializer
     private readonly UsnIndexer _indexer;
     private readonly string _indexCacheDir;
     private readonly Action<string>? _onReindexRequired;
-    private readonly Action<IDisposable>? _addMonitor;
 
     public SearchEngineInitializer(
         UsnIndexer indexer,
         string indexCacheDir,
-        Action<string>? onReindexRequired = null,
-        Action<IDisposable>? addMonitor = null)
+        Action<string>? onReindexRequired = null)
     {
         _indexer = indexer;
         _indexCacheDir = indexCacheDir;
         _onReindexRequired = onReindexRequired;
-        _addMonitor = addMonitor;
     }
 
     private void EnsureDriveStatuses(IReadOnlyList<string> detectedDrives, IReadOnlyList<string> enabledDrives)
@@ -196,16 +193,6 @@ internal class SearchEngineInitializer
         }
     }
 
-    private void StartMonitor(string drive, ulong journalId, long nextUsn, CancellationToken token)
-    {
-        if (SupportsJournal(drive))
-        {
-            new UsnMonitor(drive, journalId, nextUsn, _indexer, token, _onReindexRequired).Start();
-            return;
-        }
-
-        var monitor = new FolderDriveMonitor(drive, (changeType, path, oldPath) => _indexer.ApplyFolderChange(drive, changeType, path, oldPath), token);
-        monitor.Start();
-        _addMonitor?.Invoke(monitor);
-    }
+    private void StartMonitor(string drive, ulong journalId, long nextUsn, CancellationToken token) =>
+        DriveMonitorFactory.EnsureMonitor(_indexer, drive, journalId, nextUsn, token, _onReindexRequired);
 }
