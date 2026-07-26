@@ -180,7 +180,13 @@ public static class UsnIndexerExtensions
             indexer.UpdateDriveCounts(drive);
         }
         SearchCoordinator.ClearCaches();
-        indexer.SaveDriveSnapshot(drive, live);
+        // SaveDriveSnapshot does a synchronous FULL Compact(force: true) -- calling it on every single
+        // debounced-batch item from FolderDriveMonitor (the only caller of this method, for local drives
+        // without USN journal support) meant one full-index rewrite per changed file, same unthrottled
+        // cost WatcherManager had for network/WSL/folder-index drives. The live delta above is already
+        // applied and searchable immediately; only the expensive disk persist is debounced per drive, so
+        // a burst of changes collapses into one rewrite once that drive goes quiet for a bit.
+        indexer._folderChangeSaveDebounce.Schedule(drive, () => indexer.SaveDriveSnapshot(drive, live));
         indexer.PublishStatusChanged();
     }
 

@@ -1,4 +1,5 @@
 using SwiftList.Core.IndexV2;
+using SwiftList.Core.DriveMonitoring;
 
 using SwiftList.Core.Indexer.Usn.Journal;
 namespace SwiftList.Core.Indexer.Usn;
@@ -39,6 +40,8 @@ public class UsnIndexer : IDisposable
     internal readonly Dictionary<string, LiveIndex> _recordIndexes = new(StringComparer.OrdinalIgnoreCase);
     // One live monitor per drive -- see DriveMonitorFactory, the sole place that populates this.
     private readonly Dictionary<string, IDisposable> _driveMonitors = new(StringComparer.OrdinalIgnoreCase);
+    // Debounces UsnIndexerExtensions.ApplyFolderChange's own disk persist -- see its own comment on why.
+    internal readonly KeyedDebouncer<string> _folderChangeSaveDebounce = new(1000, StringComparer.OrdinalIgnoreCase);
 
     public IndexerStatus Status { get; } = new();
     public object LockObj => _lockObj;
@@ -234,6 +237,7 @@ public class UsnIndexer : IDisposable
     public void Dispose()
     {
         DisposeAllDriveMonitors();
+        _folderChangeSaveDebounce.Dispose();
         _driveMetadata.Clear();
         foreach (var live in _recordIndexes.Values)
             live.Dispose();

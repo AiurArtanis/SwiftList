@@ -10,6 +10,16 @@ internal class WatcherManager : IDisposable
     private readonly Action<string, NetworkIndex> _onIncrementalUpdate;
     private volatile bool _disposed;
 
+    // Every raw FileSystemWatcher event that changed the in-memory index used to trigger _onIncrementalUpdate
+    // immediately -- which persists via NetworkIndexerPublisher.PublishIncrementalUpdate -> LiveIndex.
+    // Compact(force: true), a synchronous FULL snapshot rewrite -- with zero throttling. A share under
+    // active, ongoing write traffic (a team drive, a build output folder) could trigger one multi-hundred-MB
+    // rewrite PER FILE CHANGE. ApplyCreatedOrChanged/ApplyDeleted above still update the in-memory delta
+    // immediately (live search stays current); only the expensive disk persist is debounced per drive here,
+    // so a burst of changes collapses into one rewrite once that drive goes quiet for a bit.
+    private const int PublishDebounceMs = 1000;
+    private readonly KeyedDebouncer<string> _publishDebounce = new(PublishDebounceMs, StringComparer.OrdinalIgnoreCase);
+
     public WatcherManager(
         Action<string, string> queueRefresh,
         Func<string, NetworkIndex?> getIndex,
@@ -60,7 +70,15 @@ internal class WatcherManager : IDisposable
                 }
             }
         }
+
+        _publishDebounce.Cancel(drive);
     }
+
+    // Coalesces however many watcher events land on this drive within PublishDebounceMs into a single
+    // publish -- resetting an existing pending timer rather than letting both fire, so a steady stream of
+    // changes (e.g. a large copy in progress) never actually reaches the timer's due time until it stops.
+    private void SchedulePublish(string drive, NetworkIndex index) =>
+        _publishDebounce.Schedule(drive, () => _onIncrementalUpdate(drive, index));
 
     private bool ConfigureWatcher(FileSystemWatcher watcher, string drive, Action restart, Action retry, Action<string> logError)
     {
@@ -145,7 +163,7 @@ internal class WatcherManager : IDisposable
             if (changed)
             {
                 Logger.Log($"[WatcherManager] Incremental {changeType} applied on {drive}: {logicalPath}; items={index.Count}", LogLevel.Debug);
-                _onIncrementalUpdate(drive, index);
+                SchedulePublish(drive, index);
             }
         }
         catch (Exception ex)
@@ -178,7 +196,7 @@ internal class WatcherManager : IDisposable
             if (changed)
             {
                 Logger.Log($"[WatcherManager] Incremental Rename applied on {drive}: {logicalOldPath} -> {logicalNewPath}; items={index.Count}", LogLevel.Debug);
-                _onIncrementalUpdate(drive, index);
+                SchedulePublish(drive, index);
             }
         }
         catch (Exception ex)
@@ -205,5 +223,7 @@ internal class WatcherManager : IDisposable
             }
             _watchers.Clear();
         }
+
+        _publishDebounce.Dispose();
     }
 }
