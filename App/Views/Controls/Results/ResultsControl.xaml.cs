@@ -167,30 +167,53 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
         }
     }
 
-    private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => Dispatcher.BeginInvoke(new Action(() =>
-                                                                                                 {
-                                                                                                     if (GridActions != null && GridActions.Visibility == Visibility.Visible)
-                                                                                                         return;
+    // ReconcileTo (ObservableRangeCollection) raises one CollectionChanged event PER CHANGED ROW, not
+    // one for the whole batch -- and SearchResultsReconciler.ItemsEqual compares SearchQuery, which is
+    // re-stamped with the just-typed text on every keystroke, so essentially every row differs every
+    // time (needed so an already-realized row's TextHighlighter binding picks up the new query and
+    // re-highlights). For the full window's 1000-item budget that's up to ~1000 individual events per
+    // keystroke; without this guard, each one independently scheduled its own Dispatcher.BeginInvoke
+    // below, so a single keystroke could queue up to ~1000 Render-priority callbacks (each redoing
+    // SelectedIndex/ScrollIntoView) for the UI thread to drain before it could respond to the next one --
+    // only the LAST of those ever did anything observable anyway, since the list had already fully
+    // settled to its final state by the time any of them actually ran. Collapsing the whole burst down to
+    // exactly one scheduled callback (it naturally runs after ReconcileTo's synchronous loop finishes,
+    // since BeginInvoke never runs mid-loop on the same thread) keeps the exact same observable result
+    // with none of the wasted intermediate work.
+    private bool _collectionChangedPending;
 
-                                                                                                     var list = ActiveListBox;
-                                                                                                     if (list != null && list.Items.Count > 0)
-                                                                                                     {
-                                                                                                         list.SelectedIndex = 0;
-                                                                                                         if (ViewMode == ResultsViewMode.Grid)
-                                                                                                             LstGridResults.ScrollIntoView(LstGridResults.SelectedItem);
-                                                                                                         else
-                                                                                                             LstResults.ScrollIntoView(LstResults.SelectedItem);
-                                                                                                     }
-                                                                                                     else
-                                                                                                     {
-                                                                                                         list?.SelectedIndex = -1;
-                                                                                                     }
+    private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (_collectionChangedPending) return;
+        _collectionChangedPending = true;
 
-                                                                                                     // Reseed the hover baseline to the cursor's current spot so the MouseMove WPF
-                                                                                                     // synthesizes once these rows finish laying out under it doesn't get mistaken for
-                                                                                                     // real movement (see LstResults.MouseMove above).
-                                                                                                     _lastHoverPos = System.Windows.Input.Mouse.GetPosition(LstResults);
-                                                                                                 }), System.Windows.Threading.DispatcherPriority.Render);
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _collectionChangedPending = false;
+
+            if (GridActions != null && GridActions.Visibility == Visibility.Visible)
+                return;
+
+            var list = ActiveListBox;
+            if (list != null && list.Items.Count > 0)
+            {
+                list.SelectedIndex = 0;
+                if (ViewMode == ResultsViewMode.Grid)
+                    LstGridResults.ScrollIntoView(LstGridResults.SelectedItem);
+                else
+                    LstResults.ScrollIntoView(LstResults.SelectedItem);
+            }
+            else
+            {
+                list?.SelectedIndex = -1;
+            }
+
+            // Reseed the hover baseline to the cursor's current spot so the MouseMove WPF synthesizes
+            // once these rows finish laying out under it doesn't get mistaken for real movement (see
+            // LstResults.MouseMove above).
+            _lastHoverPos = System.Windows.Input.Mouse.GetPosition(LstResults);
+        }), System.Windows.Threading.DispatcherPriority.Render);
+    }
 
     // SelectedItem DependencyProperty
     public static readonly DependencyProperty SelectedItemProperty = DependencyProperty.Register(
