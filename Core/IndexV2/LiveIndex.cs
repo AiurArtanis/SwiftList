@@ -30,6 +30,10 @@ public sealed class LiveIndex : IDisposable
 
     public string SourceKey => _snapshot.SourceKey;
 
+    // The scan-completeness marker recorded when this snapshot was written. DeltaOverlay never changes
+    // it, so this reads straight off the base snapshot rather than merging through ToStore().
+    public bool IsComplete => Read((snapshot, _) => snapshot.IsComplete);
+
     // Runs `read` under the read lock with a consistent (Snapshot, DeltaOverlay) pair -- multiple
     // searches run concurrently, but never overlap a mutation or a compaction swap.
     public T Read<T>(Func<Snapshot, DeltaOverlay, T> read)

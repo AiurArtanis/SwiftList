@@ -24,6 +24,21 @@ internal static class UsnIndexerCheckpointExtensions
         // per-item _token.ThrowIfCancellationRequested() calls.
         token.ThrowIfCancellationRequested();
 
+        // Mirrors NetworkIndexerPublisher.PublishCheckpoint's own "don't regress a complete cache" guard:
+        // a checkpoint is always a partial, in-progress snapshot. If what's currently live for this drive
+        // is already a fully complete, trusted index -- e.g. a rebuild that reused this same drive's own
+        // complete index as its TreeDiffBaseline -- persisting this mid-walk snapshot over it would
+        // regress the on-disk cache and live search back to a smaller view, permanently if the walk is
+        // then cancelled or the process crashes before finishing. Skip entirely; the last known-good
+        // complete index keeps serving searches until the walk actually finishes and can genuinely
+        // replace it. Checked BEFORE SnapshotWriter.Write below, which unconditionally overwrites this
+        // drive's on-disk cache file as part of just being called.
+        LiveIndex? currentBeforeSave;
+        lock (indexer.LockObj)
+            indexer._recordIndexes.TryGetValue(drive, out currentBeforeSave);
+        if (currentBeforeSave != null && currentBeforeSave.IsComplete)
+            return;
+
         var path = LocalDriveCacheLocator.GetCachePath(cacheDir, drive);
         SnapshotWriter.Write(store, path);
         var live = new LiveIndex(Snapshot.Open(path));

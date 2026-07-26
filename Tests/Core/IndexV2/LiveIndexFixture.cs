@@ -23,7 +23,7 @@ internal sealed class LiveIndexFixture : IDisposable
 
     // driveKey mirrors FileRecordStore.SourceKey (e.g. "C" for a local drive) -- becomes Snapshot.SourceKey
     // and, via PathHelpers.BuildSourceRoot, Snapshot.SourceRoot (e.g. "C:\").
-    public static LiveIndexFixture Build(string driveKey, IEnumerable<FileRecord> records)
+    public static LiveIndexFixture Build(string driveKey, IEnumerable<FileRecord> records, bool isComplete = false)
     {
         var tempDir = Directory.CreateTempSubdirectory("swiftlist-tests-").FullName;
         var path = System.IO.Path.Combine(tempDir, "test.idx");
@@ -34,6 +34,7 @@ internal sealed class LiveIndexFixture : IDisposable
             SourceKind = FileRecordSourceKind.LocalMft,
             IdKind = FileRecordIdKind.MftFrn,
             RootId = 1,
+            IsComplete = isComplete,
         };
         store.Records.AddRange(records);
 

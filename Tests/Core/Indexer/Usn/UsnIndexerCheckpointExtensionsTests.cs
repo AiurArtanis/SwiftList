@@ -70,6 +70,29 @@ public sealed class UsnIndexerCheckpointExtensionsTests
         }
     }
 
+    // Regression coverage for the "don't regress a complete cache" guard, mirroring
+    // NetworkIndexerPublisherTests' equivalent PublishCheckpoint coverage: a mid-walk checkpoint must
+    // never overwrite an already-complete cached index with a smaller partial one.
+    [TestMethod]
+    public void PublishLocalDriveCheckpoint_ExistingIndexAlreadyComplete_SkipsSwapWithoutRegressingIt()
+    {
+        using var cacheDir = new TempDirectory();
+        using var oldFixture = LiveIndexFixture.Build("C", new[] { LiveIndexFixture.Root() }, isComplete: true);
+        var indexer = new UsnIndexer();
+        indexer._recordIndexes["C"] = oldFixture.Index;
+        indexer.Status.Drives.Add(new UsnIndexer.DriveIndexStatus { Drive = "C", State = "indexing" });
+
+        var checkpointStore = new FileRecordStore { SourceKey = "C", SourceKind = FileRecordSourceKind.LocalMft, IdKind = FileRecordIdKind.SourceLocalId64, RootId = 1 };
+        checkpointStore.Records.Add(new FileRecord(1, 1, "", FileRecordFlags.Directory | FileRecordFlags.SourceRoot));
+
+        indexer.PublishLocalDriveCheckpoint(cacheDir.Path, "C", checkpointStore, CancellationToken.None);
+
+        Assert.AreSame(oldFixture.Index, indexer._recordIndexes["C"]);
+        // The old index must not have been disposed either -- still fully usable.
+        var (files, _) = oldFixture.Index.GetCounts();
+        Assert.AreEqual(0, files);
+    }
+
     [TestMethod]
     public void PublishLocalDriveCheckpoint_DriveNotTracked_DisposesTheNewIndexWithoutThrowing()
     {
