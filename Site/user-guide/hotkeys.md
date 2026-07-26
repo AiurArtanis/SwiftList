@@ -30,9 +30,11 @@ different in each of the [three windows](./getting-started#the-three-windows):
 - **Quick window** — left-click (no movement) opens the same menu the tray icon's right-click shows
   (Show Main Window, Toggle Hotkeys, Settings, About, Clean Exit, Exit), anchored at the cursor; that
   menu's Show Main Window item also carries over whatever query you currently have typed. Click-and-drag
-  moves the window, same as dragging any other part of the search bar. Right-click resets the window to
-  its default on-screen position (not size) — the same one it centers to on first launch. A hover
-  tooltip spells out all three behaviors.
+  moves the window, same as dragging any other part of the search bar — hold **Ctrl** while dragging
+  (either the bar or the logo, and toggling Ctrl mid-drag works too) to constrain movement to vertical
+  only, useful for nudging the window up or down without shifting it sideways. Right-click resets the
+  window to its default on-screen position (not size) — the same one it centers to on first launch. A
+  hover tooltip spells out all three behaviors.
 - **Inline window** — only clickable when the window is docked to a native Open/Save/Browse-for-folder
   dialog: left-click opens [quick navigation](#quick-navigation-mouse), same as the dedicated trigger
   below. Not clickable when docked to a plain Explorer window or the desktop, since there's nothing
