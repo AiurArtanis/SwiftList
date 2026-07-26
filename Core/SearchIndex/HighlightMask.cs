@@ -55,37 +55,35 @@ internal static class HighlightMask
     {
         foreach (var set in pattern.TermSets)
         {
-            // Mirrors FzfPattern.TryMatchSingle's own per-set OR semantics: try every non-inverse term
-            // in the set, in order, and highlight whichever one actually matches THIS candidate -- not
-            // just the set's first term regardless of whether it matches at all. A multi-term OR set
-            // (`a | b | c`) only ever has one term match a given candidate in practice, and it can be
-            // any of them; unconditionally marking term[0] left every candidate that actually matched
-            // via a later term with no highlight at all (none of term[0]'s tiers found anything to mark).
+            // Highlight EVERY non-inverse term in the set that actually matches this candidate, not
+            // just whichever one happens to be tried first -- a candidate containing more than one of a
+            // multi-term OR set's terms (e.g. "我爱我家" containing both "我" and "爱" from "我 | 爱 |
+            // 你") shows the union of all of them, matching what a user scanning the OR query visually
+            // expects to see lit up, not just an arbitrary single winner.
             foreach (var term in set.Terms)
             {
                 if (term.Inverse)
                     continue;
 
-                if (MarkTerm(fullText, term.Text, term.CaseSensitive, highlights, ref materialized, slab))
-                    break;
+                MarkTerm(fullText, term.Text, term.CaseSensitive, highlights, ref materialized, slab);
             }
         }
     }
 
-    private static bool MarkTerm(ReadOnlySpan<char> fullText, string term, bool caseSensitive, Span<bool> highlights, ref string? materialized, FzfSlab slab)
+    private static void MarkTerm(ReadOnlySpan<char> fullText, string term, bool caseSensitive, Span<bool> highlights, ref string? materialized, FzfSlab slab)
     {
         var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
         if (MarkLiteralSpan(fullText, term, comparison, highlights))
-            return true;
+            return;
 
         if (FzfPositionMatcher.FuzzyMatchV2WithPositions(fullText, term, caseSensitive, FzfScoringScheme.Default, highlights, slab).IsMatch)
-            return true;
+            return;
 
         materialized ??= fullText.ToString();
         if (MarkViaAliasProviders(materialized, term, caseSensitive, highlights))
-            return true;
+            return;
 
-        return MarkViaMixedQuery(materialized, term, caseSensitive, highlights);
+        MarkViaMixedQuery(materialized, term, caseSensitive, highlights);
     }
 
     private static bool MarkLiteralSpan(ReadOnlySpan<char> haystack, ReadOnlySpan<char> needle, StringComparison comparison, Span<bool> highlights)
@@ -221,14 +219,14 @@ internal static class HighlightMask
     // plain-alias tier above and this term's own literal/direct-fuzzy tiers have failed. Segments the term by an
     // active provider's own InputRanges/OutputRanges and, on a genuine mix, paints via
     // MixedQueryMatcher -- see its header comment for the run-by-run algorithm.
-    private static bool MarkViaMixedQuery(string text, string term, bool caseSensitive, Span<bool> highlights)
+    private static void MarkViaMixedQuery(string text, string term, bool caseSensitive, Span<bool> highlights)
     {
         if (caseSensitive)
-            return false;
+            return;
 
         var mixedTerm = MixedQueryMatcher.TrySegment(term);
         if (mixedTerm == null || !mixedTerm.Provider.CanHandle(text))
-            return false;
+            return;
 
         foreach (var aliasGroup in mixedTerm.Provider.GetAliases(text))
         {
@@ -240,11 +238,9 @@ internal static class HighlightMask
                 if (string.IsNullOrEmpty(alias))
                     continue;
                 if (MixedQueryMatcher.TryMatchAndHighlight(mixedTerm, text, alias, highlights))
-                    return true;
+                    return;
             }
         }
-
-        return false;
     }
 
     // Finds ANY valid subsequence alignment of `term` within `text`, returning the matched positions in

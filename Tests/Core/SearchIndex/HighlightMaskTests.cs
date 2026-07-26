@@ -52,20 +52,17 @@ public sealed class HighlightMaskTests
         Assert.IsTrue(Array.TrueForAll(maskForThirdTerm, m => m));
     }
 
-    // Documents a real, expected consequence of the fix above, not a new bug: when a candidate contains
-    // MORE THAN ONE of the OR set's terms (e.g. "我爱我家" contains both "我" and "爱" from "我 | 爱 |
-    // 你"), only the FIRST term in set order that matches gets highlighted (both its occurrences, via
-    // MarkLiteralSpan's "every occurrence" behavior) -- "爱" never gets a chance to highlight, since Mark
-    // breaks as soon as "我" succeeds. This mirrors FzfPattern.TryMatchSingle itself, which also only
-    // picks ONE winning term per set for scoring rather than combining every term that happens to match.
+    // When a candidate contains MORE THAN ONE of the OR set's terms (e.g. "我爱我家" contains both "我"
+    // and "爱" from "我 | 爱 | 你"), every matching term highlights -- the union of "我"'s two
+    // occurrences AND "爱"'s one occurrence, not just whichever term happens to be tried first.
     [TestMethod]
-    public void Compute_OrQuery_CandidateContainsMultipleMatchingTerms_OnlyHighlightsTheFirstMatchingOne()
+    public void Compute_OrQuery_CandidateContainsMultipleMatchingTerms_HighlightsTheUnionOfAllOfThem()
     {
         var pattern = FzfPattern.Parse("我 | 爱 | 你");
 
         var mask = HighlightMask.Compute("我爱我家", pattern);
 
-        CollectionAssert.AreEqual(new[] { true, false, true, false }, mask);
+        CollectionAssert.AreEqual(new[] { true, true, true, false }, mask);
     }
 
     [TestMethod]
