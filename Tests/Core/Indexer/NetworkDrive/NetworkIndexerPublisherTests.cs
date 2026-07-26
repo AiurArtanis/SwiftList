@@ -2,14 +2,15 @@ using SwiftList.Core.Indexer.NetworkDrive;
 
 namespace SwiftList.Core.Tests.Indexer.NetworkDrive;
 
-// Only exercises the pure dictionary/delegate bookkeeping paths. PublishIncrementalUpdate, and
-// PublishCheckpoint's own non-alreadyComplete branch, both call IndexerHelper.Save, which ultimately
-// writes a real snapshot file under Logger.UserDataDir (NetworkIndex.FromStore/SaveToCache) -- the same
-// non-injectable-real-path hazard as UserSettings, so those are deliberately left untested here.
-// PublishCheckpoint's alreadyComplete branch is the exception: it now returns before touching disk at
-// all (see PublishCheckpoint's own comment on why that check moved earlier), so it's covered below.
-// `new NetworkIndex(drive)` (no _live set) is safe to use as a stand-in index: Count is 0, ToStore()/
-// Dispose() both short-circuit on _live == null without touching disk.
+// Only exercises the pure dictionary/delegate bookkeeping paths. PublishIncrementalUpdate's own
+// non-skipped path, and PublishCheckpoint's own non-alreadyComplete branch, both call IndexerHelper.Save,
+// which ultimately writes a real snapshot file under Logger.UserDataDir (NetworkIndex.FromStore/
+// SaveToCache) -- the same non-injectable-real-path hazard as UserSettings, so those are deliberately
+// left untested here. PublishCheckpoint's alreadyComplete branch, and PublishIncrementalUpdate's own
+// "drive currently indexing" skip, are the exceptions: both now return before touching disk at all (see
+// each method's own comment on why), so they're covered below. `new NetworkIndex(drive)` (no _live set)
+// is safe to use as a stand-in index: Count is 0, ToStore()/Dispose() both short-circuit on _live == null
+// without touching disk.
 [TestClass]
 public sealed class NetworkIndexerPublisherTests
 {
@@ -184,5 +185,35 @@ public sealed class NetworkIndexerPublisherTests
         var publisher = fixture.CreatePublisher();
 
         Assert.IsNull(publisher.ReleaseCachedIndex("Z"));
+    }
+
+    // Regression coverage for the network-drive item-count flicker: the watcher for a drive is live
+    // throughout a re-scan (attached before that drive's own initial refresh is even queued -- see
+    // Scheduler.StartRefresh), so a watcher-triggered incremental update landing mid-scan must not
+    // overwrite the scan's own in-progress status or persist a change against the stale pre-scan index.
+    [TestMethod]
+    public void PublishIncrementalUpdate_DriveCurrentlyIndexing_LeavesStatusUntouched()
+    {
+        var fixture = new Fixture();
+        fixture.Statuses["Z"] = new NetworkIndexStatus { Drive = "Z", State = "indexing", Items = 4096 };
+        var publisher = fixture.CreatePublisher();
+
+        publisher.PublishIncrementalUpdate("Z", new NetworkIndex("Z"));
+
+        Assert.AreEqual("indexing", fixture.Statuses["Z"].State);
+        Assert.AreEqual(4096, fixture.Statuses["Z"].Items);
+        Assert.AreEqual(0, fixture.StatusesChangedCount);
+    }
+
+    [TestMethod]
+    public void PublishIncrementalUpdate_DriveNotTracked_DoesNothing()
+    {
+        var fixture = new Fixture();
+        var publisher = fixture.CreatePublisher();
+
+        publisher.PublishIncrementalUpdate("Z", new NetworkIndex("Z"));
+
+        Assert.IsFalse(fixture.Statuses.ContainsKey("Z"));
+        Assert.AreEqual(0, fixture.StatusesChangedCount);
     }
 }

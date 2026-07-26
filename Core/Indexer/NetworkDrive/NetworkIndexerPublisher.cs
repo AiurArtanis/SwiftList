@@ -92,10 +92,29 @@ internal sealed class NetworkIndexerPublisher
 
     public void PublishIncrementalUpdate(string drive, NetworkIndex index)
     {
+        // Same fix, same reason as UsnIndexer.UpdateDriveCounts's markReady guard: the watcher for this
+        // drive is already live from the moment it's configured (Scheduler.StartRefresh attaches it
+        // before that drive's own initial refresh is even queued), and PublishCheckpoint's own "cached
+        // index already complete, don't touch it yet" branch leaves _indexes[drive] -- and so `index`
+        // here, since WatcherManager mutates that same cached instance in place -- pointing at the OLD,
+        // full-size index for a re-scan's ENTIRE duration. Persisting and publishing this watcher-detected
+        // change against that stale base would overwrite the in-progress scan's own Items/State with the
+        // old total and force the row back to "ready" mid-scan (the up/down flicker this guard exists to
+        // prevent), AND could regress the on-disk cache back to older data if this save lands after a
+        // fresher checkpoint. Skipping is safe either way: the rescan independently re-walks the whole
+        // drive, so it discovers this same change on its own once it finishes. A routine update against a
+        // drive that ISN'T currently being (re)scanned still applies normally.
+        bool skip;
+        lock (_gate)
+            skip = !_statuses.TryGetValue(drive, out var stateCheck) || stateCheck.State == "indexing";
+        if (skip)
+            return;
+
         IndexerHelper.Save(index);
         lock (_gate)
         {
-            _statuses.TryGetValue(drive, out var current);
+            if (!_statuses.TryGetValue(drive, out var current) || current.State == "indexing")
+                return;
             _statuses[drive] = NetworkIndexerHelper.CreateStatus(drive, "ready", index.Count, index, current);
         }
         PublishStatusesChanged();
