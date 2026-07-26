@@ -16,7 +16,7 @@ internal static class DriveRecovery
         var cached = indexer.TryLoadDriveFromCache(cacheDir, drive);
         if (cached.HasValue)
         {
-            if (!SupportsJournal(drive))
+            if (!VolumeHelper.SupportsUsnJournal(drive))
             {
                 TrySaveDriveCache(indexer, cacheDir, new() { (drive, cached.Value.JournalId, cached.Value.NextUsn) }, drive, "folder restore");
                 DriveMonitorFactory.EnsureMonitor(indexer, drive, cached.Value.JournalId, cached.Value.NextUsn, token, onReindexRequired);
@@ -41,7 +41,7 @@ internal static class DriveRecovery
         // Only a journal-backed drive's monitor needs stopping before its own rebuild starts -- see
         // UsnIndexer.RemoveDriveMonitor's own comment on why a non-journal drive deliberately does NOT do
         // this instead.
-        if (SupportsJournal(drive))
+        if (VolumeHelper.SupportsUsnJournal(drive))
             indexer.RemoveDriveMonitor(drive);
         var wasCancelled = false;
         var metadata = indexer.BuildDrives(new[] { drive }, clearExisting: false, cacheDir: cacheDir,
@@ -63,12 +63,6 @@ internal static class DriveRecovery
         // drive (monitor already stopped above) never sets this flag in the first place.
         if (indexer.ConsumeMissedFolderChangeDuringRebuild(drive))
             onReindexRequired?.Invoke(drive);
-    }
-
-    internal static bool SupportsJournal(string drive)
-    {
-        var fs = VolumeHelper.GetFileSystemType(drive);
-        return fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void TrySaveDriveCache(

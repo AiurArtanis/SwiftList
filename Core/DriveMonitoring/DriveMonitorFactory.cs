@@ -22,7 +22,7 @@ internal static class DriveMonitorFactory
         Action<string>? onReindexRequired)
     {
         var fs = VolumeHelper.GetFileSystemType(drive);
-        if (fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase))
+        if (VolumeHelper.IsJournalCapableFileSystem(fs))
         {
             // UsnMonitor has no per-instance stop of its own -- it only ever checks the CancellationToken
             // it was constructed with (see its own MonitorLoop). A linked source lets RegisterDriveMonitor

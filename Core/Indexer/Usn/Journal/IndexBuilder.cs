@@ -36,7 +36,7 @@ internal static class IndexBuilder
             try
             {
                 var fs = VolumeHelper.GetFileSystemType(drive);
-                if (fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase))
+                if (VolumeHelper.IsJournalCapableFileSystem(fs))
                     indexResults[i] = (drive, reader.IndexDrive(drive, getPreviousStore(drive), (files, dirs) => onDriveProgress(drive, files, dirs),
                         onDriveCheckpoint == null ? null : (store, stats) => onDriveCheckpoint(drive, store, stats, token), token));
                 else

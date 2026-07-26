@@ -90,7 +90,7 @@ internal class SearchEngineInitializer
                 for (var i = 0; i < cachedMetadata.Count; i++)
                 {
                     var meta = cachedMetadata[i];
-                    if (!SupportsJournal(meta.Drive))
+                    if (!VolumeHelper.SupportsUsnJournal(meta.Drive))
                     {
                         updatedMetadata.Add(meta);
                         continue;
@@ -161,7 +161,7 @@ internal class SearchEngineInitializer
                 StartMonitor(drive, journalId, nextUsn, cts.Token);
             }
 
-            Logger.Log($"[SearchEngineInitializer] Started real-time USN monitors for {monitorsToStart.Count(m => SupportsJournal(m.Drive))} drives.");
+            Logger.Log($"[SearchEngineInitializer] Started real-time USN monitors for {monitorsToStart.Count(m => VolumeHelper.SupportsUsnJournal(m.Drive))} drives.");
         }
         catch (Exception ex)
         {
@@ -171,12 +171,6 @@ internal class SearchEngineInitializer
         {
             onComplete(false);
         }
-    }
-
-    private static bool SupportsJournal(string drive)
-    {
-        var fs = VolumeHelper.GetFileSystemType(drive);
-        return fs.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fs.Equals("ReFS", StringComparison.OrdinalIgnoreCase);
     }
 
     private void TrySaveDriveCache(List<(string Drive, ulong JournalId, long NextUsn)> metadata, string stage)

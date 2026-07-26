@@ -54,7 +54,7 @@ public class JournalReader
             fsType = VolumeHelper.GetFileSystemType(drive);
             Logger.Log($"[JournalReader] Failed to query USN journal on {drive}. Error: {err}, FileSystem: {fsType}", LogLevel.Warn);
 
-            if (fsType.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fsType.Equals("ReFS", StringComparison.OrdinalIgnoreCase))
+            if (VolumeHelper.IsJournalCapableFileSystem(fsType))
             {
                 Logger.Log($"[JournalReader] Attempting to create/activate USN journal on {fsType} drive {drive}...");
                 var createData = new Win32Api.CREATE_USN_JOURNAL_DATA

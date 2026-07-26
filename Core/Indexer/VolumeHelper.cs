@@ -151,6 +151,16 @@ public static class VolumeHelper
     public static string GetDisplayFileSystemType(string driveLetter)
         => GetFileSystemType(driveLetter);
 
+    // Whether `driveLetter` sits on a filesystem this app's USN-journal indexing pipeline supports (NTFS
+    // or ReFS) -- the single source of truth for this check, previously duplicated identically across
+    // DriveMonitorFactory, DriveRecovery, SearchEngineInitializer, IndexBuilder, and JournalReader.
+    public static bool SupportsUsnJournal(string driveLetter) => IsJournalCapableFileSystem(GetFileSystemType(driveLetter));
+
+    // For callers that already have a resolved filesystem-type string in hand (avoids a redundant
+    // GetFileSystemType round trip).
+    public static bool IsJournalCapableFileSystem(string fileSystemType) =>
+        fileSystemType.Equals("NTFS", StringComparison.OrdinalIgnoreCase) || fileSystemType.Equals("ReFS", StringComparison.OrdinalIgnoreCase);
+
     public static string GetNtfsVersion(string driveLetter)
     {
         var volumePath = $"\\\\.\\{driveLetter}:";

@@ -117,7 +117,7 @@ public sealed class UsnIndexerTests
 
     // Regression coverage: a journal-backed drive's manual rebuild stops its own monitor first (see
     // SearchEngineDriveMaintenance.ForceRebuildDrive / DriveRecovery.RestoreOrRebuild, both gated on
-    // DriveRecovery.SupportsJournal) so its UsnMonitor can't call ApplyUsnRecords against the old
+    // VolumeHelper.SupportsUsnJournal) so its UsnMonitor can't call ApplyUsnRecords against the old
     // LiveIndex in the narrow window OnDriveCompleted disposes it in.
     [TestMethod]
     public void RemoveDriveMonitor_ExistingEntry_DisposesItAndClearsTheRegistry()

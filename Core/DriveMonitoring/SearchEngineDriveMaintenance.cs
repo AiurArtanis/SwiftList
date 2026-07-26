@@ -193,7 +193,7 @@ internal sealed class SearchEngineDriveMaintenance
         // Only a journal-backed drive's monitor needs stopping before its own rebuild starts -- see
         // UsnIndexer.RemoveDriveMonitor's own comment on why a non-journal drive deliberately does NOT do
         // this instead.
-        if (DriveRecovery.SupportsJournal(drive))
+        if (VolumeHelper.SupportsUsnJournal(drive))
             _indexer.RemoveDriveMonitor(drive);
         var wasCancelled = false;
         var metadata = _indexer.BuildDrives(new[] { drive }, clearExisting: false, cacheDir: IndexCacheDir,

@@ -40,4 +40,22 @@ public sealed class VolumeHelperTests
         Assert.AreEqual(64, key.Length);
         Assert.AreEqual(key.ToLowerInvariant(), key);
     }
+
+    [TestMethod]
+    [DataRow("NTFS", true)]
+    [DataRow("ntfs", true)] // case-insensitive
+    [DataRow("ReFS", true)]
+    [DataRow("refs", true)]
+    [DataRow("FAT32", false)]
+    [DataRow("exFAT", false)]
+    [DataRow("", false)]
+    public void IsJournalCapableFileSystem_ReturnsExpected(string fileSystemType, bool expected) =>
+        Assert.AreEqual(expected, VolumeHelper.IsJournalCapableFileSystem(fileSystemType));
+
+    [TestMethod]
+    public void SupportsUsnJournal_UnresolvableDrive_FallsBackToGetFileSystemTypesOwnNtfsDefault() =>
+        // GetFileSystemType degrades to "NTFS" as its own documented fallback when a drive's identity
+        // can't be resolved -- SupportsUsnJournal inherits that behavior automatically since it's built
+        // directly on top of GetFileSystemType, rather than special-casing an unresolvable drive itself.
+        Assert.IsTrue(VolumeHelper.SupportsUsnJournal("~"));
 }
