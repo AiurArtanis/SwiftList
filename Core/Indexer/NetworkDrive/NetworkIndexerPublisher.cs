@@ -13,6 +13,16 @@ internal sealed class NetworkIndexerPublisher
     private readonly Action<string> _ensureWatcher;
     private readonly Func<IReadOnlyList<NetworkIndexStatus>> _getStatuses;
     private readonly Action<IReadOnlyList<NetworkIndexStatus>> _raiseStatusesChanged;
+    private readonly Action<string, string> _queueRefresh;
+    // Drives where PublishIncrementalUpdate skipped a real, watcher-detected filesystem change because a
+    // rescan was in progress -- see PublishIncrementalUpdate's own comment on why skipping THAT change is
+    // safe (the rescan's own walk normally re-observes it independently), which is true except for a
+    // change landing in a directory the walk already finished visiting (or diff-reused, skipping re-
+    // listing it) before the change happened. OnRefreshFinished consults this once the rescan that was
+    // running actually completes, and if set, queues one more lightweight follow-up refresh -- cheap
+    // (TreeDiffBaseline reuses everything that didn't actually change) and guaranteed to observe whatever
+    // the skipped watcher event was about, since it runs against this drive's live current state.
+    private readonly HashSet<string> _missedDuringRescan = new(StringComparer.OrdinalIgnoreCase);
 
     public NetworkIndexerPublisher(
         object gate,
@@ -20,7 +30,8 @@ internal sealed class NetworkIndexerPublisher
         Dictionary<string, NetworkIndex> indexes,
         Action<string> ensureWatcher,
         Func<IReadOnlyList<NetworkIndexStatus>> getStatuses,
-        Action<IReadOnlyList<NetworkIndexStatus>> raiseStatusesChanged)
+        Action<IReadOnlyList<NetworkIndexStatus>> raiseStatusesChanged,
+        Action<string, string> queueRefresh)
     {
         _gate = gate;
         _statuses = statuses;
@@ -28,6 +39,7 @@ internal sealed class NetworkIndexerPublisher
         _ensureWatcher = ensureWatcher;
         _getStatuses = getStatuses;
         _raiseStatusesChanged = raiseStatusesChanged;
+        _queueRefresh = queueRefresh;
     }
 
     public void SetStatus(string drive, string state, int? items, string? error)
@@ -58,6 +70,7 @@ internal sealed class NetworkIndexerPublisher
     {
         NetworkIndex? old;
         bool stillTracked;
+        bool missedDuringThisRescan;
         lock (_gate)
         {
             // Mirrors SetStatus's guard: a scan already in flight when its drive got removed from config
@@ -65,6 +78,7 @@ internal sealed class NetworkIndexerPublisher
             // re-attach a watcher below -- that watcher is what used to keep a disabled drive refreshing
             // itself forever via file-system-change events, long after Configure() tore everything else down.
             stillTracked = _statuses.ContainsKey(drive);
+            missedDuringThisRescan = _missedDuringRescan.Remove(drive);
             if (stillTracked)
             {
                 _indexes.TryGetValue(drive, out old);
@@ -88,6 +102,15 @@ internal sealed class NetworkIndexerPublisher
             old.Dispose();
         _ensureWatcher(drive);
         PublishStatusesChanged();
+
+        // A watcher-detected change was skipped (not lost -- the in-memory delta it applied lived on the
+        // OLD index just disposed above) while this rescan was running. The walk that just finished
+        // normally re-observes the same change on its own, EXCEPT when it landed in a directory the walk
+        // had already finished visiting, or one TreeDiffBaseline reused instead of re-listing -- queuing
+        // one more (typically cheap, diff-reuse-dominated) refresh is the simplest way to guarantee that
+        // gap gets closed instead of silently sitting stale until something else happens to touch it again.
+        if (missedDuringThisRescan)
+            _queueRefresh(drive, "watcher change during rescan");
     }
 
     public void PublishIncrementalUpdate(string drive, NetworkIndex index)
@@ -101,12 +124,19 @@ internal sealed class NetworkIndexerPublisher
         // change against that stale base would overwrite the in-progress scan's own Items/State with the
         // old total and force the row back to "ready" mid-scan (the up/down flicker this guard exists to
         // prevent), AND could regress the on-disk cache back to older data if this save lands after a
-        // fresher checkpoint. Skipping is safe either way: the rescan independently re-walks the whole
-        // drive, so it discovers this same change on its own once it finishes. A routine update against a
-        // drive that ISN'T currently being (re)scanned still applies normally.
+        // fresher checkpoint. Skipping here is safe for THIS write specifically (the rescan's own walk
+        // usually re-observes the same change independently once it finishes) -- but not guaranteed, so
+        // OnRefreshFinished consults _missedDuringRescan once that walk actually completes and queues a
+        // follow-up refresh if this flag was set, closing the gap for the cases where it doesn't. A
+        // routine update against a drive that ISN'T currently being (re)scanned still applies normally.
         bool skip;
         lock (_gate)
-            skip = !_statuses.TryGetValue(drive, out var stateCheck) || stateCheck.State == "indexing";
+        {
+            var isTracked = _statuses.TryGetValue(drive, out var stateCheck);
+            skip = !isTracked || stateCheck!.State == "indexing";
+            if (skip && isTracked)
+                _missedDuringRescan.Add(drive);
+        }
         if (skip)
             return;
 

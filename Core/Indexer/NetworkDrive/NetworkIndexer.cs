@@ -22,7 +22,8 @@ public sealed class NetworkIndexer : IDisposable
             _gate, _statuses, _indexes,
             drive => _watcherManager?.EnsureWatcher(drive),
             GetStatuses,
-            statuses => StatusesChanged?.Invoke(statuses));
+            statuses => StatusesChanged?.Invoke(statuses),
+            (drive, reason) => _scheduler?.QueueRefreshDrive(drive, reason));
 
         _watcherManager = new WatcherManager(
             (drive, reason) => _scheduler?.QueueRefreshDrive(drive, reason),
