@@ -2,8 +2,9 @@ namespace SwiftList.Core.Indexer.NetworkDrive.Walk;
 
 // Mid-walk snapshotting for TreeBuilder, as extension methods (matching RuntimeIndex's BucketExtensions/
 // QueryExtensions split) instead of a partial class, to keep TreeBuilder.cs under the project's line
-// limit. Strictly count-based (every TreeBuilder.CheckpointBatchSize items) -- no wall-clock fallback,
-// so a checkpoint only ever fires once that many items have genuinely been processed since the last one.
+// limit. Strictly count-based -- no wall-clock fallback, so a checkpoint only ever fires once that many
+// items have genuinely been processed since the last one. The gap itself grows (see
+// TreeBuilder._checkpointBatchSize) rather than staying fixed at CheckpointBatchSize forever.
 internal static class TreeBuilderCheckpointExtensions
 {
     public static void MaybeCheckpoint(this TreeBuilder builder, int indexedItems)
@@ -11,12 +12,13 @@ internal static class TreeBuilderCheckpointExtensions
         if (builder._onCheckpoint == null)
             return;
 
+        var threshold = Volatile.Read(ref builder._checkpointBatchSize);
         var count = Interlocked.Increment(ref builder._countSinceCheckpoint);
-        if (count < TreeBuilder.CheckpointBatchSize)
+        if (count < threshold)
             return;
 
         // Guards against multiple threads crossing the threshold at once: only the one whose reset actually
-        // finds a nonzero counter proceeds, so exactly one checkpoint fires per CheckpointBatchSize items.
+        // finds a nonzero counter proceeds, so exactly one checkpoint fires per threshold crossing.
         if (Interlocked.Exchange(ref builder._countSinceCheckpoint, 0) == 0)
             return;
 
@@ -33,6 +35,9 @@ internal static class TreeBuilderCheckpointExtensions
         {
             builder._onProgress(indexedItems);
             builder._onCheckpoint(CloneStore(builder), CurrentStats(builder));
+            // Double the gap before the NEXT checkpoint (capped) -- see TreeBuilder.MaxCheckpointBatchSize's
+            // own comment for why a flat interval is O(n^2) total write volume on a full rebuild.
+            Volatile.Write(ref builder._checkpointBatchSize, Math.Min(threshold * 2, TreeBuilder.MaxCheckpointBatchSize));
         }
         finally
         {

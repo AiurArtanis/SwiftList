@@ -13,7 +13,18 @@ internal sealed class TreeBuilder
 {
     internal const int RecordBatchSize = 256;
     internal const int ProgressBatchSize = 1024;
-    internal const int CheckpointBatchSize = 4096;
+    internal const int CheckpointBatchSize = 5120;
+    // Ceiling for the doubling growth in TreeBuilderCheckpointExtensions.MaybeCheckpoint. Every mid-walk
+    // checkpoint re-serializes the FULL store accumulated so far (not a delta -- see CloneStore), so a
+    // flat interval makes total write volume grow with the SQUARE of the walk size: checkpoint k always
+    // costs O(k) and there are O(n/CheckpointBatchSize) of them. Doubling the gap after each checkpoint
+    // (capped here) keeps total write volume within roughly 6-10x the final snapshot size regardless of
+    // how large the share is, instead of many hundreds of times over on a multi-million-record one --
+    // e.g. ~2.9GB total written for a 5M-record rebuild whose final snapshot is ~0.5GB. Chosen as a
+    // balance against the OTHER cost this trades against: how much of the walk has to be redone if the
+    // process is interrupted right after a checkpoint (worst case is one full cap's worth of items).
+    internal const int MaxCheckpointBatchSize = 524288;
+    internal int _checkpointBatchSize = CheckpointBatchSize;
     internal readonly FileRecordStore _store;
     private readonly string _root;
     private readonly string _physicalRoot;
