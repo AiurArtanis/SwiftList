@@ -275,5 +275,19 @@ internal sealed class NetworkIndex : IDisposable
         }
     }
 
-    public void Dispose() => _live?.Dispose();
+    // Every _live-touching method above guards itself with `if (_live == null) return;` -- that guard
+    // only actually protects a disposed instance if Dispose() also clears the field, which it didn't
+    // (Dispose() used to just call _live?.Dispose(), leaving _live pointing at a torn-down LiveIndex).
+    // Live search results are only a symptom-free way to hit this on an old cached NetworkIndex a rescan
+    // just superseded; the newly widened WatcherManager publish-debounce made it a real, reachable crash:
+    // a watcher-detected change can now be scheduled up to a second before it's actually persisted, and
+    // if PublishCheckpoint's ReleaseCachedIndex disposes THIS SAME instance in that window (a rescan
+    // starting), the debounced save would call Compact() on a disposed LiveIndex's already-disposed
+    // ReaderWriterLockSlim, throwing ObjectDisposedException instead of silently no-op'ing like every
+    // other guard here assumes.
+    public void Dispose()
+    {
+        _live?.Dispose();
+        _live = null;
+    }
 }
