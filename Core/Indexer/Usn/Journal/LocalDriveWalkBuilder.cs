@@ -46,11 +46,7 @@ internal static class LocalDriveWalkBuilder
             RootId = rootId,
         };
 
-        // Real root mtime, the same as TryCreateRecord stats every other directory -- without it
-        // TreeDiffBaseline could never match this record against a live stat, permanently forcing every
-        // top-level entry to be re-listed on every resume no matter how unchanged they actually are.
-        uint rootLastWriteTime = 0;
-        try { rootLastWriteTime = FileTimeHelper.ToUnixSeconds(Directory.GetLastWriteTimeUtc(root)); } catch { }
+        var rootLastWriteTime = FileTimeHelper.TryGetLastWriteTimeUnixSeconds(root);
 
         store.Records.Add(new FileRecord(
             rootId,

@@ -51,4 +51,29 @@ public sealed class FileTimeHelperTests
 
     [TestMethod]
     public void FileTimeToUnixSeconds_OutOfRangeValue_ReturnsZeroInsteadOfThrowing() => Assert.AreEqual(0u, FileTimeHelper.FileTimeToUnixSeconds(long.MaxValue));
+
+    [TestMethod]
+    public void TryGetLastWriteTimeUnixSeconds_RealDirectory_ReturnsNonZero()
+    {
+        using var dir = new TempDirectory();
+
+        var result = FileTimeHelper.TryGetLastWriteTimeUnixSeconds(dir.Path);
+
+        Assert.AreNotEqual(0u, result);
+        Assert.AreEqual(FileTimeHelper.ToUnixSeconds(Directory.GetLastWriteTimeUtc(dir.Path)), result);
+    }
+
+    [TestMethod]
+    public void TryGetLastWriteTimeUnixSeconds_NonexistentPath_ReturnsZeroInsteadOfThrowing() =>
+        Assert.AreEqual(0u, FileTimeHelper.TryGetLastWriteTimeUnixSeconds(@"Z:\this\path\does\not\exist\at\all"));
+
+    private sealed class TempDirectory : IDisposable
+    {
+        public string Path { get; } = Directory.CreateTempSubdirectory("swiftlist-tests-").FullName;
+
+        public void Dispose()
+        {
+            try { Directory.Delete(Path, recursive: true); } catch { }
+        }
+    }
 }

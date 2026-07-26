@@ -91,6 +91,17 @@ public static class FileTimeHelper
             return 0;
         }
     }
+
+    // Best-effort mtime stat for a root record, defaulting to 0 ("not recorded") on any failure -- shared
+    // by every walk/scan pipeline's root-record construction (NetworkIndex.Build, LocalDriveWalkBuilder.Build,
+    // ReFsScanner.ScanDrive, IndexCacheManager.CreateEmptyStore). A real value here matters: without it,
+    // TreeDiffBaseline can never match the root against a live check on a later resume, permanently
+    // forcing every top-level entry to be re-listed no matter how unchanged they actually are.
+    public static uint TryGetLastWriteTimeUnixSeconds(string path)
+    {
+        try { return ToUnixSeconds(Directory.GetLastWriteTimeUtc(path)); }
+        catch { return 0; }
+    }
 }
 
 public readonly struct FileRecord

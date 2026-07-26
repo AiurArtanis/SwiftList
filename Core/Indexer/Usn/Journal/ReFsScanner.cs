@@ -29,11 +29,9 @@ public static class ReFsScanner
         var stopwatch = Stopwatch.StartNew();
         Logger.Log($"[ReFsScanner] Starting ReFS initial scan for drive {drive}...");
 
-        // Real root mtime -- an ordinary path stat; ReFsScanner otherwise never builds path strings
-        // (it walks purely by file ID), but the root always has a real path ("Z:\") to stat directly,
-        // same as IndexCacheManager.CreateEmptyStore does for the store's own root record.
-        uint rootLastWriteTime = 0;
-        try { rootLastWriteTime = FileTimeHelper.ToUnixSeconds(Directory.GetLastWriteTimeUtc($"{drive}:\\")); } catch { }
+        // ReFsScanner otherwise never builds path strings (it walks purely by file ID), but the root
+        // always has a real path ("Z:\") to stat directly.
+        var rootLastWriteTime = FileTimeHelper.TryGetLastWriteTimeUnixSeconds($"{drive}:\\");
 
         var diffBaseline = TreeDiffBaseline.From(previousStore);
         var checkpointState = new ReFsCheckpointState(drive, rootFrn, nextUsn, journalId, onCheckpoint);

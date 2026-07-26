@@ -123,12 +123,7 @@ internal sealed class NetworkIndex : IDisposable
             RootId = rootId,
             ExclusionRulesFingerprint = fingerprint
         };
-        // Stat the real root mtime, the same as TryCreateRecord does for every other directory -- without
-        // it this record would default to LastWriteTimeUnixSeconds=0, which TreeDiffBaseline could never
-        // match against a live stat, permanently forcing the share's own top-level entries to be re-listed
-        // on every resume no matter how unchanged they actually are.
-        uint rootLastWriteTime = 0;
-        try { rootLastWriteTime = FileTimeHelper.ToUnixSeconds(Directory.GetLastWriteTimeUtc(physicalRoot)); } catch { }
+        var rootLastWriteTime = FileTimeHelper.TryGetLastWriteTimeUnixSeconds(physicalRoot);
 
         store.Records.Add(new FileRecord(
             rootId,
