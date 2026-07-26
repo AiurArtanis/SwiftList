@@ -15,6 +15,21 @@ namespace SwiftList.Core.IndexV2.Persistence;
 // so later updates can heal them, exactly like RuntimeIndex's orphan stash.
 public static class SnapshotWriter
 {
+    // Every distinct per-drive cache path gets its own lock object, shared by every caller of Write
+    // regardless of which FileRecordStore/LiveIndex instance they hold -- a network drive's periodic scan
+    // checkpoint (NetworkIndex.FromStore, a brand-new LiveIndex each time) and its FileSystemWatcher's
+    // incremental updates (PublishIncrementalUpdate, running against the drive's PREVIOUS still-live
+    // LiveIndex/Snapshot) are two entirely separate objects with no lock in common, so nothing previously
+    // stopped both from writing THIS SAME path's ".tmp" file at once. That's a real race, not a rare one:
+    // the wider the file (a large network share takes longer to serialize), the longer the window both
+    // can be mid-write at the same time, which is exactly what turned "occasionally" into "every time" on
+    // large shares -- see the GitHub issue this fixes for the full failure signature (temp file "in use",
+    // then File.Replace failing on the final path).
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> _pathLocks =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private static object GetPathLock(string path) => _pathLocks.GetOrAdd(path, static _ => new object());
+
     public static void Write(FileRecordStore store, string path)
     {
         var records = store.Records;
@@ -203,39 +218,45 @@ public static class SnapshotWriter
             Directory.CreateDirectory(directory);
 
         var temp = path + ".tmp";
-        using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20))
+        // Serializes the temp-write-then-replace sequence per target path -- see GetPathLock's own
+        // comment for why two entirely unrelated LiveIndex instances can otherwise both be mid-write to
+        // this exact temp file at once.
+        lock (GetPathLock(path))
         {
-            using var writer = new BinaryWriter(stream, SnapshotFormat.NameEncoding, leaveOpen: true);
-            SnapshotFormat.WriteHeader(writer, meta);
-            SnapshotFormat.FinishHeader(stream, meta);
-            var offsets = SnapshotFormat.ComputeSectionOffsets(meta, out var totalLength);
+            using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20))
+            {
+                using var writer = new BinaryWriter(stream, SnapshotFormat.NameEncoding, leaveOpen: true);
+                SnapshotFormat.WriteHeader(writer, meta);
+                SnapshotFormat.FinishHeader(stream, meta);
+                var offsets = SnapshotFormat.ComputeSectionOffsets(meta, out var totalLength);
 
-            WriteSection(stream, offsets, SnapshotSection.NameIds, MemoryMarshal.AsBytes(nameIds));
-            WriteSection(stream, offsets, SnapshotSection.Flags, MemoryMarshal.AsBytes(flags));
-            WriteSection(stream, offsets, SnapshotSection.ParentIndexes, MemoryMarshal.AsBytes(parentIndexes));
-            WriteSection(stream, offsets, SnapshotSection.UniqueMasks, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(masks)));
-            WriteSection(stream, offsets, SnapshotSection.NameOffsets, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(nameOffsets)));
-            WriteSection(stream, offsets, SnapshotSection.NameBlob, nameBlob.GetBuffer().AsSpan(0, (int)nameBlob.Length));
-            WriteSection(stream, offsets, SnapshotSection.Ids, MemoryMarshal.AsBytes(ids));
-            WriteSection(stream, offsets, SnapshotSection.Sizes, MemoryMarshal.AsBytes(sizes));
-            WriteSection(stream, offsets, SnapshotSection.CreationTimes, MemoryMarshal.AsBytes(creation));
-            WriteSection(stream, offsets, SnapshotSection.LastWriteTimes, MemoryMarshal.AsBytes(lastWrite));
-            WriteSection(stream, offsets, SnapshotSection.LastAccessTimes, MemoryMarshal.AsBytes(lastAccess));
-            WriteSection(stream, offsets, SnapshotSection.ChildStarts, MemoryMarshal.AsBytes(childStarts));
-            WriteSection(stream, offsets, SnapshotSection.Children, MemoryMarshal.AsBytes(children));
-            WriteSection(stream, offsets, SnapshotSection.UidStarts, MemoryMarshal.AsBytes(uidStarts));
-            WriteSection(stream, offsets, SnapshotSection.UidRows, MemoryMarshal.AsBytes(uidRows));
-            WriteSection(stream, offsets, SnapshotSection.AliasStarts, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(aliasStarts)));
-            WriteSection(stream, offsets, SnapshotSection.AliasEntryOffsets, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(aliasEntryOffsets)));
-            WriteSection(stream, offsets, SnapshotSection.AliasProviderIds, CollectionsMarshal.AsSpan(aliasProviderIds));
-            WriteSection(stream, offsets, SnapshotSection.AliasBlob, aliasBlob.GetBuffer().AsSpan(0, (int)aliasBlob.Length));
-            WriteSection(stream, offsets, SnapshotSection.OrphanRows, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(orphanRows)));
-            WriteSection(stream, offsets, SnapshotSection.OrphanFrns, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(orphanFrns)));
-            WriteSection(stream, offsets, SnapshotSection.UniqueAsciiBits, MemoryMarshal.AsBytes(asciiBits));
-            stream.SetLength(totalLength);
+                WriteSection(stream, offsets, SnapshotSection.NameIds, MemoryMarshal.AsBytes(nameIds));
+                WriteSection(stream, offsets, SnapshotSection.Flags, MemoryMarshal.AsBytes(flags));
+                WriteSection(stream, offsets, SnapshotSection.ParentIndexes, MemoryMarshal.AsBytes(parentIndexes));
+                WriteSection(stream, offsets, SnapshotSection.UniqueMasks, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(masks)));
+                WriteSection(stream, offsets, SnapshotSection.NameOffsets, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(nameOffsets)));
+                WriteSection(stream, offsets, SnapshotSection.NameBlob, nameBlob.GetBuffer().AsSpan(0, (int)nameBlob.Length));
+                WriteSection(stream, offsets, SnapshotSection.Ids, MemoryMarshal.AsBytes(ids));
+                WriteSection(stream, offsets, SnapshotSection.Sizes, MemoryMarshal.AsBytes(sizes));
+                WriteSection(stream, offsets, SnapshotSection.CreationTimes, MemoryMarshal.AsBytes(creation));
+                WriteSection(stream, offsets, SnapshotSection.LastWriteTimes, MemoryMarshal.AsBytes(lastWrite));
+                WriteSection(stream, offsets, SnapshotSection.LastAccessTimes, MemoryMarshal.AsBytes(lastAccess));
+                WriteSection(stream, offsets, SnapshotSection.ChildStarts, MemoryMarshal.AsBytes(childStarts));
+                WriteSection(stream, offsets, SnapshotSection.Children, MemoryMarshal.AsBytes(children));
+                WriteSection(stream, offsets, SnapshotSection.UidStarts, MemoryMarshal.AsBytes(uidStarts));
+                WriteSection(stream, offsets, SnapshotSection.UidRows, MemoryMarshal.AsBytes(uidRows));
+                WriteSection(stream, offsets, SnapshotSection.AliasStarts, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(aliasStarts)));
+                WriteSection(stream, offsets, SnapshotSection.AliasEntryOffsets, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(aliasEntryOffsets)));
+                WriteSection(stream, offsets, SnapshotSection.AliasProviderIds, CollectionsMarshal.AsSpan(aliasProviderIds));
+                WriteSection(stream, offsets, SnapshotSection.AliasBlob, aliasBlob.GetBuffer().AsSpan(0, (int)aliasBlob.Length));
+                WriteSection(stream, offsets, SnapshotSection.OrphanRows, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(orphanRows)));
+                WriteSection(stream, offsets, SnapshotSection.OrphanFrns, MemoryMarshal.AsBytes(CollectionsMarshal.AsSpan(orphanFrns)));
+                WriteSection(stream, offsets, SnapshotSection.UniqueAsciiBits, MemoryMarshal.AsBytes(asciiBits));
+                stream.SetLength(totalLength);
+            }
+
+            FileRecordStoreReplaceHelper.ReplaceWithRetry(temp, path, TryDelete);
         }
-
-        FileRecordStoreReplaceHelper.ReplaceWithRetry(temp, path, TryDelete);
     }
 
     // First (lowest) row holding this id, or -1 -- hard-link duplicates sit adjacent after the sort.
