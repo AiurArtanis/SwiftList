@@ -54,7 +54,8 @@ internal static class IndexCacheManager
 
         foreach (var kvp in searchItems)
         {
-            var flags = kvp.Value.IsDir ? FileRecordFlags.Directory : FileRecordFlags.None;
+            var flags = (kvp.Value.IsDir ? FileRecordFlags.Directory : FileRecordFlags.None)
+                | (kvp.Value.Listed ? FileRecordFlags.Listed : FileRecordFlags.None);
             store.Records.Add(new FileRecord(
                 kvp.Key,
                 kvp.Value.ParentFrn,
