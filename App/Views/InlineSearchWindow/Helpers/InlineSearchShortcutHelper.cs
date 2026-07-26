@@ -10,10 +10,10 @@ public static class InlineSearchShortcutHelper
 {
     public static void UpdateShortcutHints(SwiftList.App.InlineSearchWindow window, ScrollViewer? scrollViewer)
     {
-        // This window's own layout math never caps at a non-row-multiple height (see
-        // InlineSearchWindowLayoutManager), so LstResults here always stays item-based/virtualized -- but
-        // reading it through the same mode-aware helper the quick window needs is one less thing to keep
-        // in sync if that ever changes.
+        // LstResults here is pinned to pixel-based scrolling for the window's whole lifetime (see
+        // InlineSearchWindowLayoutManager's constructor), unlike the quick window's per-pass dynamic
+        // toggle -- reading it through the same mode-aware helper the quick window needs is one less
+        // thing to keep in sync if that ever changes.
         var rowHeight = Math.Round(UiMetrics.SearchResultItemHeight * 0.7);
         var firstVisible = WpfUiHelper.GetFirstVisibleIndex(scrollViewer, rowHeight);
         var shortcutIndex = 1;

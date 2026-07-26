@@ -10,7 +10,23 @@ public sealed class InlineSearchWindowLayoutManager
     private readonly SwiftList.App.InlineSearchWindow _window;
     private int _layoutUpdateQueued;
 
-    public InlineSearchWindowLayoutManager(SwiftList.App.InlineSearchWindow window) => _window = window ?? throw new ArgumentNullException(nameof(window));
+    public InlineSearchWindowLayoutManager(SwiftList.App.InlineSearchWindow window)
+    {
+        _window = window ?? throw new ArgumentNullException(nameof(window));
+
+        // LstResults is the same shared ResultsControl.xaml markup Quick/Inline/Full all use.
+        // ScrollViewer.CanContentScroll="False" (pixel-based scrolling, so a 9-row budget that isn't a
+        // whole multiple of the row height clips the boundary row instead of leaving the leftover
+        // fraction as blank space -- see 78ddae91) used to be set right there in the shared XAML. Commit
+        // 3f09b9bf removed it to fix the QUICK window's typing lag, replacing it with a per-pass dynamic
+        // toggle scoped to that window's own layout manager -- but never gave this window an equivalent,
+        // so LstResults here silently fell back to the WPF-default item-based virtualization and
+        // reintroduced the exact blank-space bug 78ddae91 existed to fix. QueueResultsLayoutUpdate below
+        // still Measure()s the real ListBox every update regardless of this setting, so unlike the quick
+        // window there's no virtualization win to protect here in the first place -- fixing this
+        // permanently, once, is free.
+        ScrollViewer.SetCanContentScroll(_window.LstResults, false);
+    }
 
     public void QueueResultsLayoutUpdate()
     {
