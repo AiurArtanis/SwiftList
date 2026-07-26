@@ -7,9 +7,9 @@
 SwiftList 运行为三个独立进程，按权限级别和生命周期有意拆分:
 
 - **`SwiftList.Service`** —— 一个以 `LocalSystem` 身份运行的 Windows 服务。它负责全部文件索引工
-  作:读取本地磁盘的 NTFS USN 日志与 MFT、扫描并缓存网络共享，并通过命名管道回答搜索查询。在
-  SYSTEM 级别运行意味着它可以读取所有用户账户都被允许看到的原始卷元数据，而不需要让交互式的 App
-  进程获得它本不需要的提升权限。
+  作:读取 NTFS/ReFS 磁盘的 USN 日志与 MFT、直接遍历并监听其他本地文件系统(它们没有日志可读)、
+  扫描并缓存网络共享，并通过命名管道回答搜索查询。在 SYSTEM 级别运行意味着它可以读取所有用户账户
+  都被允许看到的原始卷元数据，而不需要让交互式的 App 进程获得它本不需要的提升权限。
 - **`SwiftList.App`** —— 用户态、Session 级别的 WPF 应用:搜索窗口、设置窗口、热键处理、动作菜
   单/QuickLook 界面都在这里。它通过命名管道(`Core.Services` 里的 `SearchService`/
   `UsnServicePipeServer`)和 Service 通信，从不直接访问磁盘索引。它自己也额外托管了一条按用户区

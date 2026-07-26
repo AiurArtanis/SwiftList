@@ -24,9 +24,10 @@
 
 ## Search results seem out of date
 
-Local drives update from the USN Journal in near real time. If something still looks stale (a file
-you just created isn't showing up, or a deleted file still appears), use **Rebuild Index** on the
-affected drive under **Settings → Index → Local Drives** (or **Network Drives**).
+NTFS and ReFS drives update from the USN Journal in near real time; other local file systems (FAT32,
+exFAT, ...) are watched for changes directly instead, just as continuously. If something still looks
+stale (a file you just created isn't showing up, or a deleted file still appears), use **Rebuild
+Index** on the affected drive under **Settings → Index → Local Drives** (or **Network Drives**).
 
 ## A network drive never seems to refresh
 

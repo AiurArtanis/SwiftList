@@ -8,9 +8,14 @@ is detected), **Folders**, and **Exclusion Rules**.
 - Status card summarizing how many drives and items are indexed, plus a **Rebuild Index** button
   for a full re-scan.
 - One row per local drive: an **enable/disable checkbox**, drive name, file system (NTFS/ReFS/...),
-  current status, indexed item count, and a per-row **Rebuild**/**Remove** action.
-- Local drives update continuously from the Windows USN Journal — a manual rebuild is rarely
-  needed, but is there if something looks out of sync.
+  current status, indexed item count, and a per-row **Rebuild**/**Remove** action — plus a **Stop**
+  action while a rebuild is running, for every drive except true NTFS (its scan has no safe point to
+  interrupt).
+- NTFS and ReFS drives track changes continuously through the Windows USN Journal; other local file
+  systems (FAT32, exFAT, ...) have no journal to read, so they're watched for changes directly
+  instead. Either way, a manual rebuild is rarely needed, but is there if something looks out of
+  sync — and if one gets interrupted (stopped, or the app/service restarts mid-scan), the next
+  rebuild picks up from where it left off instead of starting over.
 
 ## Network Drives
 

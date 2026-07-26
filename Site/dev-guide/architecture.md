@@ -7,7 +7,8 @@
 SwiftList runs as three separate processes, deliberately isolated by privilege level and lifetime:
 
 - **`SwiftList.Service`** — a Windows service running as `LocalSystem`. It owns all file indexing:
-  reading the NTFS USN Journal and MFT for local drives, scanning and caching network shares, and
+  reading the USN Journal and MFT for NTFS/ReFS drives, walking and watching other local file
+  systems directly (they have no journal to read), scanning and caching network shares, and
   answering search queries over a named pipe. Running this at SYSTEM level means it can read the
   raw volume metadata every user account is allowed to see, without granting the interactive App
   process elevated privileges it doesn't need.

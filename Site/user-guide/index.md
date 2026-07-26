@@ -1,8 +1,9 @@
 # User Manual
 
-SwiftList is a fast, keyboard-first file search launcher for Windows. It indexes your local NTFS
-drives (via the USN Journal and MFT) and network shares in the background, then lets you jump to
-any file, folder, or application in a fraction of a second.
+SwiftList is a fast, keyboard-first file search launcher for Windows. It indexes your local drives
+(NTFS and ReFS via their change journals, other file systems by watching them directly) and network
+shares in the background, then lets you jump to any file, folder, or application in a fraction of a
+second.
 
 This manual covers everything a day-to-day user needs:
 
