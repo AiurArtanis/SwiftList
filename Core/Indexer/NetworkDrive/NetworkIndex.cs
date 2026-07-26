@@ -107,7 +107,8 @@ internal sealed class NetworkIndex : IDisposable
         CancellationToken token,
         Action<int> onProgress,
         Action<FileRecordStore, NetworkDriveWalkStats>? onCheckpoint = null,
-        FileRecordStore? previousStore = null)
+        FileRecordStore? previousStore = null,
+        Action? beforeFinalWrite = null)
     {
         const ulong rootId = 1;
         // Setting this on the store itself (not just on `index` after the walk finishes) means every
@@ -145,6 +146,11 @@ internal sealed class NetworkIndex : IDisposable
         var builder = new TreeBuilder(store, root, physicalRoot, options, token, onProgress, onCheckpoint, diffBaseline, recheckExclusions);
         var stats = builder.Run();
 
+        // FromStore below writes straight over this drive's cache path -- give the caller a chance to
+        // release whatever it still has that path memory-mapped (the cached NetworkIndex this whole
+        // refresh has been serving searches from throughout the walk) right before that happens, same
+        // fix and for the same reason as NetworkIndexerPublisher.PublishCheckpoint's own periodic writes.
+        beforeFinalWrite?.Invoke();
         var index = FromStore(store, stats);
         index.RootId = rootId;
         index.ExclusionRulesFingerprint = fingerprint;

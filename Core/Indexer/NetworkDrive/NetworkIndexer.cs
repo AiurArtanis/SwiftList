@@ -36,7 +36,8 @@ public sealed class NetworkIndexer : IDisposable
             _publisher.SetStatus,
             _publisher.OnRefreshFinished,
             _publisher.PublishCheckpoint,
-            _publisher.GetPreviousStore
+            _publisher.GetPreviousStore,
+            drive => _publisher.ReleaseCachedIndex(drive)
         );
     }
 

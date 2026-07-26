@@ -20,6 +20,7 @@ internal sealed class SchedulerQueueRunner
     private readonly Func<string, FileRecordStore?> _getPreviousStore;
     private readonly Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> _onPublishCheckpoint;
     private readonly Action<string, NetworkIndex> _onRefreshFinished;
+    private readonly Action<string> _releaseCachedIndex;
 
     public SchedulerQueueRunner(
         object gate,
@@ -30,7 +31,8 @@ internal sealed class SchedulerQueueRunner
         Action<string, string, int?, string?> setStatus,
         Func<string, FileRecordStore?> getPreviousStore,
         Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> onPublishCheckpoint,
-        Action<string, NetworkIndex> onRefreshFinished)
+        Action<string, NetworkIndex> onRefreshFinished,
+        Action<string> releaseCachedIndex)
     {
         _gate = gate;
         _debounceCts = debounceCts;
@@ -41,6 +43,7 @@ internal sealed class SchedulerQueueRunner
         _getPreviousStore = getPreviousStore;
         _onPublishCheckpoint = onPublishCheckpoint;
         _onRefreshFinished = onRefreshFinished;
+        _releaseCachedIndex = releaseCachedIndex;
     }
 
     public void QueueRefreshDrive(string drive, string reason)
@@ -128,7 +131,7 @@ internal sealed class SchedulerQueueRunner
             while (!token.IsCancellationRequested)
             {
                 Logger.Log($"[NetworkIndexer] Refreshing {drive}: because {reason}");
-                DriveRefreshRunner.RefreshDrive(drive, token, _setStatus, _getPreviousStore, _onPublishCheckpoint, _onRefreshFinished);
+                DriveRefreshRunner.RefreshDrive(drive, token, _setStatus, _getPreviousStore, _onPublishCheckpoint, _onRefreshFinished, _releaseCachedIndex);
 
                 lock (_gate)
                 {

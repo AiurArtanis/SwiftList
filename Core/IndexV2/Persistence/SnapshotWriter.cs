@@ -286,15 +286,30 @@ public static class SnapshotWriter
         stream.Write(bytes);
     }
 
+    // Best-effort cleanup of File.Replace's own backup file -- a few retries, not just one, since a
+    // just-renamed file can still be transiently held (e.g. real-time AV scanning it, or the OS not
+    // having fully torn down a just-disposed memory mapping the instant Dispose() returns) for a brief
+    // moment right after the rename. A single failed attempt used to leave that .bak file orphaned
+    // forever (nothing else ever revisits it) even though it was never actually stuck -- it would have
+    // deleted fine a few milliseconds later.
     private static void TryDelete(string path)
     {
-        try
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch
-        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+                return;
+            }
+            catch when (attempt < maxAttempts)
+            {
+                Thread.Sleep(25 * attempt);
+            }
+            catch
+            {
+            }
         }
     }
 }

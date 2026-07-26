@@ -86,8 +86,29 @@ public sealed class LiveIndex : IDisposable
         {
             if (!force && _delta.PendingChangeCount == 0)
                 return false;
-            Compaction.Compact(_snapshot, _delta, path, stamp);
-            SwapUnderLock(Snapshot.Open(path));
+
+            // Merge first (the only step that still needs the OLD snapshot's memory-mapped data), then
+            // release that mapping BEFORE writing the fresh file over this same path. SnapshotWriter's
+            // temp-then-replace swap needs to delete the resulting backup file right after the rename,
+            // and an active memory mapping on it -- even one opened with FileShare.Delete, which only
+            // guarantees the RENAME succeeds -- can make that immediately-following delete fail on some
+            // Windows/filesystem combinations (seen reliably on a Windows 10 VM indexing a network share,
+            // not on Windows 11), leaving an orphaned .bak file this exact process still holds open.
+            var mergedStore = Compaction.BuildMergedStore(_snapshot, _delta, stamp);
+            _snapshot.Dispose();
+            try
+            {
+                SnapshotWriter.Write(mergedStore, path);
+            }
+            finally
+            {
+                // Reopen either way: on success this is the fresh compacted file; on failure, File.Replace's
+                // swap is all-or-nothing, so `path` still holds its original pre-compaction content, and
+                // reopening it keeps this drive serving valid (if now stale) data instead of leaving
+                // _snapshot pointing at something already disposed above.
+                _snapshot = Snapshot.Open(path);
+                _delta = new DeltaOverlay(_snapshot);
+            }
             return true;
         }
         finally

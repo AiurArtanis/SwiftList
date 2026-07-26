@@ -14,7 +14,8 @@ internal static class DriveRefreshRunner
         Action<string, string, int?, string?> setStatus,
         Func<string, FileRecordStore?> getPreviousStore,
         Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> onPublishCheckpoint,
-        Action<string, NetworkIndex> onRefreshFinished)
+        Action<string, NetworkIndex> onRefreshFinished,
+        Action<string> releaseCachedIndex)
     {
         var root = PathHelpers.BuildSourceRoot(drive);
         var physicalRoot = root;
@@ -55,7 +56,8 @@ internal static class DriveRefreshRunner
                 // and clobber it back to "indexing" -- what made the Stop button lose that race sometimes.
                 count => { if (!token.IsCancellationRequested) setStatus(drive, "indexing", count, null); },
                 (store, stats) => onPublishCheckpoint(drive, store, stats, token),
-                previousStore);
+                previousStore,
+                beforeFinalWrite: () => releaseCachedIndex(drive));
             token.ThrowIfCancellationRequested();
             // Reaching here without cancellation only means TreeBuilder.Run() drained its queue -- NOT
             // that every directory's real contents were captured. A directory that failed to enumerate

@@ -24,17 +24,18 @@ internal sealed class Scheduler : IDisposable
     private readonly Action<string, NetworkIndex> _onRefreshFinished;
     private readonly Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> _onPublishCheckpoint;
     private readonly Func<string, FileRecordStore?> _getPreviousStore;
+    private readonly Action<string> _releaseCachedIndex;
     private readonly SchedulerQueueRunner _queueRunner;
 
     public Scheduler(Action<string, string> onWatcherEnsure, Action<string> onWatcherRemove, Action<string, string, int?, string?> setStatus,
         Action<string, NetworkIndex> onRefreshFinished, Action<string, FileRecordStore, NetworkDriveWalkStats, CancellationToken> onPublishCheckpoint,
-        Func<string, FileRecordStore?> getPreviousStore)
+        Func<string, FileRecordStore?> getPreviousStore, Action<string> releaseCachedIndex)
     {
         _onWatcherEnsure = onWatcherEnsure; _onWatcherRemove = onWatcherRemove; _setStatus = setStatus;
         _onRefreshFinished = onRefreshFinished; _onPublishCheckpoint = onPublishCheckpoint;
-        _getPreviousStore = getPreviousStore;
+        _getPreviousStore = getPreviousStore; _releaseCachedIndex = releaseCachedIndex;
         _queueRunner = new SchedulerQueueRunner(_gate, _debounceCts, _activeCts, _pendingRefreshDrives, _lifetimeCts,
-            setStatus, getPreviousStore, onPublishCheckpoint, onRefreshFinished);
+            setStatus, getPreviousStore, onPublishCheckpoint, onRefreshFinished, releaseCachedIndex);
     }
 
     public void QueueRefreshDrive(string drive, string reason) => _queueRunner.QueueRefreshDrive(drive, reason);
