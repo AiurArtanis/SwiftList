@@ -37,6 +37,10 @@ internal static class DriveRecovery
             indexer.DropDriveFromRuntime(drive);
 
         Logger.Log($"[SearchEngine] Cache restore unavailable for drive {drive}; rebuilding this drive only.");
+        // Stop this drive's own currently-running monitor (if any) before the rebuild starts -- see
+        // UsnIndexer.RemoveDriveMonitor's own comment on why a still-running monitor over the rebuild
+        // window can otherwise lose whatever it detects. Safe no-op if nothing is registered yet.
+        indexer.RemoveDriveMonitor(drive);
         var metadata = indexer.BuildDrives(new[] { drive }, clearExisting: false, cacheDir: cacheDir);
         if (metadata.Count == 0)
         {

@@ -177,6 +177,10 @@ internal sealed class SearchEngineDriveMaintenance
             _indexer.Status.ActiveDrives = new List<string> { drive };
         }
         _indexer.SetDriveState(drive, "indexing");
+        // Stop this drive's own currently-running monitor (if any) before the rebuild starts -- see
+        // UsnIndexer.RemoveDriveMonitor's own comment on why a still-running monitor over the rebuild
+        // window can otherwise lose whatever it detects.
+        _indexer.RemoveDriveMonitor(drive);
         var metadata = _indexer.BuildDrives(new[] { drive }, clearExisting: false, cacheDir: IndexCacheDir);
         if (metadata.Count == 0)
         {

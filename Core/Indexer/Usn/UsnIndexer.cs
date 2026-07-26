@@ -38,42 +38,15 @@ public class UsnIndexer : IDisposable
     // Guarded by _lockObj for structural changes (add/remove a drive); each LiveIndex then guards its
     // own Snapshot/DeltaOverlay pair independently -- see SearchCoordinator's header comment.
     internal readonly Dictionary<string, LiveIndex> _recordIndexes = new(StringComparer.OrdinalIgnoreCase);
-    // One live monitor per drive -- see DriveMonitorFactory, the sole place that populates this.
-    private readonly Dictionary<string, IDisposable> _driveMonitors = new(StringComparer.OrdinalIgnoreCase);
+    // One live monitor per drive -- see DriveMonitorFactory, the sole place that populates this. Managed
+    // via UsnIndexerMonitorExtensions (Register/Remove/DisposeAll), internal rather than private so those
+    // extension methods can reach it.
+    internal readonly Dictionary<string, IDisposable> _driveMonitors = new(StringComparer.OrdinalIgnoreCase);
     // Debounces UsnIndexerExtensions.ApplyFolderChange's own disk persist -- see its own comment on why.
     internal readonly KeyedDebouncer<string> _folderChangeSaveDebounce = new(1000, StringComparer.OrdinalIgnoreCase);
 
     public IndexerStatus Status { get; } = new();
     public object LockObj => _lockObj;
-
-    // Stops and replaces whatever monitor was previously registered for this drive, if any -- called
-    // exactly once per monitor start, from DriveMonitorFactory.EnsureMonitor. Disposed outside the lock:
-    // FolderDriveMonitor.Dispose() tears down a real FileSystemWatcher, and a CancellationDisposable's
-    // Cancel() can run arbitrary continuations -- neither should happen while holding LockObj.
-    internal void RegisterDriveMonitor(string drive, IDisposable monitor)
-    {
-        IDisposable? old;
-        lock (LockObj)
-        {
-            _driveMonitors.TryGetValue(drive, out old);
-            _driveMonitors[drive] = monitor;
-        }
-        old?.Dispose();
-    }
-
-    // Stops every currently-registered monitor -- a full rebuild-from-scratch tearing down and restarting
-    // everything, or final app shutdown.
-    internal void DisposeAllDriveMonitors()
-    {
-        List<IDisposable> monitors;
-        lock (LockObj)
-        {
-            monitors = _driveMonitors.Values.ToList();
-            _driveMonitors.Clear();
-        }
-        foreach (var monitor in monitors)
-            monitor.Dispose();
-    }
 
     // JournalId/NextUsn here are the LIVE catch-up position, updated on every USN batch; a LiveIndex's
     // own Snapshot.JournalId/NextUsn only reflect the position as of its last compaction. The other
@@ -236,7 +209,7 @@ public class UsnIndexer : IDisposable
 
     public void Dispose()
     {
-        DisposeAllDriveMonitors();
+        this.DisposeAllDriveMonitors();
         _folderChangeSaveDebounce.Dispose();
         _driveMetadata.Clear();
         foreach (var live in _recordIndexes.Values)
