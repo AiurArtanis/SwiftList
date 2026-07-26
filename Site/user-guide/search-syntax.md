@@ -45,6 +45,20 @@ matches `final-Q3-report.docx` just as well as `Q3-report-final.docx`.
 You can mix these freely, e.g. `^IMG !.png$ 2024` finds files starting with `IMG`, from 2024,
 that are *not* PNGs.
 
+## Pasting multiple lines
+
+Paste text containing several lines — e.g. filenames copied one per line from a spreadsheet or text
+file — and SwiftList automatically folds them into an OR query instead of pasting them as-is:
+
+```
+123
+456
+678
+```
+
+pastes as `123 | 456 | 678`, matching any of the three. Blank lines are skipped. A normal single-line
+paste is unaffected.
+
 ## Targeting a drive
 
 Start the query with a drive letter followed by a colon to restrict results to that drive, then
