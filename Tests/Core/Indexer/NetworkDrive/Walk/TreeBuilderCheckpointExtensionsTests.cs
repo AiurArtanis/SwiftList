@@ -70,7 +70,7 @@ public sealed class TreeBuilderCheckpointExtensionsTests
         var expectedGap = TreeBuilder.CheckpointBatchSize;
         for (var fireNumber = 1; fireNumber <= 8; fireNumber++)
         {
-            Assert.AreEqual(expectedGap, builder._checkpointBatchSize, $"gap before firing #{fireNumber}");
+            Assert.AreEqual(expectedGap, builder._checkpointGate.BatchSize, $"gap before firing #{fireNumber}");
             for (var i = 0; i < expectedGap; i++)
                 builder.MaybeCheckpoint(i);
             expectedGap = Math.Min(expectedGap * 2, TreeBuilder.MaxCheckpointBatchSize);
@@ -78,7 +78,7 @@ public sealed class TreeBuilderCheckpointExtensionsTests
 
         // CheckpointBatchSize (4096) doubled 6 times already exceeds MaxCheckpointBatchSize (262144),
         // so by the 7th/8th firing the gap must have stopped growing at the cap.
-        Assert.AreEqual(TreeBuilder.MaxCheckpointBatchSize, builder._checkpointBatchSize);
+        Assert.AreEqual(TreeBuilder.MaxCheckpointBatchSize, builder._checkpointGate.BatchSize);
     }
 
     [TestMethod]

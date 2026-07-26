@@ -27,7 +27,7 @@ public sealed class ReFsScannerCheckpointExtensionsTests
         for (var i = 0; i < TreeBuilder.CheckpointBatchSize + 10; i++)
             state.MaybeCheckpoint(EmptyItems);
 
-        Assert.AreEqual(0, state.CountSinceCheckpoint); // never even started counting -- bails before incrementing
+        Assert.AreEqual(TreeBuilder.CheckpointBatchSize, state.Gate.BatchSize); // never even started counting -- bails before TryEnter runs
     }
 
     [TestMethod]
@@ -71,13 +71,13 @@ public sealed class ReFsScannerCheckpointExtensionsTests
         var expectedGap = TreeBuilder.CheckpointBatchSize;
         for (var fireNumber = 1; fireNumber <= 8; fireNumber++)
         {
-            Assert.AreEqual(expectedGap, state.BatchSize, $"gap before firing #{fireNumber}");
+            Assert.AreEqual(expectedGap, state.Gate.BatchSize, $"gap before firing #{fireNumber}");
             for (var i = 0; i < expectedGap; i++)
                 state.MaybeCheckpoint(EmptyItems);
             expectedGap = Math.Min(expectedGap * 2, TreeBuilder.MaxCheckpointBatchSize);
         }
 
-        Assert.AreEqual(TreeBuilder.MaxCheckpointBatchSize, state.BatchSize);
+        Assert.AreEqual(TreeBuilder.MaxCheckpointBatchSize, state.Gate.BatchSize);
     }
 
     [TestMethod]

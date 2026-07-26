@@ -3,8 +3,9 @@ namespace SwiftList.Core.Indexer.NetworkDrive.Walk;
 // Mid-walk snapshotting for TreeBuilder, as extension methods (matching RuntimeIndex's BucketExtensions/
 // QueryExtensions split) instead of a partial class, to keep TreeBuilder.cs under the project's line
 // limit. Strictly count-based -- no wall-clock fallback, so a checkpoint only ever fires once that many
-// items have genuinely been processed since the last one. The gap itself grows (see
-// TreeBuilder._checkpointBatchSize) rather than staying fixed at CheckpointBatchSize forever.
+// items have genuinely been processed since the last one. The threshold-crossing/doubling mechanics
+// themselves live in DoublingCheckpointGate (shared with ReFsScanner's own checkpointing); this is just
+// the TreeBuilder-specific "how do I build a checkpoint store" part.
 internal static class TreeBuilderCheckpointExtensions
 {
     public static void MaybeCheckpoint(this TreeBuilder builder, int indexedItems)
@@ -12,36 +13,17 @@ internal static class TreeBuilderCheckpointExtensions
         if (builder._onCheckpoint == null)
             return;
 
-        var threshold = Volatile.Read(ref builder._checkpointBatchSize);
-        var count = Interlocked.Increment(ref builder._countSinceCheckpoint);
-        if (count < threshold)
-            return;
-
-        // Guards against multiple threads crossing the threshold at once: only the one whose reset actually
-        // finds a nonzero counter proceeds, so exactly one checkpoint fires per threshold crossing.
-        if (Interlocked.Exchange(ref builder._countSinceCheckpoint, 0) == 0)
-            return;
-
-        // The reuse-copy path has no network I/O throttling it, so on a mostly-cached resume threshold
-        // crossings can come faster than a checkpoint's own disk write finishes. Without this, a second
-        // checkpoint's save can start on the same cache files before the first one's temp-file swap is
-        // done -- exactly the concurrent-write collisions IndexerHelper.Save was logging. Skipping (not
-        // blocking) is safe: nothing is lost, the items that would've gone into this checkpoint just ride
-        // along in the next one that actually gets to run.
-        if (Interlocked.CompareExchange(ref builder._checkpointInFlight, 1, 0) != 0)
+        if (!builder._checkpointGate.TryEnter())
             return;
 
         try
         {
             builder._onProgress(Volatile.Read(ref builder._indexedFiles), Volatile.Read(ref builder._indexedDirs));
             builder._onCheckpoint(CloneStore(builder), CurrentStats(builder));
-            // Double the gap before the NEXT checkpoint (capped) -- see TreeBuilder.MaxCheckpointBatchSize's
-            // own comment for why a flat interval is O(n^2) total write volume on a full rebuild.
-            Volatile.Write(ref builder._checkpointBatchSize, Math.Min(threshold * 2, TreeBuilder.MaxCheckpointBatchSize));
         }
         finally
         {
-            Interlocked.Exchange(ref builder._checkpointInFlight, 0);
+            builder._checkpointGate.Completed();
         }
     }
 
