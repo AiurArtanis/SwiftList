@@ -168,52 +168,61 @@ internal sealed class SearchExecutionEngine : IDisposable
         var renderState = 0;
         var startTime = Environment.TickCount;
 
+        // Both RenderSnapshot callers (the streaming result callback below, and the final call after
+        // localSearchTask) already run on a background thread -- PerformStreamingSearchAsync executes
+        // inside PerformSearch's Task.Run, which doesn't flow a SynchronizationContext, so every await
+        // in this method resumes on a ThreadPool thread throughout. resultMapper (rank-sorts up to
+        // FullSearchFileLimit=1000 results via SearchResultRankComparer, then builds one AppSearchResult
+        // per row) and the rest of the snapshot-building logic below have no WPF/UI-thread dependency at
+        // all -- they only read the locked snapshot and build plain lists. This used to run wrapped
+        // inside the Dispatcher.BeginInvoke below regardless, meaning that CPU cost blocked the UI thread
+        // on every streaming render for the full window's own broad queries. Now only the actual
+        // UI-touching step (onResultsUpdated, which assigns FilteredResults and triggers sort/filter/
+        // render) is marshaled, after re-checking staleness once more in case the search was superseded
+        // while this thread was busy computing.
         void RenderSnapshot(bool final)
         {
-            void ApplySnapshot()
+            if (searchVersion != Volatile.Read(ref _searchVersion) || token.IsCancellationRequested)
+                return;
+            List<SearchResult> snapshot;
+            lock (responseLock)
+            {
+                snapshot = new List<SearchResult>(streamedResponse);
+            }
+
+            var uiResults = resultMapper(snapshot, contextDirectory);
+
+            List<AppSearchResult>? localMatchesCopy = null;
+            if (localMatches != null)
+            {
+                lock (localMatches)
+                {
+                    if (localMatches.Count > 0)
+                    {
+                        localMatchesCopy = new List<AppSearchResult>(localMatches);
+                    }
+                }
+            }
+
+            if (localMatchesCopy != null)
+            {
+                uiResults = InlineListSearchHelper.MergeLocalMatches(uiResults, localMatchesCopy, query);
+            }
+
+            if (final && uiResults.Count == 0)
+                uiResults.Add(SearchResultMapper.CreateNoResultsResult(query));
+            var statusText = "";
+            if (uiResults.Count > 0)
+                statusText = SearchResultMapper.FormatSearchStatus(0, snapshot.Count);
+            else if (final)
+                statusText = "No matching results";
+
+            _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (searchVersion != Volatile.Read(ref _searchVersion) || token.IsCancellationRequested)
                     return;
-                List<SearchResult> snapshot;
-                lock (responseLock)
-                {
-                    snapshot = new List<SearchResult>(streamedResponse);
-                }
-
-                var uiResults = resultMapper(snapshot, contextDirectory);
-
-                List<AppSearchResult>? localMatchesCopy = null;
-                if (localMatches != null)
-                {
-                    lock (localMatches)
-                    {
-                        if (localMatches.Count > 0)
-                        {
-                            localMatchesCopy = new List<AppSearchResult>(localMatches);
-                        }
-                    }
-                }
-
-                if (localMatchesCopy != null)
-                {
-                    uiResults = InlineListSearchHelper.MergeLocalMatches(uiResults, localMatchesCopy, query);
-                }
-
-
-                if (final && uiResults.Count == 0)
-                    uiResults.Add(SearchResultMapper.CreateNoResultsResult(query));
-                var statusText = "";
-                if (uiResults.Count > 0)
-                    statusText = SearchResultMapper.FormatSearchStatus(0, snapshot.Count);
-                else if (final)
-                    statusText = "No matching results";
                 onResultsUpdated(uiResults, statusText, final);
-            }
-
-            if (final)
-                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplySnapshot));
-            else
-                _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(ApplySnapshot));
+            }));
         }
 
         await _searchService.SearchStreamingAsync(query, fileLimit, appLimit, searchScope, result =>
