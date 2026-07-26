@@ -171,11 +171,29 @@
 
     <!-- ═══════════ Sleek ListBox Style ═══════════ -->
     <Style x:Key="SleekListBoxStyle" TargetType="{x:Type ListBox}">
+        <!-- Both Setters below are load-bearing, not decoration: a named Style with no BasedOn doesn't
+             inherit the theme's own implicit ListBox style (the one that would otherwise set these), so
+             without them a ListBox using this style silently falls back to ItemsControl's own bare
+             defaults: a plain, non-virtualizing StackPanel for ItemsPanel, and CanContentScroll=false
+             for ScrollViewer, either one of which alone is enough to defeat virtualization outright.
+             LstResults (ResultsControl.xaml) sets VirtualizingPanel.IsVirtualizing="True" directly on
+             itself, but that attached property only means anything once the realized panel is actually a
+             VirtualizingStackPanel: it was a silent no-op against the StackPanel this style used to
+             leave in place, and every row (however many thousand results a broad query returns) was being
+             fully realized and measured regardless of what was actually scrolled into view. -->
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListBox}">
                     <Border Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="0" SnapsToDevicePixels="true">
-                        <ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" Style="{StaticResource SleekScrollViewerStyle}">
+                        <ScrollViewer Focusable="false" Padding="{TemplateBinding Padding}" CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}" Style="{StaticResource SleekScrollViewerStyle}">
                             <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                         </ScrollViewer>
                     </Border>
