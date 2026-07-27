@@ -55,7 +55,7 @@ internal static class QuickLookWindowPositioner
                 // does find one.
                 if (_pollTimer == null)
                 {
-                    Logger.Log($"[QuickLookBridge] dock poll starting, target=({left},{top},{width},{height})", LogLevel.Info);
+                    Logger.Log($"[QuickLookBridge] dock poll starting, target=({left},{top},{width},{height})", LogLevel.Debug);
                     StartPollLocked();
                 }
             }
@@ -82,7 +82,7 @@ internal static class QuickLookWindowPositioner
                 // "succeeded" nor a "gave up" line -- confirmed happening (against an older build,
                 // before this line existed) by a ~5s gap between "dock poll starting" and the next
                 // QuickLookBridge log entry, for an entirely different file.
-                Logger.Log("[QuickLookBridge] Reset() aborted an in-flight dock poll", LogLevel.Info);
+                Logger.Log("[QuickLookBridge] Reset() aborted an in-flight dock poll", LogLevel.Debug);
                 _pollTimer.Dispose();
                 _pollTimer = null;
             }
@@ -109,14 +109,14 @@ internal static class QuickLookWindowPositioner
                     _pollTimer?.Dispose();
                     _pollTimer = null;
                 }
-                Logger.Log($"[QuickLookBridge] dock poll succeeded after {attempts} attempt(s)", LogLevel.Info);
+                Logger.Log($"[QuickLookBridge] dock poll succeeded after {attempts} attempt(s)", LogLevel.Debug);
                 ScheduleSettleReasserts(hwnd);
                 return;
             }
 
             if (attempts >= MaxPollAttempts)
             {
-                Logger.Log("[QuickLookBridge] dock poll gave up: no QuickLook window found in time", LogLevel.Info);
+                Logger.Log("[QuickLookBridge] dock poll gave up: no QuickLook window found in time", LogLevel.Warn);
                 lock (Lock)
                 {
                     _pollTimer?.Dispose();
@@ -161,12 +161,12 @@ internal static class QuickLookWindowPositioner
             if (!ok)
             {
                 var err = Marshal.GetLastWin32Error();
-                Logger.Log($"[QuickLookBridge] SetWindowPos FAILED, target=({_target.Left},{_target.Top},{_target.Width},{_target.Height}) Win32Error={err}", LogLevel.Info);
+                Logger.Log($"[QuickLookBridge] SetWindowPos FAILED, target=({_target.Left},{_target.Top},{_target.Width},{_target.Height}) Win32Error={err}", LogLevel.Warn);
             }
         }
         catch (Exception ex)
         {
-            Logger.Log($"[QuickLookBridge] Reposition threw: {ex.GetType().Name}: {ex.Message}", LogLevel.Info);
+            Logger.Log($"[QuickLookBridge] Reposition threw: {ex.GetType().Name}: {ex.Message}", LogLevel.Warn);
         }
     }
 

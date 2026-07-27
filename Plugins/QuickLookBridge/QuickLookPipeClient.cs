@@ -191,14 +191,12 @@ internal static class QuickLookPipeClient
             using var writer = new StreamWriter(client);
             writer.WriteLine($"{pipeMessage}|{path}|{options}");
             writer.Flush();
-            Logger.Log($"[QuickLookBridge] pipe send ok: {pipeMessage} '{path}' options='{options}' (pipe='{PipeName}')", LogLevel.Info);
+            Logger.Log($"[QuickLookBridge] pipe send ok: {pipeMessage} '{path}' options='{options}' (pipe='{PipeName}')", LogLevel.Debug);
             return true;
         }
         catch (Exception ex)
         {
-            // Temporary diagnostic (Info, not Warn/Debug) while chasing an inconsistent-availability
-            // report -- narrow the log level back down once that's understood.
-            Logger.Log($"[QuickLookBridge] pipe send FAILED: {pipeMessage} '{path}' options='{options}' (pipe='{PipeName}') -> {ex.GetType().Name}: {ex.Message}", LogLevel.Info);
+            Logger.Log($"[QuickLookBridge] pipe send FAILED: {pipeMessage} '{path}' options='{options}' (pipe='{PipeName}') -> {ex.GetType().Name}: {ex.Message}", LogLevel.Warn);
             return false;
         }
     }

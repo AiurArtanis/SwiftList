@@ -34,12 +34,12 @@ public class QuickLookPreviewProvider : IFilePreviewProvider, IPreviewSessionAwa
         var exists = isDir ? Directory.Exists(path) : File.Exists(path);
         if (!exists)
         {
-            Logger.Log($"[QuickLookBridge] CanPreview('{path}') => false (path doesn't exist)", LogLevel.Info);
+            Logger.Log($"[QuickLookBridge] CanPreview('{path}') => false (path doesn't exist)", LogLevel.Debug);
             return false;
         }
 
         var available = QuickLookPipeClient.IsAvailable();
-        Logger.Log($"[QuickLookBridge] CanPreview('{path}') => {available}", LogLevel.Info);
+        Logger.Log($"[QuickLookBridge] CanPreview('{path}') => {available}", LogLevel.Debug);
         return available;
     }
 
