@@ -40,13 +40,14 @@ public class BandizipAddFilesDialogAdapter : IFileDialogAdapter
         return BandizipPathHelpers.NormalizeIfExists(BandizipDialogInterop.GetText(edit), Directory.Exists);
     }
 
+    // No file-to-folder resolution here: TargetIsFolderOnly (above) tells every caller that reaches
+    // NavigateTo to resolve a picked file to its containing folder themselves before ever sending it --
+    // see WinRARExtractDialogAdapter.NavigateTo's own comment for why that used to be duplicated here via
+    // a File.Exists check, and why that's unreliable in the elevated Hook process this runs in.
     public bool NavigateTo(IntPtr hwnd, string targetPath)
     {
         var edit = BandizipDialogInterop.FindAddFilesPathEdit(hwnd);
-        if (edit == IntPtr.Zero) return false;
-
-        var folder = BandizipPathHelpers.ResolveTargetFolder(targetPath);
-        return BandizipDialogInterop.SetText(edit, folder);
+        return edit != IntPtr.Zero && BandizipDialogInterop.SetText(edit, targetPath);
     }
 
     // Returns the whole dialog's bounds, not just the path Edit's own rect -- same reasoning as

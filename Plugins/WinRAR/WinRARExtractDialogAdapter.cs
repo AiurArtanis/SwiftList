@@ -57,24 +57,19 @@ public class WinRARExtractDialogAdapter : IFileDialogAdapter
         return NormalizeIfExists(WinRARDialogInterop.GetText(combo), Directory.Exists);
     }
 
-    // A destination-path field expects a folder -- a picked FILE needs to resolve to its containing
-    // folder instead. QuickNavigationNavigator already does this itself before ever calling NavigateTo
-    // (isDir ? path : Path.GetDirectoryName(path)), but the quick/inline search bar's own fallback chain
-    // (InlineSearchNavigator.RunFallbackChain) does not -- it hands the raw picked path straight through.
-    // Resolving it here too means NavigateTo is correct regardless of which caller reaches it, rather than
-    // depending on every future caller remembering to pre-resolve. File.Exists (not Directory.Exists) is
-    // the discriminator: WinRAR's own destination folder commonly doesn't exist yet (it creates it on
-    // extract, per the dialog's own hint text), so "doesn't exist" must still be treated as "a folder to
-    // create", not walked up a level as if it were a file.
-    internal static string ResolveTargetFolder(string path) => File.Exists(path) ? (Path.GetDirectoryName(path) ?? path) : path;
-
+    // No file-to-folder resolution here: TargetIsFolderOnly (above) tells every caller that reaches
+    // NavigateTo -- InlineSearchNavigator.RunFallbackChain and QuickNavigationNavigator.NavigateOrOpen are
+    // the only two -- to resolve a picked file to its containing folder themselves before ever sending it.
+    // That used to be duplicated here too (a File.Exists-based check), but File.Exists is unreliable for
+    // this in the elevated Hook process this method actually runs in: a network drive the interactive user
+    // mapped without elevation can come back "doesn't exist" even for a perfectly real file. Resolving once,
+    // in the process that can actually see it, is strictly more correct than any local fallback here.
     public bool NavigateTo(IntPtr hwnd, string targetPath)
     {
         var edit = WinRARDialogInterop.FindPathEdit(hwnd);
         if (edit == IntPtr.Zero) return false;
 
-        var folder = ResolveTargetFolder(targetPath);
-        var result = WinRARDialogInterop.SetText(edit, folder);
+        var result = WinRARDialogInterop.SetText(edit, targetPath);
         if (result)
             WinRARDialogInterop.ClickDisplayButton(hwnd);
         return result;
