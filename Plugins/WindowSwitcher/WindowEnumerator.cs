@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace SwiftList.Plugins.WindowSwitcher;
 
@@ -25,11 +24,49 @@ public static class WindowEnumerator
     [DllImport("user32.dll")]
     private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
-    [DllImport("user32.dll")]
-    private static extern int GetWindowTextLength(IntPtr hWnd);
-
+    // GetWindowTextLength/GetWindowText are documented as avoiding cross-process message-passing when
+    // the target has a normal cached caption -- but that's not universally true in practice (this is
+    // long-established lore among anyone who's written a window enumerator/task switcher), and this
+    // whole method runs synchronously on the UI thread: IInstantResultProvider.GetInstantResults is
+    // documented as "cheap and synchronous" throughout this codebase (see SearchExecutionEngine's own
+    // comment), because the host never offloads it to a background thread. One truly hung window
+    // anywhere on the user's desktop -- not even one of SwiftList's own -- must not be able to freeze
+    // the whole app while GetSwitchableWindows enumerates past it. SendMessageTimeout with
+    // SMTO_ABORTIFHUNG is the well-established defensive alternative; this codebase already relies on
+    // the exact same technique for the same reason in Core/Hook/InlineSearch/KeyboardUtils.cs.
+    // CharSet.Unicode is required here, not cosmetic: without it, this binds to SendMessageTimeoutA,
+    // which sends WM_GETTEXT/WM_GETTEXTLENGTH through the ANSI thunk. That returns an ANSI byte count
+    // for the length call and writes ANSI bytes for the text call, while SafeGetWindowText below
+    // allocates a UTF-16 buffer and decodes it with PtrToStringUni -- the encoding mismatch corrupts
+    // any title outside 7-bit ASCII into mojibake.
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+    private static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeoutMs, out IntPtr result);
+
+    private const uint WM_GETTEXTLENGTH = 0x000E;
+    private const uint WM_GETTEXT = 0x000D;
+    private const uint SMTO_ABORTIFHUNG = 0x0002;
+    private const uint GetTextTimeoutMs = 150;
+
+    private static int SafeGetWindowTextLength(IntPtr hWnd) =>
+        SendMessageTimeout(hWnd, WM_GETTEXTLENGTH, IntPtr.Zero, IntPtr.Zero, SMTO_ABORTIFHUNG, GetTextTimeoutMs, out var result) == IntPtr.Zero
+            ? 0
+            : result.ToInt32();
+
+    private static string SafeGetWindowText(IntPtr hWnd, int titleLength)
+    {
+        var capacity = titleLength + 1;
+        var buffer = Marshal.AllocHGlobal(capacity * sizeof(char));
+        try
+        {
+            if (SendMessageTimeout(hWnd, WM_GETTEXT, new IntPtr(capacity), buffer, SMTO_ABORTIFHUNG, GetTextTimeoutMs, out var result) == IntPtr.Zero)
+                return string.Empty;
+            return Marshal.PtrToStringUni(buffer, result.ToInt32()) ?? string.Empty;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
@@ -74,7 +111,7 @@ public static class WindowEnumerator
                 var exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
                 var isToolWindow = (exStyle & WS_EX_TOOLWINDOW) != 0;
                 var isAppWindow = (exStyle & WS_EX_APPWINDOW) != 0;
-                var titleLength = GetWindowTextLength(hWnd);
+                var titleLength = SafeGetWindowTextLength(hWnd);
 
                 var isCloaked = false;
                 try
@@ -91,10 +128,9 @@ public static class WindowEnumerator
                 if (pid == currentProcessId)
                     return true;
 
-                var sb = new StringBuilder(titleLength + 1);
-                GetWindowText(hWnd, sb, sb.Capacity);
+                var title = SafeGetWindowText(hWnd, titleLength);
 
-                results.Add(new SwitchableWindow(hWnd, sb.ToString(), (int)pid));
+                results.Add(new SwitchableWindow(hWnd, title, (int)pid));
             }
             catch { /* skip a window that fails any of the above */ }
 
