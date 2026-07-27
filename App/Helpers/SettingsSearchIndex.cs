@@ -95,6 +95,7 @@ public static class SettingsSearchIndex
         new("General_QuickNavListTitle", "General", vm => vm.General.SelectedTab = "QuickNavigation", "TabQuickNavigation/RowQuickNavList", "General_QuickNavTitle"),
         new("General_PreviewProvidersTitle", "General", vm => vm.General.SelectedTab = "PreviewProviders", "TabPreviewProviders"),
         new("General_PreviewProvidersListTitle", "General", vm => vm.General.SelectedTab = "PreviewProviders", "TabPreviewProviders/RowPreviewProvidersList", "General_PreviewProvidersTitle"),
+        new("General_ThumbnailProvidersListTitle", "General", vm => vm.General.SelectedTab = "PreviewProviders", "TabPreviewProviders/RowThumbnailProvidersList", "General_PreviewProvidersTitle"),
 
         // Appearance
         new("Settings_Appearance", "Appearance"),

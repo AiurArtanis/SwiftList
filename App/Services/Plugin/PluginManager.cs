@@ -248,9 +248,25 @@ public class PluginManager : PluginRegistry
         }
     }
 
+    // Ordered per UserSettings.ThumbnailProviderOrder (position = priority, most-preferred first); a
+    // provider whose id isn't listed there yet falls back to its own Priority (higher first), same
+    // fallback shape FilePreviewProviders above uses for its own user-order list.
     public IEnumerable<IThumbnailProvider> ThumbnailProviders
-        => _thumbnailProviders
-            .Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.ThumbnailProvider, p.GetType().Name));
+    {
+        get
+        {
+            var order = UserSettings.Load().ThumbnailProviderOrder;
+            return _thumbnailProviders
+                .Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.ThumbnailProvider, p.GetType().Name))
+                .OrderBy(p =>
+                {
+                    var id = Helpers.PluginLoaderHelper.MakeId(ComponentFilter.GetDllName(p), PluginComponentType.ThumbnailProvider, p.GetType().Name);
+                    var rank = order.IndexOf(id);
+                    return rank >= 0 ? rank : int.MaxValue;
+                })
+                .ThenByDescending(p => p.Priority);
+        }
+    }
 
     public IEnumerable<PluginSdk.Abstractions.Plugins.IQueryTokenProvider> QueryTokenProviders
         => _queryTokenProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.QueryTokenProvider, p.GetType().Name));

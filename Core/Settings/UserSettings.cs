@@ -132,6 +132,14 @@ public class UserSettings
     public List<string> FilePreviewProviderOrder { get; set; } = new();
 
     /// <summary>
+    /// User-chosen priority order for IThumbnailProvider (the built-in shell thumbnail provider plus
+    /// any third-party plugin's own), most-preferred first. Same id format as DisabledPluginComponents.
+    /// A provider whose id isn't present here yet falls back to its own Priority (higher first), same
+    /// convention FilePreviewProviderOrder above uses -- see PluginManager.ThumbnailProviders.
+    /// </summary>
+    public List<string> ThumbnailProviderOrder { get; set; } = new();
+
+    /// <summary>
     /// Per-type trigger character for the quick window's exclusive result-type filter -- key is the
     /// same type-id ResultTypeOrder above uses, value is a single character (an entry is only present
     /// when the user actually configured one). When the FIRST character the user types matches a
