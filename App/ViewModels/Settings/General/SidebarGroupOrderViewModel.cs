@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
+using SwiftList.App.Services;
 using SwiftList.App.Services.PluginManagerCore;
 using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.Core;
@@ -32,20 +33,23 @@ public class SidebarGroupOrderViewModel : ViewModelBase
             var groups = provider.GetFilterGroups().ToList();
             if (groups.Count == 0) continue;
 
-            Items.Add(new SidebarGroupOrderItem
-            {
-                // BuildId must match PluginManager.SidebarFilterProviders' own ordering exactly, which
-                // computes its id off the RAW plugin-defined provider -- provider here is always a
-                // FilteredSidebarFilterProvider wrapper (see PluginManager.SidebarFilterProviders), so
-                // unwrap it first or the id would come from the wrapper's own type/assembly instead
-                // and never match anything the user's saved order could reference.
-                Id = BuildId(provider is FilteredSidebarFilterProvider filtered ? filtered.Inner : provider),
-                DisplayName = groups[0].Header
-            });
+            // BuildId must match PluginManager.SidebarFilterProviders' own ordering exactly, which
+            // computes its id off the RAW plugin-defined provider -- provider here is always a
+            // FilteredSidebarFilterProvider wrapper (see PluginManager.SidebarFilterProviders), so
+            // unwrap it first or the id would come from the wrapper's own type/assembly instead
+            // and never match anything the user's saved order could reference.
+            var id = BuildId(provider is FilteredSidebarFilterProvider filtered ? filtered.Inner : provider);
+            Items.Add(new SidebarGroupOrderItem(id, () => provider.GetFilterGroups().FirstOrDefault()?.Header ?? string.Empty));
         }
 
         MoveUpCommand = new RelayCommand<SidebarGroupOrderItem>(MoveUp);
         MoveDownCommand = new RelayCommand<SidebarGroupOrderItem>(MoveDown);
+
+        TranslationManager.Instance.PropertyChanged += (_, _) =>
+        {
+            foreach (var item in Items)
+                item.NotifyLanguageChanged();
+        };
     }
 
     public ObservableCollection<SidebarGroupOrderItem> Items { get; } = new();
@@ -76,8 +80,7 @@ public class SidebarGroupOrderViewModel : ViewModelBase
     }
 }
 
-public class SidebarGroupOrderItem
+public class SidebarGroupOrderItem : OrderItemBase
 {
-    public string Id { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
+    public SidebarGroupOrderItem(string id, Func<string> resolveDisplayName) : base(id, resolveDisplayName) { }
 }

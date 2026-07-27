@@ -14,7 +14,7 @@ public sealed class ColumnOrderViewModelTests
         var vm = new ColumnOrderViewModel(settings);
         vm.Items.Clear();
         foreach (var (id, name) in items)
-            vm.Items.Add(new ColumnOrderItem { Id = id, DisplayName = name });
+            vm.Items.Add(new ColumnOrderItem(id, () => name));
         return vm;
     }
 

@@ -28,23 +28,16 @@ public class ResultTypeOrderViewModel : ViewModelBase
         var triggers = userSettings.ResultTypeTriggers;
         var candidates = new List<ResultTypeOrderItem>
         {
-            new()
-            {
-                Id = SearchResultTypePriority.FilesTypeId,
-                DisplayName = TranslationManager.Instance["General_ResultTypeFiles"],
-                TriggerChar = triggers.GetValueOrDefault(SearchResultTypePriority.FilesTypeId, string.Empty)
-            }
+            new(
+                SearchResultTypePriority.FilesTypeId,
+                () => TranslationManager.Instance["General_ResultTypeFiles"],
+                triggers.GetValueOrDefault(SearchResultTypePriority.FilesTypeId, string.Empty))
         };
 
         foreach (var provider in PluginManager.Instance.SearchableItemProviders)
         {
             var id = SearchResultTypePriority.GetProviderTypeId(provider);
-            candidates.Add(new ResultTypeOrderItem
-            {
-                Id = id,
-                DisplayName = provider.Name,
-                TriggerChar = triggers.GetValueOrDefault(id, string.Empty)
-            });
+            candidates.Add(new ResultTypeOrderItem(id, () => provider.Name, triggers.GetValueOrDefault(id, string.Empty)));
         }
 
         foreach (var item in candidates.OrderBy(c => SearchResultTypePriority.Rank(c.Id, order)))
@@ -54,6 +47,12 @@ public class ResultTypeOrderViewModel : ViewModelBase
 
         MoveUpCommand = new RelayCommand<ResultTypeOrderItem>(MoveUp);
         MoveDownCommand = new RelayCommand<ResultTypeOrderItem>(MoveDown);
+
+        TranslationManager.Instance.PropertyChanged += (_, _) =>
+        {
+            foreach (var item in Items)
+                item.NotifyLanguageChanged();
+        };
     }
 
     public ObservableCollection<ResultTypeOrderItem> Items { get; } = new();
@@ -84,12 +83,14 @@ public class ResultTypeOrderViewModel : ViewModelBase
     }
 }
 
-public class ResultTypeOrderItem
+public class ResultTypeOrderItem : OrderItemBase
 {
-    public string Id { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
+    public ResultTypeOrderItem(string id, Func<string> resolveDisplayName, string triggerChar) : base(id, resolveDisplayName)
+    {
+        TriggerChar = triggerChar;
+    }
 
     // Empty = no trigger configured. When this is the first character typed in the quick window,
     // only this type's results show (see SearchResultMapper.BuildQuickResults' triggeredTypeId).
-    public string TriggerChar { get; set; } = string.Empty;
+    public string TriggerChar { get; set; }
 }

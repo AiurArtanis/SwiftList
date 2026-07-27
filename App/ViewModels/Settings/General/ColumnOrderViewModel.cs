@@ -23,20 +23,34 @@ public class ColumnOrderViewModel : ViewModelBase
 
         var candidates = new List<ColumnOrderItem>
         {
-            new() { Id = "Name", DisplayName = TranslationManager.Instance["Search_HeaderName"] },
-            new() { Id = "Path", DisplayName = TranslationManager.Instance["Search_HeaderPath"] },
-            new() { Id = "DateModified", DisplayName = TranslationManager.Instance["Search_HeaderDateModified"] },
+            new("Name", () => TranslationManager.Instance["Search_HeaderName"]),
+            new("Path", () => TranslationManager.Instance["Search_HeaderPath"]),
+            new("DateModified", () => TranslationManager.Instance["Search_HeaderDateModified"]),
         };
 
         foreach (var provider in PluginManager.Instance.ResultColumnProviders)
             foreach (var col in provider.GetColumns())
-                candidates.Add(new ColumnOrderItem { Id = col.ColumnId, DisplayName = col.HeaderText });
+            {
+                var columnId = col.ColumnId;
+                // Re-invokes GetColumns() rather than closing over this one ResultColumnDefinition
+                // instance's own HeaderText: a plugin builds a fresh HeaderText (typically via its own
+                // TranslationService.Get call) each time GetColumns() runs, but the DEFINITION OBJECT
+                // itself is frozen at whatever language was active the moment this loop ran, so reading
+                // straight off col.HeaderText later would still show the stale string.
+                candidates.Add(new ColumnOrderItem(columnId, () => provider.GetColumns().FirstOrDefault(c => c.ColumnId == columnId)?.HeaderText ?? string.Empty));
+            }
 
         foreach (var item in candidates.OrderBy(c => Rank(c.Id, order)))
             Items.Add(item);
 
         MoveUpCommand = new RelayCommand<ColumnOrderItem>(MoveUp);
         MoveDownCommand = new RelayCommand<ColumnOrderItem>(MoveDown);
+
+        TranslationManager.Instance.PropertyChanged += (_, _) =>
+        {
+            foreach (var item in Items)
+                item.NotifyLanguageChanged();
+        };
     }
 
     public ObservableCollection<ColumnOrderItem> Items { get; } = new();
@@ -74,8 +88,7 @@ public class ColumnOrderViewModel : ViewModelBase
     }
 }
 
-public class ColumnOrderItem
+public class ColumnOrderItem : OrderItemBase
 {
-    public string Id { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
+    public ColumnOrderItem(string id, Func<string> resolveDisplayName) : base(id, resolveDisplayName) { }
 }

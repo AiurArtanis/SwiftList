@@ -21,7 +21,11 @@ public class ActionMenuGroupOrderViewModel : ViewModelBase
     {
         _userSettings = userSettings;
 
-        var builtinLabel = TranslationManager.Instance["Action_BuiltinGroup"];
+        // Re-read fresh on every call (not captured once into a local) so a later language switch's
+        // NotifyLanguageChanged re-invocation of DisplayName picks up the new translation too.
+        static string BuiltinLabel() => TranslationManager.Instance["Action_BuiltinGroup"];
+
+        var builtinLabel = BuiltinLabel();
         var seenIds = new HashSet<string>();
         var candidates = new List<ActionMenuGroupOrderItem>();
 
@@ -30,7 +34,8 @@ public class ActionMenuGroupOrderViewModel : ViewModelBase
             var group = string.IsNullOrWhiteSpace(registration.Action.GroupName) ? builtinLabel : registration.Action.GroupName;
             var id = ActionMenuBuilder.BuildStaticGroupId(group, builtinLabel);
             if (!seenIds.Add(id)) continue;
-            candidates.Add(new ActionMenuGroupOrderItem { Id = id, DisplayName = group });
+            var action = registration.Action;
+            candidates.Add(new ActionMenuGroupOrderItem(id, () => string.IsNullOrWhiteSpace(action.GroupName) ? BuiltinLabel() : action.GroupName));
         }
 
         // Same Priority-ascending order ActionMenuBuilder.BuildDynamic itself renders with, so this
@@ -40,7 +45,7 @@ public class ActionMenuGroupOrderViewModel : ViewModelBase
             var group = string.IsNullOrWhiteSpace(provider.GroupName) ? builtinLabel : provider.GroupName;
             var id = ActionMenuBuilder.BuildDynamicGroupId(provider);
             if (!seenIds.Add(id)) continue;
-            candidates.Add(new ActionMenuGroupOrderItem { Id = id, DisplayName = group });
+            candidates.Add(new ActionMenuGroupOrderItem(id, () => string.IsNullOrWhiteSpace(provider.GroupName) ? BuiltinLabel() : provider.GroupName));
         }
 
         var order = userSettings.ActionMenuGroupOrder;
@@ -55,6 +60,12 @@ public class ActionMenuGroupOrderViewModel : ViewModelBase
 
         MoveUpCommand = new RelayCommand<ActionMenuGroupOrderItem>(MoveUp);
         MoveDownCommand = new RelayCommand<ActionMenuGroupOrderItem>(MoveDown);
+
+        TranslationManager.Instance.PropertyChanged += (_, _) =>
+        {
+            foreach (var item in Items)
+                item.NotifyLanguageChanged();
+        };
     }
 
     public ObservableCollection<ActionMenuGroupOrderItem> Items { get; } = new();
@@ -82,8 +93,7 @@ public class ActionMenuGroupOrderViewModel : ViewModelBase
     }
 }
 
-public class ActionMenuGroupOrderItem
+public class ActionMenuGroupOrderItem : OrderItemBase
 {
-    public string Id { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
+    public ActionMenuGroupOrderItem(string id, Func<string> resolveDisplayName) : base(id, resolveDisplayName) { }
 }

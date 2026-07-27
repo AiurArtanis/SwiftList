@@ -28,15 +28,17 @@ public class QuickNavigationOrderViewModel : ViewModelBase
         // disabled providers never appear here, per the "hiding them would be meaningless" call.
         foreach (var provider in PluginManager.Instance.QuickNavigationProviders)
         {
-            Items.Add(new QuickNavProviderOrderItem
-            {
-                Id = BuildId(provider),
-                DisplayName = provider.GroupName
-            });
+            Items.Add(new QuickNavProviderOrderItem(BuildId(provider), () => provider.GroupName));
         }
 
         MoveUpCommand = new RelayCommand<QuickNavProviderOrderItem>(MoveUp);
         MoveDownCommand = new RelayCommand<QuickNavProviderOrderItem>(MoveDown);
+
+        TranslationManager.Instance.PropertyChanged += (_, _) =>
+        {
+            foreach (var item in Items)
+                item.NotifyLanguageChanged();
+        };
     }
 
     public ObservableCollection<QuickNavProviderOrderItem> Items { get; } = new();
@@ -67,8 +69,7 @@ public class QuickNavigationOrderViewModel : ViewModelBase
     }
 }
 
-public class QuickNavProviderOrderItem
+public class QuickNavProviderOrderItem : OrderItemBase
 {
-    public string Id { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
+    public QuickNavProviderOrderItem(string id, Func<string> resolveDisplayName) : base(id, resolveDisplayName) { }
 }

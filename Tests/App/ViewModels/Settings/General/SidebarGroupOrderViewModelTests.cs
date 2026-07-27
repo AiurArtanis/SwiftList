@@ -41,7 +41,7 @@ public sealed class SidebarGroupOrderViewModelTests
         var vm = new SidebarGroupOrderViewModel(settings);
         vm.Items.Clear();
         foreach (var (id, name) in items)
-            vm.Items.Add(new SidebarGroupOrderItem { Id = id, DisplayName = name });
+            vm.Items.Add(new SidebarGroupOrderItem(id, () => name));
         return vm;
     }
 

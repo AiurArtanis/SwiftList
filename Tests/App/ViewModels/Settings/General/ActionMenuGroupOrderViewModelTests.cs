@@ -15,7 +15,7 @@ public sealed class ActionMenuGroupOrderViewModelTests
         var vm = new ActionMenuGroupOrderViewModel(settings);
         vm.Items.Clear();
         foreach (var (id, name) in items)
-            vm.Items.Add(new ActionMenuGroupOrderItem { Id = id, DisplayName = name });
+            vm.Items.Add(new ActionMenuGroupOrderItem(id, () => name));
         return vm;
     }
 
