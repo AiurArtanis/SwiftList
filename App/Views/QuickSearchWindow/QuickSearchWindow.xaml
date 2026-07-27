@@ -6,6 +6,7 @@
         xmlns:results="clr-namespace:SwiftList.App.Views.Controls.Results"
         xmlns:services="clr-namespace:SwiftList.App.Services"
         xmlns:helpers="clr-namespace:SwiftList.App.Helpers.Visuals"
+        xmlns:ctrl="clr-namespace:SwiftList.App.Views.Controls"
         Title="SwiftList"
         SizeToContent="WidthAndHeight"
         WindowStyle="None"
@@ -65,10 +66,9 @@
             <Border Grid.Row="2" Grid.RowSpan="2" Background="{DynamicResource ContentBg}"/>
 
             <!-- ═══════════ 3. Startup Panel Tab Strip ═══════════ -->
-            <ItemsControl x:Name="StartupPanelTabStrip" Grid.Row="2"
-                          ItemsSource="{Binding StartupPanelTabs}"
-                          Visibility="{Binding StartupPanelVisibility}"
-                          Margin="12,8,12,0">
+            <ctrl:TabStripScrollView x:Name="StartupPanelTabStripHost" Grid.Row="2" Visibility="{Binding StartupPanelVisibility}" Margin="12,8,12,0">
+            <ItemsControl x:Name="StartupPanelTabStrip"
+                          ItemsSource="{Binding StartupPanelTabs}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel Orientation="Horizontal"/>
@@ -153,6 +153,7 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </ctrl:TabStripScrollView>
 
             <!-- ═══════════ 4. Results Panel ═══════════ -->
             <results:ResultsControl x:Name="ResultsPanelControl" Grid.Row="3"

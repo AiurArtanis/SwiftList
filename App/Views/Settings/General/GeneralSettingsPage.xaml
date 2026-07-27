@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:services="clr-namespace:SwiftList.App.Services"
              xmlns:local="clr-namespace:SwiftList.App.Views.Settings.General"
+             xmlns:ctrl="clr-namespace:SwiftList.App.Views.Controls"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="700">
     <UserControl.Resources>
@@ -26,7 +27,8 @@
                         Text="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_Hint]}"/>
 
             <!-- Tab header row -->
-            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+            <ctrl:TabStripScrollView Margin="0,16,0,0">
+            <StackPanel Orientation="Horizontal">
                 <StackPanel Margin="0,0,28,0">
                     <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_SysTitle]}"
                             Command="{Binding General.SelectTabCommand}" CommandParameter="System">
@@ -158,6 +160,7 @@
                     </Border>
                 </StackPanel>
             </StackPanel>
+            </ctrl:TabStripScrollView>
             <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
 
             <!-- Tab: System (extracted; see GeneralSettingsSystemTab.xaml) -->

@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:services="clr-namespace:SwiftList.App.Services"
+             xmlns:ctrl="clr-namespace:SwiftList.App.Views.Controls"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="700">
     <UserControl.Resources>
@@ -125,7 +126,8 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <ctrl:TabStripScrollView Grid.Column="0">
+                <StackPanel Orientation="Horizontal">
                     <StackPanel Margin="0,0,28,0">
                         <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[Service_LogTab_App]}"
                                 Command="{Binding Log.SelectTabCommand}" CommandParameter="App">
@@ -205,6 +207,7 @@
                         </Border>
                     </StackPanel>
                 </StackPanel>
+                </ctrl:TabStripScrollView>
 
                 <Border Grid.Column="1" Height="34" CornerRadius="6" Margin="16,0,8,0" VerticalAlignment="Top"
                         Background="{DynamicResource ControlBackground}"

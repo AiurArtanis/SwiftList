@@ -6,6 +6,7 @@
              xmlns:services="clr-namespace:SwiftList.App.Services"
              xmlns:conv="clr-namespace:SwiftList.App.Converters"
              xmlns:local="clr-namespace:SwiftList.App.Views.Settings.StartupPanel"
+             xmlns:ctrl="clr-namespace:SwiftList.App.Views.Controls"
              mc:Ignorable="d"
              d:DesignHeight="550" d:DesignWidth="700">
     <UserControl.Resources>
@@ -32,7 +33,8 @@
 
             <!-- Sub-tab header row: one button + underline pair per built-in tab source, mirroring the
                  live panel's own tabs. -->
-            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+            <ctrl:TabStripScrollView Margin="0,16,0,0">
+            <StackPanel Orientation="Horizontal">
                 <StackPanel>
                     <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[StartupPanel_TabRecentFiles]}"
                             Command="{Binding SelectSubTabCommand}" CommandParameter="RecentFiles">
@@ -141,6 +143,7 @@
                     </Border>
                 </StackPanel>
             </StackPanel>
+            </ctrl:TabStripScrollView>
             <Border Height="1" Background="{DynamicResource SettingsRowBorderBrush}" Margin="0,0,0,15"/>
 
             <!-- Sub-tab: Recent Files (extracted; see StartupPanelRecentFilesSection.xaml) -->

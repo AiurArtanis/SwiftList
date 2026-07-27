@@ -136,10 +136,10 @@ internal sealed class QuickSearchWindowLayoutManager
         // shows for an empty query) keeps the WPF-default item-based virtualization, which only realizes
         // the ~9 actually-visible rows instead of the full ~50-row result set.
         var isClippingToNonRowMultiple = false;
-        if (_window.StartupPanelTabStrip.Visibility == Visibility.Visible)
+        if (_window.StartupPanelTabStripHost.Visibility == Visibility.Visible)
         {
-            var tabStripMargin = _window.StartupPanelTabStrip.Margin;
-            var tabStripFootprint = _window.StartupPanelTabStrip.ActualHeight + tabStripMargin.Top + tabStripMargin.Bottom;
+            var tabStripMargin = _window.StartupPanelTabStripHost.Margin;
+            var tabStripFootprint = _window.StartupPanelTabStripHost.ActualHeight + tabStripMargin.Top + tabStripMargin.Bottom;
             var maxAvailableHeight = 9 * UiMetrics.ScaledNormalRowHeight - tabStripFootprint;
             if (resultsHeight > maxAvailableHeight)
             {

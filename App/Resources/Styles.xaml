@@ -10,5 +10,6 @@
         <ResourceDictionary Source="Styles/Controls/Button.xaml"/>
         <ResourceDictionary Source="Styles/Controls/Controls.xaml"/>
         <ResourceDictionary Source="Styles/Controls/Menu.xaml"/>
+        <ResourceDictionary Source="Styles/Controls/TabStripScrollView.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>
