@@ -25,6 +25,26 @@ public partial class QuickLookWindow : Window
     private UIElement? _currentPreview;
     private IFilePreviewProvider? _currentProvider;
 
+    // Read by QuickLookManager right after SetTarget resolves the winning provider, so it can hide this
+    // window instead of showing it -- the provider's real preview surface is a separate window it manages
+    // itself, and CreatePreview's returned content (already set as ContentArea.Content/_currentPreview by
+    // this point) is never actually meant to be seen.
+    public bool IsShowingExternalPreview => _currentProvider?.RendersExternally == true;
+
+    // Called by QuickLookManager once it's computed where this window's own panel would have gone, so
+    // the winning provider (if it wants to know) can dock its externally-managed window there instead.
+    public void NotifyExternalPreviewBounds(int left, int top, int width, int height) =>
+        (_currentProvider as IReceivesPreviewPanelBounds)?.OnPreviewPanelBoundsAvailable(left, top, width, height);
+
+    // Called by QuickLookManager.Hide() unconditionally, not just relied on to happen implicitly via
+    // IsVisibleChanged: when the current provider is RendersExternally, this window was already Hide()'d
+    // the moment that provider started showing (so it never displays an empty panel), so a later Hide()
+    // call is a no-op transition-wise and IsVisibleChanged never fires again -- without this, ending the
+    // preview session (closing the search window, toggling preview off) would leave the current
+    // provider's EndPreviewSession() (e.g. closing an externally-docked window) never called. Idempotent:
+    // harmless if the normal in-panel path already released everything via IsVisibleChanged.
+    public void ReleaseCurrentPreview() => ReleasePreview();
+
     public QuickLookWindow()
     {
         InitializeComponent();
@@ -52,6 +72,16 @@ public partial class QuickLookWindow : Window
 
     private void ReleasePreview()
     {
+        // The provider being released owns a real external window, not just an in-process resource --
+        // unlike ShellPreviewHandlerProvider's pooled prevhost handlers (which deliberately survive
+        // hide/show cycles within one owner session, see IPreviewSessionAware's own doc comment), there's
+        // nothing to keep alive here, so it's told to end its session on every release, not just when the
+        // whole preview session ends. Otherwise its window would linger on screen with nothing left
+        // pointing at it whenever this panel just hides (toggling preview off, the search window closing)
+        // rather than the owner window itself closing.
+        if (_currentProvider?.RendersExternally == true)
+            (_currentProvider as IPreviewSessionAware)?.EndPreviewSession();
+
         _overlay.Clear();
         (_pendingHost as IDisposable)?.Dispose();
         _pendingHost = null;

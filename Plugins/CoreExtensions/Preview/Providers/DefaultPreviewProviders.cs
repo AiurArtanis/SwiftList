@@ -72,11 +72,39 @@ public class TextPreviewProvider : IFilePreviewProvider
         try
         {
             var fileInfo = new FileInfo(path);
-            if (fileInfo.Length < 102400) return true; // Under 100KB, try previewing
+            // Under 100KB is necessary but not sufficient -- a small binary file (e.g. a small .zip) would
+            // otherwise get claimed here too, pre-empting every lower-priority provider (including ones
+            // that could actually preview it) only to immediately give up and hand off to
+            // DefaultMetadataPreviewProvider in CreatePreview anyway. Deciding that here instead means a
+            // small binary file is never claimed in the first place, so those providers get a real chance.
+            if (fileInfo.Length < 102400 && !LooksBinary(path)) return true;
         }
         catch { }
         return false;
     }
+
+    // Null bytes in the first 4KB is the same heuristic file(1) and most editors use to flag binary
+    // content -- cheap, and good enough to keep archives/executables/etc. out of the text view without
+    // needing a real format sniffer.
+    private static bool LooksBinary(string path)
+    {
+        try
+        {
+            var buffer = new byte[4096];
+            int bytesRead;
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                bytesRead = fs.Read(buffer, 0, buffer.Length);
+            for (var i = 0; i < bytesRead; i++)
+                if (buffer[i] == 0) return true;
+            return false;
+        }
+        catch
+        {
+            // Can't tell -- don't block on it here, let CreatePreview's own read surface the real error.
+            return false;
+        }
+    }
+
     public UIElement CreatePreview(string path, bool isDir)
     {
         var scroll = new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
@@ -99,16 +127,9 @@ public class TextPreviewProvider : IFilePreviewProvider
         scroll.Content = txt;
         try
         {
-            var buffer = new byte[4096];
-            int bytesRead;
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                bytesRead = fs.Read(buffer, 0, buffer.Length);
-            for (var i = 0; i < bytesRead; i++)
+            if (LooksBinary(path))
             {
-                if (buffer[i] == 0)
-                {
-                    return new DefaultMetadataPreviewProvider().CreatePreview(path, isDir);
-                }
+                return new DefaultMetadataPreviewProvider().CreatePreview(path, isDir);
             }
             string textContent;
             using (var reader = new StreamReader(path, Encoding.UTF8, true))

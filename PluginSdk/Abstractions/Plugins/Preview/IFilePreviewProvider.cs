@@ -20,4 +20,12 @@ public interface IFilePreviewProvider : IPluginComponent
     /// Creates a WPF UI control displaying the preview of the path.
     /// </summary>
     UIElement CreatePreview(string path, bool isDir);
+
+    /// <summary>
+    /// When true, this provider's actual preview surface is a separate, externally-managed window --
+    /// not the <see cref="UIElement"/> <see cref="CreatePreview"/> returns, which the host then never
+    /// shows. The host preview panel hides itself instead of displaying that content, since there would
+    /// be nothing useful inside its own chrome.
+    /// </summary>
+    bool RendersExternally => false;
 }

@@ -29,7 +29,14 @@ public sealed class TextPreviewProviderTests
     {
         public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"swiftlist-tests-{Guid.NewGuid():N}");
 
-        public TempFile(int sizeBytes) => File.WriteAllBytes(Path, new byte[sizeBytes]);
+        // Default fill is ASCII 'a', not the CLR's zero-initialized default -- an all-zero buffer is
+        // itself binary content (a run of null bytes), which would make every "should be text-previewable"
+        // fixture accidentally fail LooksBinary's own null-byte check.
+        public TempFile(int sizeBytes) : this(new string('a', sizeBytes)) { }
+
+        public TempFile(string content) => File.WriteAllText(Path, content);
+
+        public TempFile(byte[] bytes) => File.WriteAllBytes(Path, bytes);
 
         public void Dispose()
         {
@@ -46,7 +53,7 @@ public sealed class TextPreviewProviderTests
         Assert.IsTrue(Provider.CanPreview(@"C:\definitely-missing.cs", isDir: false));
 
     [TestMethod]
-    public void CanPreview_UnknownExtension_SmallExistingFile_ReturnsTrue()
+    public void CanPreview_UnknownExtension_SmallExistingTextFile_ReturnsTrue()
     {
         using var file = new TempFile(1024);
 
@@ -64,6 +71,34 @@ public sealed class TextPreviewProviderTests
     [TestMethod]
     public void CanPreview_UnknownExtension_MissingFile_ReturnsFalse() =>
         Assert.IsFalse(Provider.CanPreview(@"Z:\definitely-not-real-swiftlist-file.unknownext", isDir: false));
+
+    [TestMethod]
+    public void CanPreview_UnknownExtension_SmallBinaryFile_ReturnsFalse()
+    {
+        // A null byte anywhere in the first 4KB flags it as binary (e.g. a small .zip's compressed
+        // stream) -- must not be claimed here just because it's small and has an unrecognized extension,
+        // otherwise it pre-empts every lower-priority provider that could actually preview it.
+        using var file = new TempFile(new byte[] { 0x50, 0x4B, 0x03, 0x04, 0x00, 0x00 });
+
+        Assert.IsFalse(Provider.CanPreview(file.Path, isDir: false));
+    }
+
+    [TestMethod]
+    public void CanPreview_KnownTextExtension_SmallBinaryContent_StillReturnsTrue()
+    {
+        // Extension match short-circuits before the binary sniff runs -- unchanged from before this fix,
+        // a .cs/.json/etc. file is trusted by extension alone.
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"swiftlist-tests-{Guid.NewGuid():N}.cs");
+        File.WriteAllBytes(path, new byte[] { 0x00, 0x00, 0x00 });
+        try
+        {
+            Assert.IsTrue(Provider.CanPreview(path, isDir: false));
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
+        }
+    }
 }
 
 [TestClass]

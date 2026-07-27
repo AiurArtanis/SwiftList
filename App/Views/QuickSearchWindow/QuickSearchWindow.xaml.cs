@@ -218,6 +218,12 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
             // QuickLookManager just Hide()'d this window itself, for a preview handler's own popup
             // dialog (see its own comment) -- not a real deactivation to react to.
             if (Services.QuickLookManager.Instance.IsHiddenForDialog) return;
+            // An out-of-process preview (native handler, or an external app like QuickLook docked via
+            // QuickLookBridge) legitimately holds OS foreground right now -- see PreviewActivationSignal's
+            // own doc comment. QuickSearchWindowForegroundWatcher already checks this same signal for its
+            // own (WinEventHook-driven) hide path; this is the plain Window.Deactivated path, which fires
+            // independently and needs the same guard.
+            if (PluginSdk.Services.PreviewActivationSignal.IsActive) return;
             // Do not hide if there are visible owned windows (e.g. a crash MessageBox dialog).
             foreach (Window owned in OwnedWindows)
                 if (owned.IsVisible) return;
