@@ -7,6 +7,7 @@ public sealed class GlobalHotkeyDetector
 
     private readonly ModifierDoubleTapDetector _toggleWindowTapDetector = new();
     private readonly ModifierDoubleTapDetector _quickSwitchTapDetector = new();
+    private readonly WindowsKeyState _windowsKeyState = new();
 
     public GlobalHotkeyDetector(UserSettings settings, ExplorerTracker explorerTracker)
     {
@@ -14,9 +15,12 @@ public sealed class GlobalHotkeyDetector
         _explorerTracker = explorerTracker;
     }
 
+    public void OnKeyDown(int vkCode) => _windowsKeyState.OnKeyDown(vkCode);
+
     /// <summary>Call on WM_KEYUP / WM_SYSKEYUP to reset the "was released" flags.</summary>
     public void OnKeyUp(int vkCode)
     {
+        _windowsKeyState.OnKeyUp(vkCode);
         if (HotkeyStringFormat.IsBareModifier(_settings.Hotkeys.ToggleWindowHotkey, out var toggleModifier) &&
             KeyboardUtils.IsModifierKey(vkCode, toggleModifier))
         {
@@ -51,7 +55,7 @@ public sealed class GlobalHotkeyDetector
             var targetVk = KeyboardUtils.GetKeyVirtualCode(key);
             if (targetVk != 0 && vkCode == targetVk)
             {
-                if (KeyboardUtils.CheckModifiersMatch(modifier))
+                if (KeyboardUtils.CheckModifiersMatch(modifier, _windowsKeyState.IsDown))
                 {
                     triggered = true;
                     consumeKey = true;
@@ -87,7 +91,7 @@ public sealed class GlobalHotkeyDetector
             var targetVk = KeyboardUtils.GetKeyVirtualCode(key);
             if (targetVk != 0 && vkCode == targetVk)
             {
-                if (KeyboardUtils.CheckModifiersMatch(modifier))
+                if (KeyboardUtils.CheckModifiersMatch(modifier, _windowsKeyState.IsDown))
                 {
                     triggered = true;
                 }

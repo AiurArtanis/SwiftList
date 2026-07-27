@@ -56,12 +56,12 @@ internal static class KeyboardUtils
         return 0;
     }
 
-    public static bool CheckModifiersMatch(string expectedModifier)
+    public static bool CheckModifiersMatch(string expectedModifier, bool trackedWindowsKeyDown = false)
     {
         var ctrlDown = (KeyboardNativeMethods.GetKeyState(0x11) & 0x8000) != 0;
         var altDown = (KeyboardNativeMethods.GetKeyState(0x12) & 0x8000) != 0;
         var shiftDown = (KeyboardNativeMethods.GetKeyState(0x10) & 0x8000) != 0;
-        var winDown = (KeyboardNativeMethods.GetKeyState(0x5B) & 0x8000) != 0 ||
+        var winDown = trackedWindowsKeyDown || (KeyboardNativeMethods.GetKeyState(0x5B) & 0x8000) != 0 ||
                        (KeyboardNativeMethods.GetKeyState(0x5C) & 0x8000) != 0;
 
         return ModifiersMatch(expectedModifier, ctrlDown, altDown, shiftDown, winDown, "NONE");
