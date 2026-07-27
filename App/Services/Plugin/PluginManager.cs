@@ -228,10 +228,25 @@ public class PluginManager : PluginRegistry
     public IEnumerable<PluginSdk.Abstractions.Plugins.ITranslationProvider> TranslationProviders => _translationProviders;
     public IEnumerable<PluginSdk.Abstractions.Plugins.IThemeProvider> ThemeProviders => _themeProviders;
     public IEnumerable<IActivePathCollector> ActivePathCollectors => _pathCollectors;
+    // Ordered per UserSettings.FilePreviewProviderOrder (position = priority, most-preferred first); a
+    // provider whose id isn't listed there yet falls back to its own Priority (higher first), same
+    // fallback shape SidebarFilterProviders/QuickNavigationProviders use for their own user-order lists.
     public IEnumerable<IFilePreviewProvider> FilePreviewProviders
-        => _previewProviders
-            .Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.FilePreviewProvider, p.GetType().Name))
-            .OrderByDescending(p => p.Priority);
+    {
+        get
+        {
+            var order = UserSettings.Load().FilePreviewProviderOrder;
+            return _previewProviders
+                .Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.FilePreviewProvider, p.GetType().Name))
+                .OrderBy(p =>
+                {
+                    var id = Helpers.PluginLoaderHelper.MakeId(ComponentFilter.GetDllName(p), PluginComponentType.FilePreviewProvider, p.GetType().Name);
+                    var rank = order.IndexOf(id);
+                    return rank >= 0 ? rank : int.MaxValue;
+                })
+                .ThenByDescending(p => p.Priority);
+        }
+    }
 
     public IEnumerable<IThumbnailProvider> ThumbnailProviders
         => _thumbnailProviders

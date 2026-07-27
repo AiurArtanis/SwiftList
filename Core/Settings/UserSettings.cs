@@ -123,6 +123,15 @@ public class UserSettings
     public List<string> ActionMenuGroupOrder { get; set; } = new();
 
     /// <summary>
+    /// User-chosen priority order for IFilePreviewProvider (built-in image/text/media/PE previewers plus
+    /// any third-party plugin's own), most-preferred first. Same id format as DisabledPluginComponents.
+    /// A provider whose id isn't present here yet falls back to its own Priority (higher first), same
+    /// convention QuickNavigationProviderOrder above uses for discovery order -- see
+    /// PluginManager.FilePreviewProviders.
+    /// </summary>
+    public List<string> FilePreviewProviderOrder { get; set; } = new();
+
+    /// <summary>
     /// Per-type trigger character for the quick window's exclusive result-type filter -- key is the
     /// same type-id ResultTypeOrder above uses, value is a single character (an entry is only present
     /// when the user actually configured one). When the FIRST character the user types matches a
