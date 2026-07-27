@@ -16,5 +16,6 @@
   <Project Path="Plugins/WindowSwitcher/WindowSwitcher.csproj" />
   <Project Path="Plugins/DirectoryOpus/DirectoryOpus.csproj" />
   <Project Path="Plugins/QuickLookBridge/QuickLookBridge.csproj" />
+  <Project Path="Plugins/WinRAR/WinRAR.csproj" />
 
 </Solution>
