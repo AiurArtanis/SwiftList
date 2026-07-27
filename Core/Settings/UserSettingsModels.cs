@@ -88,8 +88,13 @@ public class SearchWindowSettings
 {
     public double SearchBarWidth { get; set; } = 570;
     public double SearchBarHeight { get; set; } = 60;
-    public double? Left { get; set; }
-    public double? Top { get; set; }
+    // Fraction of whichever monitor's work area the window was last dragged to (e.g. 0.5/0.22 = centered
+    // horizontally, 22% down from the top of THAT monitor) rather than absolute screen pixels -- letting
+    // QuickSearchWindowPositioner re-derive the equivalent spot on whatever monitor the mouse/foreground
+    // window is on at the next ShowWindow, instead of always reopening on the one specific monitor the
+    // window happened to be dragged on originally.
+    public double? RelativeLeft { get; set; }
+    public double? RelativeTop { get; set; }
     // Replaces the quick window's empty-state placeholder text with date/time/day-of-week (see #101).
     public bool ShowClock { get; set; } = false;
     // When the quick window is already open, pressing the global toggle hotkey again normally hides

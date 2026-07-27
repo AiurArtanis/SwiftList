@@ -77,6 +77,8 @@ public class QuickSearchWindowController
 
     public void PositionWindow() => _positioner.PositionWindow();
 
+    public void SaveWindowPosition() => _positioner.SaveWindowPosition();
+
     // Wired to the search box's status icon right-click -- clears the saved position and immediately
     // re-centers the window using the same fallback PositionWindow already falls back to when there's
     // no saved position (or it's off-screen).

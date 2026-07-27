@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Windows.Interop;
 using SwiftList.Core;
 
 namespace SwiftList.App.Views.QuickSearchWindow.Helpers;
@@ -44,33 +45,60 @@ public class QuickSearchWindowPositioner
             ? Screen.FromHandle(lastActiveHwnd)
             : Screen.FromPoint(Control.MousePosition);
 
-        var workingArea = screen.WorkingArea;
+        var (waLeft, waTop, waWidth, waHeight) = WorkingAreaInDip(screen, dpiScaleX, dpiScaleY);
         var settings = UserSettings.Load();
         var windowWidth = settings.SearchWindow.SearchBarWidth + 48;
-        if (settings.SearchWindow.Left.HasValue && settings.SearchWindow.Top.HasValue
-            && IsAnchorOnAnyScreen(settings.SearchWindow.Left.Value + windowWidth / 2, settings.SearchWindow.Top.Value + 20, dpiScaleX, dpiScaleY))
+
+        if (settings.SearchWindow.RelativeLeft.HasValue && settings.SearchWindow.RelativeTop.HasValue)
         {
-            // A saved position may point at a monitor that has since been unplugged or resized, which would
-            // open the window off-screen where it can't be seen or reached. Only restore it when its top
-            // strip still lands on a connected monitor's work area; otherwise fall back to centering below.
-            _window.Left = settings.SearchWindow.Left.Value;
-            _window.Top = settings.SearchWindow.Top.Value;
+            // Re-derives the equivalent spot on the TARGET monitor (wherever the mouse/foreground window
+            // currently is) from a fraction of ITS work area, instead of the absolute pixel position the
+            // window was originally dragged to on a possibly completely different monitor -- see
+            // SaveWindowPosition for how this fraction was computed. Clamped rather than validated
+            // against "is this on some connected monitor" (the old Left/Top-pixel check): a fraction is
+            // always meaningful on any monitor by construction, but still clamped in case a monitor swap
+            // (e.g. a much smaller target display) would otherwise place most of the window off-screen.
+            var relLeft = Math.Clamp(settings.SearchWindow.RelativeLeft.Value, -0.5, 1.0);
+            var relTop = Math.Clamp(settings.SearchWindow.RelativeTop.Value, 0.0, 0.9);
+            _window.Left = waLeft + relLeft * waWidth;
+            _window.Top = waTop + relTop * waHeight;
         }
         else
         {
-            _window.Left = (workingArea.Width * dpiScaleX - windowWidth) / 2 + workingArea.Left * dpiScaleX;
-            _window.Top = workingArea.Height * dpiScaleY * 0.22 + workingArea.Top * dpiScaleY;
+            _window.Left = waLeft + (waWidth - windowWidth) / 2;
+            _window.Top = waTop + waHeight * 0.22;
         }
+    }
+
+    // Wired to QuickSearchWindow's own drag handler (Border_MouseLeftButtonUp), right after a drag
+    // finishes moving the window -- records where it ended up as a fraction of whichever monitor it's
+    // now ON, so a later PositionWindow (possibly targeting a different monitor entirely) can re-derive
+    // the equivalent spot there instead of always reopening on this one specific monitor.
+    public void SaveWindowPosition()
+    {
+        var hwnd = new WindowInteropHelper(_window).Handle;
+        if (hwnd == IntPtr.Zero)
+            return;
+
+        var (dpiScaleX, dpiScaleY) = GetMonitorDpiScale(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST));
+        var (waLeft, waTop, waWidth, waHeight) = WorkingAreaInDip(Screen.FromHandle(hwnd), dpiScaleX, dpiScaleY);
+        if (waWidth <= 0 || waHeight <= 0)
+            return;
+
+        var settings = UserSettings.Load();
+        settings.SearchWindow.RelativeLeft = (_window.Left - waLeft) / waWidth;
+        settings.SearchWindow.RelativeTop = (_window.Top - waTop) / waHeight;
+        settings.Save();
     }
 
     // Wired to the search box's status icon right-click -- clears the saved position and immediately
     // re-centers the window using the same fallback PositionWindow already falls back to when there's
-    // no saved position (or it's off-screen).
+    // no saved position.
     public void ResetPosition()
     {
         var settings = UserSettings.Load();
-        settings.SearchWindow.Left = null;
-        settings.SearchWindow.Top = null;
+        settings.SearchWindow.RelativeLeft = null;
+        settings.SearchWindow.RelativeTop = null;
         settings.Save();
         PositionWindow();
     }
@@ -85,19 +113,11 @@ public class QuickSearchWindowPositioner
         return (1.0, 1.0);
     }
 
-    // Saved Left/Top are DIP; Screen work areas are physical (system-DPI space), so scale them to DIP
-    // with the same factor before testing whether the given DIP anchor point falls on any monitor.
-    private static bool IsAnchorOnAnyScreen(double anchorX, double anchorY, double dpiScaleX, double dpiScaleY)
+    // Screen.WorkingArea is physical (system-DPI space); scales it to WPF's DIP space with the given
+    // monitor's own DPI factor, matching the space Window.Left/Top live in.
+    private static (double Left, double Top, double Width, double Height) WorkingAreaInDip(Screen screen, double dpiScaleX, double dpiScaleY)
     {
-        foreach (var s in Screen.AllScreens)
-        {
-            var wa = s.WorkingArea;
-            if (anchorX >= wa.Left * dpiScaleX && anchorX <= wa.Right * dpiScaleX &&
-                anchorY >= wa.Top * dpiScaleY && anchorY <= wa.Bottom * dpiScaleY)
-            {
-                return true;
-            }
-        }
-        return false;
+        var wa = screen.WorkingArea;
+        return (wa.Left * dpiScaleX, wa.Top * dpiScaleY, wa.Width * dpiScaleX, wa.Height * dpiScaleY);
     }
 }

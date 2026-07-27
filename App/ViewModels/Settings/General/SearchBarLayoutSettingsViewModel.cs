@@ -84,8 +84,8 @@ public class SearchBarLayoutSettingsViewModel : ViewModelBase
         _userSettings.SearchWindow.ReopenAsFullWindowOnRepeatHotkey = _reopenAsFullWindowOnRepeatHotkey;
         if (_resetPosition)
         {
-            _userSettings.SearchWindow.Left = null;
-            _userSettings.SearchWindow.Top = null;
+            _userSettings.SearchWindow.RelativeLeft = null;
+            _userSettings.SearchWindow.RelativeTop = null;
             _resetPosition = false;
         }
         UiMetrics.ApplyScaleFromSettings();

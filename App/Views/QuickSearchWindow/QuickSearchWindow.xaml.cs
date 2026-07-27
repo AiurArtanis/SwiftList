@@ -265,13 +265,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         SaveWindowPosition();
     }
 
-    private void SaveWindowPosition()
-    {
-        var settings = UserSettings.Load();
-        settings.SearchWindow.Left = this.Left;
-        settings.SearchWindow.Top = this.Top;
-        settings.Save();
-    }
+    private void SaveWindowPosition() => _controller.SaveWindowPosition();
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e) => _inputHandler.HandleWindowPreviewKeyDown(e);
 

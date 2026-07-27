@@ -172,26 +172,26 @@ public sealed class SearchBarLayoutSettingsViewModelTests
     public void Save_AfterReset_ClearsRememberedWindowPosition()
     {
         var settings = new UserSettings();
-        settings.SearchWindow.Left = 100;
-        settings.SearchWindow.Top = 200;
+        settings.SearchWindow.RelativeLeft = 0.3;
+        settings.SearchWindow.RelativeTop = 0.4;
         var vm = new SearchBarLayoutSettingsViewModel(settings);
 
         vm.ResetCommand.Execute(null);
         vm.Save();
 
-        Assert.IsNull(settings.SearchWindow.Left);
-        Assert.IsNull(settings.SearchWindow.Top);
+        Assert.IsNull(settings.SearchWindow.RelativeLeft);
+        Assert.IsNull(settings.SearchWindow.RelativeTop);
     }
 
     [TestMethod]
     public void Save_WithoutReset_LeavesWindowPositionUntouched()
     {
         var settings = new UserSettings();
-        settings.SearchWindow.Left = 100;
+        settings.SearchWindow.RelativeLeft = 0.3;
         var vm = new SearchBarLayoutSettingsViewModel(settings);
 
         vm.Save();
 
-        Assert.AreEqual(100, settings.SearchWindow.Left);
+        Assert.AreEqual(0.3, settings.SearchWindow.RelativeLeft);
     }
 }
