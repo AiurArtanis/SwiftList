@@ -34,15 +34,26 @@ public class WinRARExtractDialogAdapter : IFileDialogAdapter
     }
 
     // Pure normalize-and-check, pulled out so it's unit-testable without a live WinRAR window --
-    // GetCurrentPath itself just supplies the live GetText()/Directory.Exists calls around it. Mirrors
-    // ClassicFileDialogAdapter.GetCurrentPath's own strict "only if it actually exists" contract, unlike
-    // IInlineSearchAdapter.GetSearchScope's looser ancestor-walking fallback used elsewhere in this repo --
-    // different interface, different contract.
-    internal static string? NormalizeIfExists(string text, Func<string, bool> directoryExists)
+    // GetCurrentPath itself just supplies the live GetText() call around it. Deliberately does NOT verify
+    // the path actually exists via Directory.Exists: this runs in the elevated Hook process (see
+    // ExplorerActivePathPoller.Poll, the poller that calls GetCurrentPath on every tick), where UAC's split
+    // token puts it in a different logon session than whatever mapped any network drive letters -- a
+    // perfectly real Y:\... path the interactive user can see would otherwise resolve to "doesn't exist"
+    // there, silently freezing SearchScope at its last value forever once the dialog's target moves onto a
+    // network drive (confirmed live). ExplorerInlineSearchAdapter.cs's own ExecuteItem hit and documented
+    // this identical Directory.Exists-in-the-elevated-Hook-process trap already -- same fix here: trust
+    // that it's well-formed (syntactically rooted) rather than trying to verify it.
+    internal static string? NormalizeIfWellFormed(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return null;
         var trimmed = text.TrimEnd('\\', '/');
-        return directoryExists(trimmed) ? trimmed : null;
+        // "C:" alone is NOT the same path as "C:\" -- it means "the current directory on drive C" (a
+        // per-process, per-drive concept), not that drive's root. TrimEnd above would otherwise turn a
+        // genuine root path into that different, ambiguous form; confirmed live via app.log showing
+        // SearchScope='D:' (missing its trailing backslash) feeding a garbled result into
+        // Path.GetRelativePath downstream.
+        if (trimmed.Length == 2 && trimmed[1] == ':') trimmed += '\\';
+        return Path.IsPathRooted(trimmed) ? trimmed : null;
     }
 
     // Reads the ComboBox itself, not its child Edit: confirmed empirically that when the dialog's
@@ -54,7 +65,7 @@ public class WinRARExtractDialogAdapter : IFileDialogAdapter
     public string? GetCurrentPath(IntPtr hwnd)
     {
         var combo = WinRARDialogInterop.FindPathCombo(hwnd);
-        return NormalizeIfExists(WinRARDialogInterop.GetText(combo), Directory.Exists);
+        return NormalizeIfWellFormed(WinRARDialogInterop.GetText(combo));
     }
 
     // No file-to-folder resolution here: TargetIsFolderOnly (above) tells every caller that reaches

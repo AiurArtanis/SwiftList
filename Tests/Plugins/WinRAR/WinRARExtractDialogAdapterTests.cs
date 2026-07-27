@@ -4,37 +4,71 @@ namespace SwiftList.Plugins.WinRAR.Tests;
 public sealed class WinRARExtractDialogAdapterTests
 {
     [TestMethod]
-    public void NormalizeIfExists_PathExists_ReturnsItTrimmed()
+    public void NormalizeIfWellFormed_RootedPath_ReturnsItTrimmed()
     {
-        var result = WinRARExtractDialogAdapter.NormalizeIfExists(@"C:\Users\hlj49\Desktop\", path => path == @"C:\Users\hlj49\Desktop");
+        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed(@"C:\Users\hlj49\Desktop\");
 
         Assert.AreEqual(@"C:\Users\hlj49\Desktop", result);
     }
 
     [TestMethod]
-    public void NormalizeIfExists_PathDoesNotExist_ReturnsNull()
+    public void NormalizeIfWellFormed_NotYetCreatedFolder_StillReturnsIt()
     {
         // WinRAR's own default extraction folder is one it plans to create -- it commonly doesn't exist
-        // yet, and GetCurrentPath's contract (unlike IInlineSearchAdapter.GetSearchScope elsewhere in this
-        // repo) is strict: only a real, already-existing folder counts.
-        var result = WinRARExtractDialogAdapter.NormalizeIfExists(@"C:\Users\hlj49\Desktop\New ZIP Archive", _ => false);
+        // yet. Unlike the old strict "must already exist" contract, this no longer rejects it: existence
+        // can't be verified reliably from the elevated Hook process this runs in anyway (see
+        // NormalizeIfWellFormed's own comment), so a well-formed path is trusted regardless.
+        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed(@"C:\Users\hlj49\Desktop\New ZIP Archive");
+
+        Assert.AreEqual(@"C:\Users\hlj49\Desktop\New ZIP Archive", result);
+    }
+
+    [TestMethod]
+    public void NormalizeIfWellFormed_EmptyText_ReturnsNull()
+    {
+        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed("");
 
         Assert.IsNull(result);
     }
 
     [TestMethod]
-    public void NormalizeIfExists_EmptyText_ReturnsNull()
+    public void NormalizeIfWellFormed_WhitespaceText_ReturnsNull()
     {
-        var result = WinRARExtractDialogAdapter.NormalizeIfExists("", _ => true);
+        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed("   ");
 
         Assert.IsNull(result);
     }
 
     [TestMethod]
-    public void NormalizeIfExists_WhitespaceText_ReturnsNull()
+    public void NormalizeIfWellFormed_NotRootedText_ReturnsNull()
     {
-        var result = WinRARExtractDialogAdapter.NormalizeIfExists("   ", _ => true);
+        // A placeholder/hint string (or any non-path text) isn't a rooted path -- must still be rejected
+        // even without an existence check.
+        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed("choose a folder...");
 
         Assert.IsNull(result);
+    }
+
+    [TestMethod]
+    public void NormalizeIfWellFormed_DriveRoot_KeepsTrailingBackslash()
+    {
+        // "D:" alone is a different path than "D:\" (current directory on that drive vs. its root) --
+        // trimming the drive root's trailing separator must not produce the former. Confirmed live via
+        // app.log showing a bare "D:" SearchScope breaking Path.GetRelativePath downstream.
+        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed(@"D:\");
+
+        Assert.AreEqual(@"D:\", result);
+    }
+
+    [TestMethod]
+    public void NormalizeIfWellFormed_NetworkDrive_ReturnsItEvenThoughUnreachableFromHere()
+    {
+        // The whole point of dropping the Directory.Exists check: a mapped network drive the interactive
+        // user can see is invisible to the elevated Hook process this runs in, so verifying it here would
+        // wrongly reject a perfectly real path. Confirmed live: this used to silently freeze SearchScope at
+        // its last value once the dialog's target moved onto a network drive.
+        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed(@"Y:\baozi\AV\MUM");
+
+        Assert.AreEqual(@"Y:\baozi\AV\MUM", result);
     }
 }

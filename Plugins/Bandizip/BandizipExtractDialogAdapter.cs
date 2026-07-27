@@ -1,4 +1,3 @@
-using System.IO;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 using SwiftList.Plugins.Bandizip.Win32;
 
@@ -48,7 +47,7 @@ public class BandizipExtractDialogAdapter : IFileDialogAdapter
     public string? GetCurrentPath(IntPtr hwnd)
     {
         var combo = BandizipDialogInterop.FindPathCombo(hwnd);
-        return BandizipPathHelpers.NormalizeIfExists(BandizipDialogInterop.GetText(combo), Directory.Exists);
+        return BandizipPathHelpers.NormalizeIfWellFormed(BandizipDialogInterop.GetText(combo));
     }
 
     // No file-to-folder resolution here: TargetIsFolderOnly (above) tells every caller that reaches
