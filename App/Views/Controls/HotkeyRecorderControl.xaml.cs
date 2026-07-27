@@ -9,7 +9,7 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
     public static readonly DependencyProperty ValueProperty =
         DependencyProperty.Register(nameof(Value), typeof(string), typeof(HotkeyRecorderControl),
             new FrameworkPropertyMetadata(string.Empty,
-                FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnValueChanged));
+                FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnValueChanged, CoerceValue));
 
     public string Value
     {
@@ -22,6 +22,9 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
         if (d is HotkeyRecorderControl ctrl)
             ctrl.HotkeyBox.Text = Core.HotkeyStringFormat.ToDisplayText(e.NewValue as string ?? string.Empty);
     }
+
+    private static object CoerceValue(DependencyObject _, object baseValue) =>
+        baseValue is string value && Core.HotkeyStringFormat.IsReservedWindowsShortcut(value) ? string.Empty : baseValue;
 
     public static readonly DependencyProperty RequireModifierProperty =
         DependencyProperty.Register(nameof(RequireModifier), typeof(bool),
