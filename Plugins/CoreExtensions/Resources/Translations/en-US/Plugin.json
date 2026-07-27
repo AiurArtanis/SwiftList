@@ -87,6 +87,8 @@
   "QuickLook_PeProviderName": "Default PE Preview Provider",
   "QuickLook_MetadataProviderName": "Default Metadata Preview Provider",
   "QuickLook_ShellPreviewProviderName": "System Preview Handler",
+  "QuickLook_MediaProviderName": "Media Preview Provider",
+  "QuickLook_MediaPlaybackFailed": "Unable to play this file",
   "Action_Open_Desc": "Opens the selected file or folder using the default associated application.",
   "Action_OpenAdmin_Desc": "Runs the selected executable with administrative / elevated privileges.",
   "Action_LocateFolder_Desc": "Opens the parent folder in Windows File Explorer and highlights the selected item.",
