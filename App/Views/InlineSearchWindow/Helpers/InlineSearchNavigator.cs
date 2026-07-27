@@ -138,13 +138,12 @@ public static class InlineSearchNavigator
             // Only a folder-only target (WinRAR/Bandizip's own "extract to" field, see
             // IFileDialogAdapter.TargetIsFolderOnly) needs a picked FILE resolved to its containing folder
             // first -- an Open/Save dialog's filename box (ClassicFileDialogAdapter/StandardFileDialogAdapter)
-            // wants the exact path unchanged, same as it always has. Resolved here, in the App process,
-            // rather than left to the adapter's own NavigateTo: that runs in the elevated Hook process (see
-            // InlineAdapterCommandHandler's own comment on why), where File.Exists on a drive the
-            // interactive user mapped without elevation can come back false even for a perfectly real file --
-            // silently defeating a folder-only adapter's own File.Exists-based resolution for exactly that
-            // case (isDir == null, a stale result whose file no longer exists, is treated the same as a
-            // file -- not a directory -- for this same reason).
+            // wants the exact path unchanged, same as it always has. Resolved here, in the App process
+            // rather than the adapter's own NavigateTo, since that runs in the elevated Hook process (see
+            // InlineAdapterCommandHandler's own comment on why) -- this process can actually tell file from
+            // folder reliably, including for a network drive the interactive user mapped without elevation.
+            // isDir == null (a stale result whose file no longer exists) is treated the same as a file, not
+            // a directory, for the identical reason.
             var dialogTarget = tracker.ActiveAdapter?.TargetIsFolderOnly == true && isDir != true
                 ? Path.GetDirectoryName(path)
                 : path;
