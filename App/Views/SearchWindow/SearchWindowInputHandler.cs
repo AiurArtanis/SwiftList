@@ -1,9 +1,12 @@
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using SwiftList.App.Services;
 using SwiftList.App.Helpers;
+using SwiftList.App.Helpers.Visuals;
+using SwiftList.App.Services.Plugin;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using ListViewItem = System.Windows.Controls.ListViewItem;
 using SwiftList.App.Services.ShellMenu.ActionFlyout;
@@ -155,52 +158,90 @@ public class SearchWindowInputHandler
         if (depObj is ListViewItem item && item.Content is AppSearchResult result)
         {
             e.Handled = true;
-            var selectModifier = ModifierKeys.Control;
-            var currentModifiers = Keyboard.Modifiers;
             var isFileOrFolder = !result.IsSearchSectionHeader && !result.IsEmptyResult &&
                 (result.ResultKind == "File" || result.ResultKind == "Folder" || System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath));
 
-            if (currentModifiers == selectModifier && isFileOrFolder)
-            {
-                FileExecutor.LocateInExplorer(result.FullPath);
-                _window.Close();
-            }
-            else if (currentModifiers == (selectModifier | ModifierKeys.Shift))
-            {
-                FileExecutor.OpenFileOrFolderAsAdmin(result.FullPath);
-            }
-            else
+            if (!TryHandleColumnDoubleClick(e, item, result, isFileOrFolder))
             {
                 FileExecutor.OpenFileOrFolder(result.FullPath);
             }
         }
     }
 
+    // A double-click on a specific column can behave differently than double-clicking the row
+    // generally -- e.g. the built-in Path column opens the containing folder instead of the result
+    // itself, mirroring Everything's own results grid.
+    private bool TryHandleColumnDoubleClick(MouseButtonEventArgs e, ListViewItem item, AppSearchResult result, bool isFileOrFolder)
+    {
+        var columnId = GetClickedColumnId(e, item);
+        if (string.IsNullOrEmpty(columnId))
+            return false;
+
+        foreach (var provider in PluginManager.Instance.ResultColumnProviders)
+        {
+            foreach (var column in provider.GetColumns())
+            {
+                if (column.ColumnId == columnId && column.OnDoubleClick != null)
+                {
+                    column.OnDoubleClick(result);
+                    return true;
+                }
+            }
+        }
+
+        if (columnId == "Path" && isFileOrFolder)
+        {
+            // This is just the Path column's own default action, same standing as double-clicking the
+            // Name column opening the file -- it doesn't close the window either.
+            FileExecutor.LocateInExplorer(result.FullPath);
+            return true;
+        }
+
+        return false;
+    }
+
+    // GridView has no built-in "which cell was clicked" API (unlike GridViewColumnHeader for header
+    // clicks) -- GridViewRowPresenter lays columns out left-to-right by ActualWidth, so the clicked
+    // column is whichever one the X position (relative to the row) falls into.
+    private string? GetClickedColumnId(MouseButtonEventArgs e, ListViewItem item)
+    {
+        if (_window.LstGridResultsControl.View is not GridView gridView)
+            return null;
+
+        var columns = gridView.Columns.Cast<GridViewColumn>()
+            .Select(c => (ColumnId: ColumnIdentity.GetId(c), c.ActualWidth));
+        return ResolveColumnIdAtX(e.GetPosition(item).X, columns);
+    }
+
+    // Pulled out of GetClickedColumnId as a pure function (no live GridView needed) so the actual
+    // hit-testing math is unit-testable -- GetClickedColumnId itself needs a real, laid-out GridView to
+    // construct a call to it at all.
+    internal static string? ResolveColumnIdAtX(double x, IEnumerable<(string ColumnId, double Width)> columns)
+    {
+        double cumulativeWidth = 0;
+        foreach (var (columnId, width) in columns)
+        {
+            cumulativeWidth += width;
+            if (x < cumulativeWidth)
+                return columnId;
+        }
+
+        return null; // clicked past the last column, in leftover row width
+    }
+
+    // Ctrl+Enter (locate in Explorer) and Ctrl+Shift+Enter (open as admin) are NOT handled here --
+    // they're registered action hotkeys (LocateInExplorerAction/OpenResultAsAdminAction) dispatched by
+    // SearchInputHelper.TryActionHotkey during the window's tunneling PreviewKeyDown, which runs before
+    // this list's own bubbling KeyDown ever sees the event and marks it handled. A modifier+Enter case
+    // used to be duplicated here too, but it could never actually run.
     public void HandleLstGridResultsKeyDown(KeyEventArgs e)
     {
         var actualKey2 = WpfUiHelper.GetActualKey(e);
         if (actualKey2 == Key.Enter)
         {
-            var selectModifier = ModifierKeys.Control;
-            var currentModifiers = Keyboard.Modifiers;
-            if (_window.LstGridResultsControl.SelectedItem is AppSearchResult selected)
+            if (_window.LstGridResultsControl.SelectedItem is AppSearchResult)
             {
-                var isFileOrFolder = !selected.IsSearchSectionHeader && !selected.IsEmptyResult &&
-                    (selected.ResultKind == "File" || selected.ResultKind == "Folder" || System.IO.File.Exists(selected.FullPath) || System.IO.Directory.Exists(selected.FullPath));
-
-                if (currentModifiers == selectModifier && isFileOrFolder)
-                {
-                    FileExecutor.LocateInExplorer(selected.FullPath);
-                    _window.Close();
-                }
-                else if (currentModifiers == (selectModifier | ModifierKeys.Shift))
-                {
-                    OpenSelectedResult(asAdmin: true);
-                }
-                else
-                {
-                    OpenSelectedResult(asAdmin: false);
-                }
+                OpenSelectedResult(asAdmin: false);
             }
             e.Handled = true;
         }

@@ -35,4 +35,11 @@ public class ResultColumnDefinition
     /// Returns negative if x &lt; y, zero if x == y, positive if x &gt; y.
     /// </summary>
     public Func<ISearchResult, ISearchResult, int>? SortComparer { get; set; }
+
+    /// <summary>
+    /// Optional handler for a double-click on this column's cell in the full window's results grid.
+    /// Leave unset (the default) to keep double-clicking this column identical to double-clicking
+    /// anywhere else on the row (opens the result).
+    /// </summary>
+    public Action<ISearchResult>? OnDoubleClick { get; set; }
 }

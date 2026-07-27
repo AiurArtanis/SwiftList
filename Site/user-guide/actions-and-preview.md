@@ -20,6 +20,13 @@ selected result. Inside the menu:
   filter the action list.
 - Type to filter the visible actions by name, the same way you'd filter search results.
 
+## Full window results grid
+
+Double-clicking a result normally opens it, same as pressing Enter — with one exception: double-
+clicking the **Path** column instead opens the result's containing folder in Explorer, the same
+thing `Ctrl`+Enter does anywhere else on the row. A plugin's own custom column can define this same
+kind of double-click override for itself.
+
 ## QuickLook preview
 
 Press the **QuickLook** hotkey (`Alt+P` by default) on a selected result to open a preview pane
