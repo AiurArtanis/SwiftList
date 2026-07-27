@@ -135,17 +135,29 @@ public static class InlineSearchNavigator
 
         if (!forceRealOpen && path != "__SHOW_MORE__" && tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
         {
-            App.HookClient?.SendMessage(new IpcMessage
+            // A dialog's destination-path field expects a folder -- a picked FILE (or a stale result that no
+            // longer exists, isDir == null) must resolve to its containing folder instead, same as
+            // QuickNavigationNavigator.NavigateOrOpen already does. Resolved here, in the App process, rather
+            // than left to whichever IFileDialogAdapter ends up handling it: NavigateTo runs in the elevated
+            // Hook process (see InlineAdapterCommandHandler's own comment on why), where File.Exists on a
+            // drive the interactive user mapped without elevation can come back false even for a perfectly
+            // real file -- silently defeating any adapter's own File.Exists-based resolution for exactly
+            // that case.
+            var dialogTarget = isDir == true ? path : Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dialogTarget))
             {
-                Id = IpcMessageId.NavigateDialog,
-                Hwnd = tracker.ActiveHwnd.ToInt64(),
-                StringVal1 = path
+                App.HookClient?.SendMessage(new IpcMessage
+                {
+                    Id = IpcMessageId.NavigateDialog,
+                    Hwnd = tracker.ActiveHwnd.ToInt64(),
+                    StringVal1 = dialogTarget
 
-            });
+                });
 
-            window.UpdateSearchDisplay(string.Empty);
-            window.HideWindow();
-            return;
+                window.UpdateSearchDisplay(string.Empty);
+                window.HideWindow();
+                return;
+            }
         }
 
         if (!forceRealOpen

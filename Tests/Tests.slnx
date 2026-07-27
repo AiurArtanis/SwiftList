@@ -17,5 +17,6 @@
   <Project Path="Plugins/DirectoryOpus/DirectoryOpus.csproj" />
   <Project Path="Plugins/QuickLookBridge/QuickLookBridge.csproj" />
   <Project Path="Plugins/WinRAR/WinRAR.csproj" />
+  <Project Path="Plugins/Bandizip/Bandizip.csproj" />
 
 </Solution>
