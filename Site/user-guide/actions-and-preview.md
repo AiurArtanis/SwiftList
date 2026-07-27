@@ -26,6 +26,12 @@ Press the **QuickLook** hotkey (`Alt+P` by default) on a selected result to open
 docked next to the search window — images, documents, and other previewable file types render
 without leaving SwiftList. Press it again (or move to a result QuickLook can't preview) to close it.
 
+Audio and video files — whatever formats WPF's built-in media playback supports without extra
+codecs (MP4, WMV, AVI, MOV, MP3, WAV, WMA, and a few others) — play automatically as soon as the
+preview opens, with a small themed transport bar (play/pause, seek, current/total time, mute)
+instead of a static thumbnail. Moving to a different result or closing the preview stops playback
+immediately. A file whose specific codec can't be decoded falls back to a static thumbnail instead.
+
 The preview window's size is fixed and user-configurable — see
 [Settings → General → Preview](./settings/general#preview) — and independent of how many results
 are currently showing. Whatever size you set, SwiftList automatically keeps the preview window

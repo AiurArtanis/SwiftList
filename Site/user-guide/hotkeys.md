@@ -35,6 +35,11 @@ different in each of the [three windows](./getting-started#the-three-windows):
   only, useful for nudging the window up or down without shifting it sideways. Right-click resets the
   window to its default on-screen position (not size) — the same one it centers to on first launch. A
   hover tooltip spells out all three behaviors.
+
+  The remembered position is relative to whichever monitor the window was last on, not an absolute
+  screen coordinate — summon it again on a different monitor (or one with a different resolution or
+  DPI scaling) and it reopens at the equivalent spot there instead of potentially landing off-screen
+  or on the wrong display.
 - **Inline window** — only clickable when the window is docked to a native Open/Save/Browse-for-folder
   dialog: left-click opens [quick navigation](#quick-navigation-mouse), same as the dedicated trigger
   below. Not clickable when docked to a plain Explorer window or the desktop, since there's nothing
