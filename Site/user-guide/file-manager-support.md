@@ -47,6 +47,23 @@ Commander, by talking to their documented remote-control interface over `WM_COPY
 scraping the UI); Files and One Commander instead use UI Automation, since neither exposes a
 remote-control protocol.
 
+## Archive tool dialogs (optional plugins)
+
+These target one specific dialog inside a third-party archive tool — not the whole application —
+the same way the built-in dialogs above do. Install/enable from [Settings →
+Plugins](./settings/plugins); each ships a single component with its own on/off switch there (no
+separate Configure dialog, since there's only one thing to toggle).
+
+| Target | Inline search docking | Quick Navigation | Active path detection |
+|---|---|---|---|
+| WinRAR's Extract dialog | Yes | Middle-click, or left-click the inline window's own logo | — |
+| Bandizip's Extract dialog | Yes | Middle-click, or left-click the inline window's own logo | — |
+| Bandizip's Add Files dialog | Yes | Middle-click, or left-click the inline window's own logo | — |
+
+Detected by control structure, not window title, so this works across every language pack each
+tool ships. As with the built-in dialogs, active path detection doesn't apply — SwiftList is
+already docked inside the dialog itself, with no other window to scope a search against.
+
 ---
 
 Building your own integration for a file manager not listed here? See the [System & Dialog
