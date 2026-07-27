@@ -8,6 +8,12 @@ so same-named settings under different tabs stay distinguishable. Selecting a re
 Up/Down to highlight and Enter) switches to the right section and tab, scrolls the exact control
 into view, and briefly flashes a highlight border around it.
 
+Several sections (General, Hotkeys, Index, History, Startup Panel, Service Status) further split into
+their own row of sub-tabs at the top of the page. If the tab labels don't all fit — most often in
+English, since translated labels usually run longer than their Chinese originals — left/right arrow
+buttons appear at the ends of the row so the rest stay reachable by scrolling, instead of just being
+cut off.
+
 The Settings window has ten sections in its left sidebar:
 
 | Section | Covers |

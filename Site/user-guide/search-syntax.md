@@ -45,6 +45,10 @@ matches `final-Q3-report.docx` just as well as `Q3-report-final.docx`.
 You can mix these freely, e.g. `^IMG !.png$ 2024` finds files starting with `IMG`, from 2024,
 that are *not* PNGs.
 
+For an OR query, every term that actually matches a given result is highlighted in its name — not
+just whichever term happened to match first — so `report | summary` highlights both words in a
+result whose name contains them both.
+
 ## Pasting multiple lines
 
 Paste text containing several lines — e.g. filenames copied one per line from a spreadsheet or text
