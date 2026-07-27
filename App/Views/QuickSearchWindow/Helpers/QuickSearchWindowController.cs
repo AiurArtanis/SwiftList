@@ -118,6 +118,11 @@ public class QuickSearchWindowController
     {
         _visibilityOpToken++;
 
+        // As early as possible, before Show() -- Windows' Power Throttling operates at the process
+        // scheduling level, so lifting it only after this window has already started painting would miss
+        // the very first frame the user is waiting on. See PowerThrottlingHelper's own comment.
+        PowerThrottlingHelper.WindowShowing("quick");
+
         // Must run before anything below touches this window (Show()/Activate()/ForceForeground):
         // once any of those runs, GetForegroundWindow() starts reporting THIS window as foreground
         // (shell light-dismiss overlays don't compete for activation the normal way), so this is the
@@ -266,6 +271,7 @@ public class QuickSearchWindowController
 
             _window.UpdateLayout();
             _window.Hide();
+            PowerThrottlingHelper.WindowHidden("quick");
 
             InlineSearchManager.Instance.KeyboardHook.IsQuickSearchWindowVisible = false;
             InlineSearchManager.Instance.KeyboardHook.Start();

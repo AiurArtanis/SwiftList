@@ -146,6 +146,10 @@ public class InlineSearchManager : IDisposable
 
     private void EnsureWindowCreated()
     {
+        // As early as possible, before Show() -- see PowerThrottlingHelper's own comment. Idempotent, so
+        // it's harmless to call this even on the (common) already-created short-circuit below.
+        PowerThrottlingHelper.WindowShowing("inline");
+
         if (_window != null) return;
 
         var viewModel = new QuickSearchViewModel();
@@ -301,6 +305,7 @@ public class InlineSearchManager : IDisposable
         win.ViewModel.Monitor.StopStatusTimer();
         win.Hide();
         win.Close();
+        PowerThrottlingHelper.WindowHidden("inline");
 
         // Inline search closes whenever you leave Explorer; release the icon cache and trim the working
         // set each time, matching QuickSearch's hide behavior, so inline-only users reclaim memory too.
