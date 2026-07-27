@@ -1,7 +1,7 @@
 # General
 
-Five tabs: **System**, **Quick Search Window**, **Full Search Window**, **Preview**, and **Quick
-Navigation**.
+Six tabs: **System**, **Quick Search Window**, **Full Search Window**, **Preview**, **Quick
+Navigation**, and **Preview Providers**.
 
 ## System
 
@@ -121,3 +121,17 @@ Commander's Directory Hotlist, a plugin's own quick-nav entries), each labeled w
 the others. Only providers whose plugin component is currently enabled are listed here — one
 disabled under [Plugins](./plugins) never becomes a menu candidate in the first place, so there's
 nothing to order for it.
+
+## Preview Providers
+
+Sets the priority order [file preview providers](../actions-and-preview#quicklook-preview) are tried
+in for a selected result — normally decided purely by each provider's own fixed, built-in priority
+(for example, the [QuickLook Bridge](../actions-and-preview#external-preview-via-quicklook-optional)
+plugin sets its own priority above every built-in previewer), with no way to change that short of
+disabling a provider entirely.
+
+**Provider Order** — the same up/down-arrow (or drag-to-reorder) list used elsewhere in Settings (see
+[Favorites](./favorites)): move a provider up to make it always win over the ones below it,
+regardless of its own built-in priority. Only providers whose plugin component is currently enabled
+are listed here — one disabled under [Plugins](./plugins) would never actually preview anything
+anyway.

@@ -78,6 +78,11 @@ interface IFilePreviewProvider
 }
 ```
 
+`Priority` is only the *default* order — the user can freely reorder providers (including relative
+to yours) from Settings → General →
+[Preview Providers](../../user-guide/settings/general#preview-providers), which wins over whatever
+`Priority` returns. Don't assume your provider's declared priority is the order it actually runs in.
+
 Two optional companion interfaces refine preview behavior:
 
 - **`IPreviewSessionAware`** — implement this on the preview provider itself if it holds onto

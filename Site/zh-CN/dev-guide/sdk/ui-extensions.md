@@ -74,6 +74,11 @@ interface IFilePreviewProvider
 }
 ```
 
+`Priority`只是*默认*的顺序——用户可以在 设置 → 通用 →
+[预览提供者](../../user-guide/settings/general#预览提供者)里自由调整各个提供者的顺序(包括相对于
+你的这个 provider)，这个用户配置会覆盖 `Priority` 返回的值。不要假设你的 provider 声明的优先级
+就是它实际运行的顺序。
+
 两个可选的配套接口可以进一步优化预览行为:
 
 - **`IPreviewSessionAware`** —— 如果预览提供者自身持有开销较大的进程外资源(托管的原生处理程
