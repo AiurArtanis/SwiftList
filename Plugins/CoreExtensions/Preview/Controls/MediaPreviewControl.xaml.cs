@@ -51,7 +51,7 @@ public partial class MediaPreviewControl : UserControl, IDisposable, IReusablePr
         try
         {
             Player.Source = new Uri(path);
-            Player.Volume = 0.7;
+            Player.Volume = 1;
             Player.Play();
             _isPlaying = true;
             _positionTimer.Start();
