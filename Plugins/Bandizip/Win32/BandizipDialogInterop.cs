@@ -93,6 +93,15 @@ internal static class BandizipDialogInterop
     public const int EditId = 1001;
     public const int TreeViewId = 1024;
 
+    // Bandizip's "选择" (choose files to add to archive) dialog -- a completely different dialog template
+    // from the extract-path one above (no ComboBox at all: the path field is a plain Edit, confirmed live),
+    // but reuses the SAME tree-view control ID (1024) as the extract dialog. ListViewId/OpenButtonId round
+    // out the fingerprint so this never false-matches some other #32770 Bandizip happens to show (About,
+    // password prompt, ...).
+    public const int AddFilesPathEditId = 1339;
+    public const int AddFilesListViewId = 1094;
+    public const int AddFilesOpenButtonId = 1293;
+
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT
     {
@@ -136,9 +145,28 @@ internal static class BandizipDialogInterop
         return false;
     }
 
+    public static bool LooksLikeAddFilesDialog(IntPtr hWnd)
+    {
+        bool hasEdit = false, hasTree = false, hasList = false, hasOpenButton = false;
+        foreach (var d in Descendants(hWnd))
+        {
+            var id = GetDlgCtrlID(d);
+            var cls = GetClassNameOf(d);
+            if (id == AddFilesPathEditId && cls.Equals("Edit", StringComparison.OrdinalIgnoreCase)) hasEdit = true;
+            else if (id == TreeViewId && cls.Equals("SysTreeView32", StringComparison.OrdinalIgnoreCase)) hasTree = true;
+            else if (id == AddFilesListViewId && cls.Equals("SysListView32", StringComparison.OrdinalIgnoreCase)) hasList = true;
+            else if (id == AddFilesOpenButtonId && cls.Equals("Button", StringComparison.OrdinalIgnoreCase)) hasOpenButton = true;
+
+            if (hasEdit && hasTree && hasList && hasOpenButton) return true;
+        }
+        return false;
+    }
+
     public static IntPtr FindPathEdit(IntPtr dialogHwnd) => FindById(dialogHwnd, EditId, "Edit");
 
     public static IntPtr FindPathCombo(IntPtr dialogHwnd) => FindById(dialogHwnd, ComboBoxId, "ComboBox");
+
+    public static IntPtr FindAddFilesPathEdit(IntPtr dialogHwnd) => FindById(dialogHwnd, AddFilesPathEditId, "Edit");
 
     private static IntPtr FindById(IntPtr dialogHwnd, int id, string expectedClass)
     {

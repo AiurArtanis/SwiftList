@@ -41,16 +41,6 @@ public class BandizipExtractDialogAdapter : IFileDialogAdapter
         return BandizipDialogInterop.LooksLikeExtractDialog(hwnd);
     }
 
-    // Pure normalize-and-check, pulled out so it's unit-testable without a live Bandizip window --
-    // GetCurrentPath itself just supplies the live GetText()/Directory.Exists calls around it. Mirrors
-    // WinRARExtractDialogAdapter.NormalizeIfExists's own strict "only if it actually exists" contract.
-    internal static string? NormalizeIfExists(string text, Func<string, bool> directoryExists)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return null;
-        var trimmed = text.TrimEnd('\\', '/');
-        return directoryExists(trimmed) ? trimmed : null;
-    }
-
     // Reads the ComboBox itself, not its child Edit -- same reasoning as WinRARExtractDialogAdapter:
     // the combo's own WM_GETTEXT reflects whatever it displays regardless of how that text got there,
     // where the child Edit's buffer alone has been observed empty in similar dialogs elsewhere in this
@@ -58,15 +48,8 @@ public class BandizipExtractDialogAdapter : IFileDialogAdapter
     public string? GetCurrentPath(IntPtr hwnd)
     {
         var combo = BandizipDialogInterop.FindPathCombo(hwnd);
-        return NormalizeIfExists(BandizipDialogInterop.GetText(combo), Directory.Exists);
+        return BandizipPathHelpers.NormalizeIfExists(BandizipDialogInterop.GetText(combo), Directory.Exists);
     }
-
-    // A destination-path field expects a folder -- a picked FILE needs to resolve to its containing
-    // folder instead. Same reasoning and File.Exists-based discriminator as
-    // WinRARExtractDialogAdapter.ResolveTargetFolder: Bandizip's own destination folder commonly doesn't
-    // exist yet (it creates it on extract), so "doesn't exist" must still be treated as "a folder to
-    // create", not walked up a level as if it were a file's parent.
-    internal static string ResolveTargetFolder(string path) => File.Exists(path) ? (Path.GetDirectoryName(path) ?? path) : path;
 
     public bool NavigateTo(IntPtr hwnd, string targetPath)
     {
@@ -74,7 +57,7 @@ public class BandizipExtractDialogAdapter : IFileDialogAdapter
         var combo = BandizipDialogInterop.FindPathCombo(hwnd);
         if (edit == IntPtr.Zero || combo == IntPtr.Zero) return false;
 
-        var folder = ResolveTargetFolder(targetPath);
+        var folder = BandizipPathHelpers.ResolveTargetFolder(targetPath);
         var result = BandizipDialogInterop.SetText(edit, folder);
         if (!result) return false;
 
