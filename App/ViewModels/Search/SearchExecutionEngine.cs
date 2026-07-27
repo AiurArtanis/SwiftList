@@ -114,8 +114,13 @@ internal sealed class SearchExecutionEngine : IDisposable
                         Task? localSearchTask = null;
                         if (!string.IsNullOrEmpty(contextDirectory))
                         {
+                            // Always bypass ExcludedPaths/glob/regex filtering for the "current folder"
+                            // section -- the user is explicitly looking at contextDirectory in Explorer
+                            // right now, so global exclusion settings (meant to keep noise out of broad,
+                            // untargeted searches) have no business hiding results from the one folder
+                            // they're actually standing in.
                             localSearchTask = ExplorerSearchHelper.SearchLocalMatchesAsync(
-                                _searchService, query, fileLimit, appLimit, contextDirectory, localMatches, token, bypassExclusions);
+                                _searchService, query, fileLimit, appLimit, contextDirectory, localMatches, token, bypassExclusions: true);
                         }
                         await PerformStreamingSearchAsync(query, null, contextDirectory, isInlineSearchContext, fileLimit, appLimit, resultMapper, searchVersion, onResultsUpdated, token, localMatches, localSearchTask, onLocalServiceUnavailable, bypassExclusions);
                         return;

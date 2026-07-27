@@ -5,12 +5,39 @@ namespace SwiftList.Core.Services.Search;
 
 public static class LiveDirectorySearcher
 {
-    public static List<SearchResult> ScanDirectory(string directory, int maxProcessed, CancellationToken token)
+    // liveQuery/onLiveMatch let the caller that actually triggers a cold (uncached) scan see matches as
+    // soon as each directory is walked, instead of waiting for the whole (potentially huge) subtree to
+    // finish before anything renders -- see SearchService's _sessionDirectoryCache for why only the
+    // caller that wins the GetOrAdd race gets this; every later caller just reuses the finished list via
+    // MatchAndStream once the shared task completes.
+    public static List<SearchResult> ScanDirectory(
+        string directory,
+        int maxProcessed,
+        CancellationToken token,
+        string? liveQuery = null,
+        Action<SearchResult>? onLiveMatch = null,
+        bool onlyDirectChildren = false,
+        string? parentPath = null)
     {
         var results = new List<SearchResult>();
         Logger.Log($"[LiveDirectorySearcher] ScanDirectory starting for '{directory}'. Exists: {Directory.Exists(directory)}", LogLevel.Debug);
         if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
             return results;
+
+        FzfPattern? livePattern = null;
+        FzfSlab? liveSlab = null;
+        if (onLiveMatch != null && !string.IsNullOrWhiteSpace(liveQuery))
+        {
+            var parsed = FzfPattern.Parse(liveQuery);
+            if (!parsed.IsEmpty || parsed.TargetDrive != null)
+            {
+                livePattern = parsed;
+                liveSlab = new FzfSlab();
+            }
+        }
+        var normalizedParent = onlyDirectChildren && !string.IsNullOrEmpty(parentPath)
+            ? parentPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            : null;
 
         var queue = new Queue<string>();
         queue.Enqueue(directory);
@@ -43,18 +70,22 @@ public static class LiveDirectorySearcher
                     break;
 
                 var isDir = attrs.HasFlag(FileAttributes.Directory);
-                results.Add(new SearchResult
+                var result = new SearchResult
                 {
                     Name = entry.Name,
                     Path = entry.FullName,
                     IsDir = isDir,
                     Drive = drive
-                });
+                };
+                results.Add(result);
 
                 if (isDir)
                 {
                     queue.Enqueue(entry.FullName);
                 }
+
+                if (onLiveMatch != null && TryMatchEntry(result, livePattern, liveSlab, onlyDirectChildren, normalizedParent))
+                    onLiveMatch(result);
             }
         }
         Logger.Log($"[LiveDirectorySearcher] ScanDirectory finished for '{directory}'. Found: {results.Count}", LogLevel.Debug);
@@ -83,56 +114,15 @@ public static class LiveDirectorySearcher
         }
 
         var foundCount = 0;
+        var normalizedParent = onlyDirectChildren && !string.IsNullOrEmpty(parentPath)
+            ? parentPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            : null;
 
         foreach (var entry in entries)
         {
             token.ThrowIfCancellationRequested();
 
-            if (onlyDirectChildren && !string.IsNullOrEmpty(parentPath))
-            {
-                var entryParent = Path.GetDirectoryName(entry.Path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-                    ?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                var normalizedParent = parentPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                if (!string.Equals(entryParent, normalizedParent, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-            }
-
-            var matched = false;
-            if (pattern == null)
-            {
-                matched = true;
-            }
-            else
-            {
-                // 1. Try match the name itself using the core FZF engine
-                if (pattern.TryMatch(entry.Name, out var matchResult, FzfScoringScheme.Default, slab))
-                {
-                    matched = true;
-                }
-                else
-                {
-                    // 2. Try match aliases generated for the name
-                    var aliases = GenerateAliases(entry.Name);
-                    if (aliases != null)
-                    {
-                        foreach (var alias in aliases)
-                        {
-                            if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, slab))
-                            {
-                                if (!pattern.IsAcceptableAliasMatch(aliasMatch, pattern.GetTotalTermLength(), alias, FzfScoringScheme.Default, slab))
-                                    continue;
-
-                                matched = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (matched)
+            if (TryMatchEntry(entry, pattern, slab, onlyDirectChildren, normalizedParent))
             {
                 onResult(entry);
                 foundCount++;
@@ -140,6 +130,45 @@ public static class LiveDirectorySearcher
         }
 
         return foundCount > 0;
+    }
+
+    private static bool TryMatchEntry(
+        SearchResult entry,
+        FzfPattern? pattern,
+        FzfSlab? slab,
+        bool onlyDirectChildren,
+        string? normalizedParent)
+    {
+        if (onlyDirectChildren && normalizedParent != null)
+        {
+            var entryParent = Path.GetDirectoryName(entry.Path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+                ?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (!string.Equals(entryParent, normalizedParent, StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
+        if (pattern == null)
+            return true;
+
+        // 1. Try match the name itself using the core FZF engine
+        if (pattern.TryMatch(entry.Name, out _, FzfScoringScheme.Default, slab))
+            return true;
+
+        // 2. Try match aliases generated for the name
+        var aliases = GenerateAliases(entry.Name);
+        if (aliases == null)
+            return false;
+
+        foreach (var alias in aliases)
+        {
+            if (pattern.TryMatch(alias, out var aliasMatch, FzfScoringScheme.Default, slab)
+                && pattern.IsAcceptableAliasMatch(aliasMatch, pattern.GetTotalTermLength(), alias, FzfScoringScheme.Default, slab))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string[]? GenerateAliases(string text)

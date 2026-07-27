@@ -9,7 +9,7 @@ namespace SwiftList.Core.Services.Search;
 
 public class SearchService : IDisposable
 {
-    private readonly Dictionary<string, List<SearchResult>> _sessionDirectoryCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Task<List<SearchResult>>> _sessionDirectoryCache = new(StringComparer.OrdinalIgnoreCase);
     private readonly SearchPipeClient _pipeClient = new();
 
     public Task<UsnIndexer.IndexerStatus> GetStatusAsync(CancellationToken token = default) => _pipeClient.GetStatusAsync(token);
@@ -31,11 +31,12 @@ public class SearchService : IDisposable
     // bypassExclusions: opts this one search out of ExcludedPaths/IgnoredPathGlobs/IgnoredPathRegexes
     // filtering. The caller is responsible for stripping whatever query-string marker triggers this
     // (see SearchQuerySortParser.StripExclusionBypass) BEFORE calling here -- `query` itself is always
-    // matched/highlighted verbatim, so a caller must never pass the marker through as part of it. Only
-    // covers results that are already indexed (local NTFS/ReFS drives, plus whatever network/WSL data
-    // already made it into the index) -- content under an excluded network/WSL root was never indexed
-    // in the first place (WalkFilter skips it at build time), so this can't recover that without a live
-    // filesystem walk, which is deliberately out of scope here.
+    // matched/highlighted verbatim, so a caller must never pass the marker through as part of it. Also
+    // forced on automatically for a path-mode query (see effectiveBypassExclusions below) -- typing an
+    // exact path is the same "I want to see what's actually here" intent regardless of the marker. Only
+    // covers results that are already indexed -- content that was never indexed in the first place (an
+    // excluded/unconfigured network or WSL root, or a local drive not enabled for indexing) has nothing
+    // to unfilter here; recovering that is CheckNeedsLiveSearch's live-scan fallback's job instead.
     public async Task<bool> SearchStreamingAsync(string query, int maxResults, int maxAppResults, string? directoryFilter, Action<SearchResult> onResult, CancellationToken token = default, Action? onLocalSearchFailed = null, bool bypassExclusions = false)
     {
         var exclusionRules = ExclusionRuleSet.From(UserSettings.Load());
@@ -74,6 +75,11 @@ public class SearchService : IDisposable
             var resolved = LiveDirectorySearcher.ResolvePathModeSearch(parsed.ExactPathLower);
             queryExemptRoot = !string.IsNullOrEmpty(resolved.DirectoryToScan) ? resolved.DirectoryToScan : parsed.ExactPathLower;
         }
+        // A path-mode query ("C:\Windows\...") is the user typing an exact location they want to look at,
+        // same as ExplorerSearchHelper's "current folder" search always passing bypassExclusions: true for
+        // the directory the user is actually standing in -- global exclusion settings have no business
+        // hiding results from a location the user explicitly pointed at either way.
+        var effectiveBypassExclusions = bypassExclusions || parsed.IsPathMode;
 
         var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var uniqueOnResult = new Action<SearchResult>(result =>
@@ -98,7 +104,7 @@ public class SearchService : IDisposable
             {
                 await SearchPipeClient.SendSearchPipeCommandAsync(msg, result =>
                 {
-                    if (bypassExclusions || !exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
+                    if (effectiveBypassExclusions || !exclusionRules.IsExcluded(result, directoryFilter) || !exclusionRules.IsExcluded(result, queryExemptRoot))
                         uniqueOnResult(result);
                 }, token).ConfigureAwait(false);
                 return true;
@@ -119,7 +125,7 @@ public class SearchService : IDisposable
         {
             try
             {
-                return SearchServiceHelper.SearchNetworkDrives(query, fileCandidateLimit, directoryFilter, exclusionRules, bypassExclusions, uniqueOnResult, token);
+                return SearchServiceHelper.SearchNetworkDrives(query, fileCandidateLimit, directoryFilter, exclusionRules, effectiveBypassExclusions, uniqueOnResult, token);
             }
             catch (OperationCanceledException)
             {
@@ -156,28 +162,34 @@ public class SearchService : IDisposable
         Task<bool>? liveTask = null;
         if (needsLiveSearch && !string.IsNullOrEmpty(liveScanDir))
         {
-            liveTask = Task.Run(() =>
+            liveTask = Task.Run(async () =>
             {
                 try
                 {
-                    List<SearchResult> entries;
-                    lock (this)
-                    {
-                        if (_sessionDirectoryCache.TryGetValue(liveScanDir, out var cached))
-                        {
-                            entries = cached;
-                        }
-                        else
-                        {
-                            entries = LiveDirectorySearcher.ScanDirectory(liveScanDir, 10000, token);
-                            // Bound the per-session directory cache so long-running sessions that scope
-                            // searches into many directories don't retain them all indefinitely.
-                            if (_sessionDirectoryCache.Count > 32)
-                                _sessionDirectoryCache.Clear();
-                            _sessionDirectoryCache[liveScanDir] = entries;
-                        }
-                    }
+                    // GetOrAdd shares ONE in-flight scan per directory across every caller currently
+                    // waiting on it, instead of the old lock(this) around the whole SearchService
+                    // instance -- that lock serialized every live scan regardless of which directory it
+                    // targeted, so typing into a directory that needs one (excluded from the index, an
+                    // unconfigured network drive, ...) queued every subsequent keystroke's own scan
+                    // attempt behind whichever one happened to go first, none of which could even check
+                    // their own cancellation token until they finally got the lock. The shared scan itself
+                    // runs with CancellationToken.None (it keeps going and stays cached for later use even
+                    // if THIS caller's own search gets superseded a moment later); only the wait for it is
+                    // cancellable per caller, via WaitAsync.
+                    if (_sessionDirectoryCache.Count > 32)
+                        _sessionDirectoryCache.Clear();
                     var onlyDirectChildren = parsed.IsPathMode && string.IsNullOrEmpty(liveScanFilter);
+                    // liveQuery/onLiveMatch only actually fire for whichever caller wins the GetOrAdd race
+                    // (i.e. triggers the scan for real) -- a directory this large/uncached is exactly the
+                    // "current folder" case that used to sit with zero results until the entire subtree
+                    // walk finished; streaming matches out as each directory is walked keeps the first,
+                    // cold keystroke from looking frozen even though the underlying walk cost is unchanged.
+                    var scanTask = _sessionDirectoryCache.GetOrAdd(liveScanDir,
+                        dir => Task.Run(() => LiveDirectorySearcher.ScanDirectory(dir, 10000, CancellationToken.None,
+                            liveQuery: liveScanFilter, onLiveMatch: uniqueOnResult,
+                            onlyDirectChildren: onlyDirectChildren, parentPath: liveScanDir)));
+                    var entries = await scanTask.WaitAsync(token).ConfigureAwait(false);
+
                     return LiveDirectorySearcher.MatchAndStream(entries, liveScanFilter, uniqueOnResult, token, onlyDirectChildren, liveScanDir);
                 }
                 catch (OperationCanceledException) { throw; }
