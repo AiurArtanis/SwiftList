@@ -33,7 +33,15 @@ internal static class QuickLookWindowPositioner
                 return;
             }
 
-            StartPollLocked();
+            // Update the target above, but DON'T restart a poll that's already running: DockTo gets
+            // called on every owner LocationChanged/SizeChanged, and the owner's results list keeps
+            // resizing while the user is still typing -- letting each of those calls dispose and
+            // recreate the timer meant the poll's attempt counter kept getting reset back to 0 before it
+            // ever ran long enough to actually find the window, so it silently never succeeded (worst
+            // right after the first preview, exactly when the results list is still settling). One poll
+            // per "don't have a window yet" episode always reads the latest _target when it does find one.
+            if (_pollTimer == null)
+                StartPollLocked();
         }
     }
 
@@ -57,6 +65,7 @@ internal static class QuickLookWindowPositioner
                     _pollTimer?.Dispose();
                     _pollTimer = null;
                 }
+                ScheduleSettleReasserts(hwnd);
                 return;
             }
 
@@ -71,6 +80,31 @@ internal static class QuickLookWindowPositioner
             }
         }, null, PollIntervalMs, PollIntervalMs);
     }
+
+    // QuickLook's own layout code (centering/resizing for the new content) can run asynchronously a
+    // moment after the window we just docked first becomes findable -- e.g. it finishes decoding/laying
+    // out the file after DoPreview() returns -- and silently overwrite the position/size we just set,
+    // which is what "occasionally changes size" looks like from the outside. A couple of short follow-up
+    // re-asserts gives our position a much better chance of being the one that's still in effect once
+    // QuickLook's own pass has actually settled, without polling indefinitely. Uses Task.Delay rather
+    // than a bare Timer -- an unreferenced System.Threading.Timer can be garbage-collected before its
+    // callback ever fires, since nothing else roots it.
+    private static void ScheduleSettleReasserts(IntPtr hwnd)
+    {
+        foreach (var delayMs in SettleReassertDelaysMs)
+        {
+            _ = Task.Delay(delayMs).ContinueWith(_ =>
+            {
+                lock (Lock)
+                {
+                    if (_lastKnownHwnd == hwnd && QuickLookDockInterop.IsWindow(hwnd))
+                        Reposition(hwnd);
+                }
+            }, TaskScheduler.Default);
+        }
+    }
+
+    private static readonly int[] SettleReassertDelaysMs = { 150, 400, 900 };
 
     // Caller already holds Lock.
     private static void Reposition(IntPtr hwnd)

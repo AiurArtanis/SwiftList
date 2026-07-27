@@ -326,7 +326,7 @@ public class QuickLookManager
     // further out/wider than where our own panel's outer bounds would land -- these are on top of
     // whatever gap TryComputeTargetRect already used, tuned by eye against an actual docked QuickLook
     // window rather than derived from anything measurable.
-    private const double ExternalDockExtraGap = 10;
+    private const double ExternalDockExtraGap = 0;
     private const double ExternalDockExtraWidth = 80;
 
     // Tells the winning provider (if it wants to know -- see IReceivesPreviewPanelBounds) where our own
