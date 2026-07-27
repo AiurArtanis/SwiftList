@@ -23,11 +23,22 @@ public partial class MediaPreviewControl : UserControl, IDisposable, IReusablePr
     internal const string VolumeIconData = "M3,10 L7,10 L12,5 L12,19 L7,14 L3,14 Z M15,7 A7,7 0 0 1 15,17";
     internal const string MutedIconData = "M3,10 L7,10 L12,5 L12,19 L7,14 L3,14 Z M15,7 L21,17 M21,7 L15,17";
 
+    // MediaElement.Position is a real seek on the underlying decoder, not a cheap property set --
+    // MouseMove fires far faster than the decoder can keep up with during a drag, so issuing one per
+    // event floods it with seek requests that queue up behind each other and play back as a stutter of
+    // small jumps instead of a smooth scrub. Throttling how often a seek actually commits (while still
+    // updating the visual fill/time label on every move, so the drag still feels like it's tracking the
+    // cursor) fixes that; MouseUp always force-commits whatever the last position was, so a throttled-
+    // away seek never leaves the player short of wherever the user actually released.
+    private static readonly TimeSpan ScrubSeekThrottle = TimeSpan.FromMilliseconds(120);
+
     private readonly DispatcherTimer _positionTimer;
     private string _currentPath = string.Empty;
     private bool _isPlaying;
     private bool _isDraggingScrub;
     private TimeSpan _duration;
+    private DateTime _lastScrubSeekTime = DateTime.MinValue;
+    private TimeSpan? _pendingScrubTarget;
 
     public MediaPreviewControl(string path)
     {
@@ -173,12 +184,12 @@ public partial class MediaPreviewControl : UserControl, IDisposable, IReusablePr
         if (_duration <= TimeSpan.Zero) return;
         _isDraggingScrub = true;
         ScrubTrack.CaptureMouse();
-        SeekToMousePosition(e);
+        SeekToMousePosition(e, forceSeek: true);
     }
 
     private void ScrubTrack_MouseMove(object sender, MouseEventArgs e)
     {
-        if (_isDraggingScrub) SeekToMousePosition(e);
+        if (_isDraggingScrub) SeekToMousePosition(e, forceSeek: false);
     }
 
     private void ScrubTrack_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -186,9 +197,14 @@ public partial class MediaPreviewControl : UserControl, IDisposable, IReusablePr
         if (!_isDraggingScrub) return;
         _isDraggingScrub = false;
         ScrubTrack.ReleaseMouseCapture();
+        if (_pendingScrubTarget is { } target)
+        {
+            Player.Position = target;
+            _pendingScrubTarget = null;
+        }
     }
 
-    private void SeekToMousePosition(MouseEventArgs e)
+    private void SeekToMousePosition(MouseEventArgs e, bool forceSeek)
     {
         var width = ScrubTrack.ActualWidth;
         if (width <= 0) return;
@@ -196,8 +212,19 @@ public partial class MediaPreviewControl : UserControl, IDisposable, IReusablePr
         var fraction = x / width;
         ScrubFill.Width = x;
         var target = TimeSpan.FromSeconds(fraction * _duration.TotalSeconds);
-        Player.Position = target;
         TxtCurrentTime.Text = FormatTime(target);
+
+        var now = DateTime.UtcNow;
+        if (forceSeek || now - _lastScrubSeekTime >= ScrubSeekThrottle)
+        {
+            _lastScrubSeekTime = now;
+            Player.Position = target;
+            _pendingScrubTarget = null;
+        }
+        else
+        {
+            _pendingScrubTarget = target;
+        }
     }
 
     private static string FormatTime(TimeSpan ts) =>
