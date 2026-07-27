@@ -70,6 +70,7 @@ interface IFilePreviewProvider
     int Priority { get; } // 默认 0;数值越大越先运行
     bool CanPreview(string path, bool isDir);
     UIElement CreatePreview(string path, bool isDir);
+    bool RendersExternally { get; } // 默认 false
 }
 ```
 
@@ -77,10 +78,31 @@ interface IFilePreviewProvider
 
 - **`IPreviewSessionAware`** —— 如果预览提供者自身持有开销较大的进程外资源(托管的原生处理程
   序、文件锁)，就在预览提供者本身上实现这个接口;`EndPreviewSession()` 只在整个预览会话结束时
-  调用一次，而不是每次切换预览目标都调用。
+  调用一次，而不是每次切换预览目标都调用。唯一的例外:如果这个 provider 的 `RendersExternally`
+  为 true，宿主会在每次从它切换走的时候都调用一次，不只是会话真正结束的时候——见下文。
 - **`IReusablePreview`** —— 如果 `CreatePreview` 返回的 `UIElement` 能够重新指向一个新文件，而
   不需要从头重建，就在它上面实现这个接口:`TrySetTarget(path, isDir)` 返回 `true` 表示已经原地
   处理好了变更，返回 `false` 则告诉宿主需要重新构建一个新的预览。
+
+`RendersExternally` 适用于真正的预览内容渲染在一个独立的、由外部管理的窗口里、而不是
+`CreatePreview` 返回的那个 `UIElement` 上的场景——比如把文件整个交给另一个应用程序去处理。当胜
+出的 provider 设置了这个属性，宿主会隐藏自己的预览面板，而不是显示 `CreatePreview` 的内容(反正
+也不会真的显示出来，所以可以随便返回一个占位用的空内容)。配合 **`IReceivesPreviewPanelBounds`**
+使用，可以拿到宿主自己那个预览面板本该占据的屏幕矩形(物理像素)，这样外部窗口就能被摆到那个位
+置，而不是随便出现在别的地方:
+
+```csharp
+interface IReceivesPreviewPanelBounds
+{
+    void OnPreviewPanelBoundsAvailable(int left, int top, int width, int height);
+}
+```
+
+内置的(实验性)QuickLook 桥接插件就是一个真实例子:它通过命名管道探测一个外部的
+[QuickLook](https://github.com/QL-Win/QuickLook) 应用，如果能连上，就把它的窗口停靠到宿主面板
+原本的位置，覆盖所有文件/文件夹——具体的用户可见行为见[动作菜单与预览 → 通过 QuickLook 的外部
+预览](../../user-guide/actions-and-preview#通过-quickLook-的外部预览可选)。注意这和 SwiftList
+自己内置的预览面板是两回事——本代码库和文档里也习惯把那个内置面板非正式地称为"QuickLook"。
 
 ### `IThumbnailProvider`
 

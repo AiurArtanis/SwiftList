@@ -74,6 +74,7 @@ interface IFilePreviewProvider
     int Priority { get; } // default 0; higher runs first
     bool CanPreview(string path, bool isDir);
     UIElement CreatePreview(string path, bool isDir);
+    bool RendersExternally { get; } // default false
 }
 ```
 
@@ -81,11 +82,35 @@ Two optional companion interfaces refine preview behavior:
 
 - **`IPreviewSessionAware`** — implement this on the preview provider itself if it holds onto
   expensive out-of-process resources (a hosted native handler, a file lock); `EndPreviewSession()`
-  is called once the whole preview session ends, not on every individual preview swap.
+  is called once the whole preview session ends, not on every individual preview swap. The one
+  exception: for a provider with `RendersExternally` true, the host calls it on every swap away
+  from that provider too, not just session end — see below.
 - **`IReusablePreview`** — implement this on the `UIElement` returned from `CreatePreview` if it
   can re-point itself at a new file instead of being rebuilt from scratch: `TrySetTarget(path,
   isDir)` returns `true` if it handled the change in place, `false` to tell the host to build a
   fresh preview instead.
+
+`RendersExternally` is for a provider whose real preview surface is a separate, externally-managed
+window rather than the `UIElement` `CreatePreview` returns — e.g. handing the file off to another
+application entirely. When the winning provider has this set, the host hides its own preview panel
+instead of displaying `CreatePreview`'s content (which is then never actually shown, so it can be
+a trivial placeholder). Pair it with **`IReceivesPreviewPanelBounds`** to get the exact screen
+rectangle (physical pixels) the host's own panel would have occupied, so the external window can be
+positioned there instead of wherever it would otherwise appear:
+
+```csharp
+interface IReceivesPreviewPanelBounds
+{
+    void OnPreviewPanelBoundsAvailable(int left, int top, int width, int height);
+}
+```
+
+See the bundled (experimental) QuickLook Bridge plugin for a real example: it detects an external
+[QuickLook](https://github.com/QL-Win/QuickLook) app over its own named pipe and, if reachable,
+docks that app's window into the host panel's spot for every file/folder — see [Actions Menu &
+Preview → External preview via QuickLook](../../user-guide/actions-and-preview#external-preview-via-quicklook-optional)
+for the user-facing behavior. Note this is a different thing from SwiftList's own built-in preview
+pane, which is also informally called "QuickLook" throughout this codebase and docs.
 
 ### `IThumbnailProvider`
 
