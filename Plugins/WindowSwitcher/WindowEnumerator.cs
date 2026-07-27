@@ -111,7 +111,6 @@ public static class WindowEnumerator
                 var exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
                 var isToolWindow = (exStyle & WS_EX_TOOLWINDOW) != 0;
                 var isAppWindow = (exStyle & WS_EX_APPWINDOW) != 0;
-                var titleLength = SafeGetWindowTextLength(hWnd);
 
                 var isCloaked = false;
                 try
@@ -121,6 +120,16 @@ public static class WindowEnumerator
                 }
                 catch { /* DWM unavailable -- treat as not cloaked */ }
 
+                // EnumWindows visits every top-level window on the desktop -- often hundreds, mostly
+                // invisible/owned helper windows -- and SendMessageTimeout's cross-thread dispatch has
+                // real per-call overhead even against a healthy window, unlike the plain GetWindowText
+                // it replaced. Checking every other (cheap, in-process) eligibility condition first and
+                // only then paying for a title query keeps that cost down to the handful of windows that
+                // could actually end up in the list, instead of every window EnumWindows ever sees.
+                if (!isVisible || hasOwner || isCloaked || (isToolWindow && !isAppWindow))
+                    return true;
+
+                var titleLength = SafeGetWindowTextLength(hWnd);
                 if (!IsAltTabEligible(isVisible, hasOwner, isCloaked, titleLength, isToolWindow, isAppWindow))
                     return true;
 
