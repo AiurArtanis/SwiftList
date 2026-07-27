@@ -135,15 +135,19 @@ public static class InlineSearchNavigator
 
         if (!forceRealOpen && path != "__SHOW_MORE__" && tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
         {
-            // A dialog's destination-path field expects a folder -- a picked FILE (or a stale result that no
-            // longer exists, isDir == null) must resolve to its containing folder instead, same as
-            // QuickNavigationNavigator.NavigateOrOpen already does. Resolved here, in the App process, rather
-            // than left to whichever IFileDialogAdapter ends up handling it: NavigateTo runs in the elevated
-            // Hook process (see InlineAdapterCommandHandler's own comment on why), where File.Exists on a
-            // drive the interactive user mapped without elevation can come back false even for a perfectly
-            // real file -- silently defeating any adapter's own File.Exists-based resolution for exactly
-            // that case.
-            var dialogTarget = isDir == true ? path : Path.GetDirectoryName(path);
+            // Only a folder-only target (WinRAR/Bandizip's own "extract to" field, see
+            // IFileDialogAdapter.TargetIsFolderOnly) needs a picked FILE resolved to its containing folder
+            // first -- an Open/Save dialog's filename box (ClassicFileDialogAdapter/StandardFileDialogAdapter)
+            // wants the exact path unchanged, same as it always has. Resolved here, in the App process,
+            // rather than left to the adapter's own NavigateTo: that runs in the elevated Hook process (see
+            // InlineAdapterCommandHandler's own comment on why), where File.Exists on a drive the
+            // interactive user mapped without elevation can come back false even for a perfectly real file --
+            // silently defeating a folder-only adapter's own File.Exists-based resolution for exactly that
+            // case (isDir == null, a stale result whose file no longer exists, is treated the same as a
+            // file -- not a directory -- for this same reason).
+            var dialogTarget = tracker.ActiveAdapter?.TargetIsFolderOnly == true && isDir != true
+                ? Path.GetDirectoryName(path)
+                : path;
             if (!string.IsNullOrEmpty(dialogTarget))
             {
                 App.HookClient?.SendMessage(new IpcMessage

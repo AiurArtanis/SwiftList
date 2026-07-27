@@ -19,6 +19,19 @@ public interface IFileDialogAdapter : IPluginComponent
     bool NavigateTo(IntPtr hwnd, string targetPath);
 
     /// <summary>
+    /// True for a dialog whose target field can only ever hold a folder (e.g. an archive tool's "extract
+    /// to" destination) -- never a specific file, unlike an Open/Save dialog's filename box. Callers that
+    /// resolve a picked search result to a target path (see InlineSearchNavigator.RunFallbackChain) use
+    /// this to decide whether a picked FILE needs to be resolved to its containing folder first: doing
+    /// that resolution here, once, in the interactive process that can actually see the user's own network
+    /// drive mappings, is more reliable than leaving each such adapter to re-derive it itself via
+    /// File.Exists inside the elevated Hook process, where a drive the user mapped without elevation may
+    /// not resolve at all. Defaults false so existing Open/Save-style adapters keep receiving the exact
+    /// path they always have.
+    /// </summary>
+    bool TargetIsFolderOnly => false;
+
+    /// <summary>
     /// Whether Quick Navigation should trigger for a middle-click at the given point inside this dialog.
     /// Default true once <see cref="CanHandle"/> has already matched the dialog itself: unlike a full
     /// file-manager window, a common dialog has no "click a toolbar/breadcrumb button" action for a

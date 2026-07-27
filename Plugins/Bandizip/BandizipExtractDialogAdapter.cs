@@ -23,6 +23,10 @@ public class BandizipExtractDialogAdapter : IFileDialogAdapter
 
     public string Name => "Bandizip";
 
+    // The destination-path field can only ever hold a folder -- never a specific file, unlike an Open/Save
+    // dialog's filename box -- see IFileDialogAdapter.TargetIsFolderOnly for why callers use this.
+    public bool TargetIsFolderOnly => true;
+
     public bool CanHandle(IntPtr hwnd, string className, string processName)
     {
         if (string.IsNullOrEmpty(className) || string.IsNullOrEmpty(processName))
