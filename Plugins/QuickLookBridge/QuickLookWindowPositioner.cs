@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using SwiftList.PluginSdk;
 
@@ -21,27 +22,70 @@ internal static class QuickLookWindowPositioner
     private static Timer? _pollTimer;
     private static (int Left, int Top, int Width, int Height) _target;
 
+    // Called synchronously from the UI thread (owner LocationChanged/SizeChanged, or right after
+    // SetTarget resolves a new file) -- must never itself block there. IsWindow() is a cheap table
+    // lookup, safe to call inline, but SetWindowPos can send synchronous WM_WINDOWPOSCHANGING/CHANGED to
+    // the target window and wait for its thread to process them; if QuickLook's own UI thread is busy
+    // (e.g. still decoding the previous video file), that wait would show up here as the SAME kind of UI
+    // stutter the pipe calls used to cause before those were made async. So the actual repositioning
+    // always happens on a background thread, never on this one.
     public static void DockTo(int left, int top, int width, int height)
     {
+        IntPtr hwndToReposition;
+
         lock (Lock)
         {
             _target = (left, top, width, height);
 
             if (_lastKnownHwnd != IntPtr.Zero && QuickLookDockInterop.IsWindow(_lastKnownHwnd))
             {
-                Reposition(_lastKnownHwnd);
-                return;
+                hwndToReposition = _lastKnownHwnd;
             }
+            else
+            {
+                hwndToReposition = IntPtr.Zero;
 
-            // Update the target above, but DON'T restart a poll that's already running: DockTo gets
-            // called on every owner LocationChanged/SizeChanged, and the owner's results list keeps
-            // resizing while the user is still typing -- letting each of those calls dispose and
-            // recreate the timer meant the poll's attempt counter kept getting reset back to 0 before it
-            // ever ran long enough to actually find the window, so it silently never succeeded (worst
-            // right after the first preview, exactly when the results list is still settling). One poll
-            // per "don't have a window yet" episode always reads the latest _target when it does find one.
-            if (_pollTimer == null)
-                StartPollLocked();
+                // Update the target above, but DON'T restart a poll that's already running: DockTo gets
+                // called on every owner LocationChanged/SizeChanged, and the owner's results list keeps
+                // resizing while the user is still typing -- letting each of those calls dispose and
+                // recreate the timer meant the poll's attempt counter kept getting reset back to 0 before
+                // it ever ran long enough to actually find the window, so it silently never succeeded
+                // (worst right after the first preview, exactly when the results list is still settling).
+                // One poll per "don't have a window yet" episode always reads the latest _target when it
+                // does find one.
+                if (_pollTimer == null)
+                {
+                    Logger.Log($"[QuickLookBridge] dock poll starting, target=({left},{top},{width},{height})", LogLevel.Info);
+                    StartPollLocked();
+                }
+            }
+        }
+
+        if (hwndToReposition != IntPtr.Zero)
+            Task.Run(() => { lock (Lock) { Reposition(hwndToReposition); } });
+    }
+
+    // Called by QuickLookPipeClient right before it sends a Close message (guaranteed to destroy and
+    // recreate QuickLook's window, confirmed against its own source -- see CloseMessage's comment) and
+    // whenever the pipe availability check flips from reachable to unreachable (the process itself likely
+    // exited). Both are cases where the cached hwnd is either certainly or very likely stale, and Windows
+    // can recycle HWND values once one's destroyed, so IsWindow() alone can't always tell "still the same
+    // window" from "a different window that happens to share the old number."
+    public static void Reset()
+    {
+        lock (Lock)
+        {
+            _lastKnownHwnd = IntPtr.Zero;
+            if (_pollTimer != null)
+            {
+                // Otherwise an in-flight poll just silently vanishes from the log with neither a
+                // "succeeded" nor a "gave up" line -- confirmed happening (against an older build,
+                // before this line existed) by a ~5s gap between "dock poll starting" and the next
+                // QuickLookBridge log entry, for an entirely different file.
+                Logger.Log("[QuickLookBridge] Reset() aborted an in-flight dock poll", LogLevel.Info);
+                _pollTimer.Dispose();
+                _pollTimer = null;
+            }
         }
     }
 
@@ -65,6 +109,7 @@ internal static class QuickLookWindowPositioner
                     _pollTimer?.Dispose();
                     _pollTimer = null;
                 }
+                Logger.Log($"[QuickLookBridge] dock poll succeeded after {attempts} attempt(s)", LogLevel.Info);
                 ScheduleSettleReasserts(hwnd);
                 return;
             }
@@ -111,10 +156,18 @@ internal static class QuickLookWindowPositioner
     {
         try
         {
-            QuickLookDockInterop.SetWindowPos(hwnd, IntPtr.Zero, _target.Left, _target.Top, _target.Width, _target.Height,
+            var ok = QuickLookDockInterop.SetWindowPos(hwnd, IntPtr.Zero, _target.Left, _target.Top, _target.Width, _target.Height,
                 QuickLookDockInterop.SWP_NOZORDER | QuickLookDockInterop.SWP_NOACTIVATE);
+            if (!ok)
+            {
+                var err = Marshal.GetLastWin32Error();
+                Logger.Log($"[QuickLookBridge] SetWindowPos FAILED, target=({_target.Left},{_target.Top},{_target.Width},{_target.Height}) Win32Error={err}", LogLevel.Info);
+            }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Logger.Log($"[QuickLookBridge] Reposition threw: {ex.GetType().Name}: {ex.Message}", LogLevel.Info);
+        }
     }
 
     private static int GetQuickLookProcessId()

@@ -20,14 +20,23 @@ internal static class QuickLookPipeClient
     // TogglePreview(path, options) only takes its "hide if already showing this same path" branch when
     // options is empty; a non-empty options string always routes to InvokePreviewWithOption(path,
     // options) instead (see ViewWindowManager.cs), i.e. plain show/update, same as the Invoke message,
-    // plus whatever the options ask for. Used (with "top") to keep the docked window topmost so it
+    // plus whatever the options ask for. Used (with "-top") to keep the docked window topmost so it
     // doesn't get lost behind SwiftList's own window.
     private const string ToggleMessage = "QuickLook.App.PipeMessages.Toggle";
-    private const string TopOption = "top";
 
-    // QuickLook.App.PipeMessages.Close -- hides QuickLook's viewer window via its own code path. Used on
-    // preview-session teardown so QuickLook's own window-state bookkeeping (_viewerWindow.IsVisible etc.)
-    // stays in sync instead of just being abandoned.
+    // Must have a "-"/"--"/"/" prefix -- QuickLook's own CommandLineParser (Helpers/CommandLineParser.cs)
+    // only records a bare word into its Values dictionary if it immediately follows an already-recorded
+    // "-key" token; a lone word with nothing preceding it (exactly what a bare "top" is here, since it's
+    // the only token) is silently dropped and cli.Has("top") never sees it. Confirmed against QuickLook's
+    // actual source, not just its own doc comments -- the first attempt at this used a bare "top" and
+    // silently had no effect.
+    private const string TopOption = "-top";
+
+    // QuickLook.App.PipeMessages.Close -- NOT just a hide: ClosePreview() calls _viewerWindow.Close(),
+    // and its Closed event handler immediately does _viewerWindow = new ViewerWindow() (confirmed against
+    // QuickLook's own source, ViewWindowManager.cs). So every Close we send genuinely destroys and
+    // recreates QuickLook's window -- any cached hwnd from before this point is guaranteed stale
+    // afterward, not just possibly stale (see TryClosePreview).
     private const string CloseMessage = "QuickLook.App.PipeMessages.Close";
 
     // Anything QuickLook's own PipeMessages switch doesn't recognize falls into its `default: return
@@ -62,13 +71,23 @@ internal static class QuickLookPipeClient
     {
         if (Interlocked.CompareExchange(ref _hasCheckedOnce, 1, 0) == 0)
         {
-            _cachedAvailable = TrySend(PingMessage, string.Empty, string.Empty);
+            SetCachedAvailable(TrySend(PingMessage, string.Empty, string.Empty));
             Interlocked.Exchange(ref _lastRefreshStartedTicks, DateTime.UtcNow.Ticks);
             return _cachedAvailable;
         }
 
         MaybeStartBackgroundRefresh();
         return _cachedAvailable;
+    }
+
+    // A true -> false transition here is a strong signal QuickLook's process itself just exited (or
+    // crashed), covering the case TryClosePreview's own Reset() call can't: the process disappearing out
+    // from under us entirely, e.g. between navigations rather than because we asked it to close.
+    private static void SetCachedAvailable(bool available)
+    {
+        if (_cachedAvailable && !available)
+            QuickLookWindowPositioner.Reset();
+        _cachedAvailable = available;
     }
 
     private static void MaybeStartBackgroundRefresh()
@@ -84,29 +103,77 @@ internal static class QuickLookPipeClient
         Interlocked.Exchange(ref _lastRefreshStartedTicks, nowTicks);
         Task.Run(() =>
         {
-            try { _cachedAvailable = TrySend(PingMessage, string.Empty, string.Empty); }
+            try { SetCachedAvailable(TrySend(PingMessage, string.Empty, string.Empty)); }
             finally { Interlocked.Exchange(ref _refreshInFlight, 0); }
         });
     }
 
     // Also called synchronously from the UI thread on every single navigation (CreatePreview/
-    // TrySetTarget/EndPreviewSession) -- neither caller uses the bool result, so these are fire-and-
-    // forget onto a background chain instead of blocking there too. Chained (not independent Task.Run
-    // calls) specifically so ordering is preserved: typing fast enough to fire several of these in a row
-    // must not let a later Invoke's send complete before an earlier one's, which would land QuickLook on
-    // a stale file instead of the one currently selected.
-    private static Task _sendChain = Task.CompletedTask;
-    private static readonly object ChainLock = new();
+    // TrySetTarget/EndPreviewSession). Originally queued strictly in order (one Task.ContinueWith chain),
+    // to guarantee an earlier Invoke's send never completed after a later one's -- but a strict FIFO
+    // queue is exactly wrong when requests arrive faster than they can be sent: rapidly paging through a
+    // long result list (arrow-key-held or fast scroll, observed at 20-50ms per file -- far faster than one
+    // real pipe round trip) queued up dozens of sends, and since each one really did get sent in order,
+    // QuickLook just fell further and further behind, showing files the user had already scrolled past
+    // long before catching up to the current one -- which reads as "invoke failure" even though every
+    // individual send succeeded. What actually matters is only ever the MOST RECENT request: if a newer
+    // one arrives before the previous one has even started sending, the old one is already irrelevant and
+    // is dropped instead of queued, so the worker only ever sends whatever was truly latest once it's free.
+    private enum PendingKind { None, Invoke, Close }
 
-    public static void TryInvokePreview(string path) => EnqueueSend(ToggleMessage, path, TopOption);
+    private static readonly object QueueLock = new();
+    private static PendingKind _pendingKind;
+    private static string _pendingPath = string.Empty;
+    private static bool _workerRunning;
 
-    public static void TryClosePreview() => EnqueueSend(CloseMessage, string.Empty, string.Empty);
+    public static void TryInvokePreview(string path) => Enqueue(PendingKind.Invoke, path);
 
-    private static void EnqueueSend(string pipeMessage, string path, string options)
+    public static void TryClosePreview()
     {
-        lock (ChainLock)
+        // Reset BEFORE sending, not after: QuickLook destroys and recreates its window as a direct,
+        // synchronous(-ish) consequence of receiving this message (see CloseMessage's own comment), so the
+        // cached hwnd is guaranteed stale from the moment this is sent, not just probably stale by the
+        // time the send completes. Safe to do even if this particular Close ends up superseded/dropped
+        // below before ever actually being sent -- resetting our own local cache early is harmless either
+        // way, at worst costing one extra re-poll later.
+        QuickLookWindowPositioner.Reset();
+        Enqueue(PendingKind.Close, string.Empty);
+    }
+
+    private static void Enqueue(PendingKind kind, string path)
+    {
+        lock (QueueLock)
         {
-            _sendChain = _sendChain.ContinueWith(_ => TrySend(pipeMessage, path, options), TaskScheduler.Default);
+            _pendingKind = kind;
+            _pendingPath = path;
+            if (_workerRunning) return;
+            _workerRunning = true;
+        }
+        Task.Run(RunPendingWorker);
+    }
+
+    private static void RunPendingWorker()
+    {
+        while (true)
+        {
+            PendingKind kind;
+            string path;
+            lock (QueueLock)
+            {
+                if (_pendingKind == PendingKind.None)
+                {
+                    _workerRunning = false;
+                    return;
+                }
+                kind = _pendingKind;
+                path = _pendingPath;
+                _pendingKind = PendingKind.None;
+            }
+
+            if (kind == PendingKind.Invoke)
+                TrySend(ToggleMessage, path, TopOption);
+            else
+                TrySend(CloseMessage, string.Empty, string.Empty);
         }
     }
 
