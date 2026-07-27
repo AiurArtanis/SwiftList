@@ -25,6 +25,24 @@ public class InlineSearchWindowPositioner
     private readonly SwiftList.App.InlineSearchWindow _window;
     private int _positionUpdateQueued;
 
+    // Everything PositionWindowCore computes (Grid.Row layout mode, DPI-scaled Left/Top) is a pure
+    // function of these inputs -- when every one of them is unchanged since the last full run, the
+    // result would be identical too, so the DPI/monitor P/Invoke calls and Screen.FromHandle/FromPoint
+    // lookups (the actually expensive part -- UpdateLayout() alone is cheap when the tree isn't dirty)
+    // can be skipped outright instead of recomputing the same answer on every keystroke that doesn't
+    // change the result count/height or move the target window.
+    private bool _hasCachedInputs;
+    private IntPtr _cachedActiveHwnd;
+    private bool _cachedIsDesktop;
+    private bool _cachedIsActiveWindowDialog;
+    private bool _cachedHasValidRect;
+    private Core.Hook.ExplorerTracker.RECT _cachedRect;
+    private System.Drawing.Point _cachedMousePosition;
+    private double _cachedWindowWidth;
+    private double _cachedWindowHeight;
+    private double _cachedVisibleHeight;
+    private bool _cachedIsResultsVisible;
+
     public InlineSearchWindowPositioner(SwiftList.App.InlineSearchWindow window) => _window = window ?? throw new ArgumentNullException(nameof(window));
 
     public void PositionWindow()
@@ -56,23 +74,6 @@ public class InlineSearchWindowPositioner
         _window.UpdateLayout();
         var tracker = _window.Manager.ExplorerTracker;
 
-        // DPI must come from the monitor this window is about to be placed ON (the Desktop's cursor
-        // monitor, or the active window's monitor) -- NOT from wherever this window itself currently
-        // happens to sit (PresentationSource.FromVisual(_window)'s own CompositionTarget, the old
-        // source here). Those only agree when every monitor shares the same scale, or once the window
-        // has already been correctly placed once. PositionWindowImmediate calls this before Show(),
-        // when the window is sitting at whatever default position Windows picked for a brand-new HWND
-        // -- on a mixed-DPI multi-monitor setup that default position's monitor has no relationship to
-        // the actual target, so sourcing the scale from it computes a position wrong by exactly the
-        // ratio between the two monitors' scales (e.g. summoning on a 150% secondary screen while this
-        // window's own HWND landed on a 100% primary one).
-        var targetMonitor = tracker.IsDesktop
-            ? MonitorFromPoint(ToPoint(System.Windows.Forms.Control.MousePosition), MONITOR_DEFAULTTONEAREST)
-            : tracker.ActiveHwnd != IntPtr.Zero
-                ? MonitorFromWindow(tracker.ActiveHwnd, MONITOR_DEFAULTTONEAREST)
-                : IntPtr.Zero;
-        var (dpiScaleX, dpiScaleY) = GetMonitorDpiScale(targetMonitor);
-
         // Window height is fixed at 550 logical pixels to allow content to grow upwards/downwards internally
         var windowHeight = double.IsNaN(_window.Height) || _window.Height <= 0
             ? (_window.ActualHeight > 0 ? _window.ActualHeight : 550.0)
@@ -84,21 +85,64 @@ public class InlineSearchWindowPositioner
             ? _window.MainBorder.ActualHeight
             : windowHeight;
 
+        var isResultsVisible = _window.ResultsPanelControl.Visibility == Visibility.Visible;
+
+        var hasValidRect = false;
+        var rect = new Core.Hook.ExplorerTracker.RECT();
+        if (tracker.ActiveHwnd != IntPtr.Zero && !tracker.IsDesktop)
+        {
+            hasValidRect = tracker.TryGetActiveWindowRect(out rect) && (rect.Right - rect.Left > 100 && rect.Bottom - rect.Top > 100);
+        }
+        var mousePosition = System.Windows.Forms.Control.MousePosition;
+
+        // Everything below (Grid.Row layout mode, DPI-scaled Left/Top) is a pure function of the inputs
+        // gathered above -- if none of them moved since the last full run, the DPI/monitor P/Invoke calls
+        // and Screen.FromHandle/FromPoint lookups below would just recompute the exact same answer, so
+        // skip straight past them. This is the actual expense (not the UpdateLayout() above, which is a
+        // no-op when the visual tree isn't dirty) -- it fires on every keystroke that changes the result
+        // count/height even when the target window hasn't moved and this window's own size hasn't changed.
+        if (_hasCachedInputs
+            && _cachedActiveHwnd == tracker.ActiveHwnd
+            && _cachedIsDesktop == tracker.IsDesktop
+            && _cachedIsActiveWindowDialog == tracker.IsActiveWindowDialog
+            && _cachedHasValidRect == hasValidRect
+            && _cachedRect.Left == rect.Left && _cachedRect.Top == rect.Top && _cachedRect.Right == rect.Right && _cachedRect.Bottom == rect.Bottom
+            && _cachedWindowWidth == windowWidth
+            && _cachedWindowHeight == windowHeight
+            && _cachedVisibleHeight == visibleHeight
+            && _cachedIsResultsVisible == isResultsVisible
+            && (!tracker.IsDesktop || _cachedMousePosition == mousePosition))
+        {
+            return;
+        }
+
+        // DPI must come from the monitor this window is about to be placed ON (the Desktop's cursor
+        // monitor, or the active window's monitor) -- NOT from wherever this window itself currently
+        // happens to sit (PresentationSource.FromVisual(_window)'s own CompositionTarget, the old
+        // source here). Those only agree when every monitor shares the same scale, or once the window
+        // has already been correctly placed once. PositionWindowImmediate calls this before Show(),
+        // when the window is sitting at whatever default position Windows picked for a brand-new HWND
+        // -- on a mixed-DPI multi-monitor setup that default position's monitor has no relationship to
+        // the actual target, so sourcing the scale from it computes a position wrong by exactly the
+        // ratio between the two monitors' scales (e.g. summoning on a 150% secondary screen while this
+        // window's own HWND landed on a 100% primary one).
+        var targetMonitor = tracker.IsDesktop
+            ? MonitorFromPoint(ToPoint(mousePosition), MONITOR_DEFAULTTONEAREST)
+            : tracker.ActiveHwnd != IntPtr.Zero
+                ? MonitorFromWindow(tracker.ActiveHwnd, MONITOR_DEFAULTTONEAREST)
+                : IntPtr.Zero;
+        var (dpiScaleX, dpiScaleY) = GetMonitorDpiScale(targetMonitor);
+
         // MainBorder in XAML has Margin="12" to make room for drop shadow.
         // We want the visible border to be exactly aligned to the screen/window corner.
         const double xamlMargin = 12;
         const double visibleMargin = 0;
 
-        var isResultsVisible = _window.ResultsPanelControl.Visibility == Visibility.Visible;
-
         var useDialogMode = false;
-        var hasValidRect = false;
-        var rect = new Core.Hook.ExplorerTracker.RECT();
 
-        if (tracker.ActiveHwnd != IntPtr.Zero && !tracker.IsDesktop)
+        if (hasValidRect)
         {
-            hasValidRect = tracker.TryGetActiveWindowRect(out rect) && (rect.Right - rect.Left > 100 && rect.Bottom - rect.Top > 100);
-            if (hasValidRect && tracker.IsActiveWindowDialog)
+            if (tracker.IsActiveWindowDialog)
             {
                 var screen = Screen.FromHandle(tracker.ActiveHwnd);
                 var workingArea = screen.WorkingArea;
@@ -246,6 +290,18 @@ public class InlineSearchWindowPositioner
                 if (Math.Abs(_window.Top - targetTop) > 0.5) _window.Top = targetTop;
             }
         }
+
+        _hasCachedInputs = true;
+        _cachedActiveHwnd = tracker.ActiveHwnd;
+        _cachedIsDesktop = tracker.IsDesktop;
+        _cachedIsActiveWindowDialog = tracker.IsActiveWindowDialog;
+        _cachedHasValidRect = hasValidRect;
+        _cachedRect = rect;
+        _cachedMousePosition = mousePosition;
+        _cachedWindowWidth = windowWidth;
+        _cachedWindowHeight = windowHeight;
+        _cachedVisibleHeight = visibleHeight;
+        _cachedIsResultsVisible = isResultsVisible;
     }
 
     private static POINT ToPoint(System.Drawing.Point p) => new() { X = p.X, Y = p.Y };
