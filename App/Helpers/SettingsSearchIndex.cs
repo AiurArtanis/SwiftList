@@ -1,3 +1,4 @@
+using System.Windows;
 using SwiftList.App.ViewModels.Settings;
 
 namespace SwiftList.App.Helpers;
@@ -33,7 +34,8 @@ public static class SettingsSearchIndex
         // still drive the highlight flash.
         new("Settings_Service", "Service"),
         new("Service_Title", "Service"),
-        new("Service_ActionInstall", "Service", TargetElementName: "RowActionInstall"),
+        new("Service_ActionInstall", "Service", TargetElementName: "RowActionInstall",
+            IsVisible: vm => vm.Service.InstallButtonVisibility == Visibility.Visible),
         new("Service_ClearLog", "Service", TargetElementName: "RowClearLog"),
         new("Service_LogTab_App", "Service", vm => vm.Log.SelectedTab = "App"),
         new("Service_LogTab_Hook", "Service", vm => vm.Log.SelectedTab = "Hook"),
@@ -73,8 +75,10 @@ public static class SettingsSearchIndex
         new("General_LogLevel", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowLogLevel", "General_SysTitle"),
         new("General_LangSelect", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowLangSelect", "General_SysTitle"),
         new("General_DefaultFileManagerEnabled", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowDefaultFileManagerEnabled", "General_SysTitle"),
-        new("General_DefaultFileManagerPath", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowDefaultFileManagerPath", "General_SysTitle"),
-        new("General_DefaultFileManagerParameter", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowDefaultFileManagerParameter", "General_SysTitle"),
+        new("General_DefaultFileManagerPath", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowDefaultFileManagerPath", "General_SysTitle",
+            IsVisible: vm => vm.General.DefaultFileManagerEnabled),
+        new("General_DefaultFileManagerParameter", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowDefaultFileManagerParameter", "General_SysTitle",
+            IsVisible: vm => vm.General.DefaultFileManagerEnabled),
         new("General_LayoutTitle", "General", vm => vm.General.SelectedTab = "Layout", "TabLayout"),
         new("General_LayoutSectionTitle", "General", vm => vm.General.SelectedTab = "Layout", "TabLayout/RowLayoutSectionTitle", "General_LayoutTitle"),
         new("General_LayoutWidth", "General", vm => vm.General.SelectedTab = "Layout", "TabLayout/RowLayoutWidth", "General_LayoutTitle", "General_LayoutSectionTitle"),
