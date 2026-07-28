@@ -113,15 +113,13 @@ public sealed class UiMetricsTests
     public void MenuItemHeight_IsEightyPercentOfListItemHeight() =>
         Assert.AreEqual(UiMetrics.BaseListItemHeight * 0.8, UiMetrics.MenuItemHeight);
 
+    // InlineRowHeight/InlineIconSize are literal design constants (not derived from
+    // BaseSearchResultItemHeight/a ratio) precisely so they CAN'T silently drift apart -- this pins the
+    // one invariant that actually matters instead: the icon plus its margin must still fit inside the
+    // row, or InlineSearchResult.xaml's icon would overflow InlineItemHeight's own row height.
     [TestMethod]
-    public void BaseInlineItemHeight_IsRoundedSeventyPercentOfBaseResultItemHeight() =>
-        Assert.AreEqual(Math.Round(UiMetrics.BaseSearchResultItemHeight * 0.7), UiMetrics.BaseInlineItemHeight);
-
-    [TestMethod]
-    public void InlineResultIconSize_IsInlineItemHeightMinusMarginAndBreathingRoom() =>
-        Assert.AreEqual(
-            UiMetrics.BaseInlineItemHeight - UiMetrics.ResultRowVerticalMargin - UiMetrics.IconRowBreathingRoom,
-            UiMetrics.InlineResultIconSize);
+    public void InlineIconSize_FitsWithinInlineRowHeight() =>
+        Assert.IsTrue(UiMetrics.InlineIconSize + UiMetrics.ResultRowVerticalMargin <= UiMetrics.InlineRowHeight);
 
     [TestMethod]
     public void ScaledNormalRowHeight_AtFlowReferenceHeight_RowHeightWins()

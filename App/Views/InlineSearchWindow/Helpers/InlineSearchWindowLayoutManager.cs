@@ -15,16 +15,22 @@ public sealed class InlineSearchWindowLayoutManager
         _window = window ?? throw new ArgumentNullException(nameof(window));
 
         // LstResults is the same shared ResultsControl.xaml markup Quick/Inline/Full all use.
-        // ScrollViewer.CanContentScroll="False" (pixel-based scrolling, so a 9-row budget that isn't a
-        // whole multiple of the row height clips the boundary row instead of leaving the leftover
-        // fraction as blank space -- see 78ddae91) used to be set right there in the shared XAML. Commit
-        // 3f09b9bf removed it to fix the QUICK window's typing lag, replacing it with a per-pass dynamic
-        // toggle scoped to that window's own layout manager -- but never gave this window an equivalent,
-        // so LstResults here silently fell back to the WPF-default item-based virtualization and
-        // reintroduced the exact blank-space bug 78ddae91 existed to fix. QueueResultsLayoutUpdate below
-        // still Measure()s the real ListBox every update regardless of this setting, so unlike the quick
-        // window there's no virtualization win to protect here in the first place -- fixing this
-        // permanently, once, is free.
+        // Pixel-based scrolling, pinned for this window's whole lifetime. Tried switching this to
+        // item-based (logical) scrolling alongside QueueResultsLayoutUpdate's move to a row-height SUM
+        // below -- reasoning being that InlineRowHeight is now a literal constant every row genuinely
+        // renders at (see ListBox.xaml's Style.Trigger for a "SwiftList Inline"-titled window), so a
+        // 9-row sum is an exact whole multiple of it by construction, which is what item-based scrolling
+        // needs to render without a leftover gap. Confirmed by testing that this ISN'T enough: a query
+        // short enough to fit without scrolling (exactly 9 results) never showed the gap, but any query
+        // that actually needs to scroll (more than 9 results, e.g. "dev") reproduced it 100% of the time
+        // -- item-based scrolling estimates how many rows fit its own viewport from a container height IT
+        // measures internally, not from the number this class hands it, and that internal estimate can
+        // still round down by one row independent of how exact our own sum is. Pixel-based scrolling has
+        // no such estimation step -- it just clips whatever doesn't fit -- so it's the only one of the two
+        // that's actually robust here, which is why 78ddae91/74c73cf1 landed on it after this exact same
+        // idea was tried and reverted before. QueueResultsLayoutUpdate's move away from measuring the real
+        // ListBox to a direct height sum is still worth keeping independent of this -- it avoids
+        // force-realizing every bound row just to measure a total, regardless of scrolling mode.
         ScrollViewer.SetCanContentScroll(_window.LstResults, false);
     }
 
@@ -38,52 +44,31 @@ public sealed class InlineSearchWindowLayoutManager
             Interlocked.Exchange(ref _layoutUpdateQueued, 0);
             if (!_window.IsVisible) return;
 
-            // Every prior version of this (summing selectable rows only, giving headers their own extra
-            // budget, lazily dropping a dangling header, matching the quick window's flat "first 9 items"
-            // sum) was still a hand-computed PREDICTION of what WPF would render, kept in a separate
-            // formula that had to stay perfectly in sync with the template/container styling by hand --
-            // and every round, something about a header, a badge, or a banner made the two disagree by
-            // exactly one row's worth. Measuring the real ListBox instead removes the prediction
-            // entirely: there's no separate number to drift out of sync with, because this IS what WPF
-            // is about to render.
-            var count = _window.ViewModel.Results.Count;
+            // Sums each of the first 9 rows' own InlineItemHeight instead of measuring the real ListBox
+            // (what this used to do -- see git log on this file for the several rounds that predated it).
+            // The old hand-summed predictions drifted out of sync with what WPF actually rendered because
+            // a normal row's true container height used to come from ResultItemStyle's MinHeight, a
+            // SEPARATE number (ItemHeight, the full-size 51px main-window metric) from what the sum
+            // assumed -- headers being unified to InlineItemHeight alone was never enough to fix it. Now
+            // that ResultItemStyle's own Style.Trigger already binds MinHeight to this SAME InlineItemHeight
+            // for a "SwiftList Inline"-titled window (see ListBox.xaml), and InlineItemHeight itself is a
+            // literal UiMetrics constant instead of a derived ratio, this sum and the real render are
+            // reading the exact same number for every row -- there's no separate formula left to drift.
+            var results = _window.ViewModel.Results;
+            var count = results.Count;
+            var visibleCount = Math.Min(count, 9);
+            double resultsHeight = 0;
+            for (var i = 0; i < visibleCount; i++)
+                resultsHeight += results[i].InlineItemHeight;
+
             // PathPreviewBorder (the truncated-path banner above the list, Grid.Row sibling of
-            // ResultsPanelControl -- see InlineSearchWindow.xaml) is never counted out of this 9-row
-            // budget: unlike the quick window (which sizes itself via SizeToContent and so needs its
-            // tab-strip case to land on the exact same total height as its bannerless/tabstrip-less case,
-            // see QuickSearchWindowLayoutManager's own ceiling), this window's shell is a fixed 550px that
+            // ResultsPanelControl -- see InlineSearchWindow.xaml) is never counted into this 9-row sum:
+            // unlike the quick window (which sizes itself via SizeToContent and so needs its tab-strip
+            // case to land on the exact same total height as its bannerless/tabstrip-less case, see
+            // QuickSearchWindowLayoutManager's own ceiling), this window's shell is a fixed 550px that
             // already has headroom for content to grow inside it (see InlineSearchWindowPositioner's own
             // comment on that) -- there's no bannerless sibling state it needs to visually match, so the
             // banner can simply add its own height on top of a full, uncompromised 9-row list.
-            var maxAvailableHeight = 9 * Math.Round(Services.UiMetrics.SearchResultItemHeight * 0.7);
-
-            var measureWidth = _window.ResultsPanelControl.ActualWidth > 0 ? _window.ResultsPanelControl.ActualWidth : 437;
-            // A result-set change (e.g. ReconcileTo mutating item 0 in place and RemoveAt-ing the rest, see
-            // SearchResultsReconciler) can leave the ListBox's own item-container generator not yet caught up
-            // by the time this callback runs -- a directly-called Measure() below reuses whatever containers
-            // the generator currently has, so measuring before that catches up could still count a container
-            // that's about to be recycled away, adding a stray row's worth of height. Forcing a real layout
-            // pass first (against the STILL-current Height, purely to flush any pending container generation)
-            // guarantees the generator is caught up with ItemsSource before the actual measurement below
-            // reads anything from it.
-            _window.LstResults.InvalidateMeasure();
-            _window.UpdateLayout();
-            _window.LstResults.Height = double.NaN;
-            // Measuring against maxAvailableHeight itself (rather than infinite/unconstrained height)
-            // was the actual bug behind the persistent trailing gap, present regardless of the banner:
-            // the ListBox's own template wraps its items in a ScrollViewer, and a ScrollViewer offered a
-            // finite available height reports THAT height back as its desired size (it's a scrollable
-            // container -- "I'll take whatever you give me and scroll internally" -- not "I'll shrink to
-            // just what my content needs"), regardless of whether the actual item count fills it. So
-            // DesiredSize.Height was silently just echoing maxAvailableHeight back on every call with
-            // fewer than a full budget's worth of items, reserving a full 9-row-equivalent height no
-            // matter how few rows were actually there. Measuring against infinity first forces the real,
-            // content-driven size; the cap is then applied afterward, purely to bound a genuinely-long list.
-            _window.LstResults.Measure(new System.Windows.Size(measureWidth, double.PositiveInfinity));
-            var desiredHeight = _window.LstResults.DesiredSize.Height;
-
-            var resultsHeight = Math.Min(desiredHeight, maxAvailableHeight);
-
             _window.LstResults.Height = resultsHeight;
             _window.ResultsPanelControl.Height = resultsHeight;
             // Forces layout to actually run right now, synchronously, instead of leaving WPF free to

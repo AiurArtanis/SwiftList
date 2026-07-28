@@ -64,12 +64,10 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     public double ScaledNameFontSize => HasPathSubtitle ? UiMetrics.ScaledResultNameFontSize : UiMetrics.ScaledResultNameFontSizeSingleLine;
     public double ScaledPathFontSize => UiMetrics.ScaledResultPathFontSize;
     public double ScaledResultIconSize => UiMetrics.ScaledResultIconSize;
-    // Uses the inline window's own (smaller) icon size rather than the main window's ItemHeight, so a
-    // normal row is never sized against an icon it doesn't actually show (see ScaledItemHeight above
-    // for why that mismatch matters).
-    public double InlineItemHeight => IsListItem
-        ? ItemHeight
-        : Math.Max(UiMetrics.BaseInlineItemHeight, UiMetrics.InlineResultIconSize + UiMetrics.ResultRowVerticalMargin);
+    // UiMetrics.InlineRowHeight is a literal design constant (not derived from ItemHeight/ResultIconSize),
+    // so every non-list-item row is uniformly that height -- which InlineSearchWindowLayoutManager's own
+    // height-sum relies on to land exactly on a whole multiple of the row height for every row count.
+    public double InlineItemHeight => IsListItem ? ItemHeight : UiMetrics.InlineRowHeight;
     public double ActionsHeaderHeight => Math.Round(ItemHeight * 0.7);
     public string DisplayPath => IsApplication ? ParentDir : FullPath;
     public uint PluginActionId { get; set; }

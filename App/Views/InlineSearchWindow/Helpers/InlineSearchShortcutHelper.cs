@@ -13,8 +13,9 @@ public static class InlineSearchShortcutHelper
         // LstResults here is pinned to pixel-based scrolling for the window's whole lifetime (see
         // InlineSearchWindowLayoutManager's constructor), unlike the quick window's per-pass dynamic
         // toggle -- reading it through the same mode-aware helper the quick window needs is one less
-        // thing to keep in sync if that ever changes.
-        var rowHeight = Math.Round(UiMetrics.SearchResultItemHeight * 0.7);
+        // thing to keep in sync if that ever changes. InlineRowHeight is now a literal constant instead
+        // of a derived ratio, but the row height itself is unchanged (36).
+        var rowHeight = UiMetrics.InlineRowHeight;
         var firstVisible = WpfUiHelper.GetFirstVisibleIndex(scrollViewer, rowHeight);
         var shortcutIndex = 1;
 

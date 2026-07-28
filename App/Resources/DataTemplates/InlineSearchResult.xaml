@@ -49,7 +49,7 @@
             </Border>
             <!-- File/Folder icon -->
             <Image Grid.Column="0" Source="{Binding Icon}"
-                   Width="{x:Static services:UiMetrics.InlineResultIconSize}" Height="{x:Static services:UiMetrics.InlineResultIconSize}"
+                   Width="{x:Static services:UiMetrics.InlineIconSize}" Height="{x:Static services:UiMetrics.InlineIconSize}"
                    Margin="0,0,14,0" VerticalAlignment="Center"
                    RenderOptions.BitmapScalingMode="HighQuality">
                 <Image.Style>

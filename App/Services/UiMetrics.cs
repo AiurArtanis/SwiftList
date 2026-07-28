@@ -193,16 +193,15 @@ public static class UiMetrics
     public static double ResultPathFontSize => BaseResultPathFontSize;
     public static double ResultIconSize => BaseResultIconSize;
 
-    // Fixed icon size for the inline window's own (more compact) row template
-    // (App/Resources/DataTemplates/InlineSearchResult.xaml binds its Image to this). Was a flat 30 --
-    // only 6px of slack in BaseInlineItemHeight's 36px row, versus the main window's own 42px icon
-    // getting a full 9px of slack in its 51px row. Derived with the exact same slack-budget formula
-    // (ResultRowVerticalMargin + IconRowBreathingRoom) the main window's own icon uses instead of an
-    // arbitrary constant, so the two are proportioned the same way -- font sizes untouched.
-    public static double InlineResultIconSize => BaseInlineItemHeight - ResultRowVerticalMargin - IconRowBreathingRoom;
-
-    // Design height for a compact inline row before accounting for its icon (see AppSearchResult.InlineItemHeight).
-    public static double BaseInlineItemHeight => Math.Round(BaseSearchResultItemHeight * 0.7);
+    // The inline window's own row metrics -- literal design values, NOT derived by scaling
+    // BaseSearchResultItemHeight/BaseResultIconSize by a ratio (that used to be Math.Round(51 * 0.7),
+    // which quietly coupled inline's row design to the main window's own numbers: changing one could
+    // silently drag the other along). Tuned independently so inline can be re-designed on its own.
+    // InlineRowHeight must stay >= InlineIconSize + ResultRowVerticalMargin for the icon to actually
+    // fit (see AppSearchResult.InlineItemHeight, which assumes this and no longer needs its own
+    // Math.Max to enforce it).
+    public const double InlineRowHeight = 36;
+    public const double InlineIconSize = 27;
 
     // ── Scaled metrics — consumed ONLY by the quick window (opted in via window title),
     //    so the inline/full windows never scale with the search-bar height. ──
