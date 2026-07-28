@@ -189,7 +189,7 @@
   "General_DefaultFileManagerBrowseTooltip": "Browse for a program",
   "General_DefaultFileManagerBrowseFilter": "Programs",
   "General_DefaultFileManagerParameter": "Parameters",
-  "General_DefaultFileManagerParameterHint": "Supports placeholder substitution:\n· %s (or {}): the folder path\n· Placeholders are quoted automatically -- don't wrap them in your own quotes",
+  "General_DefaultFileManagerParameterHint": "Supports placeholder substitution:\n· %s (or {}): the folder path\n· Placeholders are quoted automatically -- don't wrap them in your own quotes\n· Left empty, the quoted folder path itself is used as the sole parameter",
   "General_LogLevel": "Log Level",
   "General_LangSelect": "Interface Language",
   "General_ThemeSelect": "Interface Theme",

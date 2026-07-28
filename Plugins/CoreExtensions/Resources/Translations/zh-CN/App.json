@@ -189,7 +189,7 @@
   "General_DefaultFileManagerBrowseTooltip": "浏览选择程序",
   "General_DefaultFileManagerBrowseFilter": "程序",
   "General_DefaultFileManagerParameter": "参数",
-  "General_DefaultFileManagerParameterHint": "支持占位符替换:\n· %s(或 {}):文件夹路径\n· 占位符会自动加引号,请勿自行包引号",
+  "General_DefaultFileManagerParameterHint": "支持占位符替换:\n· %s(或 {}):文件夹路径\n· 占位符会自动加引号,请勿自行包引号\n· 留空则直接把加好引号的文件夹路径作为参数",
   "General_LogLevel": "日志等级",
   "General_LangSelect": "界面语言",
   "General_ThemeSelect": "界面主题",
