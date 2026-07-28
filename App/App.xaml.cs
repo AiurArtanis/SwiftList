@@ -179,8 +179,32 @@ public partial class App : Application
             };
             PluginSdk.Services.IconService.GetThumbnailFunc = (path, size) => ShellImageListInterop.TryGetPreviewThumbnail(path, size);
             PluginSdk.Services.FileMetadataService.BatchLookupFunc = FileMetadataBridge.GetMetadataBatchAsync;
+            // Cached across calls: this feed's own doc comment calls it "the host's static list of
+            // searchable settings entries", but the naive version (call BuildAllEntries fresh every
+            // time) silently broke that -- CoreExtensions' SearchSettingsInstantProvider calls
+            // GetEntries() on every debounced keystroke of a "set ..." query in the main search window,
+            // which was re-running BuildAllEntries(vm: null)'s PluginLoaderHelper.BuildPluginList
+            // reflection scan (AppDomain.GetAssemblies + two GetTypes() passes per plugin DLL) per
+            // keystroke -- independent of whether Settings was even open, and worse than the
+            // once-per-window-open cost issue #186 was about. Safe to cache: with vm: null, none of the
+            // built entries' Activate/Reveal delegates (which close over live PluginInfoViewModel/etc.
+            // instances) are ever invoked -- JumpToEntry always rebuilds fresh against the real live vm
+            // before activating anything, using the index purely as a positional lookup -- so only the
+            // translated Label/Breadcrumb/Index actually returned here need to stay current. Invalidated
+            // on language change (labels/breadcrumbs are translated at build time) and on
+            // PluginManager.ComponentsRefreshed: unlike the Plugins-section entries (which include every
+            // component regardless of IsEnabled, only ever toggling a flag PluginLoaderHelper doesn't
+            // even expose here), PluginManager.StartupPanelTabProviders -- which the StartupPanel-section
+            // entries are built from -- IS enabled-filtered, so disabling a startup-panel-tab-providing
+            // component genuinely changes this feed's membership, not just some unexposed flag on it.
+            List<PluginSdk.Services.SettingsSearchEntryInfo>? cachedSettingsSearchEntries = null;
+            TranslationManager.Instance.PropertyChanged += (_, _) => cachedSettingsSearchEntries = null;
+            PluginManager.Instance.ComponentsRefreshed += () => cachedSettingsSearchEntries = null;
             PluginSdk.Services.SettingsSearchService.GetEntriesFunc = () =>
             {
+                if (cachedSettingsSearchEntries != null)
+                    return cachedSettingsSearchEntries;
+
                 // No live SettingsWindow is guaranteed to exist here (Settings may never have been
                 // opened yet), so this passes vm: null -- BuildAllEntries then builds the Plugins/
                 // Hotkeys-actions/StartupPanel-tabs sections straight from PluginManager.Instance/
@@ -190,7 +214,8 @@ public partial class App : Application
                 var list = new List<PluginSdk.Services.SettingsSearchEntryInfo>(entries.Count);
                 for (var i = 0; i < entries.Count; i++)
                     list.Add(new PluginSdk.Services.SettingsSearchEntryInfo(entries[i].Label, entries[i].SectionLabel, i));
-                return list;
+                cachedSettingsSearchEntries = list;
+                return cachedSettingsSearchEntries;
             };
             PluginSdk.Logger.LogAction = (msg, lvl) => Logger.Log(msg, (LogLevel)(int)lvl);
             TranslationManager.Instance.ReloadTranslations();

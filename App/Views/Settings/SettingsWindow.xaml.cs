@@ -6,6 +6,11 @@ using SwiftList.App.ViewModels.Settings;
 using SwiftList.App.Services.ShellIcons;
 using SwiftList.App.Services.Theme;
 using SwiftList.App.Helpers.Visuals;
+using SwiftList.App.Views.Settings;
+using SwiftList.App.Views.Settings.General;
+using SwiftList.App.Views.Settings.Hotkey;
+using SwiftList.App.Views.Settings.Plugins;
+using SwiftList.App.Views.Settings.StartupPanel;
 namespace SwiftList.App;
 
 // Window chrome and the sidebar's own section-switching. Search box/popup logic lives in
@@ -15,6 +20,46 @@ namespace SwiftList.App;
 public partial class SettingsWindow : Window
 {
     private int _validationErrorCount;
+
+    // Lazily constructed on first visit instead of all being built (and their full visual trees
+    // realized) up front -- see issue #186: opening even a single cheap tab like About used to pay for
+    // every other tab's construction too. AddPage parents each one into PagesHost (see SettingsWindow.xaml)
+    // the first time its property is touched; ApplySelectedSection only ever touches the tab it's
+    // switching to (plus whichever was already visible), never the untouched ones, so tabs the user never
+    // visits stay unbuilt for the whole window's lifetime.
+    private ServiceSettingsPage? _pageService;
+    private IndexSettingsPage? _pageIndex;
+    private GeneralSettingsPage? _pageGeneral;
+    private AppearanceSettingsPage? _pageAppearance;
+    private HotkeySettingsPage? _pageHotkeys;
+    private PluginManagementSettingsPage? _pagePlugins;
+    private HistorySettingsPage? _pageHistory;
+    private FavoritesSettingsPage? _pageFavorites;
+    private StartupPanelSettingsPage? _pageStartupPanel;
+    private AboutSettingsPage? _pageAbout;
+    private FrameworkElement? _currentPage;
+
+    internal ServiceSettingsPage PageService => _pageService ??= AddPage(new ServiceSettingsPage());
+    internal IndexSettingsPage PageIndex => _pageIndex ??= AddPage(new IndexSettingsPage());
+    internal GeneralSettingsPage PageGeneral => _pageGeneral ??= AddPage(new GeneralSettingsPage());
+    internal AppearanceSettingsPage PageAppearance => _pageAppearance ??= AddPage(new AppearanceSettingsPage());
+    // Hotkeys/Plugins/History/Favorites/StartupPanel set their own DataContext explicitly (previously done
+    // via SettingsWindow.xaml's DataContext="{Binding Xxx}") -- the rest inherit it from this Window like
+    // before, since inherited DataContext still flows correctly through a subtree added via
+    // Children.Add rather than markup.
+    internal HotkeySettingsPage PageHotkeys => _pageHotkeys ??= AddPage(new HotkeySettingsPage { DataContext = ((SettingsViewModel)DataContext).Hotkeys });
+    internal PluginManagementSettingsPage PagePlugins => _pagePlugins ??= AddPage(new PluginManagementSettingsPage { DataContext = ((SettingsViewModel)DataContext).Plugins });
+    internal HistorySettingsPage PageHistory => _pageHistory ??= AddPage(new HistorySettingsPage { DataContext = ((SettingsViewModel)DataContext).History });
+    internal FavoritesSettingsPage PageFavorites => _pageFavorites ??= AddPage(new FavoritesSettingsPage { DataContext = ((SettingsViewModel)DataContext).Favorites });
+    internal StartupPanelSettingsPage PageStartupPanel => _pageStartupPanel ??= AddPage(new StartupPanelSettingsPage { DataContext = ((SettingsViewModel)DataContext).StartupPanel });
+    internal AboutSettingsPage PageAbout => _pageAbout ??= AddPage(new AboutSettingsPage());
+
+    private T AddPage<T>(T page) where T : FrameworkElement
+    {
+        page.Visibility = Visibility.Collapsed;
+        PagesHost.Children.Add(page);
+        return page;
+    }
 
     public SettingsWindow()
     {
@@ -157,23 +202,17 @@ public partial class SettingsWindow : Window
 
     private void ApplySelectedSection(string tag)
     {
-        if (PageIndex == null)
-            return;
-
         // Covers navigating via the sidebar directly while a search popup happens to be open (typed a
         // query, then clicked a section instead of a result) -- clearing the text closes the popup too.
         TxtSettingsSearch.Text = string.Empty;
 
-        PageService?.Visibility = tag == "Service" ? Visibility.Visible : Visibility.Collapsed;
+        // Only ever touches the page being left (already built, cheap to hide) and the page being
+        // entered (this.GetSectionPage lazily constructs it on first visit) -- never the other, still
+        // untouched tabs, which is the whole point of the lazy PageXxx properties above.
+        _currentPage?.Visibility = Visibility.Collapsed;
 
-        PageIndex.Visibility = tag == "Index" ? Visibility.Visible : Visibility.Collapsed;
-        PageGeneral.Visibility = tag == "General" ? Visibility.Visible : Visibility.Collapsed;
-        PageAppearance.Visibility = tag == "Appearance" ? Visibility.Visible : Visibility.Collapsed;
-        PageHotkeys.Visibility = tag == "Hotkeys" ? Visibility.Visible : Visibility.Collapsed;
-        PagePlugins.Visibility = tag == "Plugins" ? Visibility.Visible : Visibility.Collapsed;
-        PageHistory.Visibility = tag == "History" ? Visibility.Visible : Visibility.Collapsed;
-        PageFavorites.Visibility = tag == "Favorites" ? Visibility.Visible : Visibility.Collapsed;
-        PageStartupPanel.Visibility = tag == "StartupPanel" ? Visibility.Visible : Visibility.Collapsed;
-        PageAbout.Visibility = tag == "About" ? Visibility.Visible : Visibility.Collapsed;
+        var page = this.GetSectionPage(tag);
+        page?.Visibility = Visibility.Visible;
+        _currentPage = page;
     }
 }

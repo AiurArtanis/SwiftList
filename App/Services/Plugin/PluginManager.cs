@@ -138,7 +138,16 @@ public class PluginManager : PluginRegistry
         settings.Save();
     }
 
-    public void RefreshDisabledComponents() => _filter.Refresh();
+    // Raised so callers that cache anything derived from IsEnabled-filtered collections (e.g.
+    // StartupPanelTabProviders, which RefreshDisabledComponents can change the membership of) know to
+    // invalidate -- see App.xaml.cs's SettingsSearchService.GetEntriesFunc cache.
+    public event Action? ComponentsRefreshed;
+
+    public void RefreshDisabledComponents()
+    {
+        _filter.Refresh();
+        ComponentsRefreshed?.Invoke();
+    }
 
     public bool IsComponentEnabled(string dllName, PluginComponentType type, string name)
         => _filter.IsEnabled(dllName, type, name);

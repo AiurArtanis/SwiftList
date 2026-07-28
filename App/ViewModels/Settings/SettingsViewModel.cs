@@ -34,7 +34,6 @@ public class SettingsViewModel : ViewModelBase
         General = new GeneralSettingsViewModel(_userSettings);
         Appearance = new ThemeSettingsViewModel(_userSettings);
         Exclusions = new ExclusionSettingsViewModel(_userSettings);
-        Plugins = new PluginManagementViewModel(_userSettings);
         Blacklist = new BlacklistSettingsViewModel(_userSettings);
         Hotkeys = new HotkeySettingsViewModel(_userSettings, Blacklist);
         History = new HistorySettingsViewModel(_userSettings);
@@ -57,7 +56,18 @@ public class SettingsViewModel : ViewModelBase
     public GeneralSettingsViewModel General { get; }
     public ThemeSettingsViewModel Appearance { get; }
     public ExclusionSettingsViewModel Exclusions { get; }
-    public PluginManagementViewModel Plugins { get; }
+
+    // Lazy, not built alongside the other sub-VMs above -- issue #186: PluginManagementViewModel's ctor
+    // runs PluginLoaderHelper.BuildPluginList, which does genuine reflection (AppDomain.GetAssemblies,
+    // GetReferencedAssemblies, and two GetTypes() scans per plugin DLL via GetPluginDisplayName/
+    // ResolveConfigurable) across every loaded plugin -- unlike every other sub-VM here, which is cheap
+    // field/command wiring or LINQ over PluginManager's already-cached collections. Deferring it means a
+    // Settings-window open that never visits the Plugins tab (or types a plugin name into the search box,
+    // which forces it via the property access in SettingsWindowSearchExtensions.BuildAllEntries) never
+    // pays that scan at all.
+    private PluginManagementViewModel? _plugins;
+    public PluginManagementViewModel Plugins => _plugins ??= new PluginManagementViewModel(_userSettings);
+
     public HotkeySettingsViewModel Hotkeys { get; }
     public BlacklistSettingsViewModel Blacklist { get; }
     public HistorySettingsViewModel History { get; }
@@ -133,7 +143,10 @@ public class SettingsViewModel : ViewModelBase
         _userSettings.FolderIndexes = newFolderIndexes;
         Exclusions.Save();
         General.Apply();
-        Plugins.Save();
+        // _plugins, not the Plugins property: an untouched Plugins tab was never constructed, so it has
+        // nothing dirty to save -- going through the property here would force that reflection scan
+        // (see the Plugins property's own comment) just to immediately no-op.
+        _plugins?.Save();
         Hotkeys.Apply();
         Blacklist.Save();
         History.Save();

@@ -290,7 +290,10 @@ internal static class SettingsWindowSearchExtensions
         return null;
     }
 
-    private static FrameworkElement? GetSectionPage(this SettingsWindow window, string section) => section switch
+    // Internal, not private: also called by SettingsWindow.ApplySelectedSection, whose lazy PageXxx
+    // properties this switch resolves through -- that's the actual point where an untouched tab's page
+    // gets constructed for the first time (see SettingsWindow.xaml.cs's PageXxx properties).
+    internal static FrameworkElement? GetSectionPage(this SettingsWindow window, string section) => section switch
     {
         "Service" => window.PageService,
         "Index" => window.PageIndex,
