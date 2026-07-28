@@ -7,6 +7,11 @@ import { buildLocaleConfig } from './i18n/buildLocaleConfig.js'
 // duplicated nav/sidebar text lives in this file.
 const en = buildLocaleConfig('/', dictionary['en-US'])
 const zh = buildLocaleConfig('/zh-CN/', dictionary['zh-CN'])
+const zhHK = buildLocaleConfig('/zh-HK/', dictionary['zh-HK'])
+const zhTW = buildLocaleConfig('/zh-TW/', dictionary['zh-TW'])
+const ja = buildLocaleConfig('/ja-JP/', dictionary['ja-JP'])
+const ko = buildLocaleConfig('/ko-KR/', dictionary['ko-KR'])
+const es = buildLocaleConfig('/es-ES/', dictionary['es-ES'])
 
 function themeConfigFor(locale, built) {
   const t = dictionary[locale]
@@ -66,6 +71,11 @@ export default defineConfig({
         locales: {
           root: searchTranslationsFor('en-US'),
           'zh-CN': searchTranslationsFor('zh-CN'),
+          'zh-HK': searchTranslationsFor('zh-HK'),
+          'zh-TW': searchTranslationsFor('zh-TW'),
+          'ja-JP': searchTranslationsFor('ja-JP'),
+          'ko-KR': searchTranslationsFor('ko-KR'),
+          'es-ES': searchTranslationsFor('es-ES'),
         },
       },
     },
@@ -106,6 +116,51 @@ export default defineConfig({
       description: '高性能、可扩展的 Windows 全局检索系统',
       head: ogHeadFor('SwiftList', '高性能、可扩展的 Windows 全局检索系统'),
       themeConfig: themeConfigFor('zh-CN', zh),
+    },
+    'zh-HK': {
+      label: '繁體中文（香港）',
+      lang: 'zh-HK',
+      link: '/zh-HK/',
+      title: 'SwiftList',
+      description: '高性能、可擴展的 Windows 檢索系統',
+      head: ogHeadFor('SwiftList', '高性能、可擴展的 Windows 檢索系統'),
+      themeConfig: themeConfigFor('zh-HK', zhHK),
+    },
+    'zh-TW': {
+      label: '繁體中文（台灣）',
+      lang: 'zh-TW',
+      link: '/zh-TW/',
+      title: 'SwiftList',
+      description: '高效能、可擴充的 Windows 搜尋系統',
+      head: ogHeadFor('SwiftList', '高效能、可擴充的 Windows 搜尋系統'),
+      themeConfig: themeConfigFor('zh-TW', zhTW),
+    },
+    'ja-JP': {
+      label: '日本語',
+      lang: 'ja-JP',
+      link: '/ja-JP/',
+      title: 'SwiftList',
+      description: 'Windows 向けの高性能で拡張可能な検索ツール',
+      head: ogHeadFor('SwiftList', 'Windows 向けの高性能で拡張可能な検索ツール'),
+      themeConfig: themeConfigFor('ja-JP', ja),
+    },
+    'ko-KR': {
+      label: '한국어',
+      lang: 'ko-KR',
+      link: '/ko-KR/',
+      title: 'SwiftList',
+      description: 'Windows용 고성능 확장형 검색 도구',
+      head: ogHeadFor('SwiftList', 'Windows용 고성능 확장형 검색 도구'),
+      themeConfig: themeConfigFor('ko-KR', ko),
+    },
+    'es-ES': {
+      label: 'Español',
+      lang: 'es-ES',
+      link: '/es-ES/',
+      title: 'SwiftList',
+      description: 'Búsqueda extensible de alto rendimiento para Windows',
+      head: ogHeadFor('SwiftList', 'Búsqueda extensible de alto rendimiento para Windows'),
+      themeConfig: themeConfigFor('es-ES', es),
     },
   },
 })
