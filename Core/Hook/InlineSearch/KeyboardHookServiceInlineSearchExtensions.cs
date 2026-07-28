@@ -98,7 +98,7 @@ internal static class KeyboardHookServiceInlineSearchExtensions
     private static bool HandleInlineSearchTriggerKey(this KeyboardHookService service, int vkCode, KeyboardNativeMethods.KBDLLHOOKSTRUCT hookStruct, IntPtr fgHwnd)
     {
         var isIndexModifierDown = !string.IsNullOrEmpty(service._settings.Hotkeys.SelectJumpModifier)
-            && KeyboardUtils.CheckModifiersMatchOnly(service._settings.Hotkeys.SelectJumpModifier);
+            && KeyboardUtils.CheckModifiersMatchOnly(service._settings.Hotkeys.SelectJumpModifier, service._hotkeyDetector.IsWindowsKeyDown);
         if (isIndexModifierDown && service.IsInlineSearchVisible)
         {
             var num = -1;

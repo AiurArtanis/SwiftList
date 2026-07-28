@@ -15,7 +15,7 @@ public class KeyboardHookService : IDisposable
     internal readonly ExplorerTracker _explorerTracker;
 
     internal UserSettings _settings = UserSettings.Load();
-    private GlobalHotkeyDetector _hotkeyDetector;
+    internal GlobalHotkeyDetector _hotkeyDetector;
 
     internal bool _hasPendingContextMenuTrigger;
     internal uint _lastContextMenuTriggerTime;

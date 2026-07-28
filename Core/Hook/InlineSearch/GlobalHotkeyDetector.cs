@@ -17,6 +17,13 @@ public sealed class GlobalHotkeyDetector
 
     public void OnKeyDown(int vkCode) => _windowsKeyState.OnKeyDown(vkCode);
 
+    // Exposed so KeyboardHookServiceInlineSearchExtensions.HandleInlineSearchTriggerKey can pass the
+    // same tracked state into CheckModifiersMatchOnly (SelectJumpModifier) that CheckToggleWindowHotkey/
+    // CheckAndHandleQuickSwitch already pass into CheckModifiersMatch above -- otherwise "jump to result
+    // N" configured with Win as its modifier would still be exposed to the exact GetKeyState-inside-a-
+    // low-level-hook staleness CheckModifiersMatch's own trackedWindowsKeyDown parameter exists to fix.
+    public bool IsWindowsKeyDown => _windowsKeyState.IsDown;
+
     /// <summary>Call on WM_KEYUP / WM_SYSKEYUP to reset the "was released" flags.</summary>
     public void OnKeyUp(int vkCode)
     {
