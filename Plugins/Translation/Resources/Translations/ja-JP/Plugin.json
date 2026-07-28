@@ -1,0 +1,12 @@
+{
+  "Translation_ProviderName": "Bing 翻訳",
+  "Translation_PluginName": "Bing 翻訳プラグイン",
+  "Translation_PluginDesc": "Bing 翻訳サービスと連携します。検索ボックスにトリガーキーワード（例: tr）を直接入力するだけで、多言語間の高速翻訳とワンクリックコピーに対応します。",
+  "Translation_PlaceholderTitle": "{0} <テキスト>",
+  "Translation_PlaceholderDesc": "翻訳したいテキストを入力すると Bing 翻訳が実行されます（自動検出 ➔ アプリの表示言語）",
+  "Translation_ResultDesc": "翻訳元: {0} - Enter または クリックでコピー",
+  "Translation_Config_TriggerKeywordLabel": "トリガーキーワード",
+  "Translation_Config_TriggerKeywordDesc": "このキーワード（後ろにスペースと翻訳したいテキストを続ける）を入力すると翻訳が起動します。既定値は \"tr\" です。",
+  "Plugin_Comp_Desc_TranslationInstantProvider": "検索ボックスにトリガーキーワード（例: tr <テキスト>）を入力すると、リアルタイムに Bing 翻訳結果を取得します。",
+  "Plugin_Comp_Desc_TranslationTranslationProvider": "Bing 翻訳のローカライズされた UI 翻訳サービスを提供します。"
+}

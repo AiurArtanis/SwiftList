@@ -1,0 +1,12 @@
+{
+  "Translation_ProviderName": "Bing 번역기",
+  "Translation_PluginName": "Bing 번역기 플러그인",
+  "Translation_PluginDesc": "Bing 번역 서비스를 통합합니다. 검색 상자에 트리거 키워드(예: tr)를 직접 입력하여 빠르게 다국어 번역을 하고 한 번의 클릭으로 복사할 수 있습니다.",
+  "Translation_PlaceholderTitle": "{0} <텍스트>",
+  "Translation_PlaceholderDesc": "Bing 번역기로 번역할 텍스트를 입력하세요 (자동 감지 ➔ 앱 언어)",
+  "Translation_ResultDesc": "번역 출처: {0} - Enter를 누르거나 클릭하여 복사",
+  "Translation_Config_TriggerKeywordLabel": "트리거 키워드",
+  "Translation_Config_TriggerKeywordDesc": "이 키워드(뒤에 공백과 번역할 텍스트를 입력)를 입력하면 번역이 실행됩니다. 예: 기본값 \"tr\".",
+  "Plugin_Comp_Desc_TranslationInstantProvider": "검색 상자에 트리거 키워드(예: tr <텍스트>)를 입력하면 실시간으로 Bing 번역을 받을 수 있습니다.",
+  "Plugin_Comp_Desc_TranslationTranslationProvider": "Bing 번역에 지역화된 UI 번역 서비스를 제공합니다."
+}

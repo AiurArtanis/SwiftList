@@ -1,0 +1,12 @@
+{
+  "Translation_ProviderName": "Bing 智慧翻譯",
+  "Translation_PluginName": "Bing 智慧翻譯外掛",
+  "Translation_PluginDesc": "整合 Bing 翻譯服務。支援在搜尋框內直接鍵入觸發詞（如 tr）快速完成多國語言翻譯，且支援一鍵複製翻譯結果。",
+  "Translation_PlaceholderTitle": "{0} <待翻譯文字>",
+  "Translation_PlaceholderDesc": "輸入文字即可透過 Bing 翻譯（自動識別源語言 ➔ 自動翻譯為當前應用語言）",
+  "Translation_ResultDesc": "翻譯自: {0} - 回車或單擊複製結果",
+  "Translation_Config_TriggerKeywordLabel": "觸發詞",
+  "Translation_Config_TriggerKeywordDesc": "輸入此關鍵字（後跟一個空格加待翻譯文字）來觸發翻譯，例如預設的 \"tr\"。",
+  "Plugin_Comp_Desc_TranslationInstantProvider": "在搜尋框中輸入特定觸發詞（如 tr 文字）實時呼叫 Bing 翻譯並顯示翻譯結果。",
+  "Plugin_Comp_Desc_TranslationTranslationProvider": "為 Bing 翻譯提供內部介面語言的本地化翻譯服務。"
+}

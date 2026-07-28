@@ -1,0 +1,12 @@
+{
+  "Translation_ProviderName": "Traductor de Bing",
+  "Translation_PluginName": "Complemento Traductor de Bing",
+  "Translation_PluginDesc": "Integra el servicio de traducción de Bing. Permite escribir palabras clave de activación (por ejemplo, tr) directamente en el cuadro de búsqueda para una traducción multilingüe rápida y copia con un solo clic.",
+  "Translation_PlaceholderTitle": "{0} <texto>",
+  "Translation_PlaceholderDesc": "Introduce el texto a traducir con el Traductor de Bing (Detección automática ➔ Idioma de la aplicación)",
+  "Translation_ResultDesc": "Traducido desde: {0} - Pulsa Intro o haz clic para copiar",
+  "Translation_Config_TriggerKeywordLabel": "Palabra Clave de Activación",
+  "Translation_Config_TriggerKeywordDesc": "Escribe esta palabra clave (seguida de un espacio y el texto a traducir) para activar la traducción, por ejemplo, la predeterminada \"tr\".",
+  "Plugin_Comp_Desc_TranslationInstantProvider": "Escribe palabras clave de activación (por ejemplo, tr <texto>) en el cuadro de búsqueda para obtener traducciones de Bing en tiempo real.",
+  "Plugin_Comp_Desc_TranslationTranslationProvider": "Ofrece servicios de traducción de la interfaz localizada para el Traductor de Bing."
+}
