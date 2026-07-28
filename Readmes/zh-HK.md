@@ -24,8 +24,8 @@ SwiftList 是一款基於 **.NET 10 (WPF)** 打造的超輕量、極速、高度
 - **開放插件 SDK** —— 可擴展搜尋來源、別名、右鍵選單動作、結果欄、檔案預覽與主題。
 - **進程隔離** —— SYSTEM 級後臺索引服務與使用者態介面進程徹底分離。
 
-搜尋語法、每一個熱鍵、每一項設定詳見**[使用者手冊](https://swiftlist.github.io/zh-HK/user-guide/)**；
-架構設計與插件 SDK 參考詳見**[開發者手冊](https://swiftlist.github.io/zh-HK/dev-guide/)**。
+搜尋語法、每一個熱鍵、每一項設定詳見[使用者手冊](https://swiftlist.github.io/zh-HK/user-guide/)；
+架構設計與插件 SDK 參考詳見[開發者手冊](https://swiftlist.github.io/zh-HK/dev-guide/)。
 
 ## 下載
 
@@ -43,7 +43,7 @@ SwiftList 是一款基於 **.NET 10 (WPF)** 打造的超輕量、極速、高度
 - `make.bat` —— 產生 Release 建置，輸出 `dist/SwiftList-Setup.exe` 與
   `dist/SwiftList-Portable.zip`。
 
-完整架構設計與插件 SDK 詳見**[開發者手冊](https://swiftlist.github.io/zh-HK/dev-guide/)**。
+完整架構設計與插件 SDK 詳見[開發者手冊](https://swiftlist.github.io/zh-HK/dev-guide/)。
 
 ## 🎁 捐款與支持
 

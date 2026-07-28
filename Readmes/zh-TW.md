@@ -24,8 +24,8 @@ MFT 直接索引本機磁碟，實現毫秒級、低資源佔用的搜尋體驗�
 - **開放外掛 SDK** —— 可擴充搜尋來源、別名、右鍵選單動作、結果欄、檔案預覽與佈景主題。
 - **處理程序隔離** —— SYSTEM 級背景索引服務與使用者態介面處理程序徹底分離。
 
-搜尋語法、每一個快速鍵、每一項設定詳見**[使用者手冊](https://swiftlist.github.io/zh-TW/user-guide/)**；
-架構設計與外掛 SDK 參考詳見**[開發者手冊](https://swiftlist.github.io/zh-TW/dev-guide/)**。
+搜尋語法、每一個快速鍵、每一項設定詳見[使用者手冊](https://swiftlist.github.io/zh-TW/user-guide/)；
+架構設計與外掛 SDK 參考詳見[開發者手冊](https://swiftlist.github.io/zh-TW/dev-guide/)。
 
 ## 下載
 
@@ -43,7 +43,7 @@ MFT 直接索引本機磁碟，實現毫秒級、低資源佔用的搜尋體驗�
 - `make.bat` —— 產生 Release 建置，輸出 `dist/SwiftList-Setup.exe` 與
   `dist/SwiftList-Portable.zip`。
 
-完整架構設計與外掛 SDK 詳見**[開發者手冊](https://swiftlist.github.io/zh-TW/dev-guide/)**。
+完整架構設計與外掛 SDK 詳見[開發者手冊](https://swiftlist.github.io/zh-TW/dev-guide/)。
 
 ## 🎁 贊助與支持
 

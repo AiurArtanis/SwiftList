@@ -27,8 +27,8 @@ SwiftList는 **.NET 10 (WPF)** 기반으로 만들어진 초경량, 고성능, �
 - **프로세스 격리** —— SYSTEM 수준의 인덱싱 서비스가 사용자별 앱 UI와 별도 프로세스로 분리되어
   동작합니다.
 
-검색 구문, 모든 단축키, 모든 설정 항목은 **[사용자 매뉴얼](https://swiftlist.github.io/ko-KR/user-guide/)**을,
-아키텍처와 플러그인 SDK 레퍼런스는 **[개발자 매뉴얼](https://swiftlist.github.io/ko-KR/dev-guide/)**을
+검색 구문, 모든 단축키, 모든 설정 항목은 [사용자 매뉴얼](https://swiftlist.github.io/ko-KR/user-guide/)을,
+아키텍처와 플러그인 SDK 레퍼런스는 [개발자 매뉴얼](https://swiftlist.github.io/ko-KR/dev-guide/)을
 참고하세요.
 
 ## 다운로드
@@ -48,7 +48,7 @@ SwiftList는 **.NET 10 (WPF)** 기반으로 만들어진 초경량, 고성능, �
 - `make.bat` —— Release 빌드를 생성하고 `dist/SwiftList-Setup.exe`와
   `dist/SwiftList-Portable.zip`을 출력합니다.
 
-전체 아키텍처와 플러그인 SDK는 **[개발자 매뉴얼](https://swiftlist.github.io/ko-KR/dev-guide/)**을
+전체 아키텍처와 플러그인 SDK는 [개발자 매뉴얼](https://swiftlist.github.io/ko-KR/dev-guide/)을
 참고하세요.
 
 ## 🎁 후원 및 기부

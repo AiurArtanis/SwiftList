@@ -28,8 +28,8 @@ NTFS の **USN Journal** と MFT を直接読み取ってローカルドライ�
 - **プロセスの分離** —— SYSTEM レベルのインデックスサービスは、ユーザー単位のアプリ UI とは別プロ
   セスとして動作します。
 
-検索構文、すべてのホットキー、すべての設定項目については**[ユーザーマニュアル](https://swiftlist.github.io/ja-JP/user-guide/)**
-を、アーキテクチャとプラグイン SDK リファレンスについては**[開発者マニュアル](https://swiftlist.github.io/ja-JP/dev-guide/)**
+検索構文、すべてのホットキー、すべての設定項目については[ユーザーマニュアル](https://swiftlist.github.io/ja-JP/user-guide/)
+を、アーキテクチャとプラグイン SDK リファレンスについては[開発者マニュアル](https://swiftlist.github.io/ja-JP/dev-guide/)
 をご覧ください。
 
 ## ダウンロード
@@ -48,7 +48,7 @@ NTFS の **USN Journal** と MFT を直接読み取ってローカルドライ�
 - `make.bat` —— Release ビルドを生成し、`dist/SwiftList-Setup.exe` と
   `dist/SwiftList-Portable.zip` を出力します。
 
-アーキテクチャとプラグイン SDK の詳細については**[開発者マニュアル](https://swiftlist.github.io/ja-JP/dev-guide/)**
+アーキテクチャとプラグイン SDK の詳細については[開発者マニュアル](https://swiftlist.github.io/ja-JP/dev-guide/)
 をご覧ください。
 
 ## 🎁 サポート・寄付
