@@ -16,8 +16,10 @@ public sealed class PinyinAliasCombinationGeneratorTests
     {
         var aliases = PinyinAliasCombinationGenerator.GenerateAliases("中国");
 
-        CollectionAssert.Contains(aliases, "zg"); // initials
-        CollectionAssert.Contains(aliases, "zhongguo"); // full pinyin
+        CollectionAssert.Contains(aliases, "zg"); // initials: one char per source char, no boundaries
+        // Full pinyin carries a syllable boundary between the two transliterated characters, so a
+        // query cannot match across the seam ("ngg" is not a thing anyone typed).
+        CollectionAssert.Contains(aliases, "zhong" + PinyinAliasFormat.SyllableSeparator + "guo");
     }
 
     [TestMethod]

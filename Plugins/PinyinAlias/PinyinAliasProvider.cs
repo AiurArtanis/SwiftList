@@ -9,7 +9,9 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
 
     public string Description => TranslationService.Get("Plugin_Comp_Desc_PinyinAliasProvider");
 
-    public int Version => 2;
+    // 3: the full-pinyin alias gained syllable boundaries (see PinyinAliasFormat). Bumping it is what
+    // makes every already-built index regenerate its baked aliases -- see AliasProvidersReconciler.
+    public int Version => 3;
 
     public IReadOnlyList<string> SupportedCultures => TranslationService.GetSupportedCultures(System.Reflection.Assembly.GetExecutingAssembly());
 
@@ -97,6 +99,12 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
     }
 
     // "alias" here is one single combination already (caller splits '|'-joined alternatives first).
+    // Query-side counterpart of the syllable boundaries GetAliases emits: "zhengshu" is offered back
+    // as "zheng<SEP>shu" so it still reaches 证书, while a term that is not a syllable sequence at all
+    // ("gsh") yields nothing and is left with only the initials alias to match -- which is the whole
+    // point, since that term only ever reached the full pinyin by straddling a syllable boundary.
+    public IEnumerable<string> GetQueryForms(string term) => PinyinQuerySegmenter.Segment(term);
+
     public int[]? MapAliasToSourceIndices(string text, string alias)
     {
         if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(alias))
@@ -149,6 +157,19 @@ public class PinyinAliasProvider : IAliasProvider, ITranslationProvider
         var aliasPos = 0;
         for (var sourceIndex = 0; sourceIndex < text.Length && aliasPos < alias.Length; sourceIndex++)
         {
+            // Consume the syllable boundary this position is generated with. It maps to the character
+            // it introduces, so a query form that spans it (PinyinQuerySegmenter emits exactly that
+            // shape) still highlights both syllables it sits between. Demanding it where one is due --
+            // rather than skipping whatever happens to be there -- keeps this returning null for an
+            // alias that did not come from this provider for this text, which is what the contract says.
+            if (PinyinAliasFormat.NeedsSeparatorBefore(text, sourceIndex))
+            {
+                if (aliasPos >= alias.Length || alias[aliasPos] != PinyinAliasFormat.SyllableSeparator)
+                    return null;
+                map[aliasPos] = sourceIndex;
+                aliasPos++;
+            }
+
             var matchedLen = -1;
             foreach (var candidate in lists[sourceIndex])
             {

@@ -78,6 +78,8 @@ internal static class PinyinAliasCombinationGenerator
             {
                 var s = lists[i][0];
                 initialsArr[i] = s.Length > 0 ? s[0] : '\0';
+                if (PinyinAliasFormat.NeedsSeparatorBefore(text, i))
+                    fullLen++;
                 fullLen += s.Length;
             }
 
@@ -92,6 +94,8 @@ internal static class PinyinAliasCombinationGenerator
             for (var i = 0; i < text.Length; i++)
             {
                 var s = lists[i][0];
+                if (PinyinAliasFormat.NeedsSeparatorBefore(text, i))
+                    fullBuffer[offset++] = PinyinAliasFormat.SyllableSeparator;
                 s.CopyTo(0, fullBuffer, offset, s.Length);
                 offset += s.Length;
             }
@@ -115,7 +119,7 @@ internal static class PinyinAliasCombinationGenerator
 
         // Generate combinations. Since we concatenate them, we can safely allow up to 32 combinations
         // to support longer polyphonic names without database explosion.
-        GenerateCombinations(lists, text.Length, 0, 0, fullPinyins, initials, fullBufferTemp, initialsBuffer, ref count, ref steps);
+        GenerateCombinations(text, lists, text.Length, 0, 0, fullPinyins, initials, fullBufferTemp, initialsBuffer, ref count, ref steps);
 
         var joinedInitials = JoinUnique(initials);
         if (joinedInitials != null)
@@ -185,6 +189,7 @@ internal static class PinyinAliasCombinationGenerator
     }
 
     private static void GenerateCombinations(
+        string text,
         string[][] lists,
         int listCount,
         int index,
@@ -214,14 +219,24 @@ internal static class PinyinAliasCombinationGenerator
         }
 
         var elements = lists[index];
+        var separate = PinyinAliasFormat.NeedsSeparatorBefore(text, index);
         foreach (var element in elements)
         {
-            if (currentFullLength + element.Length <= fullBuffer.Length)
+            var at = currentFullLength;
+            if (separate)
             {
-                element.CopyTo(0, fullBuffer, currentFullLength, element.Length);
+                if (at + 1 > fullBuffer.Length)
+                    continue;
+                fullBuffer[at++] = PinyinAliasFormat.SyllableSeparator;
+            }
+
+            if (at + element.Length <= fullBuffer.Length)
+            {
+                element.CopyTo(0, fullBuffer, at, element.Length);
                 initialsBuffer[index] = element.Length > 0 ? element[0] : '\0';
-                GenerateCombinations(lists, listCount, index + 1, currentFullLength + element.Length, fullPinyins, initials, fullBuffer, initialsBuffer, ref count, ref steps);
+                GenerateCombinations(text, lists, listCount, index + 1, at + element.Length, fullPinyins, initials, fullBuffer, initialsBuffer, ref count, ref steps);
             }
         }
     }
+
 }

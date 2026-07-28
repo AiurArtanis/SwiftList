@@ -53,11 +53,20 @@ public sealed class PinyinAliasProviderTests
     [TestMethod]
     public void MapAliasToSourceIndices_FullPinyinAlias_MapsEachSyllableToItsSourceChar()
     {
-        var map = Provider.MapAliasToSourceIndices("中国", "zhongguo");
+        var map = Provider.MapAliasToSourceIndices("中国", "zhong" + PinyinAliasFormat.SyllableSeparator + "guo");
 
         Assert.IsNotNull(map);
-        // "zhong" (5 letters) -> source char 0, "guo" (3 letters) -> source char 1
-        CollectionAssert.AreEqual(new[] { 0, 0, 0, 0, 0, 1, 1, 1 }, map);
+        // "zhong" (5 letters) -> source char 0; the boundary maps to the character it introduces, so
+        // a match spanning it highlights both syllables rather than dropping one; "guo" -> source char 1.
+        CollectionAssert.AreEqual(new[] { 0, 0, 0, 0, 0, 1, 1, 1, 1 }, map);
+    }
+
+    [TestMethod]
+    public void MapAliasToSourceIndices_FullPinyinWithoutItsBoundaries_ReturnsNull()
+    {
+        // The undelimited form is no longer something this provider produces for this text, and the
+        // contract is to report that rather than guess -- a wrong map silently mis-highlights.
+        Assert.IsNull(Provider.MapAliasToSourceIndices("中国", "zhongguo"));
     }
 
     [TestMethod]

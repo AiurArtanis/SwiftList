@@ -121,6 +121,8 @@ internal static class PinyinAliasUtf8Encoder
 
     private static void AppendFull(AliasByteSink dest, string text, int i, ushort[]? charIds)
     {
+        if (PinyinAliasFormat.NeedsSeparatorBefore(text, i))
+            dest.Append((byte)PinyinAliasFormat.SyllableSeparator);
         if (charIds != null)
             dest.Append(PinyinEngine.GetSyllableUtf8(charIds[0]));
         else
@@ -236,14 +238,25 @@ internal static class PinyinAliasUtf8Encoder
             return;
         }
 
+        // Mirrors GenerateCombinations: the boundary is written before the syllable, inside the loop,
+        // so every branch of the polyphonic expansion carries it.
+        var separate = PinyinAliasFormat.NeedsSeparatorBefore(text, index);
         foreach (var id in charIds)
         {
+            var at = fullLen;
+            if (separate)
+            {
+                if (at + 1 > fullBuffer.Length)
+                    continue;
+                fullBuffer[at++] = (byte)PinyinAliasFormat.SyllableSeparator;
+            }
+
             var syl = PinyinEngine.GetSyllableUtf8(id);
-            if (fullLen + syl.Length > fullBuffer.Length)
+            if (at + syl.Length > fullBuffer.Length)
                 continue;
-            syl.CopyTo(fullBuffer.AsSpan(fullLen));
+            syl.CopyTo(fullBuffer.AsSpan(at));
             initialBuffer[index] = (char)syl[0];
-            RecurseBytes(text, ids, index + 1, fullLen + syl.Length, fulls, initials, fullBuffer, initialBuffer, ref count, ref steps);
+            RecurseBytes(text, ids, index + 1, at + syl.Length, fulls, initials, fullBuffer, initialBuffer, ref count, ref steps);
         }
     }
 

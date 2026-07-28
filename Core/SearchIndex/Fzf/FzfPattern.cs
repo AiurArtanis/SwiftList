@@ -51,6 +51,43 @@ internal sealed class FzfPattern
 
     public static FzfPattern ParseText(string query) => new FzfPattern(null, ParseTermSets(query));
 
+    // Offers each alias provider the chance to restate this term in the shape its own aliases use, and
+    // adds whatever comes back as ALTERNATIVES within the same term set (an OR): the candidate decides
+    // which spelling it satisfies, and TryMatchSingle already stops at the first that hits.
+    //
+    // This one seam is what keeps every alias-matching site -- the index scan, path segments, display
+    // highlighting, the plugin-facing FuzzyMatchService -- working without any of them knowing that a
+    // provider's aliases have internal structure. It is also why "syllable" appears nowhere in Core:
+    // the provider is asked for strings, not asked about its writing system.
+    //
+    // Skipped for an inverse term. "!x" means "reject anything matching x", and an OR set is satisfied
+    // by ANY alternative, so adding spellings there would widen what gets excluded rather than what
+    // gets found -- the opposite of the intent.
+    private static void AddAliasQueryForms(List<FzfTerm> current, string lower, FzfTermKind kind, bool inverse, bool caseSensitive)
+    {
+        if (inverse || caseSensitive || lower.Length == 0)
+            return;
+
+        foreach (var provider in AliasProviderRegistry.GetActiveProviders())
+        {
+            IEnumerable<string> forms;
+            try
+            {
+                forms = provider.GetQueryForms(lower);
+            }
+            catch
+            {
+                continue; // a misbehaving provider must not take the whole query down
+            }
+
+            foreach (var form in forms)
+            {
+                if (!string.IsNullOrEmpty(form) && form != lower)
+                    current.Add(new FzfTerm(kind, false, form, false));
+            }
+        }
+    }
+
     // One already-parsed term set lifted into a pattern of its own, so a caller can ask "which
     // candidates satisfy THIS term" instead of only "which satisfy the whole query". Reuses the parsed
     // term verbatim rather than re-parsing its text, which would have to re-derive kind/case-sensitivity
@@ -241,6 +278,7 @@ internal sealed class FzfPattern
             var lower = token.ToLowerInvariant();
             var caseSensitive = token != lower;
             current.Add(new FzfTerm(kind, inverse, caseSensitive ? token : lower, caseSensitive));
+            AddAliasQueryForms(current, lower, kind, inverse, caseSensitive);
             switchSet = true;
         }
 
