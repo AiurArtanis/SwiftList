@@ -36,11 +36,19 @@ interface IFileDialogAdapter
     bool CanHandle(IntPtr hwnd, string className, string processName);
     string? GetCurrentPath(IntPtr hwnd);
     bool NavigateTo(IntPtr hwnd, string targetPath);
+    bool TargetIsFolderOnly { get; } // 默认 false
     bool CanShowQuickNav(IntPtr hwndUnderCursor, string classNameUnderCursor); // 默认 true
     bool GetDockBounds(IntPtr hwnd, out AdapterRect rect);
     bool RestoreFocus(IntPtr hwnd);
 }
 ```
+
+`TargetIsFolderOnly` 为 `true` 表示这个对话框的目标输入框只能填文件夹——比如压缩软件的"解压到"
+目标路径——不像 Open/Save 对话框的文件名输入框那样还能填具体文件。宿主用它来判断:如果用户从搜索
+结果里选中的是一个文件，需不需要在传给 `NavigateTo` 之前先解析成它所在的文件夹，而不是把这个判断
+留给 `NavigateTo` 自己——因为那个调用是在提升权限的 Hook 进程里执行的，`File.Exists`/
+`Directory.Exists` 在那里没法信任(用户在非提升权限下映射的驱动器，在那边可能"不存在")。如果目标
+输入框本身就是能填具体文件的，保持默认值 `false` 即可。
 
 ## `IInlineSearchAdapter`
 

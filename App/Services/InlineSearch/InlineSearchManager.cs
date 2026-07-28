@@ -154,9 +154,18 @@ public class InlineSearchManager : IDisposable
 
         var viewModel = new QuickSearchViewModel();
         var scope = _explorerTracker.ActivePath;
-        if (string.IsNullOrEmpty(scope) && _explorerTracker.ActiveInlineAdapter != null && _explorerTracker.ActiveHwnd != IntPtr.Zero)
+        if (string.IsNullOrEmpty(scope) && _explorerTracker.ActiveHwnd != IntPtr.Zero)
         {
-            scope = _explorerTracker.ActiveInlineAdapter.GetSearchScope(_explorerTracker.ActiveHwnd);
+            // ActiveInlineAdapter is always null for a plain IFileDialogAdapter host (WinRAR's Extract
+            // dialog, Explorer's classic/folder-browser dialogs, ...) -- only ActiveAdapter applies there.
+            // Falling back to ActivePath's own poller cycle alone meant SearchScope stayed empty for
+            // every window recreated between polls (the window gets torn down and rebuilt on every
+            // SetInlineSearchVisible toggle), which in turn broke ExplorerJumpSuggestionHelper's own
+            // "already scoped here, don't suggest jumping" check for the entire gap.
+            if (_explorerTracker.ActiveInlineAdapter != null)
+                scope = _explorerTracker.ActiveInlineAdapter.GetSearchScope(_explorerTracker.ActiveHwnd);
+            else if (_explorerTracker.ActiveAdapter != null)
+                scope = _explorerTracker.ActiveAdapter.GetCurrentPath(_explorerTracker.ActiveHwnd);
         }
         viewModel.SearchScope = scope;
         viewModel.IsInlineSearchContext = true;

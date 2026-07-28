@@ -78,6 +78,12 @@ interface IFilePreviewProvider
 }
 ```
 
+`Priority` is only the *default* order — the user can freely reorder providers (including relative
+to yours) from Settings → General →
+[Preview & Thumbnails](../../user-guide/settings/general#preview-thumbnails), which wins over
+whatever `Priority` returns. Don't assume your provider's declared priority is the order it actually
+runs in.
+
 Two optional companion interfaces refine preview behavior:
 
 - **`IPreviewSessionAware`** — implement this on the preview provider itself if it holds onto
@@ -119,10 +125,16 @@ Overrides the icon/thumbnail shown for matching results.
 ```csharp
 interface IThumbnailProvider : IPluginComponent
 {
+    int Priority { get; } // default 0; higher runs first
     bool CanProvideThumbnail(string path, bool isDir);
     ImageSource? GetThumbnail(string path, int size);
 }
 ```
+
+Same caveat as `IFilePreviewProvider.Priority` above: it's only the default order, and the user can
+override it from Settings → General →
+[Preview & Thumbnails](../../user-guide/settings/general#preview-thumbnails) (the same tab hosts both
+providers' order lists).
 
 ## Themes & localization
 

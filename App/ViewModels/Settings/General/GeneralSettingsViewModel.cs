@@ -43,6 +43,8 @@ public class GeneralSettingsViewModel : ViewModelBase
         SidebarGroupOrder = new SidebarGroupOrderViewModel(userSettings);
         ColumnOrder = new ColumnOrderViewModel(userSettings);
         ActionMenuGroupOrder = new ActionMenuGroupOrderViewModel(userSettings);
+        FilePreviewProviderOrder = new FilePreviewProviderOrderViewModel(userSettings);
+        ThumbnailProviderOrder = new ThumbnailProviderOrderViewModel(userSettings);
 
         _startWithWindows = userSettings.StartWithWindows;
         _autoCheckUpdates = userSettings.AutoCheckUpdates;
@@ -200,6 +202,8 @@ public class GeneralSettingsViewModel : ViewModelBase
         SidebarGroupOrder.Save();
         ColumnOrder.Save();
         ActionMenuGroupOrder.Save();
+        FilePreviewProviderOrder.Save();
+        ThumbnailProviderOrder.Save();
 
         _userSettings.Save();
     }
@@ -212,4 +216,6 @@ public class GeneralSettingsViewModel : ViewModelBase
     public SidebarGroupOrderViewModel SidebarGroupOrder { get; }
     public ColumnOrderViewModel ColumnOrder { get; }
     public ActionMenuGroupOrderViewModel ActionMenuGroupOrder { get; }
+    public FilePreviewProviderOrderViewModel FilePreviewProviderOrder { get; }
+    public ThumbnailProviderOrderViewModel ThumbnailProviderOrder { get; }
 }

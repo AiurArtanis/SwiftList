@@ -135,17 +135,32 @@ public static class InlineSearchNavigator
 
         if (!forceRealOpen && path != "__SHOW_MORE__" && tracker.IsExplorerOrDesktopActive && tracker.IsActiveWindowDialog && tracker.ActiveHwnd != IntPtr.Zero)
         {
-            App.HookClient?.SendMessage(new IpcMessage
+            // Only a folder-only target (WinRAR/Bandizip's own "extract to" field, see
+            // IFileDialogAdapter.TargetIsFolderOnly) needs a picked FILE resolved to its containing folder
+            // first -- an Open/Save dialog's filename box (ClassicFileDialogAdapter/StandardFileDialogAdapter)
+            // wants the exact path unchanged, same as it always has. Resolved here, in the App process
+            // rather than the adapter's own NavigateTo, since that runs in the elevated Hook process (see
+            // InlineAdapterCommandHandler's own comment on why) -- this process can actually tell file from
+            // folder reliably, including for a network drive the interactive user mapped without elevation.
+            // isDir == null (a stale result whose file no longer exists) is treated the same as a file, not
+            // a directory, for the identical reason.
+            var dialogTarget = tracker.ActiveAdapter?.TargetIsFolderOnly == true && isDir != true
+                ? Path.GetDirectoryName(path)
+                : path;
+            if (!string.IsNullOrEmpty(dialogTarget))
             {
-                Id = IpcMessageId.NavigateDialog,
-                Hwnd = tracker.ActiveHwnd.ToInt64(),
-                StringVal1 = path
+                App.HookClient?.SendMessage(new IpcMessage
+                {
+                    Id = IpcMessageId.NavigateDialog,
+                    Hwnd = tracker.ActiveHwnd.ToInt64(),
+                    StringVal1 = dialogTarget
 
-            });
+                });
 
-            window.UpdateSearchDisplay(string.Empty);
-            window.HideWindow();
-            return;
+                window.UpdateSearchDisplay(string.Empty);
+                window.HideWindow();
+                return;
+            }
         }
 
         if (!forceRealOpen

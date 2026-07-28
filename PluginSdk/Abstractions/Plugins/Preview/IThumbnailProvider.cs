@@ -8,6 +8,9 @@ namespace SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 public interface IThumbnailProvider : IPluginComponent
 {
 
+    /// <summary>Gets the priority of this provider (higher runs first).</summary>
+    int Priority => 0;
+
     /// <summary>
     /// Checks if this provider can generate a thumbnail/icon for the specified file path and directory state.
     /// </summary>

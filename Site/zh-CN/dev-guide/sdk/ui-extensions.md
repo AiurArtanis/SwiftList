@@ -74,6 +74,11 @@ interface IFilePreviewProvider
 }
 ```
 
+`Priority`只是*默认*的顺序——用户可以在 设置 → 通用 →
+[预览与缩略图](../../user-guide/settings/general#预览与缩略图)里自由调整各个提供者的顺序(包括相
+对于你的这个 provider)，这个用户配置会覆盖 `Priority` 返回的值。不要假设你的 provider 声明的优
+先级就是它实际运行的顺序。
+
 两个可选的配套接口可以进一步优化预览行为:
 
 - **`IPreviewSessionAware`** —— 如果预览提供者自身持有开销较大的进程外资源(托管的原生处理程
@@ -111,10 +116,15 @@ interface IReceivesPreviewPanelBounds
 ```csharp
 interface IThumbnailProvider : IPluginComponent
 {
+    int Priority { get; } // 默认 0;数值越大越先运行
     bool CanProvideThumbnail(string path, bool isDir);
     ImageSource? GetThumbnail(string path, int size);
 }
 ```
+
+跟上面 `IFilePreviewProvider.Priority` 的说明一样:这只是默认顺序,用户可以在 设置 → 通用 →
+[预览与缩略图](../../user-guide/settings/general#预览与缩略图)里覆盖它(这两种 provider 的排序列
+表在同一个标签页里)。
 
 ## 主题与本地化
 

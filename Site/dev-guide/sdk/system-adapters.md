@@ -37,11 +37,20 @@ interface IFileDialogAdapter
     bool CanHandle(IntPtr hwnd, string className, string processName);
     string? GetCurrentPath(IntPtr hwnd);
     bool NavigateTo(IntPtr hwnd, string targetPath);
+    bool TargetIsFolderOnly { get; } // default: false
     bool CanShowQuickNav(IntPtr hwndUnderCursor, string classNameUnderCursor); // default: true
     bool GetDockBounds(IntPtr hwnd, out AdapterRect rect);
     bool RestoreFocus(IntPtr hwnd);
 }
 ```
+
+`TargetIsFolderOnly` is `true` for a dialog whose target field can only ever hold a folder — an
+archive tool's "extract to" destination, say — never a specific file, unlike an Open/Save dialog's
+filename box. The host uses it to decide whether a picked search result that's a file needs
+resolving to its containing folder before ever reaching `NavigateTo`, rather than leaving that to
+`NavigateTo` itself: that call runs in the elevated Hook process, where `File.Exists`/
+`Directory.Exists` can't be trusted for a drive the interactive user mapped without elevation.
+Leave it at its default `false` for anything with a real filename box.
 
 ## `IInlineSearchAdapter`
 

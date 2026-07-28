@@ -133,7 +133,7 @@
                         </Border.Style>
                     </Border>
                 </StackPanel>
-                <StackPanel>
+                <StackPanel Margin="0,0,28,0">
                     <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_QuickNavTitle]}"
                             Command="{Binding General.SelectTabCommand}" CommandParameter="QuickNavigation">
                         <Button.Style>
@@ -152,6 +152,32 @@
                             <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding General.SelectedTab}" Value="QuickNavigation">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                </StackPanel>
+                <StackPanel>
+                    <Button Content="{Binding Source={x:Static services:TranslationManager.Instance}, Path=[General_PreviewProvidersTitle]}"
+                            Command="{Binding General.SelectTabCommand}" CommandParameter="PreviewProviders">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource TabHeaderButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewProviders">
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentBlue}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Border>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource TabUnderlineStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewProviders">
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -232,6 +258,20 @@
                     </Style>
                 </local:GeneralSettingsQuickNavigationTab.Style>
             </local:GeneralSettingsQuickNavigationTab>
+
+            <!-- Tab: Preview Providers (see GeneralSettingsPreviewProvidersTab.xaml) -->
+            <local:GeneralSettingsPreviewProvidersTab x:Name="TabPreviewProviders">
+                <local:GeneralSettingsPreviewProvidersTab.Style>
+                    <Style TargetType="local:GeneralSettingsPreviewProvidersTab">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding General.SelectedTab}" Value="PreviewProviders">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </local:GeneralSettingsPreviewProvidersTab.Style>
+            </local:GeneralSettingsPreviewProvidersTab>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
