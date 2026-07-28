@@ -115,6 +115,39 @@ internal static class QuickNavigationMenuContentExtensions
         };
     }
 
+    // Caps how wide a single cascading-menu row's own text is allowed to grow before it starts
+    // scrolling instead -- without this, a long file/folder name (see GitHub issue #184: a level-3
+    // Explorer folder with a long name) made the whole ContextMenu/Popup auto-size to fit it, dragging
+    // every OTHER row's column out just as wide. Chosen to comfortably fit a typical folder name at this
+    // menu's own FontSize (12.5, see Menu.xaml) without still feeling like a Listary-style cramped fixed
+    // width -- not user-configurable, matching how every other row metric in this menu is a fixed value.
+    private const double MaxItemTextWidth = 220;
+
+    // ScrollViewer clips the TextBlock to MaxItemTextWidth without a visible scrollbar -- the same
+    // container shape DataTemplates.xaml's own search-result rows already use for MarqueeBehavior, just
+    // built in code here since this menu has no XAML template of its own. TextTrimming stays None: the
+    // marquee is what reveals the rest of an overflowing name (on hover/keyboard-highlight), not an
+    // ellipsis, which would defeat the point of scrolling to it at all.
+    internal static System.Windows.Controls.ScrollViewer CreateItemHeader(string text)
+    {
+        var textBlock = new System.Windows.Controls.TextBlock
+        {
+            Text = text,
+            TextTrimming = TextTrimming.None,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        SwiftList.App.Helpers.Visuals.MarqueeBehavior.SetEnableMarquee(textBlock, true);
+
+        return new System.Windows.Controls.ScrollViewer
+        {
+            HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Hidden,
+            VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled,
+            Focusable = false,
+            MaxWidth = MaxItemTextWidth,
+            Content = textBlock
+        };
+    }
+
     internal static MenuItem CreateMenuItem(DynamicMenuItem item, ISearchResult result, IQuickNavigationProvider provider, ContextMenu contextMenu, QuickNavTriggerContext trigger, bool enableRightClick = true, bool isRootItem = false)
     {
         if (item.IsHeader)
@@ -122,7 +155,7 @@ internal static class QuickNavigationMenuContentExtensions
             return CreateHeaderMenuItem(item.Text, item.OnExecute, null, contextMenu);
         }
 
-        var menuItem = new MenuItem { Header = item.Text, IsEnabled = !item.IsDisabled, Focusable = !item.IsDisabled };
+        var menuItem = new MenuItem { Header = CreateItemHeader(item.Text), IsEnabled = !item.IsDisabled, Focusable = !item.IsDisabled };
 
         if (item.HBitmapItem != IntPtr.Zero)
         {

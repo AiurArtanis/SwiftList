@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using MenuItem = System.Windows.Controls.MenuItem;
 
 namespace SwiftList.App.Helpers.Visuals;
 
@@ -61,11 +62,17 @@ public static class MarqueeBehavior
     {
         CleanupMarquee(element);
 
-        // No containing ListBoxItem (e.g. a standalone header banner rather than a list row): there's
-        // no hover/select gesture to reserve the effect for, so it just animates whenever it overflows.
-        // A row inside a list still gates on IsMouseOver/IsSelected so every overflowing row doesn't
-        // scroll at once.
+        // No containing ListBoxItem/MenuItem (e.g. a standalone header banner rather than a list row):
+        // there's no hover/select gesture to reserve the effect for, so it just animates whenever it
+        // overflows. A row inside a list or a cascading menu still gates on its own container's
+        // hover/select/highlight state so every overflowing row doesn't scroll at once.
         var listBoxItem = FindVisualAncestor<ListBoxItem>(element);
+        var menuItem = listBoxItem == null ? FindVisualAncestor<MenuItem>(element) : null;
+        Func<bool> isActive = listBoxItem != null
+            ? () => listBoxItem.IsMouseOver || listBoxItem.IsSelected
+            : menuItem != null
+                ? () => menuItem.IsHighlighted
+                : () => true;
 
         if (element.RenderTransform is not TranslateTransform)
         {
@@ -74,6 +81,8 @@ public static class MarqueeBehavior
 
         DependencyPropertyDescriptor? isMouseOverDescriptor = null;
         DependencyPropertyDescriptor? isSelectedDescriptor = null;
+        DependencyPropertyDescriptor? isHighlightedDescriptor = null;
+        DependencyObject? watchedContainer = (DependencyObject?)listBoxItem ?? menuItem;
         EventHandler? handler = null;
 
         if (listBoxItem != null)
@@ -81,29 +90,38 @@ public static class MarqueeBehavior
             isMouseOverDescriptor = DependencyPropertyDescriptor.FromProperty(UIElement.IsMouseOverProperty, typeof(ListBoxItem));
             isSelectedDescriptor = DependencyPropertyDescriptor.FromProperty(ListBoxItem.IsSelectedProperty, typeof(ListBoxItem));
 
-            handler = (s, e) => UpdateMarqueeAnimation(element, listBoxItem);
+            handler = (s, e) => UpdateMarqueeAnimation(element, isActive);
 
             isMouseOverDescriptor?.AddValueChanged(listBoxItem, handler);
             isSelectedDescriptor?.AddValueChanged(listBoxItem, handler);
         }
+        else if (menuItem != null)
+        {
+            isHighlightedDescriptor = DependencyPropertyDescriptor.FromProperty(MenuItem.IsHighlightedProperty, typeof(MenuItem));
 
-        element.SizeChanged += (s, e) => UpdateMarqueeAnimation(element, listBoxItem);
+            handler = (s, e) => UpdateMarqueeAnimation(element, isActive);
+
+            isHighlightedDescriptor?.AddValueChanged(menuItem, handler);
+        }
+
+        element.SizeChanged += (s, e) => UpdateMarqueeAnimation(element, isActive);
 
         if (VisualTreeHelper.GetParent(element) is FrameworkElement parent)
         {
-            parent.SizeChanged += (s, e) => UpdateMarqueeAnimation(element, listBoxItem);
+            parent.SizeChanged += (s, e) => UpdateMarqueeAnimation(element, isActive);
         }
 
         var state = new MarqueeState
         {
-            ListBoxItem = listBoxItem,
+            WatchedContainer = watchedContainer,
             IsMouseOverDescriptor = isMouseOverDescriptor,
             IsSelectedDescriptor = isSelectedDescriptor,
+            IsHighlightedDescriptor = isHighlightedDescriptor,
             Handler = handler
         };
         SetMarqueeState(element, state);
 
-        UpdateMarqueeAnimation(element, listBoxItem);
+        UpdateMarqueeAnimation(element, isActive);
     }
 
     private static void CleanupMarquee(FrameworkElement element)
@@ -111,10 +129,11 @@ public static class MarqueeBehavior
         var state = GetMarqueeState(element);
         if (state != null)
         {
-            if (state.ListBoxItem != null && state.Handler != null)
+            if (state.WatchedContainer != null && state.Handler != null)
             {
-                state.IsMouseOverDescriptor?.RemoveValueChanged(state.ListBoxItem, state.Handler);
-                state.IsSelectedDescriptor?.RemoveValueChanged(state.ListBoxItem, state.Handler);
+                state.IsMouseOverDescriptor?.RemoveValueChanged(state.WatchedContainer, state.Handler);
+                state.IsSelectedDescriptor?.RemoveValueChanged(state.WatchedContainer, state.Handler);
+                state.IsHighlightedDescriptor?.RemoveValueChanged(state.WatchedContainer, state.Handler);
             }
             SetMarqueeState(element, null);
         }
@@ -126,7 +145,7 @@ public static class MarqueeBehavior
         }
     }
 
-    private static void UpdateMarqueeAnimation(FrameworkElement element, ListBoxItem? listBoxItem)
+    private static void UpdateMarqueeAnimation(FrameworkElement element, Func<bool> isActive)
     {
         if (element.RenderTransform is not TranslateTransform translate) return;
 
@@ -138,7 +157,7 @@ public static class MarqueeBehavior
         if (availableWidth <= 0 || elementWidth <= 0) return;
 
         var overflow = elementWidth - availableWidth;
-        var shouldAnimate = overflow > 0 && (listBoxItem == null || listBoxItem.IsMouseOver || listBoxItem.IsSelected);
+        var shouldAnimate = overflow > 0 && isActive();
 
         if (shouldAnimate)
         {
@@ -183,9 +202,10 @@ public static class MarqueeBehavior
 
     private class MarqueeState
     {
-        public ListBoxItem? ListBoxItem { get; set; }
+        public DependencyObject? WatchedContainer { get; set; }
         public DependencyPropertyDescriptor? IsMouseOverDescriptor { get; set; }
         public DependencyPropertyDescriptor? IsSelectedDescriptor { get; set; }
+        public DependencyPropertyDescriptor? IsHighlightedDescriptor { get; set; }
         public EventHandler? Handler { get; set; }
     }
 }
