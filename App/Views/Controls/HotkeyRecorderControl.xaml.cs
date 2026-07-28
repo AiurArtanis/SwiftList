@@ -9,7 +9,7 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
     public static readonly DependencyProperty ValueProperty =
         DependencyProperty.Register(nameof(Value), typeof(string), typeof(HotkeyRecorderControl),
             new FrameworkPropertyMetadata(string.Empty,
-                FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnValueChanged));
+                FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnValueChanged, CoerceValue));
 
     public string Value
     {
@@ -22,6 +22,9 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
         if (d is HotkeyRecorderControl ctrl)
             ctrl.HotkeyBox.Text = Core.HotkeyStringFormat.ToDisplayText(e.NewValue as string ?? string.Empty);
     }
+
+    private static object CoerceValue(DependencyObject _, object baseValue) =>
+        baseValue is string value && Core.HotkeyStringFormat.IsReservedWindowsShortcut(value) ? string.Empty : baseValue;
 
     public static readonly DependencyProperty RequireModifierProperty =
         DependencyProperty.Register(nameof(RequireModifier), typeof(bool),
@@ -75,6 +78,7 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
     // key involved) is unreliable to key off of directly, but its KeyUp always arrives, so recording
     // is deferred to release -- if nothing else was pressed in between, the modifier alone is the value.
     private bool _realKeyPressedDuringModifierHold;
+    private ModifierKeys _trackedModifiers;
 
     public HotkeyRecorderControl() => InitializeComponent();
 
@@ -82,12 +86,12 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
 
     private void RestoreButton_Click(object sender, RoutedEventArgs e) => Value = DefaultValue;
 
-    private static string? ModifierName(Key key) => key switch
+    private static string? ModifierName(Key key) => HotkeyRecorderModifierState.FromKey(key) switch
     {
-        Key.LeftCtrl or Key.RightCtrl => "Ctrl",
-        Key.LeftAlt or Key.RightAlt => "Alt",
-        Key.LeftShift or Key.RightShift => "Shift",
-        Key.LWin or Key.RWin => "Win",
+        ModifierKeys.Control => "Ctrl",
+        ModifierKeys.Alt => "Alt",
+        ModifierKeys.Shift => "Shift",
+        ModifierKeys.Windows => "Win",
         _ => null
     };
 
@@ -104,8 +108,9 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
         if (key == Key.Escape) { Value = string.Empty; return; }
         if (key is Key.Clear or Key.OemClear) return;
 
-        if (ModifierName(key) != null)
+        if (HotkeyRecorderModifierState.FromKey(key) != ModifierKeys.None)
         {
+            _trackedModifiers = HotkeyRecorderModifierState.Add(_trackedModifiers, key);
             // Wait for KeyUp to decide: if nothing else is pressed before it's released, the bare
             // modifier itself is the recorded value (see HotkeyBox_PreviewKeyUp).
             return;
@@ -113,7 +118,7 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
 
         _realKeyPressedDuringModifierHold = true;
 
-        var modifiers = Keyboard.Modifiers;
+        var modifiers = HotkeyRecorderModifierState.Combine(Keyboard.Modifiers, _trackedModifiers);
         if (e.Key == Key.System) modifiers |= ModifierKeys.Alt;
 
         if (ModifierOnly)
@@ -160,7 +165,8 @@ public partial class HotkeyRecorderControl : System.Windows.Controls.UserControl
             Value = (ModifierOnly || AllowBareModifier) ? releasedModifier : string.Empty;
         }
 
-        if (Keyboard.Modifiers == ModifierKeys.None)
+        _trackedModifiers = HotkeyRecorderModifierState.Remove(_trackedModifiers, key);
+        if (_trackedModifiers == ModifierKeys.None)
             _realKeyPressedDuringModifierHold = false;
     }
 }

@@ -105,6 +105,7 @@ public class KeyboardHookService : IDisposable
             var hookStruct = Marshal.PtrToStructure<KeyboardNativeMethods.KBDLLHOOKSTRUCT>(lParam);
             var vkCode = (int)hookStruct.vkCode;
             var time = hookStruct.time;
+            _hotkeyDetector.OnKeyDown(vkCode);
 
             // The physical Menu/context-menu key, and Shift+F10, both open a context menu just like a
             // right-click does, with the same real, non-zero construction delay -- covered

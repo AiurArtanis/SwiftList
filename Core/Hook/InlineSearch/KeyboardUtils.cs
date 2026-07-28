@@ -56,27 +56,15 @@ internal static class KeyboardUtils
         return 0;
     }
 
-    public static bool CheckModifiersMatch(string expectedModifier)
+    public static bool CheckModifiersMatch(string expectedModifier, bool trackedWindowsKeyDown = false)
     {
         var ctrlDown = (KeyboardNativeMethods.GetKeyState(0x11) & 0x8000) != 0;
         var altDown = (KeyboardNativeMethods.GetKeyState(0x12) & 0x8000) != 0;
         var shiftDown = (KeyboardNativeMethods.GetKeyState(0x10) & 0x8000) != 0;
-        var winDown = (KeyboardNativeMethods.GetKeyState(0x5B) & 0x8000) != 0 ||
+        var winDown = trackedWindowsKeyDown || (KeyboardNativeMethods.GetKeyState(0x5B) & 0x8000) != 0 ||
                        (KeyboardNativeMethods.GetKeyState(0x5C) & 0x8000) != 0;
 
-        var expected = expectedModifier?.Trim().ToUpperInvariant() ?? "NONE";
-        if (expected == "CONTROL" || expected == "CTRL")
-            return ctrlDown && !altDown && !shiftDown && !winDown;
-        if (expected == "ALT")
-            return altDown && !ctrlDown && !shiftDown && !winDown;
-        if (expected == "SHIFT")
-            return shiftDown && !ctrlDown && !altDown && !winDown;
-        if (expected == "WIN" || expected == "WINDOWS")
-            return winDown && !ctrlDown && !altDown && !shiftDown;
-        if (expected == "NONE")
-            return !ctrlDown && !altDown && !shiftDown && !winDown;
-
-        return false;
+        return ModifiersMatch(expectedModifier, ctrlDown, altDown, shiftDown, winDown, "NONE");
     }
 
     public static bool CheckModifiersMatchOnly(string expected)
@@ -87,16 +75,17 @@ internal static class KeyboardUtils
         var winDown = (KeyboardNativeMethods.GetKeyState(0x5B) & 0x8000) != 0 ||
                        (KeyboardNativeMethods.GetKeyState(0x5C) & 0x8000) != 0;
 
-        var exp = expected?.Trim().ToUpperInvariant() ?? "CONTROL";
-        if (exp == "CONTROL" || exp == "CTRL")
-            return ctrlDown && !altDown && !shiftDown && !winDown;
-        if (exp == "ALT")
-            return altDown && !ctrlDown && !shiftDown && !winDown;
-        if (exp == "SHIFT")
-            return shiftDown && !ctrlDown && !altDown && !winDown;
-        if (exp == "WIN" || exp == "WINDOWS")
-            return winDown && !ctrlDown && !altDown && !shiftDown;
-        return false;
+        return ModifiersMatch(expected, ctrlDown, altDown, shiftDown, winDown, "CONTROL");
+    }
+
+    private static bool ModifiersMatch(string? expected, bool ctrlDown, bool altDown, bool shiftDown, bool winDown, string defaultModifier)
+    {
+        var modifiers = (expected ?? defaultModifier).Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var expectsCtrl = modifiers.Any(modifier => modifier.Equals("Control", StringComparison.OrdinalIgnoreCase) || modifier.Equals("Ctrl", StringComparison.OrdinalIgnoreCase));
+        var expectsAlt = modifiers.Any(modifier => modifier.Equals("Alt", StringComparison.OrdinalIgnoreCase));
+        var expectsShift = modifiers.Any(modifier => modifier.Equals("Shift", StringComparison.OrdinalIgnoreCase));
+        var expectsWin = modifiers.Any(modifier => modifier.Equals("Win", StringComparison.OrdinalIgnoreCase) || modifier.Equals("Windows", StringComparison.OrdinalIgnoreCase));
+        return ctrlDown == expectsCtrl && altDown == expectsAlt && shiftDown == expectsShift && winDown == expectsWin;
     }
 
     public static bool IsModifierKey(int vkCode, string modifier)

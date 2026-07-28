@@ -39,6 +39,15 @@ public sealed class HotkeyStringFormatTests
     }
 
     [TestMethod]
+    public void ParseCombo_MultipleModifiers_PreservesEveryModifier()
+    {
+        HotkeyStringFormat.ParseCombo("Ctrl+Win+F1", out var modifier, out var key);
+
+        Assert.AreEqual("Control+Win", modifier);
+        Assert.AreEqual("F1", key);
+    }
+
+    [TestMethod]
     public void ParseCombo_BareModifierToken_IsModifierWithEmptyKey()
     {
         HotkeyStringFormat.ParseCombo("Ctrl", out var modifier, out var key);
@@ -100,4 +109,34 @@ public sealed class HotkeyStringFormatTests
 
     [TestMethod]
     public void ToDisplayText_EmptyValue_ReturnsEmpty() => Assert.AreEqual(string.Empty, HotkeyStringFormat.ToDisplayText(string.Empty));
+
+    [TestMethod]
+    [DataRow("Win")]
+    [DataRow("Win+E")]
+    [DataRow("Win+Shift+S")]
+    [DataRow("Win+Alt+B")]
+    [DataRow("Win+Alt+Enter")]
+    [DataRow("Win+Ctrl+D")]
+    [DataRow("Win+Ctrl+Shift+B")]
+    [DataRow("Win+Ctrl+F4")]
+    [DataRow("Win+Ctrl+Left")]
+    [DataRow("Win+Ctrl+Right")]
+    [DataRow("Win+OemComma")]
+    [DataRow("Win+Oem2")]
+    [DataRow("Win+PrintScreen")]
+    [DataRow("Win+1")]
+    [DataRow("Win+Alt+1")]
+    [DataRow("Win+Ctrl+1")]
+    [DataRow("Win+Ctrl+Shift+1")]
+    [DataRow("Win+Shift+1")]
+    public void IsReservedWindowsShortcut_DetectsDocumentedWindowsShortcuts(string hotkey) =>
+        Assert.IsTrue(HotkeyStringFormat.IsReservedWindowsShortcut(hotkey));
+
+    [TestMethod]
+    [DataRow("Win+F1")]
+    [DataRow("Win+Ctrl+Alt+F1")]
+    [DataRow("Ctrl+E")]
+    [DataRow("F1")]
+    public void IsReservedWindowsShortcut_AllowsOtherShortcuts(string hotkey) =>
+        Assert.IsFalse(HotkeyStringFormat.IsReservedWindowsShortcut(hotkey));
 }
