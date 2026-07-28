@@ -121,7 +121,11 @@ public static class HotkeyStringFormat
 
     public static string FormatCombo(string modifier, string key)
     {
-        var mod = modifier.Equals("Control", StringComparison.OrdinalIgnoreCase) ? "Ctrl" : modifier;
+        // modifier can be a "+"-joined multi-modifier combo (e.g. "Control+Win") since ParseCombo
+        // started preserving every modifier instead of just the first one -- abbreviate each segment
+        // individually rather than only matching the whole string against "Control".
+        var mod = string.Join("+", modifier.Split('+', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => part.Equals("Control", StringComparison.OrdinalIgnoreCase) ? "Ctrl" : part));
         if (string.IsNullOrEmpty(key)) return string.IsNullOrEmpty(mod) ? string.Empty : mod;
         return string.IsNullOrEmpty(mod) ? key : $"{mod}+{key}";
     }

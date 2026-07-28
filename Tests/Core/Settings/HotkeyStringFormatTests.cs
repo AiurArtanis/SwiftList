@@ -94,6 +94,22 @@ public sealed class HotkeyStringFormatTests
         Assert.AreEqual("Ctrl+G", HotkeyStringFormat.FormatCombo(modifier, key));
     }
 
+    // Regression coverage: FormatCombo is ParseCombo's own inverse, so once ParseCombo started
+    // preserving every modifier (e.g. "Control+Win") instead of just the first, FormatCombo's own
+    // "Control" -> "Ctrl" abbreviation (an exact string.Equals against the whole modifier) silently
+    // stopped abbreviating anything past the first segment.
+    [TestMethod]
+    public void FormatCombo_MultipleModifiers_AbbreviatesEverySegment() =>
+        Assert.AreEqual("Ctrl+Win+G", HotkeyStringFormat.FormatCombo("Control+Win", "G"));
+
+    [TestMethod]
+    public void ParseCombo_ThenFormatCombo_RoundTrips_WithMultipleModifiers()
+    {
+        HotkeyStringFormat.ParseCombo("Ctrl+Win+F1", out var modifier, out var key);
+
+        Assert.AreEqual("Ctrl+Win+F1", HotkeyStringFormat.FormatCombo(modifier, key));
+    }
+
     [TestMethod]
     [DataRow("Oem1", ";")]
     [DataRow("OemPlus", "=")]
