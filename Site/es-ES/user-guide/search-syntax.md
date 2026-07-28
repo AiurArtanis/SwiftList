@@ -36,11 +36,12 @@ coincide igual de bien con `final-Q3-report.docx` que con `Q3-report-final.docx`
 | Prefijo/Sufijo | Ejemplo | Efecto |
 |---|---|---|
 | *(ninguno)* | `report` | Coincidencia difusa en cualquier parte del nombre (predeterminado). |
-| `!` | `!temp` | **Excluir** resultados que coincidan con `temp`. |
+| `!` | `!temp` | **Excluir** resultados cuyo nombre contenga la subcadena exacta `temp` (esta no es difusa). |
 | `'` | `'report` | Coincidencia de subcadena **exacta** en lugar de difusa. |
 | `'...'` | `'final report'` | Coincidencia exacta anclada a límites de palabra (no coincidirá dentro de una palabra más larga). |
 | `^` | `^IMG` | Coincidencia de **prefijo** — el nombre debe empezar por `IMG`. |
 | `$` | `.pdf$` | Coincidencia de **sufijo** — el nombre debe terminar en `.pdf`. |
+| `^...$` | `^readme.md$` | **Igualdad** — el nombre debe ser exactamente `readme.md`. Solo cuando ambos envuelven la *misma* palabra; en palabras distintas siguen siendo filtros independientes de prefijo y sufijo. |
 | `\|` | `report \| summary` | **OR** — coincide con cualquiera de los dos lados de la barra vertical. |
 
 Puedes combinar estos libremente, por ejemplo `^IMG !.png$ 2024` encuentra archivos que empiecen por `IMG`, de

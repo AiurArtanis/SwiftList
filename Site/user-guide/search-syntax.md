@@ -35,11 +35,12 @@ matches `final-Q3-report.docx` just as well as `Q3-report-final.docx`.
 | Prefix/Suffix | Example | Effect |
 |---|---|---|
 | *(none)* | `report` | Fuzzy match anywhere in the name (default). |
-| `!` | `!temp` | **Exclude** results that match `temp`. |
+| `!` | `!temp` | **Exclude** results whose name contains the exact substring `temp` (this one is not fuzzy). |
 | `'` | `'report` | **Exact** substring match instead of fuzzy. |
 | `'...'` | `'final report'` | Exact match anchored to word boundaries (won't match inside a larger word). |
 | `^` | `^IMG` | **Prefix** match — the name must start with `IMG`. |
 | `$` | `.pdf$` | **Suffix** match — the name must end with `.pdf`. |
+| `^...$` | `^readme.md$` | **Equals** — the whole name must be exactly `readme.md`. Only when both wrap the *same* word; on separate words they stay independent prefix and suffix filters. |
 | `\|` | `report \| summary` | **OR** — match either side of the pipe. |
 
 You can mix these freely, e.g. `^IMG !.png$ 2024` finds files starting with `IMG`, from 2024,

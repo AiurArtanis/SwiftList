@@ -114,6 +114,10 @@ public sealed class FzfPatternTests
         Assert.IsTrue(pattern.TryMatch("README.md", out _, FzfScoringScheme.Default));
     }
 
+    // Reachable through this API only, never from the search box: a backslash anywhere in a query
+    // makes SearchQueryParser classify it as path mode, which routes to PathSearch before
+    // FzfPattern.Parse is ever called. Quoting ("'my file'") is the only search-box route to a term
+    // containing a space.
     [TestMethod]
     public void TryMatch_EscapedSpace_IsTreatedAsLiteralSpaceInOneTerm()
     {
@@ -141,6 +145,97 @@ public sealed class FzfPatternTests
         // both terms within the SAME segment, not scattered across the whole joined string.
         Assert.IsFalse(pattern.TryMatch("ab|cd", out _, FzfScoringScheme.Default));
         Assert.IsTrue(pattern.TryMatch("abcd|xy", out _, FzfScoringScheme.Default));
+    }
+
+    [TestMethod]
+    public void TryMatch_QuotedPhraseContainingSpaces_IsOneBoundaryTerm()
+    {
+        var pattern = FzfPattern.Parse("'cad acb'");
+
+        Assert.HasCount(1, pattern.TermSets);
+        Assert.HasCount(1, pattern.TermSets[0].Terms);
+        Assert.AreEqual(FzfTermKind.ExactBoundary, pattern.TermSets[0].Terms[0].Kind);
+        Assert.AreEqual("cad acb", pattern.TermSets[0].Terms[0].Text);
+        Assert.IsTrue(pattern.TryMatch("cad acb.txt", out _, FzfScoringScheme.Default));
+        // The space is literal, so a differently delimited name is not a match.
+        Assert.IsFalse(pattern.TryMatch("cad-acb.txt", out _, FzfScoringScheme.Default));
+    }
+
+    [TestMethod]
+    public void TryMatch_NegatedQuotedPhraseContainingSpaces_IsOneInverseBoundaryTerm()
+    {
+        var pattern = FzfPattern.Parse("txt !'cad acb'");
+
+        Assert.IsTrue(pattern.TryMatch("other.txt", out _, FzfScoringScheme.Default));
+        Assert.IsFalse(pattern.TryMatch("cad acb.txt", out _, FzfScoringScheme.Default));
+    }
+
+    [TestMethod]
+    public void Parse_ApostropheInsideWord_DoesNotOpenAQuotedPhrase()
+    {
+        var pattern = FzfPattern.Parse("don't stop");
+
+        // Neither token starts with a quote, so this stays two ordinary fuzzy terms.
+        Assert.HasCount(2, pattern.TermSets);
+        Assert.AreEqual("don't", pattern.TermSets[0].Terms[0].Text);
+        Assert.AreEqual("stop", pattern.TermSets[1].Terms[0].Text);
+    }
+
+    [TestMethod]
+    public void Parse_UnmatchedOpeningQuote_KeepsTermByTermReading()
+    {
+        var pattern = FzfPattern.Parse("'cad acb");
+
+        Assert.HasCount(2, pattern.TermSets);
+        Assert.AreEqual(FzfTermKind.Exact, pattern.TermSets[0].Terms[0].Kind);
+        Assert.AreEqual("cad", pattern.TermSets[0].Terms[0].Text);
+        Assert.AreEqual("acb", pattern.TermSets[1].Terms[0].Text);
+    }
+
+    [TestMethod]
+    public void Parse_OrOfQuotedTerms_KeepsTheSeparatorInsteadOfMergingIntoOnePhrase()
+    {
+        var pattern = FzfPattern.Parse("'foo | 'bar'");
+
+        // One set holding two alternatives (an OR), not a single phrase swallowing the '|'.
+        Assert.HasCount(1, pattern.TermSets);
+        Assert.HasCount(2, pattern.TermSets[0].Terms);
+        Assert.AreEqual("foo", pattern.TermSets[0].Terms[0].Text);
+        Assert.AreEqual("bar", pattern.TermSets[0].Terms[1].Text);
+    }
+
+    [TestMethod]
+    public void Parse_ExactMarkerBeforeEndAnchor_KeepsSuffixSemantics()
+    {
+        var pattern = FzfPattern.Parse("'md$");
+
+        Assert.AreEqual(FzfTermKind.Suffix, pattern.TermSets[0].Terms[0].Kind);
+        Assert.AreEqual("md", pattern.TermSets[0].Terms[0].Text);
+        Assert.IsTrue(pattern.TryMatch("readme.md", out _, FzfScoringScheme.Default));
+        Assert.IsFalse(pattern.TryMatch("md5sum.txt", out _, FzfScoringScheme.Default));
+    }
+
+    [TestMethod]
+    public void Parse_PrefixMarkerFollowedByExactMarker_DropsTheRedundantQuote()
+    {
+        var pattern = FzfPattern.Parse("^'read");
+
+        Assert.AreEqual(FzfTermKind.Prefix, pattern.TermSets[0].Terms[0].Kind);
+        Assert.AreEqual("read", pattern.TermSets[0].Terms[0].Text);
+        Assert.IsTrue(pattern.TryMatch("readme.md", out _, FzfScoringScheme.Default));
+    }
+
+    // Carries the same API-level-only caveat as TryMatch_EscapedSpace_IsTreatedAsLiteralSpaceInOneTerm
+    // (a backslash sends the query to path mode first). Kept as a regression guard so the quoted-phrase
+    // merge cannot silently break the older escape form, not as a search-box syntax anyone can type.
+    [TestMethod]
+    public void TryMatch_EscapedSpaceInsideQuotedPhrase_StillParsesAsOneTerm()
+    {
+        var pattern = FzfPattern.Parse(@"'cad\ acb'");
+
+        Assert.AreEqual(FzfTermKind.ExactBoundary, pattern.TermSets[0].Terms[0].Kind);
+        Assert.AreEqual("cad acb", pattern.TermSets[0].Terms[0].Text);
+        Assert.IsTrue(pattern.TryMatch("cad acb.txt", out _, FzfScoringScheme.Default));
     }
 
     [TestMethod]
