@@ -248,6 +248,47 @@ public sealed class FzfPatternTests
         finally { SwiftList.Core.SearchContext.FuzzyMatchEnabled = previous; }
     }
 
+    // DefaultFuzzyMatchEnabled is process-wide, unlike the AsyncLocal the other cases flip, so these
+    // two have to leave the parallel phase entirely -- otherwise they change what every concurrently
+    // running pattern parse in this assembly sees.
+    [TestMethod]
+    [DoNotParallelize]
+    public void Parse_ProcessDefaultDisabled_AppliesWithoutAnyPerRequestValue()
+    {
+        // The regression this guards: plugin catalog items, favorites and highlighting all parse
+        // patterns on call paths the search pipeline's AsyncLocal never reaches, so they have to
+        // follow the process-wide default instead of silently staying fuzzy.
+        var previous = SwiftList.Core.SearchContext.DefaultFuzzyMatchEnabled;
+        SwiftList.Core.SearchContext.DefaultFuzzyMatchEnabled = false;
+        try
+        {
+            var pattern = FzfPattern.Parse("ab");
+
+            Assert.AreEqual(FzfTermKind.Exact, pattern.TermSets[0].Terms[0].Kind);
+            Assert.IsFalse(pattern.TryMatch("a-b.txt", out _, FzfScoringScheme.Default));
+        }
+        finally { SwiftList.Core.SearchContext.DefaultFuzzyMatchEnabled = previous; }
+    }
+
+    [TestMethod]
+    [DoNotParallelize]
+    public void Parse_PerRequestValue_OverridesTheProcessDefault()
+    {
+        var previous = SwiftList.Core.SearchContext.DefaultFuzzyMatchEnabled;
+        SwiftList.Core.SearchContext.DefaultFuzzyMatchEnabled = false;
+        try
+        {
+            // A search request that explicitly asks for fuzzy must win over a disabled process default.
+            SwiftList.Core.SearchContext.FuzzyMatchEnabled = true;
+            try
+            {
+                Assert.AreEqual(FzfTermKind.Fuzzy, FzfPattern.Parse("ab").TermSets[0].Terms[0].Kind);
+            }
+            finally { SwiftList.Core.SearchContext.FuzzyMatchEnabled = previous; }
+        }
+        finally { SwiftList.Core.SearchContext.DefaultFuzzyMatchEnabled = previous; }
+    }
+
     [TestMethod]
     public void Parse_FuzzyDisabled_MakesBareTermsContiguous() => WithFuzzyDisabled(() =>
     {

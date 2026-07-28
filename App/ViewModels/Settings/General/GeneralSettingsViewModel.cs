@@ -229,6 +229,9 @@ public class GeneralSettingsViewModel : ViewModelBase
             _userSettings.AutoSilentUpdate = _autoSilentUpdate;
         _userSettings.EnableHardwareAcceleration = _enableHardwareAcceleration;
         _userSettings.EnableFuzzyMatch = _enableFuzzyMatch;
+        // Push it straight into the process-wide default too, so toggling this takes effect for the
+        // plugin catalog, favorites and highlighting immediately rather than only after a restart.
+        SearchContext.DefaultFuzzyMatchEnabled = _enableFuzzyMatch;
         _userSettings.HideTrayIcon = _hideTrayIcon;
         _userSettings.LogLevel = LogLevel;
         _userSettings.DefaultFileManager.Enabled = _defaultFileManagerEnabled;

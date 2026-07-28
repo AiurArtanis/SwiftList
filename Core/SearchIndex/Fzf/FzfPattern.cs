@@ -51,6 +51,13 @@ internal sealed class FzfPattern
 
     public static FzfPattern ParseText(string query) => new FzfPattern(null, ParseTermSets(query));
 
+    // One already-parsed term set lifted into a pattern of its own, so a caller can ask "which
+    // candidates satisfy THIS term" instead of only "which satisfy the whole query". Reuses the parsed
+    // term verbatim rather than re-parsing its text, which would have to re-derive kind/case-sensitivity
+    // from a string the operators were already stripped from.
+    internal static FzfPattern ForTermSet(FzfPattern source, int index)
+        => new(source.TargetDrive, new[] { source.TermSets[index] });
+
     public bool TryMatch(ReadOnlySpan<char> text, out FzfPatternResult result, FzfScoringScheme scheme, FzfSlab? slab = null)
     {
         if (text.Contains('|'))

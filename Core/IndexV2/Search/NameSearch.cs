@@ -55,6 +55,12 @@ internal static class NameSearch
             if (++emitted >= limit)
                 break;
         }
+
+        // Nothing matched by name alone: retry allowing each term to be satisfied by an ancestor
+        // folder instead. Gated on the empty result so an ordinary query never pays for it, and so a
+        // real name match can never be diluted by a weaker path-derived one.
+        if (emitted == 0)
+            PathTermFallback.SearchStreaming(snapshot, delta, pattern, limit, onResult, token, directoryFilterLower);
     }
 
     // Bounded refinement: only ever runs over the scanKeep-sized headroom set above, never the full

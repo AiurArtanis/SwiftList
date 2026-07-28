@@ -61,6 +61,10 @@ public partial class App : Application
         Logger.Initialize("app.log", overwrite: true);
         var settings = UserSettings.Load();
         Logger.MinimumLevel = SettingsOptionGenerator.ParseLogLevel(settings.LogLevel);
+        // Everything this process matches outside the search pipeline -- plugin catalog items,
+        // favorites, shell-menu filtering, display highlighting -- reads this rather than the
+        // per-request value, which only ever reaches the search pipeline's own async flow.
+        SearchContext.DefaultFuzzyMatchEnabled = settings.EnableFuzzyMatch;
         StartupManager.SetEnabled(settings.StartWithWindows);
         Logger.Log("=========================================");
         Logger.Log($"Application starting with arguments: {string.Join(" ", e.Args)}");
