@@ -4,7 +4,7 @@
 
 # ⚡ SwiftList
 
-[简体中文](README_ZH.md) | English
+English | [简体中文](Readmes/zh-CN.md) | [繁體中文（香港）](Readmes/zh-HK.md) | [繁體中文（台灣）](Readmes/zh-TW.md) | [日本語](Readmes/ja-JP.md) | [한국어](Readmes/ko-KR.md) | [Español](Readmes/es-ES.md)
 
 SwiftList is an ultra-lightweight, high-performance, extensible global search and productivity
 launcher for Windows, built on **.NET 10 (WPF)**. It's a modern, open-source alternative to

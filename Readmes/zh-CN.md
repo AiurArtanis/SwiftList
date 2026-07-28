@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="App/logo.png" alt="SwiftList logo" width="120">
+  <img src="../App/logo.png" alt="SwiftList logo" width="120">
 </p>
 
 # ⚡ SwiftList
 
-简体中文 | [English](README.md)
+[English](../README.md) | 简体中文 | [繁體中文（香港）](zh-HK.md) | [繁體中文（台灣）](zh-TW.md) | [日本語](ja-JP.md) | [한국어](ko-KR.md) | [Español](es-ES.md)
 
 SwiftList 是一款基于 **.NET 10 (WPF)** 打造的超轻量、极速、高度可扩展的 Windows 全局搜索与效率启
 动工具，是 **Everything** 和 **Listary** 的现代化开源替代——通过读取 NTFS **USN 日志** 与 MFT 直
