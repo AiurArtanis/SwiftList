@@ -7,6 +7,7 @@ public class UserSettings
     public List<NetworkDriveSetting> NetworkDrives { get; set; } = new();
     public List<WslSetting> WslSettings { get; set; } = new();
     public List<FolderIndexSetting> FolderIndexes { get; set; } = new();
+    public DefaultFileManagerSetting DefaultFileManager { get; set; } = new();
     public List<FavoriteItemSetting> Favorites { get; set; } = new();
     public List<string> ExcludedPaths { get; set; } = new()
     {

@@ -20,6 +20,9 @@ public class GeneralSettingsViewModel : ViewModelBase
     private bool _autoSilentUpdate;
     private bool _enableHardwareAcceleration;
     private bool _hideTrayIcon;
+    private bool _defaultFileManagerEnabled;
+    private string _defaultFileManagerPath;
+    private string _defaultFileManagerParameter;
 
     // Tab navigation for the System/Layout/Preview Window split of this page.
     private string _selectedTab = "System";
@@ -51,6 +54,9 @@ public class GeneralSettingsViewModel : ViewModelBase
         _autoSilentUpdate = userSettings.AutoSilentUpdate;
         _enableHardwareAcceleration = userSettings.EnableHardwareAcceleration;
         _hideTrayIcon = userSettings.HideTrayIcon;
+        _defaultFileManagerEnabled = userSettings.DefaultFileManager.Enabled;
+        _defaultFileManagerPath = userSettings.DefaultFileManager.Path;
+        _defaultFileManagerParameter = userSettings.DefaultFileManager.Parameter;
 
         _selectedLogLevel = LogLevelOptions.FirstOrDefault(o => o.Value == SettingsOptionGenerator.NormalizeLogLevel(_userSettings.LogLevel))
                             ?? LogLevelOptions[2]; // Default to Info
@@ -151,6 +157,36 @@ public class GeneralSettingsViewModel : ViewModelBase
         set => SetProperty(ref _hideTrayIcon, value);
     }
 
+    // See GitHub issue #180 -- redirects "open a folder" (and "open containing folder") to a
+    // user-configured third-party file manager instead of the shell's own association.
+    public bool DefaultFileManagerEnabled
+    {
+        get => _defaultFileManagerEnabled;
+        set => SetProperty(ref _defaultFileManagerEnabled, value);
+    }
+
+    public string DefaultFileManagerPath
+    {
+        get => _defaultFileManagerPath;
+        set => SetProperty(ref _defaultFileManagerPath, value);
+    }
+
+    public string DefaultFileManagerParameter
+    {
+        get => _defaultFileManagerParameter;
+        set => SetProperty(ref _defaultFileManagerParameter, value);
+    }
+
+    private ICommand? _browseDefaultFileManagerPathCommand;
+    public ICommand BrowseDefaultFileManagerPathCommand => _browseDefaultFileManagerPathCommand ??= new RelayCommand(BrowseDefaultFileManagerPath);
+
+    private void BrowseDefaultFileManagerPath()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = $"{TranslationManager.Instance["General_DefaultFileManagerBrowseFilter"]}|*.exe" };
+        if (dialog.ShowDialog() == true)
+            DefaultFileManagerPath = dialog.FileName;
+    }
+
     public string LogLevel => SettingsOptionGenerator.NormalizeLogLevel(_selectedLogLevel?.Value ?? _userSettings.LogLevel);
 
     public string PreferredLanguage
@@ -184,6 +220,9 @@ public class GeneralSettingsViewModel : ViewModelBase
         _userSettings.EnableHardwareAcceleration = _enableHardwareAcceleration;
         _userSettings.HideTrayIcon = _hideTrayIcon;
         _userSettings.LogLevel = LogLevel;
+        _userSettings.DefaultFileManager.Enabled = _defaultFileManagerEnabled;
+        _userSettings.DefaultFileManager.Path = _defaultFileManagerPath;
+        _userSettings.DefaultFileManager.Parameter = _defaultFileManagerParameter;
 
         StartupManager.SetEnabled(StartWithWindows);
         (System.Windows.Application.Current.MainWindow as QuickSearchWindow)?.ApplyTrayIconVisibility(_hideTrayIcon);

@@ -15,6 +15,28 @@ internal static class ExplorerLocateHelper
 {
     public static void LocateInExplorer(string path)
     {
+        // A user-configured default file manager (see GitHub issue #180, FileExecutor.
+        // TryBuildDefaultFileManagerStartInfo) takes over "open containing folder" too -- it can only open
+        // the folder itself, not select-and-highlight the specific item within it the way
+        // SHOpenFolderAndSelectItems below does, since there's no generic way to know a third-party tool's
+        // own "select this item" argument syntax. Accepted tradeoff: one generic open-folder method
+        // reused everywhere, rather than each caller needing its own opinion about the setting.
+        var folder = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(folder) && FileExecutor.TryBuildDefaultFileManagerStartInfo(folder, UserSettings.Load().DefaultFileManager) is { } customStartInfo)
+        {
+            try
+            {
+                Process.Start(customStartInfo);
+                return;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[FileExecutor] Default file manager launch failed for '{folder}': {ex.Message}", LogLevel.Error);
+                MessageBox.Show(string.Format(TranslationManager.Instance["Executor_LocateFailed"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+        }
+
         try
         {
             if (SHParseDisplayName(path, IntPtr.Zero, out var pidl, 0, out _) == 0)
@@ -47,6 +69,10 @@ internal static class ExplorerLocateHelper
     public static bool TryLocateInExistingExplorer(string path, IntPtr explorerHwnd)
     {
         if (explorerHwnd == IntPtr.Zero) return false;
+        // A configured default file manager should win over this "reuse the already-open Explorer
+        // window" shortcut -- refusing it here forces the caller to fall through to LocateInExplorer,
+        // where the actual custom-manager launch lives.
+        if (UserSettings.Load().DefaultFileManager is { Enabled: true }) return false;
         try
         {
             dynamic? window = FindExplorerWindow(explorerHwnd);

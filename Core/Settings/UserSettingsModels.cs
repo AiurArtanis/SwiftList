@@ -21,6 +21,18 @@ public class FolderIndexSetting
     public string RefreshMode { get; set; } = "Manual";
 }
 
+// Lets a user redirect "open this folder" (see FileExecutor.TryBuildDefaultFileManagerStartInfo) to an
+// arbitrary third-party file manager instead of the shell's own association -- e.g. GitHub issue #180.
+// Parameter is a command-line template where "%s"/"{}" expand to the folder path, already quoted --
+// same placeholder convention as CustomActions.DynamicActionProvider.RunMulti. The user must not wrap
+// the placeholder in their own quotes, since that would double up.
+public class DefaultFileManagerSetting
+{
+    public bool Enabled { get; set; }
+    public string Path { get; set; } = string.Empty;
+    public string Parameter { get; set; } = string.Empty;
+}
+
 /// <summary>Everything shown on the Hotkey Settings page, grouped under one object.</summary>
 public class HotkeyPageSettings
 {

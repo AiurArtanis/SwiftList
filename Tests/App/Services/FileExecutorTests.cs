@@ -1,4 +1,5 @@
 using SwiftList.App.Services;
+using SwiftList.Core;
 
 namespace SwiftList.App.Tests.Services;
 
@@ -126,4 +127,102 @@ public sealed class BuildStartInfoTests
 
         Assert.IsEmpty(info.WorkingDirectory);
     }
+
+    [TestMethod]
+    public void BuildStartInfo_FolderWithDefaultFileManagerConfigured_LaunchesConfiguredManager()
+    {
+        var setting = new DefaultFileManagerSetting { Enabled = true, Path = @"C:\portable\TotalCMD64.exe", Parameter = "/O /T /R=%s" };
+
+        var info = FileExecutor.BuildStartInfo(@"C:\Program Files\Folder", isFile: false, asAdmin: false, associatedExe: null, setting);
+
+        Assert.AreEqual(@"C:\portable\TotalCMD64.exe", info.FileName);
+        Assert.AreEqual("/O /T /R=\"C:\\Program Files\\Folder\"", info.Arguments);
+    }
+
+    [TestMethod]
+    public void BuildStartInfo_FileWithDefaultFileManagerConfigured_StillOpensFileDirectly()
+    {
+        // GitHub issue #180's setting only ever redirects opening a FOLDER -- a file still needs its own
+        // associated program.
+        var setting = new DefaultFileManagerSetting { Enabled = true, Path = @"C:\portable\TotalCMD64.exe" };
+
+        var info = FileExecutor.BuildStartInfo(@"C:\doc.txt", isFile: true, asAdmin: false, associatedExe: null, setting);
+
+        Assert.AreEqual(@"C:\doc.txt", info.FileName);
+    }
+
+    [TestMethod]
+    public void BuildStartInfo_DefaultFileManagerDisabled_FallsBackToShellExecute()
+    {
+        var setting = new DefaultFileManagerSetting { Enabled = false, Path = @"C:\portable\TotalCMD64.exe" };
+
+        var info = FileExecutor.BuildStartInfo(@"C:\folder", isFile: false, asAdmin: false, associatedExe: null, setting);
+
+        Assert.AreEqual(@"C:\folder", info.FileName);
+        Assert.IsTrue(info.UseShellExecute);
+    }
+}
+
+[TestClass]
+public sealed class TryBuildDefaultFileManagerStartInfoTests
+{
+    [TestMethod]
+    public void TryBuildDefaultFileManagerStartInfo_NullSetting_ReturnsNull() =>
+        Assert.IsNull(FileExecutor.TryBuildDefaultFileManagerStartInfo(@"C:\folder", null));
+
+    [TestMethod]
+    public void TryBuildDefaultFileManagerStartInfo_Disabled_ReturnsNull() =>
+        Assert.IsNull(FileExecutor.TryBuildDefaultFileManagerStartInfo(@"C:\folder", new DefaultFileManagerSetting { Enabled = false, Path = @"C:\tc.exe" }));
+
+    [TestMethod]
+    public void TryBuildDefaultFileManagerStartInfo_EnabledButEmptyPath_ReturnsNull() =>
+        Assert.IsNull(FileExecutor.TryBuildDefaultFileManagerStartInfo(@"C:\folder", new DefaultFileManagerSetting { Enabled = true, Path = "" }));
+
+    [TestMethod]
+    public void TryBuildDefaultFileManagerStartInfo_EnabledWithPath_UsesShellExecute()
+    {
+        var info = FileExecutor.TryBuildDefaultFileManagerStartInfo(@"C:\folder", new DefaultFileManagerSetting { Enabled = true, Path = @"C:\tc.exe" });
+
+        Assert.IsNotNull(info);
+        Assert.IsTrue(info.UseShellExecute);
+    }
+}
+
+[TestClass]
+public sealed class BuildDefaultFileManagerArgumentsTests
+{
+    [TestMethod]
+    public void BuildDefaultFileManagerArguments_PathWithSpaces_SubstitutesQuotedPath() =>
+        // %s expands already-quoted (same %s/{} convention CustomActions.DynamicActionProvider.RunMulti
+        // already uses) -- the user must not add their own quotes around it, since that would double up.
+        Assert.AreEqual(
+            "/O /T /R=\"C:\\Program Files\\Folder\"",
+            FileExecutor.BuildDefaultFileManagerArguments(@"C:\Program Files\Folder", "/O /T /R=%s"));
+
+    [TestMethod]
+    public void BuildDefaultFileManagerArguments_PathWithNoSpaces_SubstitutesUnquotedPath() =>
+        // ArgQuoting.Quote only adds quotes when actually needed -- a plain path with no whitespace/quote
+        // characters is passed through bare.
+        Assert.AreEqual("/O /T /R=C:\\a", FileExecutor.BuildDefaultFileManagerArguments(@"C:\a", "/O /T /R=%s"));
+
+    [TestMethod]
+    public void BuildDefaultFileManagerArguments_CurlyBracePlaceholder_AlsoSubstitutes() =>
+        // {} is interchangeable with %s, same as CustomActions' own convention.
+        Assert.AreEqual(
+            "/O /T /R=\"C:\\Program Files\"",
+            FileExecutor.BuildDefaultFileManagerArguments(@"C:\Program Files", "/O /T /R={}"));
+
+    [TestMethod]
+    public void BuildDefaultFileManagerArguments_MultiplePlaceholders_SubstitutesAll() =>
+        Assert.AreEqual(
+            "/L=\"C:\\Program Files\" /R=\"C:\\Program Files\"",
+            FileExecutor.BuildDefaultFileManagerArguments(@"C:\Program Files", "/L=%s /R={}"));
+
+    [TestMethod]
+    public void BuildDefaultFileManagerArguments_EmptyTemplate_QuotesPathAsSoleArgument() =>
+        Assert.AreEqual(@"""C:\Program Files""", FileExecutor.BuildDefaultFileManagerArguments(@"C:\Program Files", ""));
+
+    [TestMethod]
+    public void BuildDefaultFileManagerArguments_NullTemplate_QuotesPathAsSoleArgument() =>
+        Assert.AreEqual(@"""C:\Program Files""", FileExecutor.BuildDefaultFileManagerArguments(@"C:\Program Files", null));
 }
