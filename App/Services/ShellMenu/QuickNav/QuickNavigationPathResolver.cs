@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Collections;
-using SwiftList.PluginSdk.Abstractions.Plugins;
 using Logger = SwiftList.Core.Logger;
 using LogLevel = SwiftList.Core.LogLevel;
 

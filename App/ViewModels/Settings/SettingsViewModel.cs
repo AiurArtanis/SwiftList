@@ -2,8 +2,6 @@ using System.Windows.Input;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.Core;
-using SwiftList.Core.Indexer.Usn;
-using SwiftList.Core.Indexer.NetworkDrive;
 using System.ComponentModel;
 using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.Core.Services.Search;

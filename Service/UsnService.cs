@@ -3,8 +3,6 @@ using System.ServiceProcess;
 using SwiftList.Core;
 using SwiftList.Core.Services;
 
-using SwiftList.Core.Services.Plugin;
-
 using SwiftList.Core.Services.Plugin.Loading;
 namespace SwiftList.Service;
 

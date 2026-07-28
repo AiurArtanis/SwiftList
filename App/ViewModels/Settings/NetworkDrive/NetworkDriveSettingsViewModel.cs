@@ -5,7 +5,6 @@ using SwiftList.App.Helpers;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.NetworkDrive;
 using SwiftList.App.Services;
-using SwiftList.App.ViewModels.Settings.NetworkDrive;
 
 using SwiftList.Core.Services.Search;
 

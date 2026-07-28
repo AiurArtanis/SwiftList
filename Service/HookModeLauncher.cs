@@ -1,8 +1,5 @@
 using SwiftList.Core;
-using SwiftList.Core.Hook;
 using SwiftList.Core.Services;
-
-using SwiftList.Core.Services.Plugin;
 
 using SwiftList.Core.Hook.Ipc;
 using SwiftList.Core.Services.Plugin.Loading;

@@ -2,9 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using System.Windows.Controls;
-using SwiftList.Core;
 using SwiftList.App.Services;
-using SwiftList.App.Views.QuickSearchWindow;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using TextBox = System.Windows.Controls.TextBox;
@@ -150,7 +148,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         // QuickSearchViewModel's own UiMetrics.ScaleChanged subscription, which re-notifies each
         // existing row/tab's Scaled* bindings) -- that's a per-item PropertyChanged, not a
         // CollectionChanged, so the subscription above alone wouldn't resize the window to match.
-        Services.UiMetrics.ScaleChanged += () => _layoutManager.QueueResultsLayoutUpdate();
+        UiMetrics.ScaleChanged += () => _layoutManager.QueueResultsLayoutUpdate();
 
         KeywordHistoryController = new QuickSearchKeywordHistoryController(this);
 
@@ -217,7 +215,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
             if (IsActive) return;
             // QuickLookManager just Hide()'d this window itself, for a preview handler's own popup
             // dialog (see its own comment) -- not a real deactivation to react to.
-            if (Services.QuickLookManager.Instance.IsHiddenForDialog) return;
+            if (QuickLookManager.Instance.IsHiddenForDialog) return;
             // An out-of-process preview (native handler, or an external app like QuickLook docked via
             // QuickLookBridge) legitimately holds OS foreground right now -- see PreviewActivationSignal's
             // own doc comment. QuickSearchWindowForegroundWatcher already checks this same signal for its

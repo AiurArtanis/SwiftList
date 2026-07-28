@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using SwiftList.App.Services;
 
 using SwiftList.App.Services.Theme;
 using SwiftList.App.Helpers.Visuals;

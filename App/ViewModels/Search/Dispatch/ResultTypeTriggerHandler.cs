@@ -1,6 +1,5 @@
 using System.Windows;
 using SwiftList.Core;
-using SwiftList.App.Services;
 
 using SwiftList.App.ViewModels.Search.StartupPanel;
 using SwiftList.App.ViewModels.Search.Mapping;

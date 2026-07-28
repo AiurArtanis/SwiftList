@@ -1,4 +1,3 @@
-using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
 namespace SwiftList.Core.SearchIndex;

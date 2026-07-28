@@ -1,6 +1,5 @@
 using System.IO;
 using SwiftList.PluginSdk.Abstractions.Plugins;
-using SwiftList.App.Services;
 using SwiftList.Core;
 
 using SwiftList.App.Services.Plugin;
@@ -108,7 +107,7 @@ public static class SearchableItemMapper
                     continue;
                 }
 
-// The standard match+weight contract (FuzzyMatcher.ComputeBestMatch): title first,
+                // The standard match+weight contract (FuzzyMatcher.ComputeBestMatch): title first,
                 // then each curated alias, via the same FzfPattern.Parse Core's real file search uses
                 // -- a multi-word query like "gsh ypfq" correctly requires BOTH words to match
                 // somewhere, unlike the old title.StartsWith/.Contains/MarkFuzzyMatch chain, which

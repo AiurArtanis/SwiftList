@@ -23,23 +23,17 @@ public class TabStripScrollView : ContentControl
     {
         base.OnApplyTemplate();
 
-        if (_scroller != null)
-            _scroller.ScrollChanged -= Scroller_ScrollChanged;
-        if (_leftButton != null)
-            _leftButton.Click -= LeftButton_Click;
-        if (_rightButton != null)
-            _rightButton.Click -= RightButton_Click;
+        _scroller?.ScrollChanged -= Scroller_ScrollChanged;
+        _leftButton?.Click -= LeftButton_Click;
+        _rightButton?.Click -= RightButton_Click;
 
         _scroller = GetTemplateChild("PART_Scroller") as ScrollViewer;
         _leftButton = GetTemplateChild("PART_LeftButton") as Button;
         _rightButton = GetTemplateChild("PART_RightButton") as Button;
 
-        if (_scroller != null)
-            _scroller.ScrollChanged += Scroller_ScrollChanged;
-        if (_leftButton != null)
-            _leftButton.Click += LeftButton_Click;
-        if (_rightButton != null)
-            _rightButton.Click += RightButton_Click;
+        _scroller?.ScrollChanged += Scroller_ScrollChanged;
+        _leftButton?.Click += LeftButton_Click;
+        _rightButton?.Click += RightButton_Click;
 
         UpdateArrowVisibility();
     }
@@ -59,9 +53,7 @@ public class TabStripScrollView : ContentControl
     private void UpdateArrowVisibility()
     {
         if (_scroller == null) return;
-        if (_leftButton != null)
-            _leftButton.Visibility = _scroller.HorizontalOffset > 0.5 ? Visibility.Visible : Visibility.Collapsed;
-        if (_rightButton != null)
-            _rightButton.Visibility = _scroller.HorizontalOffset < _scroller.ScrollableWidth - 0.5 ? Visibility.Visible : Visibility.Collapsed;
+        _leftButton?.Visibility = _scroller.HorizontalOffset > 0.5 ? Visibility.Visible : Visibility.Collapsed;
+        _rightButton?.Visibility = _scroller.HorizontalOffset < _scroller.ScrollableWidth - 0.5 ? Visibility.Visible : Visibility.Collapsed;
     }
 }

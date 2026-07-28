@@ -1,6 +1,5 @@
 using System.IO;
 using System.Windows;
-using System.Windows.Controls.Primitives;
 using System.Windows.Media.Imaging;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
@@ -36,7 +35,7 @@ internal static class QuickNavigationMenuContentExtensions
     internal static Separator CreateSeparator()
     {
         var separator = new Separator();
-        separator.SetResourceReference(Separator.BackgroundProperty, "SeparatorBrush");
+        separator.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "SeparatorBrush");
         return separator;
     }
 
@@ -136,7 +135,7 @@ internal static class QuickNavigationMenuContentExtensions
             TextTrimming = TextTrimming.None,
             VerticalAlignment = VerticalAlignment.Center
         };
-        SwiftList.App.Helpers.Visuals.MarqueeBehavior.SetEnableMarquee(textBlock, true);
+        Helpers.Visuals.MarqueeBehavior.SetEnableMarquee(textBlock, true);
 
         return new System.Windows.Controls.ScrollViewer
         {

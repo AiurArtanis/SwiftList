@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Threading;
-using SwiftList.App.Services;
 using SwiftList.Core;
 
 namespace SwiftList.App.Views.QuickSearchWindow.Helpers;

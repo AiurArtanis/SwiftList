@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Windows;
-using SwiftList.App.Services;
 using SwiftList.Core;
 
 using SwiftList.Core.Services.Search;

@@ -112,7 +112,7 @@ internal static class ActionMenuBuilder
             {
                 var action = registration.Action;
                 var effectiveHotkey = action.Hotkey;
-                var pluginId = System.IO.Path.GetFileNameWithoutExtension(PluginManagerCore.ComponentFilter.GetDllName(registration.Plugin));
+                var pluginId = System.IO.Path.GetFileNameWithoutExtension(ComponentFilter.GetDllName(registration.Plugin));
                 if (pluginActionHotkeys.TryGetValue(pluginId, out var overrides)
                     && overrides.TryGetValue(action.GetType().Name, out var overrideHotkey))
                 {

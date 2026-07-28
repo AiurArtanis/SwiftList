@@ -269,7 +269,7 @@ public class InlineSearchManager : IDisposable
     {
         if (_window == null) return;
 
-        var dragActive = SwiftList.App.Views.Controls.Results.ResultsDragDropHelper.IsDragActive;
+        var dragActive = Views.Controls.Results.ResultsDragDropHelper.IsDragActive;
         var pendingMouseDown = _window.HasPendingMouseDown;
 
         if (dragActive || pendingMouseDown)

@@ -1,11 +1,9 @@
 using System.IO;
 using System.Reflection;
-using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings.Plugins;
 using SwiftList.Core;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
-using SwiftList.PluginSdk.Services;
 using SwiftList.PluginSdk.Registries;
 
 using SwiftList.App.Services.Plugin;

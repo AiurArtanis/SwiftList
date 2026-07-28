@@ -1,5 +1,3 @@
-using SwiftList.Core.Services.Pipe;
-
 using SwiftList.Core.Wire;
 
 namespace SwiftList.Core.Services;

@@ -1,8 +1,5 @@
 using System.IO;
 using System.Diagnostics;
-using SwiftList.Core;
-using SwiftList.Core.Hook;
-using SwiftList.PluginSdk.Abstractions.Plugins;
 
 using SwiftList.Core.Wire;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;

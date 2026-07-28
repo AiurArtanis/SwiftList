@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using SwiftList.App.Services;
 
 namespace SwiftList.App.Services.ShellIcons;
 

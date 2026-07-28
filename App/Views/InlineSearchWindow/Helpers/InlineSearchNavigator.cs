@@ -1,8 +1,6 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using SwiftList.App.Services;
-using SwiftList.Core;
-using SwiftList.Core.Hook;
 using SwiftList.App.Services.Plugin;
 using SwiftList.Core.Wire;
 using SwiftList.Core.Hook.Commands;
@@ -121,7 +119,7 @@ public static class InlineSearchNavigator
             // thread automatically via WPF's SynchronizationContext, so touching window/UI state here is
             // safe -- the window is already hidden by this point either way.
             _ = InlineAdapterIpcCoordinator.RunAfterLateResultAsync(lateResult,
-                onSuccess: () => { window.Manager.IsExecuting = false; },
+                onSuccess: () => window.Manager.IsExecuting = false,
                 onFallback: () => { window.Manager.IsExecuting = false; window.RunFallbackChain(path, asAdmin, isDir, forceRealOpen); });
             return;
         }

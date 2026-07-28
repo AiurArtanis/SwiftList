@@ -1,4 +1,3 @@
-using SwiftList.Core.Indexer.NetworkDrive;
 using SwiftList.Core.Indexer.NetworkDrive.Walk;
 
 namespace SwiftList.Core.Indexer.Usn.Journal;

@@ -5,25 +5,22 @@ namespace SwiftList.App;
 // instances), then marshal back to the UI thread to apply it.
 internal static class LazyBackgroundLoader
 {
-    public static void Start(SemaphoreSlim semaphore, Func<Task> loadAndApply)
-    {
-        Task.Run(async () =>
-        {
-            await semaphore.WaitAsync();
-            try
-            {
-                await loadAndApply();
-            }
-            catch
-            {
-                // Ignore -- loadAndApply is responsible for its own fallback state on failure
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        });
-    }
+    public static void Start(SemaphoreSlim semaphore, Func<Task> loadAndApply) => Task.Run(async () =>
+                                                                                       {
+                                                                                           await semaphore.WaitAsync();
+                                                                                           try
+                                                                                           {
+                                                                                               await loadAndApply();
+                                                                                           }
+                                                                                           catch
+                                                                                           {
+                                                                                               // Ignore -- loadAndApply is responsible for its own fallback state on failure
+                                                                                           }
+                                                                                           finally
+                                                                                           {
+                                                                                               semaphore.Release();
+                                                                                           }
+                                                                                       });
 
     public static void ApplyOnUiThread(Action apply)
     {

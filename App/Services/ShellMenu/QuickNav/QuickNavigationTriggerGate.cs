@@ -1,9 +1,6 @@
 using System.Text;
-using SwiftList.PluginSdk.Abstractions.Plugins;
 using Native = SwiftList.Core.Hook.ExplorerNativeHooks;
 using PointNative = SwiftList.App.Views.InlineSearchWindow.Helpers.InlineSearchWindowNativeMethods;
-
-using SwiftList.App.Services.ShellMenu.Presenter;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.App.Services.ShellMenu.QuickNav;
 

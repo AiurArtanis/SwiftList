@@ -85,10 +85,7 @@ public class ResultTypeOrderViewModel : ViewModelBase
 
 public class ResultTypeOrderItem : OrderItemBase
 {
-    public ResultTypeOrderItem(string id, Func<string> resolveDisplayName, string triggerChar) : base(id, resolveDisplayName)
-    {
-        TriggerChar = triggerChar;
-    }
+    public ResultTypeOrderItem(string id, Func<string> resolveDisplayName, string triggerChar) : base(id, resolveDisplayName) => TriggerChar = triggerChar;
 
     // Empty = no trigger configured. When this is the first character typed in the quick window,
     // only this type's results show (see SearchResultMapper.BuildQuickResults' triggeredTypeId).

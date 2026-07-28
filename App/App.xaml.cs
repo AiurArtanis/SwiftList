@@ -2,8 +2,6 @@ using System.Diagnostics;
 using System.Windows;
 using SwiftList.Core;
 using SwiftList.Core.Services;
-using SwiftList.App.Helpers;
-using SwiftList.App.ViewModels.Settings;
 using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Search;
 using Application = System.Windows.Application;

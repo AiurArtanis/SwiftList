@@ -1,4 +1,3 @@
-using SwiftList.Core;
 using SwiftList.Core.Hook;
 
 using SwiftList.Core.Wire;

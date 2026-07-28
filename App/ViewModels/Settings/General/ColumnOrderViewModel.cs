@@ -82,10 +82,7 @@ public class ColumnOrderViewModel : ViewModelBase
         if (idx >= 0 && idx < Items.Count - 1) Items.Move(idx, idx + 1);
     }
 
-    public void Save()
-    {
-        _userSettings.ColumnOrder = Items.Select(x => x.Id).ToList();
-    }
+    public void Save() => _userSettings.ColumnOrder = Items.Select(x => x.Id).ToList();
 }
 
 public class ColumnOrderItem : OrderItemBase

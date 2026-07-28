@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
-using SwiftList.Core;
 
 using SwiftList.Core.SearchIndex;
 namespace SwiftList.App.ViewModels.Settings;

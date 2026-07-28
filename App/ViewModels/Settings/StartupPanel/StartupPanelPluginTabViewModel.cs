@@ -1,4 +1,3 @@
-using SwiftList.App.ViewModels.Search;
 using SwiftList.Core;
 
 using SwiftList.App.ViewModels.Search.StartupPanel;

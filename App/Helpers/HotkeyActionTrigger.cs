@@ -1,5 +1,4 @@
 using System.Windows.Input;
-using SwiftList.App.Services;
 using SwiftList.App.Services.PluginManagerCore;
 using SwiftList.Core;
 using SwiftList.PluginSdk.Abstractions;

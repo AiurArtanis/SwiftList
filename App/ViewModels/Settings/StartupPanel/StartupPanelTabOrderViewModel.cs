@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
-using SwiftList.App.ViewModels.Search;
 using SwiftList.Core;
 
 using SwiftList.App.Services.Plugin;
@@ -94,10 +93,7 @@ public class StartupPanelTabOrderViewModel : ViewModelBase
         if (idx >= 0 && idx < Items.Count - 1) Items.Move(idx, idx + 1);
     }
 
-    public void Save()
-    {
-        _userSettings.StartupPanel.TabOrder = Items.Select(x => x.Id).ToList();
-    }
+    public void Save() => _userSettings.StartupPanel.TabOrder = Items.Select(x => x.Id).ToList();
 }
 
 public class StartupPanelTabOrderItem

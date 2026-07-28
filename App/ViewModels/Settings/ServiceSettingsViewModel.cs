@@ -2,7 +2,6 @@ using System.Windows;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
-using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
 using MessageBox = SwiftList.App.Views.Controls.Dialogs.CustomMessageBox;
 

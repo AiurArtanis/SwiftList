@@ -1,4 +1,3 @@
-using SwiftList.Core.Indexer;
 using SwiftList.Core.Services.Network;
 
 using SwiftList.Core.SearchIndex.Query;

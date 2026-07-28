@@ -82,7 +82,7 @@ public static class MarqueeBehavior
         DependencyPropertyDescriptor? isMouseOverDescriptor = null;
         DependencyPropertyDescriptor? isSelectedDescriptor = null;
         DependencyPropertyDescriptor? isHighlightedDescriptor = null;
-        DependencyObject? watchedContainer = (DependencyObject?)listBoxItem ?? menuItem;
+        var watchedContainer = (DependencyObject?)listBoxItem ?? menuItem;
         EventHandler? handler = null;
 
         if (listBoxItem != null)

@@ -1,7 +1,6 @@
 using System.IO;
 using System.IO.Pipes;
 using SwiftList.Core;
-using SwiftList.Core.Services;
 using SwiftList.App.ViewModels.Search;
 
 using SwiftList.Core.Services.Search;

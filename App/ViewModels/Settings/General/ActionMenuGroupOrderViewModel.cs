@@ -87,10 +87,7 @@ public class ActionMenuGroupOrderViewModel : ViewModelBase
         if (idx >= 0 && idx < Items.Count - 1) Items.Move(idx, idx + 1);
     }
 
-    public void Save()
-    {
-        _userSettings.ActionMenuGroupOrder = Items.Select(x => x.Id).ToList();
-    }
+    public void Save() => _userSettings.ActionMenuGroupOrder = Items.Select(x => x.Id).ToList();
 }
 
 public class ActionMenuGroupOrderItem : OrderItemBase

@@ -1,10 +1,7 @@
 using System.IO;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
-using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Services;
-using SwiftList.App.Services;
 
 using SwiftList.App.Services.Plugin;
 using SwiftList.App.Services.ShellIcons;

@@ -1,8 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using SwiftList.App.Helpers;
-using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings;
 
 using SwiftList.App.Services.ShellIcons;

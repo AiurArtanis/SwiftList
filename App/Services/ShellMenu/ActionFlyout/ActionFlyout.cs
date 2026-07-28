@@ -13,8 +13,6 @@ using ItemsPanelTemplate = System.Windows.Controls.ItemsPanelTemplate;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using KeyEventHandler = System.Windows.Input.KeyEventHandler;
 using MouseButtonEventHandler = System.Windows.Input.MouseButtonEventHandler;
-
-using SwiftList.App.Services.ShellMenu.QuickNav;
 using SwiftList.App.Services.ShellMenu.QuickNav.RightClickActions;
 namespace SwiftList.App.Services.ShellMenu.ActionFlyout;
 
@@ -121,7 +119,7 @@ public static class ActionFlyout
         border.SetResourceReference(Border.BackgroundProperty, "MenuBackground");
         border.SetResourceReference(Border.BorderBrushProperty, "MenuBorderBrush");
         border.SetResourceReference(Border.CornerRadiusProperty, "CornerRadiusPopover");
-        border.SetResourceReference(Border.EffectProperty, "Elevation1");
+        border.SetResourceReference(UIElement.EffectProperty, "Elevation1");
 
         _popup = new Popup
         {

@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using SwiftList.Core.Indexer.NetworkDrive;
 using SwiftList.Core.SearchIndex.Fzf;
 
 using SwiftList.Core.IndexV2.Alias;

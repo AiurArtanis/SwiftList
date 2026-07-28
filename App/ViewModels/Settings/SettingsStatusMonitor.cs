@@ -1,4 +1,3 @@
-using SwiftList.App.Services;
 using SwiftList.Core;
 using SwiftList.Core.Indexer.NetworkDrive;
 using SwiftList.Core.Indexer.Usn;

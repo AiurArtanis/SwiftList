@@ -1,4 +1,3 @@
-using SwiftList.Core;
 using SwiftList.Core.Indexer.Usn;
 
 using SwiftList.Core.Services.Search;

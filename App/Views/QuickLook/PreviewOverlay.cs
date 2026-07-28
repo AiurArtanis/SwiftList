@@ -35,7 +35,7 @@ internal sealed class PreviewOverlay
             ShowActivated = false,
             Content = host,
         };
-        _overlay.SetResourceReference(Window.BackgroundProperty, "CardBackground");
+        _overlay.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "CardBackground");
 
         _owner.LocationChanged += OnChanged;
         _owner.SizeChanged += OnSizeChanged;

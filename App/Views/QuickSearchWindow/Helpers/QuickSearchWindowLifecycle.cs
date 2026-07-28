@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Interop;
 using SwiftList.App.Helpers.Visuals;
-using SwiftList.App.Services;
 using SwiftList.App.Services.Theme;
 using SwiftList.App.Views.InlineSearchWindow.Helpers;
 using SwiftList.Core;

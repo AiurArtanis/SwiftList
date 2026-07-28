@@ -1,6 +1,5 @@
 using System.IO;
 using SwiftList.Core;
-using SwiftList.Core.Indexer.NetworkDrive;
 using SwiftList.App.Helpers;
 using SwiftList.App.Services;
 using SwiftList.App.Views.Controls.Dialogs;

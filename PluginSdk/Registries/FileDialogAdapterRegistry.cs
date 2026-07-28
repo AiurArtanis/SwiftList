@@ -1,4 +1,3 @@
-using SwiftList.PluginSdk.Abstractions.Plugins;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
 namespace SwiftList.PluginSdk.Registries;
 

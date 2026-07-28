@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Input;
-using SwiftList.App.Services;
 using SwiftList.App.ViewModels.Settings.Plugins;
 
 using SwiftList.App.Services.Theme;

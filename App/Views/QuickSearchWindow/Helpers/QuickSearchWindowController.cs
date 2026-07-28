@@ -174,7 +174,7 @@ public class QuickSearchWindowController
         // ceiling instead of always fading to a flat 1.0.
         var fadeContent = _window.Content as UIElement;
         fadeContent?.BeginAnimation(UIElement.OpacityProperty, null);
-        if (fadeContent != null) fadeContent.Opacity = 0;
+        fadeContent?.Opacity = 0;
 
         _window.Show();
         _window.WindowState = WindowState.Normal;
@@ -254,7 +254,6 @@ public class QuickSearchWindowController
         // state, so it's deferred behind a fade-out of whatever is CURRENTLY on screen -- fading out
         // first, then resetting the content, means the window dismisses showing what the user was just
         // looking at instead of jump-cutting to the empty/startup-panel state a beat before it vanishes.
-        var fadeContent = _window.Content as UIElement;
         void FinishHide()
         {
             // A newer ShowWindow()/HideWindow() call already superseded this one (e.g. the user
@@ -289,7 +288,7 @@ public class QuickSearchWindowController
             });
         }
 
-        if (fadeContent != null)
+        if (_window.Content is UIElement fadeContent)
         {
             var fadeOutDuration = (Duration)System.Windows.Application.Current.FindResource("DurationFast");
             var fadeOut = new DoubleAnimation(0.0, fadeOutDuration)
