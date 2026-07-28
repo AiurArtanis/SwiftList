@@ -6,9 +6,9 @@ public sealed class WinRARExtractDialogAdapterTests
     [TestMethod]
     public void NormalizeIfWellFormed_RootedPath_ReturnsItTrimmed()
     {
-        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed(@"C:\Users\hlj49\Desktop\");
+        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed(@"C:\Users\testuser\Desktop\");
 
-        Assert.AreEqual(@"C:\Users\hlj49\Desktop", result);
+        Assert.AreEqual(@"C:\Users\testuser\Desktop", result);
     }
 
     [TestMethod]
@@ -18,9 +18,9 @@ public sealed class WinRARExtractDialogAdapterTests
         // yet. Unlike the old strict "must already exist" contract, this no longer rejects it: existence
         // can't be verified reliably from the elevated Hook process this runs in anyway (see
         // NormalizeIfWellFormed's own comment), so a well-formed path is trusted regardless.
-        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed(@"C:\Users\hlj49\Desktop\New ZIP Archive");
+        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed(@"C:\Users\testuser\Desktop\New ZIP Archive");
 
-        Assert.AreEqual(@"C:\Users\hlj49\Desktop\New ZIP Archive", result);
+        Assert.AreEqual(@"C:\Users\testuser\Desktop\New ZIP Archive", result);
     }
 
     [TestMethod]
