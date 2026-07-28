@@ -40,4 +40,11 @@ public struct SearchRequestMessage
     // LaunchHook: whether the caller wants the hook elevated (only honored if that session's user is
     // genuinely an administrator -- see HookProcessBroker).
     public bool RequestElevation { get; set; }
+
+    // Search/SearchDir: the user's fuzzy-matching preference, carried per request because the service
+    // runs as a different (elevated) identity and cannot read this user's settings file. Deliberately
+    // phrased as the negative ("exact") rather than "fuzzy": this is a struct, so it cannot carry a
+    // field initializer, and a caller that forgets to set it must fall back to the historical fuzzy
+    // behavior -- which only the negative phrasing gives, since default(bool) is false.
+    public bool ExactMatch { get; set; }
 }

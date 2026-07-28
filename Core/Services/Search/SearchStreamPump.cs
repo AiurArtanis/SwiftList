@@ -37,6 +37,9 @@ public static class SearchStreamPump
             }
         }
         SearchContext.DisabledAliasIds = disabledIds;
+        // The service runs as a different identity and cannot read the calling user's settings file,
+        // so this preference only exists here as whatever the request carried over the pipe.
+        SearchContext.FuzzyMatchEnabled = !msg.ExactMatch;
 
         var bufferedStream = new BufferedStream(stream, 8192);
         try

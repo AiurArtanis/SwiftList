@@ -7,7 +7,7 @@ namespace SwiftList.Core.Wire;
 public static class SearchRequestBinarySerializer
 {
     private const int Magic = 0x51504C53; // SLPQ
-    private const int VersionSearchRequest = 4;
+    private const int VersionSearchRequest = 5; // v5: Search/SearchDir gained the ExactMatch flag
 
     public static async Task WriteSearchRequestAsync(Stream stream, SearchRequestMessage msg, CancellationToken token = default)
     {
@@ -23,10 +23,10 @@ public static class SearchRequestBinarySerializer
                 payloadSize += GetStringByteCount(msg.Drive) + 5;
                 break;
             case SearchRequestId.Search:
-                payloadSize += 8 + GetStringByteCount(msg.Query) + 5 + CalculateStringListSize(msg.DisabledAliasComponents);
+                payloadSize += 8 + GetStringByteCount(msg.Query) + 5 + CalculateStringListSize(msg.DisabledAliasComponents) + 1;
                 break;
             case SearchRequestId.SearchDir:
-                payloadSize += 8 + GetStringByteCount(msg.DirectoryFilter) + 5 + GetStringByteCount(msg.Query) + 5 + CalculateStringListSize(msg.DisabledAliasComponents);
+                payloadSize += 8 + GetStringByteCount(msg.DirectoryFilter) + 5 + GetStringByteCount(msg.Query) + 5 + CalculateStringListSize(msg.DisabledAliasComponents) + 1;
                 break;
             case SearchRequestId.GetFileMetadata:
                 payloadSize += CalculateStringListSize(msg.FilePaths);
@@ -64,6 +64,7 @@ public static class SearchRequestBinarySerializer
                     offset += 4;
                     WriteString(span, ref offset, msg.Query);
                     WriteStringList(span, ref offset, msg.DisabledAliasComponents);
+                    span[offset++] = (byte)(msg.ExactMatch ? 1 : 0);
                     break;
                 case SearchRequestId.SearchDir:
                     BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), msg.Limit);
@@ -73,6 +74,7 @@ public static class SearchRequestBinarySerializer
                     WriteString(span, ref offset, msg.DirectoryFilter);
                     WriteString(span, ref offset, msg.Query);
                     WriteStringList(span, ref offset, msg.DisabledAliasComponents);
+                    span[offset++] = (byte)(msg.ExactMatch ? 1 : 0);
                     break;
                 case SearchRequestId.GetFileMetadata:
                     WriteStringList(span, ref offset, msg.FilePaths);
@@ -140,6 +142,7 @@ public static class SearchRequestBinarySerializer
                 offset += 4;
                 msg.Query = ReadString(payload, ref offset);
                 msg.DisabledAliasComponents = ReadStringList(payload, ref offset);
+                msg.ExactMatch = payload[offset++] != 0;
                 break;
             case SearchRequestId.SearchDir:
                 msg.Limit = BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
@@ -149,6 +152,7 @@ public static class SearchRequestBinarySerializer
                 msg.DirectoryFilter = ReadString(payload, ref offset);
                 msg.Query = ReadString(payload, ref offset);
                 msg.DisabledAliasComponents = ReadStringList(payload, ref offset);
+                msg.ExactMatch = payload[offset++] != 0;
                 break;
             case SearchRequestId.GetFileMetadata:
                 msg.FilePaths = ReadStringList(payload, ref offset);

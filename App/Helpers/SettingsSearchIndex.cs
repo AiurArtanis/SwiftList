@@ -72,6 +72,7 @@ public static class SettingsSearchIndex
         new("General_AutoSilentUpdate", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowAutoSilentUpdate", "General_SysTitle"),
         new("General_HardwareAcceleration", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowHardwareAcceleration", "General_SysTitle"),
         new("General_HideTrayIcon", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowHideTrayIcon", "General_SysTitle"),
+        new("General_EnableFuzzyMatch", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowEnableFuzzyMatch", "General_SysTitle"),
         new("General_LogLevel", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowLogLevel", "General_SysTitle"),
         new("General_LangSelect", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowLangSelect", "General_SysTitle"),
         new("General_DefaultFileManagerEnabled", "General", vm => vm.General.SelectedTab = "System", "TabSystem/RowDefaultFileManagerEnabled", "General_SysTitle"),

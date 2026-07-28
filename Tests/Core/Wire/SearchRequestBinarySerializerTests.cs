@@ -14,6 +14,39 @@ public sealed class SearchRequestBinarySerializerTests
     }
 
     [TestMethod]
+    public async Task RoundTrip_Search_PreservesExactMatchFlag()
+    {
+        foreach (var id in new[] { SearchRequestId.Search, SearchRequestId.SearchDir })
+        {
+            var result = await RoundTripAsync(new SearchRequestMessage
+            {
+                Id = id,
+                Query = "report",
+                DirectoryFilter = @"C:\docs",
+                Limit = 51,
+                AppLimit = 51,
+                ExactMatch = true
+            });
+
+            Assert.IsTrue(result.ExactMatch, $"{id} lost the flag");
+            // The flag is written after the alias list, so a wrong payload size would corrupt
+            // whatever precedes it rather than only the flag itself.
+            Assert.AreEqual("report", result.Query);
+            Assert.AreEqual(51, result.Limit);
+        }
+    }
+
+    [TestMethod]
+    public async Task RoundTrip_Search_DefaultsToFuzzyWhenFlagNeverSet()
+    {
+        // SearchRequestMessage is a struct and cannot carry a field initializer, so the wire flag is
+        // phrased as the negative: a caller that never touches it must still get fuzzy matching.
+        var result = await RoundTripAsync(new SearchRequestMessage { Id = SearchRequestId.Search, Query = "report" });
+
+        Assert.IsFalse(result.ExactMatch);
+    }
+
+    [TestMethod]
     public async Task RoundTrip_NoPayloadRequest_PreservesId()
     {
         var result = await RoundTripAsync(new SearchRequestMessage { Id = SearchRequestId.Ping });

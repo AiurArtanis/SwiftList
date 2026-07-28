@@ -238,6 +238,57 @@ public sealed class FzfPatternTests
         Assert.IsTrue(pattern.TryMatch("cad acb.txt", out _, FzfScoringScheme.Default));
     }
 
+    // SearchContext.FuzzyMatchEnabled is an AsyncLocal, so each case restores it rather than leaving
+    // the flipped value to leak into whatever test the runner schedules next on this context.
+    private static void WithFuzzyDisabled(Action body)
+    {
+        var previous = SwiftList.Core.SearchContext.FuzzyMatchEnabled;
+        SwiftList.Core.SearchContext.FuzzyMatchEnabled = false;
+        try { body(); }
+        finally { SwiftList.Core.SearchContext.FuzzyMatchEnabled = previous; }
+    }
+
+    [TestMethod]
+    public void Parse_FuzzyDisabled_MakesBareTermsContiguous() => WithFuzzyDisabled(() =>
+    {
+        var pattern = FzfPattern.Parse("ab cd");
+
+        Assert.AreEqual(FzfTermKind.Exact, pattern.TermSets[0].Terms[0].Kind);
+        Assert.AreEqual(FzfTermKind.Exact, pattern.TermSets[1].Terms[0].Kind);
+        Assert.IsTrue(pattern.TryMatch("ab cd.txt", out _, FzfScoringScheme.Default));
+        // The whole point: each term must now be contiguous, so scattered characters no longer match.
+        Assert.IsFalse(pattern.TryMatch("cad acb.txt", out _, FzfScoringScheme.Default));
+    });
+
+    [TestMethod]
+    public void Parse_FuzzyEnabled_LeavesBareTermsFuzzy()
+    {
+        var pattern = FzfPattern.Parse("ab cd");
+
+        Assert.AreEqual(FzfTermKind.Fuzzy, pattern.TermSets[0].Terms[0].Kind);
+        Assert.IsTrue(pattern.TryMatch("cad acb.txt", out _, FzfScoringScheme.Default));
+    }
+
+    [TestMethod]
+    public void Parse_FuzzyDisabled_ExactMarkerFlipsTheTermBackToFuzzy() => WithFuzzyDisabled(() =>
+    {
+        // "'" flips exactness rather than setting it, so it stays the per-term escape hatch in
+        // both modes -- matching fzf's own behavior under --exact.
+        var pattern = FzfPattern.Parse("'ab");
+
+        Assert.AreEqual(FzfTermKind.Fuzzy, pattern.TermSets[0].Terms[0].Kind);
+        Assert.IsTrue(pattern.TryMatch("cad acb.txt", out _, FzfScoringScheme.Default));
+    });
+
+    [TestMethod]
+    public void Parse_FuzzyDisabled_LeavesExplicitOperatorsAlone() => WithFuzzyDisabled(() =>
+    {
+        Assert.AreEqual(FzfTermKind.Prefix, FzfPattern.Parse("^read").TermSets[0].Terms[0].Kind);
+        Assert.AreEqual(FzfTermKind.Suffix, FzfPattern.Parse("md$").TermSets[0].Terms[0].Kind);
+        Assert.AreEqual(FzfTermKind.Equal, FzfPattern.Parse("^readme.md$").TermSets[0].Terms[0].Kind);
+        Assert.AreEqual(FzfTermKind.ExactBoundary, FzfPattern.Parse("'read'").TermSets[0].Terms[0].Kind);
+    });
+
     [TestMethod]
     public void GetTotalTermLength_SumsPositiveTermsOnlyExcludingInverse()
     {

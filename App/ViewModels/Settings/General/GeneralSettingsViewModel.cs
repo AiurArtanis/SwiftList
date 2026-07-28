@@ -19,6 +19,7 @@ public class GeneralSettingsViewModel : ViewModelBase
     private bool _autoCheckUpdates;
     private bool _autoSilentUpdate;
     private bool _enableHardwareAcceleration;
+    private bool _enableFuzzyMatch;
     private bool _hideTrayIcon;
     private bool _defaultFileManagerEnabled;
     private string _defaultFileManagerPath;
@@ -53,6 +54,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         _autoCheckUpdates = userSettings.AutoCheckUpdates;
         _autoSilentUpdate = userSettings.AutoSilentUpdate;
         _enableHardwareAcceleration = userSettings.EnableHardwareAcceleration;
+        _enableFuzzyMatch = userSettings.EnableFuzzyMatch;
         _hideTrayIcon = userSettings.HideTrayIcon;
         _defaultFileManagerEnabled = userSettings.DefaultFileManager.Enabled;
         _defaultFileManagerPath = userSettings.DefaultFileManager.Path;
@@ -151,6 +153,14 @@ public class GeneralSettingsViewModel : ViewModelBase
         set => SetProperty(ref _enableHardwareAcceleration, value);
     }
 
+    // Off narrows every bare query term from a subsequence match to a contiguous substring one, so
+    // "abc" stops matching "a-b-c". Applies to the search itself, not just the ordering.
+    public bool EnableFuzzyMatch
+    {
+        get => _enableFuzzyMatch;
+        set => SetProperty(ref _enableFuzzyMatch, value);
+    }
+
     public bool HideTrayIcon
     {
         get => _hideTrayIcon;
@@ -218,6 +228,7 @@ public class GeneralSettingsViewModel : ViewModelBase
         if (IsUserAdmin)
             _userSettings.AutoSilentUpdate = _autoSilentUpdate;
         _userSettings.EnableHardwareAcceleration = _enableHardwareAcceleration;
+        _userSettings.EnableFuzzyMatch = _enableFuzzyMatch;
         _userSettings.HideTrayIcon = _hideTrayIcon;
         _userSettings.LogLevel = LogLevel;
         _userSettings.DefaultFileManager.Enabled = _defaultFileManagerEnabled;

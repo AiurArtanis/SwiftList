@@ -37,6 +37,10 @@ public class UserSettings
     // surface, since it's created once at startup and only ever hidden, never closed). Requires a
     // restart to take effect, since the window's HwndTarget.RenderMode is only set once at load.
     public bool EnableHardwareAcceleration { get; set; } = true;
+
+    // Off makes every bare query term a contiguous-substring match instead of a subsequence one
+    // (fzf's own --exact mode). Default on, so an upgrade never changes what a query matches.
+    public bool EnableFuzzyMatch { get; set; } = true;
     // The Quick window's tray-menu capsule button (only shown while this is true) is the replacement
     // entry point for Settings/Exit/etc., so hiding the tray icon never strands the user -- see
     // QuickSearchWindow's BtnTrayMenu and TrayIconService.ShowMenuAt.

@@ -39,7 +39,8 @@ public class SearchService : IDisposable
     // to unfilter here; recovering that is CheckNeedsLiveSearch's live-scan fallback's job instead.
     public async Task<bool> SearchStreamingAsync(string query, int maxResults, int maxAppResults, string? directoryFilter, Action<SearchResult> onResult, CancellationToken token = default, Action? onLocalSearchFailed = null, bool bypassExclusions = false)
     {
-        var exclusionRules = ExclusionRuleSet.From(UserSettings.Load());
+        var settings = UserSettings.Load();
+        var exclusionRules = ExclusionRuleSet.From(settings);
         var fileCandidateLimit = Math.Clamp(maxResults * 4, maxResults, 2000);
 
         var isSearchDir = !string.IsNullOrEmpty(directoryFilter);
@@ -50,7 +51,8 @@ public class SearchService : IDisposable
             AppLimit = maxAppResults,
             DirectoryFilter = isSearchDir ? directoryFilter : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             Query = query,
-            DisabledAliasComponents = UserSettings.Load().DisabledPluginComponents
+            ExactMatch = !settings.EnableFuzzyMatch,
+            DisabledAliasComponents = settings.DisabledPluginComponents
                 .Where(c => c.Contains("::AliasProvider::", StringComparison.OrdinalIgnoreCase))
                 .ToList()
         };
@@ -67,6 +69,9 @@ public class SearchService : IDisposable
             }
         }
         SearchContext.DisabledAliasIds = disabledIds;
+        // Applies to the sources this process searches itself (network drives, live directory scans);
+        // the local-drive path carries the same flag over the pipe instead -- see SearchStreamPump.
+        SearchContext.FuzzyMatchEnabled = !msg.ExactMatch;
 
         var parsed = SearchQueryParser.Parse(query);
         string? queryExemptRoot = null;

@@ -176,7 +176,11 @@ internal sealed class FzfPattern
             }
 
             afterBar = false;
-            var kind = FzfTermKind.Fuzzy;
+            // Mirrors fzf's own --exact mode ("if !fuzzy { typ = termExact }" in its parseTerms):
+            // with fuzzy matching switched off, a bare term must match as a contiguous substring
+            // rather than a scattered subsequence.
+            var fuzzyEnabled = SearchContext.FuzzyMatchEnabled;
+            var kind = fuzzyEnabled ? FzfTermKind.Fuzzy : FzfTermKind.Exact;
             var inverse = false;
             if (token.StartsWith("!", StringComparison.Ordinal))
             {
@@ -198,11 +202,14 @@ internal sealed class FzfPattern
             }
             else if (token.StartsWith("'", StringComparison.Ordinal))
             {
+                // "'" flips exactness rather than setting it, so it stays useful in both modes: it
+                // makes a term exact while fuzzy matching is on, and hands one term back to fuzzy
+                // matching while it is off (fzf's own "Flip exactness" branch does the same).
                 // A trailing "$" already claimed the kind ("'foo$"). A suffix match is exact by
                 // nature, so the "'" adds nothing there and must not overwrite Suffix -- doing so
                 // silently discarded the end anchor the user explicitly typed.
                 if (kind != FzfTermKind.Suffix)
-                    kind = inverse ? FzfTermKind.Fuzzy : FzfTermKind.Exact;
+                    kind = fuzzyEnabled && !inverse ? FzfTermKind.Exact : FzfTermKind.Fuzzy;
                 token = token.Substring(1);
             }
             else if (token.StartsWith("^", StringComparison.Ordinal))

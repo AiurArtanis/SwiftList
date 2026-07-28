@@ -183,6 +183,8 @@
   "General_AutoSilentUpdate": "自動靜默更新 (檢測到新版本時)",
   "General_HardwareAcceleration": "啟用硬體加速 (需重啟程式)",
   "General_HideTrayIcon": "隱藏托盤圖示",
+  "General_EnableFuzzyMatch": "啟用模糊比對",
+  "General_EnableFuzzyMatchDesc": "關閉後，查詢詞必須作為連續子字串出現：\"abc\" 不再比對到 \"a-b-c\"。在詞前加 ' 可讓該詞仍按模糊比對。",
   "General_DefaultFileManagerEnabled": "使用第三方檔案管理員開啟資料夾",
   "General_DefaultFileManagerHint": "開啟資料夾(包括\"開啟所在資料夾\")時改用下面配置的程式，而不是系統預設關聯。",
   "General_DefaultFileManagerPath": "路徑(程式)",

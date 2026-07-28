@@ -183,6 +183,8 @@
   "General_AutoSilentUpdate": "Auto silent update (when new version is detected)",
   "General_HardwareAcceleration": "Enable hardware acceleration (requires restart)",
   "General_HideTrayIcon": "Hide tray icon",
+  "General_EnableFuzzyMatch": "Enable fuzzy matching",
+  "General_EnableFuzzyMatchDesc": "When off, a term must appear as a contiguous substring: \"abc\" no longer matches \"a-b-c\". Prefix a term with ' to keep matching it fuzzily.",
   "General_DefaultFileManagerEnabled": "Open folders with a third-party file manager",
   "General_DefaultFileManagerHint": "Redirects opening a folder (including \"Open Folder Location\") to the program below instead of the shell's own default.",
   "General_DefaultFileManagerPath": "Path (program)",
