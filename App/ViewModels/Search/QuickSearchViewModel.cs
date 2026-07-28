@@ -172,7 +172,16 @@ public class QuickSearchViewModel : ViewModelBase, IDisposable
     // ==========================================
 
     public void TriggerIndexBuild(bool forceRebuild = false) => Monitor.TriggerIndexBuild(forceRebuild);
-    public void EnsureServiceMonitoringActive() => Monitor.EnsureServiceMonitoringActive();
+
+    // Covers both the Quick and Inline search windows -- they already reuse this one ViewModel, so this
+    // is the single call site for both (see InlineSearchWindow.ActivateAndFocusSearchBox,
+    // QuickSearchWindowController's own show path, and InlineSearchManager's show path, all of which
+    // already call this method on every window activation).
+    public void EnsureServiceMonitoringActive()
+    {
+        Monitor.EnsureServiceMonitoringActive();
+        SearchReachabilityGate.BeginSession();
+    }
     public void RefreshEmptyState() => Search.RefreshEmptyState();
 
     public double SearchBarWidth => UserSettings.Load().SearchWindow.SearchBarWidth;

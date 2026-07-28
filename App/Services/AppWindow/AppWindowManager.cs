@@ -94,6 +94,9 @@ public static class AppWindowManager
                 _searchWindow.WindowState = WindowState.Normal;
 
             _searchWindow.Activate();
+            // Session-start hook for the full window -- mirrors QuickSearchViewModel.
+            // EnsureServiceMonitoringActive, which is the same hook for the Quick/Inline windows.
+            SwiftList.App.ViewModels.Search.SearchReachabilityGate.BeginSession();
         });
     }
 

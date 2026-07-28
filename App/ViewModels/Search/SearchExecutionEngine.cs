@@ -234,6 +234,12 @@ internal sealed class SearchExecutionEngine : IDisposable
         {
             token.ThrowIfCancellationRequested();
 
+            // Excludes a result whose source (local drive, network drive, WSL, folder index) was found
+            // unreachable by this session's own SearchReachabilityGate.BeginSession probe -- see its own
+            // comment on why that's a better fit here than either source type's existing periodic signal.
+            if (!SearchReachabilityGate.IsResultReachable(result))
+                return;
+
             lock (responseLock)
             {
                 streamedResponse.Add(result);
