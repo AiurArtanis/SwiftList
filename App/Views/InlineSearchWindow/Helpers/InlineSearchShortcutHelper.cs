@@ -34,7 +34,7 @@ public static class InlineSearchShortcutHelper
             else if (!string.IsNullOrEmpty(quickSwitch))
             {
                 HotkeyStringFormat.ParseCombo(quickSwitch, out var qsMod, out var qsKey);
-                if (string.Equals(qsMod, "Control", StringComparison.OrdinalIgnoreCase)) qsMod = "Ctrl";
+                qsMod = AbbreviateModifiers(qsMod);
 
                 if (string.Equals(qsKey, "Escape", StringComparison.OrdinalIgnoreCase)) qsKey = "Esc";
 
@@ -77,4 +77,11 @@ public static class InlineSearchShortcutHelper
             }
         }
     }
+
+    // ParseCombo's modifier output can be a "+"-joined multi-modifier combo (e.g. "Control+Win") since
+    // it started preserving every modifier instead of just the first one -- abbreviate each segment
+    // individually rather than only matching the whole string against "Control".
+    internal static string AbbreviateModifiers(string modifiers) =>
+        string.Join("+", modifiers.Split('+', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => string.Equals(part, "Control", StringComparison.OrdinalIgnoreCase) ? "Ctrl" : part));
 }
