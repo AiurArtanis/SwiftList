@@ -12,11 +12,39 @@ public class StandardFileDialogAdapter : IFileDialogAdapter
 {
     public string Name => TranslationService.Get("Plugins_StandardFileDialogAdapterName");
 
+    // Set by CanHandle for whichever hwnd it last matched -- read back by TargetIsFolderOnly below.
+    // Safe as instance state (not per-hwnd) because this adapter, like every IFileDialogAdapter, is a
+    // long-lived singleton tracking exactly one "currently active" dialog at a time (see
+    // ExplorerTracker/InlineSearchNavigator), never two concurrently.
+    private bool _lastMatchWasFolderOnly;
+
     public bool CanHandle(IntPtr hwnd, string className, string processName)
     {
         if (!className.Equals("#32770", StringComparison.OrdinalIgnoreCase))
             return false;
-        return FindBreadcrumbParent(hwnd) != IntPtr.Zero;
+        if (FindBreadcrumbParent(hwnd) == IntPtr.Zero)
+            return false;
+        _lastMatchWasFolderOnly = LooksLikeFolderOnlyPicker(hwnd);
+        return true;
+    }
+
+    // True for a modern dialog opened via FOS_PICKFOLDERS (a "Browse For Folder"-style picker built on
+    // the same IFileOpenDialog frame as a regular Open/Save dialog, as opposed to the legacy
+    // SHBrowseForFolder dialog FolderBrowserDialogAdapter already covers). Determined empirically by
+    // comparing a real modern file picker against a real modern folder picker: folder mode swaps out
+    // the filename ComboBoxEx32 (control id 1148) for a plain Edit box (control id 1152) in the same
+    // slot. Checking for id 1152's PRESENCE together with id 1148's ABSENCE (not either alone) is
+    // deliberately conservative -- a single missing control could just mean an unrelated customization,
+    // e.g. Office's Open dialog bolts extra panels (Recent/OneDrive/SharePoint) onto this same shell
+    // frame via IFileDialogCustomize, but can't remove or renumber the shell's own built-in id-1148
+    // combo since that part isn't Office's to customize, only add alongside.
+    public bool TargetIsFolderOnly => _lastMatchWasFolderOnly;
+
+    private static bool LooksLikeFolderOnlyPicker(IntPtr hwnd)
+    {
+        var hasFileNameCombo = FindDescendant(hwnd, "ComboBoxEx32", 1148) != IntPtr.Zero;
+        var hasFolderEdit = FindDescendant(hwnd, "Edit", 1152) != IntPtr.Zero;
+        return hasFolderEdit && !hasFileNameCombo;
     }
 
     public string? GetCurrentPath(IntPtr hwnd)
@@ -226,6 +254,24 @@ public class StandardFileDialogAdapter : IFileDialogAdapter
             var classNameSb = new StringBuilder(256);
             GetClassName(childHwnd, classNameSb, classNameSb.Capacity);
             if (classNameSb.ToString().Equals("Breadcrumb Parent", StringComparison.OrdinalIgnoreCase))
+            {
+                result = childHwnd;
+                return false;
+            }
+            return true;
+        }, IntPtr.Zero);
+        return result;
+    }
+
+    private static IntPtr FindDescendant(IntPtr parent, string className, int controlId)
+    {
+        if (parent == IntPtr.Zero) return IntPtr.Zero;
+        var result = IntPtr.Zero;
+        EnumChildWindows(parent, (childHwnd, lParam) =>
+        {
+            var classNameSb = new StringBuilder(256);
+            GetClassName(childHwnd, classNameSb, classNameSb.Capacity);
+            if (classNameSb.ToString().Equals(className, StringComparison.OrdinalIgnoreCase) && GetDlgCtrlID(childHwnd) == controlId)
             {
                 result = childHwnd;
                 return false;
