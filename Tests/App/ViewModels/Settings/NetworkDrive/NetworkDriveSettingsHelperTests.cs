@@ -63,4 +63,25 @@ public sealed class NetworkDriveSettingsHelperTests
     [TestMethod]
     public void IsWslPath_PrefixMatchIsCaseInsensitive() =>
         Assert.IsTrue(NetworkDriveSettingsHelper.IsWslPath(@"\\WSL$\Ubuntu"));
+
+    // Regression coverage: System.IO.Path.GetFileName(@"\\wsl$\Ubuntu") returns "" -- a bare two-segment
+    // UNC path has no path component past its root by .NET's own rules (same as Path.GetFileName(@"C:\")
+    // == "") -- which used to collapse every cached-but-no-longer-listed WSL distro into one blank row
+    // instead of showing its real name (both here and in NetworkDriveRefreshCoordinator, which shares
+    // this helper).
+    [TestMethod]
+    public void GetWslDistroName_WslDollarPrefix_ReturnsDistroName() =>
+        Assert.AreEqual("Ubuntu", NetworkDriveSettingsHelper.GetWslDistroName(@"\\wsl$\Ubuntu"));
+
+    [TestMethod]
+    public void GetWslDistroName_WslLocalhostPrefix_ReturnsDistroName() =>
+        Assert.AreEqual("Ubuntu", NetworkDriveSettingsHelper.GetWslDistroName(@"\\wsl.localhost\Ubuntu"));
+
+    [TestMethod]
+    public void GetWslDistroName_TrailingBackslash_IsTrimmed() =>
+        Assert.AreEqual("Ubuntu", NetworkDriveSettingsHelper.GetWslDistroName(@"\\wsl$\Ubuntu\"));
+
+    [TestMethod]
+    public void GetWslDistroName_MultiWordDistroName_ReturnsWholeName() =>
+        Assert.AreEqual("Debian-Legacy", NetworkDriveSettingsHelper.GetWslDistroName(@"\\wsl$\Debian-Legacy"));
 }

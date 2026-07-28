@@ -110,10 +110,7 @@ internal static class SearchReachabilityGate
             return resolvedDriveLetters.Contains(cacheKey);
         if (NetworkDriveSettingsHelper.IsWslPath(cacheKey))
         {
-            // NOT Path.GetFileName: a bare two-segment UNC path ("\\wsl$\Ubuntu") has no path component
-            // past its root by .NET's own path rules (same as Path.GetFileName(@"C:\") == ""), so it
-            // always returns "" here rather than the distro name.
-            var distroName = cacheKey.TrimEnd('\\').Split('\\').Last();
+            var distroName = NetworkDriveSettingsHelper.GetWslDistroName(cacheKey);
             return wslDistros.Contains(distroName, StringComparer.OrdinalIgnoreCase);
         }
         return Directory.Exists(cacheKey);
