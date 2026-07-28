@@ -21,8 +21,8 @@ internal sealed class DriveWatcherHost : IDisposable
         _name = name;
         _drive = drive;
         // A bare drive letter ("C") needs ":\" appended. A UNC path just needs a trailing separator.
-        // Anything else (a folder-index target, e.g. "Z:\AV") is already a full path -- the old
-        // UNC-or-append-colon check appended ":\" there too, producing "Z:\AV:\", a path that can never
+        // Anything else (a folder-index target, e.g. "Z:\Archive") is already a full path -- the old
+        // UNC-or-append-colon check appended ":\" there too, producing "Z:\Archive:\", a path that can never
         // exist -- so Directory.Exists(_rootPath) always failed and the watcher silently never started.
         _rootPath = PathHelpers.BuildSourceRoot(drive);
         _exists = exists;

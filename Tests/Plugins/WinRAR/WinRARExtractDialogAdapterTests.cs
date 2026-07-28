@@ -67,8 +67,8 @@ public sealed class WinRARExtractDialogAdapterTests
         // user can see is invisible to the elevated Hook process this runs in, so verifying it here would
         // wrongly reject a perfectly real path. Confirmed live: this used to silently freeze SearchScope at
         // its last value once the dialog's target moved onto a network drive.
-        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed(@"Y:\baozi\AV\MUM");
+        var result = WinRARExtractDialogAdapter.NormalizeIfWellFormed(@"Z:\share\projects\build");
 
-        Assert.AreEqual(@"Y:\baozi\AV\MUM", result);
+        Assert.AreEqual(@"Z:\share\projects\build", result);
     }
 }

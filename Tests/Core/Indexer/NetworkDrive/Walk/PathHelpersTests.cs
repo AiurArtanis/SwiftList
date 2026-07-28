@@ -21,10 +21,10 @@ public sealed class PathHelpersTests
     public void BuildSourceRoot_BareDriveLetter_AppendsColonAndSeparator() => Assert.AreEqual(@"Z:\", PathHelpers.BuildSourceRoot("Z"));
 
     [TestMethod]
-    public void BuildSourceRoot_FullPathWithoutTrailingSeparator_GetsOneAppended() => Assert.AreEqual(@"Z:\AV\", PathHelpers.BuildSourceRoot(@"Z:\AV"));
+    public void BuildSourceRoot_FullPathWithoutTrailingSeparator_GetsOneAppended() => Assert.AreEqual(@"Z:\Archive\", PathHelpers.BuildSourceRoot(@"Z:\Archive"));
 
     [TestMethod]
-    public void BuildSourceRoot_FullPathWithTrailingSeparator_IsUnchanged() => Assert.AreEqual(@"Z:\AV\", PathHelpers.BuildSourceRoot(@"Z:\AV\"));
+    public void BuildSourceRoot_FullPathWithTrailingSeparator_IsUnchanged() => Assert.AreEqual(@"Z:\Archive\", PathHelpers.BuildSourceRoot(@"Z:\Archive\"));
 
     [TestMethod]
     [DataRow(@"\\wsl$\Ubuntu\home", true)]
