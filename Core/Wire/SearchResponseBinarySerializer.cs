@@ -8,7 +8,7 @@ namespace SwiftList.Core.Wire;
 public static class SearchResponseBinarySerializer
 {
     private const int Magic = 0x53524C53; // SLRS
-    private const int Version = 4; // v4: gained Size/Created/Modified/Accessed (SearchResult.Metadata)
+    private const int Version = 5; // v4: gained Size/Created/Modified/Accessed (SearchResult.Metadata); v5: gained Attributes
     private const byte EndFrame = 0;
     private const byte FileResultFrame = 1;
     private const byte AppResultFrame = 2;
@@ -123,7 +123,7 @@ public static class SearchResponseBinarySerializer
         var pathLen = Encoding.UTF8.GetByteCount(path);
         var driveLen = Encoding.UTF8.GetByteCount(drive);
 
-        var maxPayloadSize = nameLen + pathLen + driveLen + 44;
+        var maxPayloadSize = nameLen + pathLen + driveLen + 48;
         var totalSize = 9 + maxPayloadSize;
 
         var buffer = ArrayPool<byte>.Shared.Rent(totalSize);
@@ -169,6 +169,14 @@ public static class SearchResponseBinarySerializer
             BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset), FileTimeHelper.ToUnixSeconds(result.Metadata.Modified.ToUniversalTime()));
             offset += 4;
             BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset), FileTimeHelper.ToUnixSeconds(result.Metadata.Accessed.ToUniversalTime()));
+            offset += 4;
+
+            // Hidden/System bits drive FileSystemItemFilter.IsHiddenOrSystem client-side -- without this,
+            // that check always sees the zero default and never filters anything (confirmed live: NTFS
+            // metadata files like $MFT showed up in results despite the filter being unconditionally
+            // wired in). Only the two bits the filter actually reads are worth carrying; write the whole
+            // enum value anyway since it's a single int and keeps this a faithful round-trip.
+            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset), (int)result.Attributes);
             offset += 4;
 
             var payloadLength = offset - payloadStart;
@@ -234,12 +242,15 @@ public static class SearchResponseBinarySerializer
         var modified = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(offset));
         offset += 4;
         var accessed = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(offset));
+        offset += 4;
+        var attributes = (FileAttributes)BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
         return new SearchResult
         {
             Name = name,
             Path = path,
             IsDir = isDir,
             Drive = drive,
+            Attributes = attributes,
             RankSortKey = rankSortKey,
             Metadata = new FileMetadata(
                 size,

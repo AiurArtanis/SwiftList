@@ -40,6 +40,23 @@ public sealed class LiveDirectorySearcherTests
     }
 
     [TestMethod]
+    public void ScanDirectory_HiddenFile_PopulatesAttributesWithHiddenFlag()
+    {
+        // Regression test: attrs was computed to decide IsDir but never assigned onto the SearchResult
+        // itself, so FileSystemItemFilter.IsHiddenOrSystem always saw the zero default for every
+        // live-scanned entry regardless of its real on-disk attributes.
+        using var dir = new TempDirectory();
+        var hiddenPath = Path.Combine(dir.Path, "hidden.txt");
+        File.WriteAllText(hiddenPath, "x");
+        File.SetAttributes(hiddenPath, FileAttributes.Hidden);
+
+        var results = LiveDirectorySearcher.ScanDirectory(dir.Path, 100, CancellationToken.None);
+
+        var hidden = results.Single(r => r.Name == "hidden.txt");
+        Assert.IsTrue(hidden.Attributes.HasFlag(FileAttributes.Hidden));
+    }
+
+    [TestMethod]
     public void ScanDirectory_RecursesIntoSubdirectories()
     {
         using var dir = new TempDirectory();

@@ -17,7 +17,7 @@ namespace SwiftList.Core.Wire;
 public static class SearchResultWithHighlightBinarySerializer
 {
     private const int Magic = 0x53524C48; // "HLRS" as bytes, arbitrary but distinct from SearchResponseBinarySerializer's own magic
-    private const int Version = 1;
+    private const int Version = 2; // v2: gained Attributes (see SearchResponseBinarySerializer's own v5 for why)
     private const byte EndFrame = 0;
     private const byte FileResultFrame = 1;
     private const byte HeaderFrame = 255;
@@ -72,7 +72,7 @@ public static class SearchResultWithHighlightBinarySerializer
         var driveLen = Encoding.UTF8.GetByteCount(drive);
         var rangeCount = Math.Min(highlightRanges.Count / 2, 255);
 
-        var maxPayloadSize = nameLen + pathLen + driveLen + 44 + 1 + rangeCount * 4;
+        var maxPayloadSize = nameLen + pathLen + driveLen + 48 + 1 + rangeCount * 4;
         var totalSize = 9 + maxPayloadSize;
 
         var buffer = ArrayPool<byte>.Shared.Rent(totalSize);
@@ -103,6 +103,10 @@ public static class SearchResultWithHighlightBinarySerializer
             BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset, 4), FileTimeHelper.ToUnixSeconds(result.Metadata.Modified.ToUniversalTime()));
             offset += 4;
             BinaryPrimitives.WriteUInt32LittleEndian(span.Slice(offset, 4), FileTimeHelper.ToUnixSeconds(result.Metadata.Accessed.ToUniversalTime()));
+            offset += 4;
+
+            // See SearchResponseBinarySerializer's own identical addition for why this is here.
+            BinaryPrimitives.WriteInt32LittleEndian(span.Slice(offset, 4), (int)result.Attributes);
             offset += 4;
 
             span[offset++] = (byte)rangeCount;
@@ -206,6 +210,8 @@ public static class SearchResultWithHighlightBinarySerializer
         offset += 4;
         var accessed = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(offset));
         offset += 4;
+        var attributes = (FileAttributes)BinaryPrimitives.ReadInt32LittleEndian(payload.AsSpan(offset));
+        offset += 4;
 
         var rangeCount = payload[offset++];
         var ranges = new int[rangeCount * 2];
@@ -223,6 +229,7 @@ public static class SearchResultWithHighlightBinarySerializer
             Path = path,
             IsDir = isDir,
             Drive = drive,
+            Attributes = attributes,
             RankSortKey = rankSortKey,
             Metadata = new FileMetadata(
                 size,

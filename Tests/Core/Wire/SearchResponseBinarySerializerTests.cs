@@ -6,12 +6,13 @@ namespace SwiftList.Core.Tests.Wire;
 [TestClass]
 public sealed class SearchResponseBinarySerializerTests
 {
-    private static SearchResult MakeResult(string name, string path, bool isDir = false, string drive = "C") => new()
+    private static SearchResult MakeResult(string name, string path, bool isDir = false, string drive = "C", FileAttributes attributes = FileAttributes.Normal) => new()
     {
         Name = name,
         Path = path,
         IsDir = isDir,
         Drive = drive,
+        Attributes = attributes,
         Metadata = new FileMetadata(
             1024,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc).ToLocalTime(),
@@ -84,6 +85,24 @@ public sealed class SearchResponseBinarySerializerTests
         await SearchResponseBinarySerializer.ReadAsync(stream, results.Add);
 
         Assert.IsTrue(results[0].IsDir);
+    }
+
+    [TestMethod]
+    public async Task ReadAsync_HiddenSystemAttributes_RoundTrips()
+    {
+        // Regression test: this field was silently dropped by the wire format entirely, so
+        // FileSystemItemFilter.IsHiddenOrSystem (client-side) always saw the zero default and never
+        // filtered NTFS metadata files like $MFT despite the filter itself being unconditionally wired in.
+        using var stream = new MemoryStream();
+        await SearchResponseBinarySerializer.WriteHeaderAsync(stream);
+        await SearchResponseBinarySerializer.WriteFileResultAsync(stream, MakeResult("$MFT", @"c:\$MFT", attributes: FileAttributes.Hidden | FileAttributes.System));
+        await SearchResponseBinarySerializer.WriteEndAsync(stream);
+        stream.Position = 0;
+
+        var results = new List<SearchResult>();
+        await SearchResponseBinarySerializer.ReadAsync(stream, results.Add);
+
+        Assert.AreEqual(FileAttributes.Hidden | FileAttributes.System, results[0].Attributes);
     }
 
     [TestMethod]

@@ -6,11 +6,12 @@ namespace SwiftList.Core.Tests.Wire;
 [TestClass]
 public sealed class SearchResultWithHighlightBinarySerializerTests
 {
-    private static SearchResult MakeResult(string name, string path) => new()
+    private static SearchResult MakeResult(string name, string path, FileAttributes attributes = FileAttributes.Normal) => new()
     {
         Name = name,
         Path = path,
         Drive = "C",
+        Attributes = attributes,
         Metadata = new FileMetadata(512, DateTime.UtcNow.ToLocalTime(), DateTime.UtcNow.ToLocalTime(), DateTime.UtcNow.ToLocalTime())
     };
 
@@ -57,6 +58,15 @@ public sealed class SearchResultWithHighlightBinarySerializerTests
         var (result, _) = await RoundTripSingleAsync(MakeResult("文件搜索.txt", @"c:\文件搜索.txt"), Array.Empty<int>());
 
         Assert.AreEqual("文件搜索.txt", result.Name);
+    }
+
+    [TestMethod]
+    public async Task RoundTrip_HiddenSystemAttributes_RoundTrips()
+    {
+        var (result, _) = await RoundTripSingleAsync(
+            MakeResult("$MFT", @"c:\$MFT", FileAttributes.Hidden | FileAttributes.System), Array.Empty<int>());
+
+        Assert.AreEqual(FileAttributes.Hidden | FileAttributes.System, result.Attributes);
     }
 
     [TestMethod]

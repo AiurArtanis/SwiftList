@@ -75,7 +75,8 @@ public static class LiveDirectorySearcher
                     Name = entry.Name,
                     Path = entry.FullName,
                     IsDir = isDir,
-                    Drive = drive
+                    Drive = drive,
+                    Attributes = attrs
                 };
                 results.Add(result);
 
