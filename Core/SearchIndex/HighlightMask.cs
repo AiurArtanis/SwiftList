@@ -62,7 +62,13 @@ internal static class HighlightMask
             // expects to see lit up, not just an arbitrary single winner.
             foreach (var term in set.Terms)
             {
-                if (term.Inverse)
+                // An alias provider's rewriting of the user's term is for matching only. Its text is
+                // the provider's internal shape (pinyin plus syllable boundaries), which appears
+                // nowhere in the candidate, so the subsequence search below would spread it across the
+                // whole name and light up characters the user never described -- searching a folder by
+                // the pinyin of its first four characters lit up two more from the middle of the name.
+                // The typed term still reaches the same aliases through MarkViaAliasProviders.
+                if (term.Inverse || term.AliasForm)
                     continue;
 
                 MarkTerm(fullText, term.Text, term.CaseSensitive, highlights, ref materialized, slab);
@@ -169,6 +175,19 @@ internal static class HighlightMask
                 if (!provider.CanHandle(text))
                     continue;
 
+                // The typed term plus this provider's own spellings of it. The rewritten forms are what
+                // actually appear in its aliases -- a term typed as one run of letters is not present
+                // verbatim in an alias that marks syllable boundaries -- so leaving them out means a
+                // pinyin search highlights nothing at all. They are only ever compared against THIS
+                // provider's aliases, and MapAliasToSourceIndices translates whatever matches (boundary
+                // characters included) back onto the original text.
+                var probes = new List<string> { termLower };
+                foreach (var form in provider.GetQueryForms(termLower))
+                {
+                    if (!string.IsNullOrEmpty(form))
+                        probes.Add(caseSensitive ? form : form.ToLowerInvariant());
+                }
+
                 foreach (var aliasGroup in provider.GetAliases(text))
                 {
                     if (string.IsNullOrEmpty(aliasGroup))
@@ -180,7 +199,20 @@ internal static class HighlightMask
                             continue;
 
                         var aliasLower = caseSensitive ? alias : alias.ToLowerInvariant();
-                        var positions = FindSubsequencePositions(aliasLower, termLower);
+                        // Follow the same rule matching does. With fuzzy off a term only matches an
+                        // alias as a contiguous run, so highlighting it as a scattered subsequence
+                        // lights up characters that had nothing to do with the hit: "gsh" matches
+                        // 格式化 through the initials alias, but a subsequence search also finds
+                        // g...s...h spread across the full pinyin and lit 创 along with it.
+                        int[]? positions = null;
+                        foreach (var probe in probes)
+                        {
+                            positions = SearchContext.FuzzyMatchEnabled
+                                ? FindSubsequencePositions(aliasLower, probe)
+                                : FindContiguousPositions(aliasLower, probe);
+                            if (positions != null)
+                                break;
+                        }
                         if (positions == null)
                             continue;
 
@@ -263,6 +295,23 @@ internal static class HighlightMask
             searchFrom = idx + 1;
         }
 
+        return positions;
+    }
+
+    // Contiguous counterpart of the walk above, for when matching itself demands a contiguous run.
+    // Only the first occurrence is reported: the mask is a union anyway, so every occurrence is an
+    // equally good explanation of the same hit.
+    private static int[]? FindContiguousPositions(string text, string term)
+    {
+        if (term.Length == 0)
+            return null;
+        var idx = text.IndexOf(term, StringComparison.Ordinal);
+        if (idx < 0)
+            return null;
+
+        var positions = new int[term.Length];
+        for (var i = 0; i < term.Length; i++)
+            positions[i] = idx + i;
         return positions;
     }
 }

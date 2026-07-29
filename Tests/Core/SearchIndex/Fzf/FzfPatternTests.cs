@@ -337,4 +337,25 @@ public sealed class FzfPatternTests
 
         Assert.AreEqual("read".Length, pattern.GetTotalTermLength());
     }
+
+    [TestMethod]
+    public void GetTotalTermLength_CountsOneAlternativePerSet()
+    {
+        // A set's terms are alternatives -- an OR branch here, an alias provider's other spelling of
+        // the same term elsewhere -- so only one of them can be what the user typed. Summing them
+        // inflated the length that IsAcceptableAliasMatch scales its thresholds against, which
+        // rejected real matches purely because a term had several readings.
+        var pattern = FzfPattern.Parse("readme | rdm | rd");
+
+        Assert.HasCount(1, pattern.TermSets);
+        Assert.AreEqual("readme".Length, pattern.GetTotalTermLength());
+    }
+
+    [TestMethod]
+    public void GetTotalTermLength_StillAddsUpAcrossSeparateTerms()
+    {
+        var pattern = FzfPattern.Parse("read me");
+
+        Assert.AreEqual("read".Length + "me".Length, pattern.GetTotalTermLength());
+    }
 }

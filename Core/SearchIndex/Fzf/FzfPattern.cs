@@ -17,6 +17,15 @@ internal sealed class FzfPattern
     public FzfTermSet[] TermSets { get; }
     public bool IsEmpty => TermSets.Length == 0;
 
+    // How much text the user actually typed, which is what the alias-fallback quality gate scales its
+    // thresholds against (see IsAcceptableAliasMatch). A term set holds ALTERNATIVES -- one OR branch,
+    // or one of the spellings an alias provider offers for the same term -- so only one of them can
+    // ever be what was typed, and only one is counted.
+    //
+    // Summing them instead made the gate reject genuine matches as soon as a term had several
+    // alternatives: "jiating" expands to six pinyin readings, which inflated the length from 7 to 64
+    // and pushed the required score past anything a real match scores, so 家庭... stopped being found
+    // while the shorter "jiatin" (four readings) still squeaked through.
     public int GetTotalTermLength()
     {
         var len = 0;
@@ -24,8 +33,10 @@ internal sealed class FzfPattern
         {
             foreach (var term in set.Terms)
             {
-                if (!term.Inverse)
-                    len += term.Text.Length;
+                if (term.Inverse)
+                    continue;
+                len += term.Text.Length;
+                break; // the rest of this set are alternative spellings of the same typed text
             }
         }
         return len;
@@ -83,7 +94,7 @@ internal sealed class FzfPattern
             foreach (var form in forms)
             {
                 if (!string.IsNullOrEmpty(form) && form != lower)
-                    current.Add(new FzfTerm(kind, false, form, false));
+                    current.Add(new FzfTerm(kind, false, form, false, AliasForm: true));
             }
         }
     }
@@ -350,5 +361,10 @@ internal sealed class FzfPattern
 }
 
 internal readonly record struct FzfTermSet(FzfTerm[] Terms);
-internal readonly record struct FzfTerm(FzfTermKind Kind, bool Inverse, string Text, bool CaseSensitive);
+// AliasForm marks a spelling an alias provider supplied for a term the user typed, rather than
+// something the user typed themselves. It exists so display highlighting can tell the two apart: a
+// user-written OR ("a | b") highlights every branch that matches, but a provider's rewriting of one
+// term is an internal detail whose text (pinyin, boundaries and all) appears nowhere in the candidate,
+// and marking it lights up characters that have nothing to do with what was typed.
+internal readonly record struct FzfTerm(FzfTermKind Kind, bool Inverse, string Text, bool CaseSensitive, bool AliasForm = false);
 internal readonly record struct FzfPatternResult(int Score, int MinBegin, int MinEnd, int MaxEnd, bool ValidOffsetFound);
