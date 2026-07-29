@@ -1,4 +1,5 @@
 using SwiftList.Core.SearchIndex.Fzf;
+using SwiftList.PluginSdk.Abstractions.Plugins;
 
 namespace SwiftList.Core.SearchIndex;
 
@@ -173,6 +174,39 @@ internal static class HighlightMask
     // camelCase/word-boundary structure for the real algorithm's bonus scoring to add value from -- so
     // paying its full DP cost per candidate measured slower overall than this simpler scan, for a mask
     // that (per real name/text) comes out effectively identical either way.
+    // The typed term plus a provider's own spellings of it. The rewritten forms are what actually
+    // appear in its aliases -- a term typed as one run of letters is not present verbatim in an alias
+    // that marks syllable boundaries -- so leaving them out means a pinyin search highlights nothing at
+    // all. They are only ever compared against THAT provider's aliases, and MapAliasToSourceIndices
+    // translates whatever matches (boundary characters included) back onto the original text.
+    //
+    // Cached because they depend on the term and the provider and nothing else, while this is reached
+    // once per CANDIDATE: ranking a CJK query re-segmented the same pinyin term for every one of the
+    // thousands of candidates in the refinement set, which was most of what that refinement cost.
+    [ThreadStatic]
+    private static Dictionary<(IAliasProvider Provider, string Term, bool CaseSensitive), string[]>? _probeCache;
+
+    private static string[] ProbesFor(IAliasProvider provider, string termLower, bool caseSensitive)
+    {
+        var cache = _probeCache ??= new Dictionary<(IAliasProvider, string, bool), string[]>();
+        var key = (provider, termLower, caseSensitive);
+        if (cache.TryGetValue(key, out var cached))
+            return cached;
+
+        var probes = new List<string> { termLower };
+        foreach (var form in provider.GetQueryForms(termLower))
+        {
+            if (!string.IsNullOrEmpty(form))
+                probes.Add(caseSensitive ? form : form.ToLowerInvariant());
+        }
+
+        // Bounded rather than grown forever: a session types a lot of distinct terms, and only the
+        // handful in the query being ranked right now is ever read again.
+        if (cache.Count >= 64)
+            cache.Clear();
+        return cache[key] = probes.ToArray();
+    }
+
     private static bool MarkViaAliasProviders(string text, string term, bool caseSensitive, FzfTermKind kind, Span<bool> highlights)
     {
         var termLower = caseSensitive ? term : term.ToLowerInvariant();
@@ -185,18 +219,7 @@ internal static class HighlightMask
                 if (!provider.CanHandle(text))
                     continue;
 
-                // The typed term plus this provider's own spellings of it. The rewritten forms are what
-                // actually appear in its aliases -- a term typed as one run of letters is not present
-                // verbatim in an alias that marks syllable boundaries -- so leaving them out means a
-                // pinyin search highlights nothing at all. They are only ever compared against THIS
-                // provider's aliases, and MapAliasToSourceIndices translates whatever matches (boundary
-                // characters included) back onto the original text.
-                var probes = new List<string> { termLower };
-                foreach (var form in provider.GetQueryForms(termLower))
-                {
-                    if (!string.IsNullOrEmpty(form))
-                        probes.Add(caseSensitive ? form : form.ToLowerInvariant());
-                }
+                var probes = ProbesFor(provider, termLower, caseSensitive);
 
                 foreach (var aliasGroup in provider.GetAliases(text))
                 {
