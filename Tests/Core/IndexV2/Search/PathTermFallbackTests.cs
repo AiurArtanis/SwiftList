@@ -26,6 +26,59 @@ public sealed class PathTermFallbackTests
         return results;
     }
 
+    // The ancestor verdict is now recorded for every folder on the chain, not just the one asked about,
+    // so a later row can be answered from a partial walk somebody else did. The cases below are the ones
+    // where sharing an answer could hand back the wrong one.
+    [TestMethod]
+    public void SearchStreaming_SiblingFoldersUnderOneAncestor_DoNotInheritEachOthersVerdict()
+    {
+        using var fixture = BuildSeriesDrive();
+
+        // Both series folders sit under the same "drama", so walking one records an answer for "drama"
+        // and everything above it. The other must still be judged on its own name: sharing the ancestor
+        // must not make "rose" match a file under Tulip Season.
+        var rose = Search(fixture, "episode01 rose");
+
+        Assert.HasCount(1, rose);
+        Assert.AreEqual(@"T:\library\drama\Rose Season\Episode01.mp4", rose[0].Path);
+    }
+
+    [TestMethod]
+    public void SearchStreaming_ATermSatisfiedHighOnTheChain_ReachesEveryFolderBelowIt()
+    {
+        using var fixture = BuildSeriesDrive();
+
+        // "library" is satisfied at the top of the chain, so it holds for both series folders. Walking
+        // the first one records that; the second must get the same answer rather than a truncated one.
+        var results = Search(fixture, "episode01 library");
+
+        Assert.HasCount(2, results);
+        CollectionAssert.AreEquivalent(
+            new[] { @"T:\library\drama\Rose Season\Episode01.mp4", @"T:\library\drama\Tulip Season\Episode01.mp4" },
+            results.ConvertAll(r => r.Path));
+    }
+
+    [TestMethod]
+    public void SearchStreaming_AfterAnAncestorFolderIsRenamed_MatchesTheNewName()
+    {
+        using var fixture = BuildSeriesDrive();
+        fixture.Index.Mutate((_, delta) =>
+            delta.Upsert(6, 3, "Iris Season", FileRecordFlags.None | FileRecordFlags.Directory, 0, 0, 0, 0));
+
+        // A renamed ancestor lives only in delta state, so the walk falls back to the built path string.
+        // That answer describes one starting folder and must not be recorded against the folders above
+        // it, which are unchanged and shared with the other series.
+        var byNewName = Search(fixture, "episode01 iris");
+        var byOldName = Search(fixture, "episode01 tulip");
+        var sibling = Search(fixture, "episode01 rose");
+
+        Assert.HasCount(1, byNewName);
+        Assert.AreEqual(@"T:\library\drama\Iris Season\Episode01.mp4", byNewName[0].Path);
+        Assert.IsEmpty(byOldName);
+        Assert.HasCount(1, sibling);
+        Assert.AreEqual(@"T:\library\drama\Rose Season\Episode01.mp4", sibling[0].Path);
+    }
+
     [TestMethod]
     public void SearchStreaming_TermMatchingOnlyAnAncestorFolder_StillMatches()
     {

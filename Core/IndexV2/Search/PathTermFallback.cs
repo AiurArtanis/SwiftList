@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using SwiftList.Core.SearchIndex.Fzf;
 
 using SwiftList.Core.IndexV2.Delta;
@@ -71,7 +71,15 @@ internal static class PathTermFallback
         if (nameMasks.Count == 0)
             return;
 
+        // The source root's segments are the same for every row in the query, but the ancestor walk
+        // below consulted them on each of its (many) memo misses -- re-splitting the root string and
+        // re-matching every term against it tens of thousands of times per search. Computed once.
+        var rootWorker = SearchMatcher.RentWorker();
+        var rootMask = MaskFromSegments(snapshot.SourceRoot.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries), termPatterns, rootWorker, 0);
+        SearchMatcher.ReturnWorker(rootWorker);
+
         var ancestorMemo = new Dictionary<int, int>();
+        var ancestorChain = new List<int>(64);
         var membership = directoryContext.FilterLower != null ? new Dictionary<int, bool>() : null;
         var worker = SearchMatcher.RentWorker();
         var keep = Math.Max(limit * 8, 64);
@@ -99,7 +107,7 @@ internal static class PathTermFallback
                     var parent = snapshot.ParentIndexes[row];
                     if (parent == row || parent < 0)
                         continue;
-                    if ((nameMask | AncestorMask(snapshot, delta, parent, termPatterns, termBytePatterns, worker, ancestorMemo, fullMask)) != fullMask)
+                    if ((nameMask | AncestorMask(snapshot, delta, parent, termPatterns, termBytePatterns, worker, ancestorMemo, fullMask, rootMask, ancestorChain)) != fullMask)
                         continue;
 
                     topN.Add(new FzfRank(row, rank.Score, rank.SortKey));
@@ -130,36 +138,76 @@ internal static class PathTermFallback
     // stop at a negative or self parent, skip empty names, then offer the source root's own segments.
     private static int AncestorMask(Snapshot snapshot, DeltaOverlay delta, int parentRow,
         FzfPattern[] termPatterns, FzfBytePattern[] termBytePatterns, SearchMatcher.Worker worker,
-        Dictionary<int, int> memo, int fullMask)
+        Dictionary<int, int> memo, int fullMask, int rootMask, List<int> chain)
     {
         if (memo.TryGetValue(parentRow, out var cached))
             return cached;
 
+        // Walk up collecting the chain until something already known is reached, then unwind and record
+        // an answer for EVERY node on the way rather than only the one asked about. Ancestor chains
+        // overlap heavily -- two files in different folders still share everything above the first
+        // common parent -- so memoising the entry point alone re-walked those shared upper segments once
+        // per distinct folder. Measured at a 78% miss rate on a real query, because with a few files per
+        // folder almost every row arrives with a parent nobody has asked about yet.
+        chain.Clear();
         var mask = 0;
         var current = parentRow;
-        for (var depth = 0; depth < 512 && current >= 0 && mask != fullMask; depth++)
+        var composable = false;
+        for (var depth = 0; depth < 512 && current >= 0; depth++)
         {
+            if (memo.TryGetValue(current, out var known))
+            {
+                mask = known;
+                composable = true;
+                break;
+            }
+
             if (delta.IsSuperseded(current))
             {
                 // A renamed/overridden ancestor's live name only exists in delta state, so fall back to
                 // the built path string for the whole chain -- the same escape hatch PathGate takes.
-                mask |= MaskFromPath(delta.GetFullPath(parentRow), termPatterns, worker);
-                break;
+                // That answer describes the chain from parentRow specifically and says nothing about the
+                // nodes above it, so it is the one case that cannot be shared.
+                var fallback = MaskFromPath(delta.GetFullPath(parentRow), termPatterns, worker);
+                if (fallback != fullMask)
+                    fallback |= rootMask;
+                memo[parentRow] = fallback;
+                return fallback;
             }
 
-            var uid = (int)snapshot.NameIds[current];
-            var nameUtf8 = snapshot.UniqueNameUtf8(uid);
-            if (nameUtf8.Length > 0)
-                mask |= MaskForSegment(snapshot, uid, nameUtf8, termPatterns, termBytePatterns, worker, mask, fullMask);
-
+            chain.Add(current);
             var parent = snapshot.ParentIndexes[current];
             if (parent == current)
+            {
+                composable = true;
                 break;
+            }
             current = parent;
         }
 
+        // Unwound from the top down, so each node sees what its own ancestors already satisfy and can be
+        // recorded with a complete answer. Nodes are skipped once everything above them already matches
+        // every term, exactly as the old walk stopped early.
+        for (var i = chain.Count - 1; i >= 0; i--)
+        {
+            var node = chain[i];
+            if (mask != fullMask)
+            {
+                var uid = (int)snapshot.NameIds[node];
+                var nameUtf8 = snapshot.UniqueNameUtf8(uid);
+                if (nameUtf8.Length > 0)
+                    mask |= MaskForSegment(snapshot, uid, nameUtf8, termPatterns, termBytePatterns, worker, mask, fullMask);
+            }
+
+            // Only when the walk ended at the root or at a known node. Hitting the depth guard means the
+            // chain was truncated, and a truncated answer must not be handed to a node further up whose
+            // own walk would have reached higher.
+            if (composable)
+                memo[node] = mask | rootMask;
+        }
+
         if (mask != fullMask)
-            mask |= MaskFromSegments(snapshot.SourceRoot.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries), termPatterns, worker, mask);
+            mask |= rootMask;
 
         memo[parentRow] = mask;
         return mask;
