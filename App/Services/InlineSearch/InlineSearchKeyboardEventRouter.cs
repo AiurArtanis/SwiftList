@@ -1,4 +1,5 @@
 using Application = System.Windows.Application;
+using SwiftList.App.Helpers;
 
 namespace SwiftList.App.Services;
 
@@ -140,19 +141,11 @@ internal sealed class InlineSearchKeyboardEventRouter
     {
         var count = window.LstResults.Items.Count;
         if (count == 0) return;
-        var index = window.LstResults.SelectedIndex;
-        var originalIndex = index;
+        var next = ListSelectionNavigator.NextSelectable(window.LstResults.SelectedIndex, direction, count,
+            i => window.LstResults.Items[i] is AppSearchResult item && !item.IsEmptyResult && !item.IsSearchSectionHeader);
+        if (next < 0) return;
 
-        do
-        {
-            index = (index + direction + count) % count;
-            if (index == originalIndex) break;
-            if (window.LstResults.Items[index] is AppSearchResult item && !item.IsEmptyResult && !item.IsSearchSectionHeader)
-            {
-                window.LstResults.SelectedIndex = index;
-                window.LstResults.ScrollIntoView(window.LstResults.SelectedItem);
-                break;
-            }
-        } while (true);
+        window.LstResults.SelectedIndex = next;
+        window.LstResults.ScrollIntoView(window.LstResults.SelectedItem);
     }
 }

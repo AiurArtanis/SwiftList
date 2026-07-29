@@ -1,4 +1,5 @@
 using SwiftList.App.Services.AppWindow;
+using SwiftList.App.Helpers;
 
 namespace SwiftList.App.Services.ShellMenu.ActionFlyout;
 
@@ -34,21 +35,12 @@ internal sealed class ActionsMenuNavigator
     {
         var count = _view.LstActions.Items.Count;
         if (count == 0) return;
-        var index = _view.LstActions.SelectedIndex;
-        var originalIndex = index;
+        var next = ListSelectionNavigator.NextSelectable(_view.LstActions.SelectedIndex, direction, count,
+            i => _view.LstActions.Items[i] is ActionMenuItem item && !item.IsSeparator && !item.IsSectionHeader && !item.IsDisabled);
+        if (next < 0) return;
 
-        do
-        {
-            index = (index + direction + count) % count;
-            if (index == originalIndex) break;
-            if (_view.LstActions.Items[index] is ActionMenuItem item && !item.IsSeparator && !item.IsSectionHeader && !item.IsDisabled)
-            {
-                _view.LstActions.SelectedIndex = index;
-                _view.LstActions.ScrollIntoView(_view.LstActions.SelectedItem);
-                break;
-            }
-
-        } while (true);
+        _view.LstActions.SelectedIndex = next;
+        _view.LstActions.ScrollIntoView(_view.LstActions.SelectedItem);
     }
 
     public void EnterSubMenu()

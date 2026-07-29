@@ -285,20 +285,12 @@ public class InlineSearchWindowInputHandler
         _userNavigatedSinceLastQuery = true;
         var count = _window.LstResults.Items.Count;
         if (count == 0) return;
-        var index = _window.LstResults.SelectedIndex;
-        var originalIndex = index;
+        var next = ListSelectionNavigator.NextSelectable(_window.LstResults.SelectedIndex, direction, count,
+            i => _window.LstResults.Items[i] is AppSearchResult item && !item.IsEmptyResult && !item.IsSearchSectionHeader);
+        if (next < 0) return;
 
-        do
-        {
-            index = (index + direction + count) % count;
-            if (index == originalIndex) break;
-            if (_window.LstResults.Items[index] is AppSearchResult item && !item.IsEmptyResult && !item.IsSearchSectionHeader)
-            {
-                _window.LstResults.SelectedIndex = index;
-                _window.LstResults.ScrollIntoView(_window.LstResults.SelectedItem);
-                break;
-            }
-        } while (true);
+        _window.LstResults.SelectedIndex = next;
+        _window.LstResults.ScrollIntoView(_window.LstResults.SelectedItem);
     }
 
     public static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject => InlineSearchWindowLayoutManager.FindVisualParent<T>(child);
