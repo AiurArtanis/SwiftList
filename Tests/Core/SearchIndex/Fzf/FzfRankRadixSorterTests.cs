@@ -66,6 +66,66 @@ public sealed class FzfRankRadixSorterTests
     }
 
     [TestMethod]
+    public void Sort_LargeListMixingDistinctAndDuplicateKeys_MatchesTheReferenceOrdering()
+    {
+        // The shape the search actually produces, and the one the all-same-key case above cannot check:
+        // a sort key is computed per unique name, so a result set is many small groups of equal keys
+        // scattered among distinct ones. Ordering by the tie-break and the key in separate passes has to
+        // come out the same as comparing both at once.
+        var random = new Random(Seed: 7);
+        var ranks = new List<FzfRank>();
+        for (var i = 0; i < 1000; i++)
+            ranks.Add(new FzfRank(EntryIndex: 999 - i, Score: 0, SortKey: (ulong)random.Next(0, 50)));
+
+        var expected = new List<FzfRank>(ranks);
+        expected.Sort(FzfResultRank.Compare);
+
+        FzfRankRadixSorter.Sort(ranks);
+
+        CollectionAssert.AreEqual(expected, ranks);
+    }
+
+    [TestMethod]
+    public void Sort_LargeListWithNegativeEntryIndices_StillOrdersThemFirst()
+    {
+        // Entry indices are row numbers and never negative today. The radix passes read them as raw
+        // bytes, which would order a negative index AFTER every positive one unless the sign is
+        // handled -- a silent wrong answer the moment anything ever hands this a synthetic index.
+        var ranks = new List<FzfRank>();
+        for (var i = 0; i < 200; i++)
+            ranks.Add(new FzfRank(EntryIndex: 100 - i, Score: 0, SortKey: 42));
+
+        var expected = new List<FzfRank>(ranks);
+        expected.Sort(FzfResultRank.Compare);
+
+        FzfRankRadixSorter.Sort(ranks);
+
+        CollectionAssert.AreEqual(expected, ranks);
+        Assert.AreEqual(-99, ranks[0].EntryIndex);
+    }
+
+    [TestMethod]
+    public void Sort_CalledRepeatedlyWithDifferentSizes_ReusesItsScratchCorrectly()
+    {
+        // The scratch buffer is kept between calls and only grown, so a later, shorter sort runs over a
+        // buffer still holding the previous call's entries -- reading one back would corrupt the result.
+        for (var length = 400; length >= 128; length -= 37)
+        {
+            var random = new Random(Seed: length);
+            var ranks = new List<FzfRank>();
+            for (var i = 0; i < length; i++)
+                ranks.Add(new FzfRank(i, 0, (ulong)random.Next(0, 1000)));
+
+            var expected = new List<FzfRank>(ranks);
+            expected.Sort(FzfResultRank.Compare);
+
+            FzfRankRadixSorter.Sort(ranks);
+
+            CollectionAssert.AreEqual(expected, ranks, $"length {length}");
+        }
+    }
+
+    [TestMethod]
     public void Sort_EmptyList_DoesNotThrow()
     {
         var ranks = new List<FzfRank>();

@@ -1,7 +1,26 @@
+using System.Runtime.InteropServices;
+
 namespace SwiftList.Core.SearchIndex.Fzf;
 
+// Orders ranks by sort key, ties broken by entry index -- the same order as FzfResultRank.Compare,
+// which the small-input path below still uses directly.
+//
+// Twelve LSD passes, over the four bytes of the entry index and then the eight of the sort key. An LSD
+// radix sort is stable, so ordering by the tie-break FIRST and the key second leaves equal keys in
+// entry-index order, and the tie-break costs four extra passes over the data.
+//
+// It used to run the eight key passes and then walk the result looking for runs of equal keys, calling
+// List.Sort on each one. Equal keys are not the exception here: a sort key is computed per unique name,
+// so every row sharing a name shares its key, and a set of a few thousand ranks contains hundreds of
+// such runs. Each was a separate List.Sort with its own bounds checking and a non-inlinable IComparer
+// call per comparison, and together they cost more than the radix sort they were correcting.
 internal static class FzfRankRadixSorter
 {
+    // Reused across searches: the scratch is a few thousand 16-byte structs, which was two arrays
+    // allocated and thrown away on every keystroke.
+    [ThreadStatic]
+    private static FzfRank[]? _scratch;
+
     public static void Sort(List<FzfRank> ranks)
     {
         var count = ranks.Count;
@@ -11,23 +30,26 @@ internal static class FzfRankRadixSorter
             return;
         }
 
-        var source = ranks.ToArray();
-        var scratch = new FzfRank[count];
-        var from = source;
+        var live = CollectionsMarshal.AsSpan(ranks);
+        if (_scratch == null || _scratch.Length < count)
+            _scratch = new FzfRank[Math.Max(count, 4096)];
+        var scratch = _scratch.AsSpan(0, count);
+
+        var from = live;
         var to = scratch;
         var passes = 0;
         Span<int> buckets = stackalloc int[256];
         Span<int> offsets = stackalloc int[256];
 
-        for (var pass = 0; pass < 8; pass++)
+        for (var pass = 0; pass < 12; pass++)
         {
-            var shift = pass * 8;
             buckets.Clear();
             for (var i = 0; i < count; i++)
-                buckets[(int)((from[i].SortKey >> shift) & 0xFF)]++;
+                buckets[ByteOf(from[i], pass)]++;
 
-            var firstBucket = (int)((from[0].SortKey >> shift) & 0xFF);
-            if (buckets[firstBucket] == count)
+            // Every value shares this byte, so the pass would only copy the data unchanged. Skipping it
+            // also keeps `passes` honest about where the data currently lives.
+            if (buckets[ByteOf(from[0], pass)] == count)
                 continue;
 
             offsets.Clear();
@@ -35,44 +57,24 @@ internal static class FzfRankRadixSorter
                 offsets[i] = offsets[i - 1] + buckets[i - 1];
 
             for (var i = 0; i < count; i++)
-            {
-                var bucket = (int)((from[i].SortKey >> shift) & 0xFF);
-                to[offsets[bucket]++] = from[i];
-            }
+                to[offsets[ByteOf(from[i], pass)]++] = from[i];
 
-            (from, to) = (to, from);
+            // Not a tuple swap: Span is a ref struct and cannot be a generic type argument.
+            var swap = from;
+            from = to;
+            to = swap;
             passes++;
         }
 
-        if ((passes & 1) == 0)
-            scratch = source;
-
-        ranks.Clear();
-        ranks.AddRange(from);
-        SortEqualKeyRuns(ranks);
+        if ((passes & 1) == 1)
+            from.CopyTo(live);
     }
 
-    private static void SortEqualKeyRuns(List<FzfRank> ranks)
-    {
-        var start = 0;
-        while (start < ranks.Count)
-        {
-            var end = start + 1;
-            var key = ranks[start].SortKey;
-            while (end < ranks.Count && ranks[end].SortKey == key)
-                end++;
-
-            if (end - start > 1)
-                ranks.Sort(start, end - start, EntryIndexComparer.Instance);
-
-            start = end;
-        }
-    }
-
-    private sealed class EntryIndexComparer : IComparer<FzfRank>
-    {
-        public static readonly EntryIndexComparer Instance = new();
-
-        public int Compare(FzfRank left, FzfRank right) => left.EntryIndex.CompareTo(right.EntryIndex);
-    }
+    // Passes 0-3 are the entry index, 4-11 the sort key. The index is signed, and flipping its top bit
+    // makes the unsigned byte order agree with int comparison -- entry indices are row numbers and
+    // never negative today, but a radix sort that quietly depends on that is a trap.
+    private static int ByteOf(in FzfRank rank, int pass)
+        => pass < 4
+            ? (int)((((uint)rank.EntryIndex ^ 0x8000_0000u) >> (pass * 8)) & 0xFF)
+            : (int)((rank.SortKey >> ((pass - 4) * 8)) & 0xFF);
 }
