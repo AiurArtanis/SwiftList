@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
 using SwiftList.Core;
