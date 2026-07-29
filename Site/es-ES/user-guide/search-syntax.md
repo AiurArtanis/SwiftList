@@ -13,6 +13,13 @@ cualquier parte del nombre del archivo/carpeta — no necesitas escribir una sub
 | `swlst` | `SwiftList.exe` |
 | `report` | `Q3-report-final.docx` |
 
+Desactiva esto en **Configuración → General → Sistema → Activar coincidencia difusa** y un término normal (sin
+operador) tendrá que aparecer como subcadena contigua en su lugar — `abc` deja de coincidir con `a-b-c`. Todos
+los operadores de la tabla de abajo siguen funcionando exactamente igual en cualquier caso; el ajuste solo
+cambia lo que exige un término normal. El operador `'` invierte la exactitud de un solo término
+independientemente del ajuste, así que puedes meter una palabra difusa en una consulta por lo demás exacta, o
+una palabra exacta en una por lo demás difusa, sin tocar el ajuste en sí.
+
 ## Varias palabras
 
 Separa las palabras con un espacio. Cada palabra reduce aún más el conjunto de resultados — **no** exige que las
@@ -37,7 +44,7 @@ coincide igual de bien con `final-Q3-report.docx` que con `Q3-report-final.docx`
 |---|---|---|
 | *(ninguno)* | `report` | Coincidencia difusa en cualquier parte del nombre (predeterminado). |
 | `!` | `!temp` | **Excluir** resultados cuyo nombre contenga la subcadena exacta `temp` (esta no es difusa). |
-| `'` | `'report` | Coincidencia de subcadena **exacta** en lugar de difusa. |
+| `'` | `'report` | **Invierte la exactitud** de este término — coincidencia de subcadena exacta en lugar de difusa mientras la coincidencia difusa está activada (por defecto); vuelve a ser difusa para este término mientras la coincidencia difusa está desactivada en Configuración. |
 | `'...'` | `'final report'` | Coincidencia exacta anclada a límites de palabra (no coincidirá dentro de una palabra más larga). |
 | `^` | `^IMG` | Coincidencia de **prefijo** — el nombre debe empezar por `IMG`. |
 | `$` | `.pdf$` | Coincidencia de **sufijo** — el nombre debe terminar en `.pdf`. |
@@ -100,6 +107,24 @@ en cualquier otro lugar):
 
 encuentra archivos con `1080` en el nombre que vivan en algún lugar bajo una carpeta que coincida con `wallpapers`,
 sin necesidad de saber o escribir la ruta exacta. Combina varios filtros con una coma: `report ::2024,:final`.
+
+## Cuando un término describe la carpeta, no el archivo
+
+Si los términos de una consulta no dan ningún resultado por nombre de archivo/carpeta, SwiftList vuelve a
+intentarlo automáticamente permitiendo además que los términos coincidan con carpetas antecesoras — sin
+necesidad de ninguna sintaxis especial:
+
+```
+d01j dcj
+```
+
+encuentra un archivo llamado `d01j` que vive en una carpeta llamada (o con alias) `dcj`, aunque `dcj` nunca
+aparezca en el propio nombre del archivo. Esto solo rellena el resto de una consulta a partir de las carpetas
+por encima de un archivo — al menos un término todavía tiene que coincidir con el propio nombre del archivo, y
+solo entra en acción una vez que una búsqueda normal por nombre no devuelve absolutamente nada, así que nunca
+puede desplazar ni reordenar un resultado que una búsqueda normal ya habría encontrado. Las carpetas
+antecesoras se comparan de la misma forma que los nombres de archivo, así que el pinyin llega aquí también a
+un nombre de carpeta en chino.
 
 ## Saltarse las reglas de exclusión para una búsqueda
 

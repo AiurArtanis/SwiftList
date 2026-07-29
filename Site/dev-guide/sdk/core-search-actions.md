@@ -73,6 +73,7 @@ interface IAliasProvider
     int Version { get; } // default 1
     int[]? MapAliasToSourceIndices(string text, string alias); // default null
     void GetAliasesUtf8(string text, AliasByteSink dest); // default: adapts GetAliases
+    IEnumerable<string> GetQueryForms(string term); // default: none
 }
 ```
 
@@ -100,6 +101,15 @@ providers never need to touch them:
   providers work unchanged; only override it to skip string materialization entirely when your
   provider generates a very high volume of aliases and that allocation cost actually shows up in
   practice.
+- **`GetQueryForms`**: the query-side counterpart of `GetAliases` — rewrites one typed query term
+  into whatever delimited shape this provider's own aliases use, so a term the user typed as one
+  run of plain characters can still respect structure the host doesn't understand (pinyin syllable
+  boundaries, for example, which is what keeps a query from matching across two unrelated
+  syllables). Returning nothing (the default) means "this term isn't in my alphabet at all," which
+  is what stops a query the provider can't express from reaching aliases it was never meant to
+  match. Called once per term per query, never per candidate, so real work here is affordable —
+  but every form returned becomes another alternative every candidate is tested against, so
+  returning many is what costs.
 
 ### `IQueryTokenProvider`
 

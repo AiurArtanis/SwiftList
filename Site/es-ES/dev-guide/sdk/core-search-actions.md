@@ -73,6 +73,7 @@ interface IAliasProvider
     int Version { get; } // default 1
     int[]? MapAliasToSourceIndices(string text, string alias); // default null
     void GetAliasesUtf8(string text, AliasByteSink dest); // default: adapts GetAliases
+    IEnumerable<string> GetQueryForms(string term); // default: none
 }
 ```
 
@@ -100,6 +101,15 @@ proveedores nunca necesitan tocarlos:
   proveedores existentes siguen funcionando sin cambios; solo hay que sobrescribirla para evitar por completo la
   materialización de cadenas cuando tu proveedor genera un volumen muy alto de alias y ese coste de asignación de
   memoria realmente se nota en la práctica.
+- **`GetQueryForms`**: la contraparte de `GetAliases` en el lado de la consulta — reescribe un término de
+  consulta escrito por el usuario en la forma delimitada que usan los propios alias de este proveedor, de modo
+  que un término escrito como una simple cadena de caracteres pueda seguir respetando una estructura que el host
+  no entiende (los límites de sílaba del pinyin, por ejemplo, que es justo lo que evita que una consulta
+  coincida a través de dos sílabas sin relación). No devolver nada (el valor por defecto) significa "este
+  término no está en absoluto en mi alfabeto", que es lo que impide que una consulta que este proveedor no puede
+  expresar llegue a alias con los que nunca debió coincidir. Se llama una vez por término y por consulta, nunca
+  por candidato, así que hacer trabajo real aquí sale a cuenta — pero cada forma que devuelvas se convierte en
+  una alternativa más contra la que se compara cada candidato, así que devolver muchas es lo que cuesta caro.
 
 ### `IQueryTokenProvider`
 

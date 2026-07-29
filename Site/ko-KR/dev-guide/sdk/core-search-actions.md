@@ -76,6 +76,7 @@ interface IAliasProvider
     int Version { get; } // default 1
     int[]? MapAliasToSourceIndices(string text, string alias); // default null
     void GetAliasesUtf8(string text, AliasByteSink dest); // default: adapts GetAliases
+    IEnumerable<string> GetQueryForms(string term); // default: none
 }
 ```
 
@@ -101,6 +102,15 @@ ASCII 여부를 추측하는 대신 제공자 자신의 입력/출력 알파벳�
   별칭은 결국 UTF-8 바이트로 저장됩니다. 기본 구현은 `GetAliases`를 그대로 사용하므로 기존 제공자는
   변경 없이 동작합니다. 여러분의 제공자가 매우 많은 양의 별칭을 생성하고 그 문자열 생성 비용이 실제로
   체감될 때만 이를 재정의하여 문자열 생성 자체를 건너뛰도록 하세요.
+- **`GetQueryForms`**: `GetAliases`의 쿼리 쪽 대응물입니다 — 사용자가 입력한 쿼리 항목 하나를 이
+  제공자 자신의 별칭이 사용하는 것과 같은 구분자 구조로 다시 작성합니다. 그렇게 하면 사용자가 그저
+  연속된 문자로 입력한 쿼리 항목도 호스트가 이해하지 못하는 구조(예를 들어 병음의 음절 경계 —
+  이것이 바로 쿼리가 서로 관련 없는 두 음절에 걸쳐 매칭되는 것을 막아줍니다)를 그대로 유지할 수
+  있습니다. 아무것도 반환하지 않는 것(기본값)은 "이 항목은 내 알파벳에 전혀 속하지 않는다"는
+  뜻이며, 이것이 바로 이 제공자가 표현할 수 없는 쿼리가 원래 매칭되어서는 안 될 별칭에 매칭되는
+  것을 막아줍니다. 쿼리마다 항목당 한 번만 호출되고 후보마다 호출되지는 않으므로 여기서 실질적인
+  작업을 해도 괜찮습니다 — 다만 반환하는 형태가 많아질수록 각각이 모든 후보와 대조되는 추가
+  대안이 되므로, 많이 반환할수록 비용이 커집니다.
 
 ### `IQueryTokenProvider`
 

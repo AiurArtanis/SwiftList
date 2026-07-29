@@ -17,6 +17,11 @@ Seis pestañas: **Sistema**, **Ventana de búsqueda rápida**, **Ventana de bús
   reiniciar. El mismo menú que muestra el clic derecho del icono de la bandeja siempre está disponible desde el
   [propio logotipo de la ventana rápida](../hotkeys#icono-del-logotipo-en-el-cuadro-de-busqueda) sin importar este
   ajuste, así que ocultar el icono de la bandeja nunca te deja sin forma de volver a Configuración o a Salir.
+- **Activar coincidencia difusa** — casilla, activada por defecto. Con ella activada, un término de búsqueda
+  normal coincide con que sus caracteres aparezcan en orden en cualquier parte del nombre; al desactivarla, un
+  término normal debe aparecer como subcadena contigua en su lugar (`abc` deja de coincidir con `a-b-c`) — ver
+  [Sintaxis de búsqueda](../search-syntax#coincidencia-difusa-predeterminada) para lo que cambia y lo que no. Se
+  aplica de inmediato, sin necesidad de reiniciar.
 - **Nivel de registro** — desplegable: Error / Warn / Info (predeterminado) / Debug. Controla el nivel de detalle
   en los registros de la App, el Servicio y el Hook (ver [Estado del Servicio](./service-status)).
 - **Idioma de interfaz** — desplegable, poblado a partir de cada proveedor de traducción instalado (idiomas

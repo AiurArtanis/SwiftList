@@ -17,6 +17,11 @@ Navigation**, and **Preview & Thumbnails**.
   menu the tray icon's right-click shows is always available from the
   [Quick window's own logo](../hotkeys#search-box-logo-icon) regardless of this setting, so hiding
   the tray icon never strands you without a way back into Settings or Exit.
+- **Enable fuzzy matching** — checkbox, on by default. With fuzzy matching on, a bare search term
+  matches as long as its characters occur in order anywhere in the name; turning this off requires
+  a bare term to appear as a contiguous substring instead (`abc` no longer matches `a-b-c`) — see
+  [Search Syntax](../search-syntax#fuzzy-matching-default) for what does and doesn't change.
+  Applies immediately, no restart needed.
 - **Log level** — dropdown: Error / Warn / Info (default) / Debug. Controls verbosity across the
   App, Service, and Hook logs (see [Service Status](./service-status)).
 - **Interface language** — dropdown, populated from every installed translation provider (built-in

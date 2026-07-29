@@ -13,6 +13,13 @@ in the file/folder name — you don't need to type a contiguous substring:
 | `swlst` | `SwiftList.exe` |
 | `report` | `Q3-report-final.docx` |
 
+Turn this off under **Settings → General → System → Enable fuzzy matching** and a bare term
+(no operator) instead has to appear as a contiguous substring — `abc` no longer matches `a-b-c`.
+Every operator in the table below keeps working exactly the same either way; the setting only
+changes what a bare term requires. The `'` operator flips exactness for one term regardless of the
+setting, so you can drop a fuzzy word into an otherwise exact query, or an exact word into an
+otherwise fuzzy one, without changing the setting itself.
+
 ## Multiple words
 
 Separate words with a space. Each word narrows the result set further — it does **not** require
@@ -36,7 +43,7 @@ matches `final-Q3-report.docx` just as well as `Q3-report-final.docx`.
 |---|---|---|
 | *(none)* | `report` | Fuzzy match anywhere in the name (default). |
 | `!` | `!temp` | **Exclude** results whose name contains the exact substring `temp` (this one is not fuzzy). |
-| `'` | `'report` | **Exact** substring match instead of fuzzy. |
+| `'` | `'report` | **Flips exactness** for this one term — exact substring instead of fuzzy while fuzzy matching is on (the default); back to fuzzy for this term while fuzzy matching is turned off in Settings. |
 | `'...'` | `'final report'` | Exact match anchored to word boundaries (won't match inside a larger word). |
 | `^` | `^IMG` | **Prefix** match — the name must start with `IMG`. |
 | `$` | `.pdf$` | **Suffix** match — the name must end with `.pdf`. |
@@ -99,6 +106,22 @@ else):
 finds files with `1080` in the name that live somewhere under a folder matching `wallpapers`,
 without needing to know or type the exact path. Combine multiple filters with a comma:
 `report ::2024,:final`.
+
+## When a term describes the folder, not the file
+
+If a query's terms produce no matches at all by file/folder name, SwiftList automatically retries
+by additionally letting terms match ancestor folders — no special syntax needed:
+
+```
+d01j dcj
+```
+
+finds a file named `d01j` that lives in a folder named (or aliased to) `dcj`, even though `dcj`
+never appears in the file's own name. This only fills in the rest of a query from the folders above
+a file — at least one term still has to match the file name itself, and it only kicks in once an
+ordinary name-only search comes back completely empty, so it can never displace or reorder a result
+an ordinary search would already have found. Ancestor folders are matched the same way file names
+are, so pinyin reaches a Chinese folder name here too.
 
 ## Bypassing exclusion rules for one search
 

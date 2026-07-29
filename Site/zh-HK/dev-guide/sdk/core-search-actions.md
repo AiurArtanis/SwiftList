@@ -72,6 +72,7 @@ interface IAliasProvider
     int Version { get; } // 預設 1
     int[]? MapAliasToSourceIndices(string text, string alias); // 預設 null
     void GetAliasesUtf8(string text, AliasByteSink dest); // 預設:內部轉調 GetAliases
+    IEnumerable<string> GetQueryForms(string term); // 預設:不返回任何形式
 }
 ```
 
@@ -92,6 +93,13 @@ provider 轉寫的**源**字元範圍(比如拼音對應的是 CJK 表意文字�
 - **`GetAliasesUtf8`**:宿主批量建索引時用的字節原生版本，別名最終是按 UTF-8 字節存儲的。預設實
   現就是內部轉調 `GetAliases`，所以現有的 provider 不用改也能正常工作；只有當你的 provider 生成
   的別名量特別大、字串分配開銷確實成為實際瓶頸時，才需要重寫它來完全跳過字串具現化。
+- **`GetQueryForms`**:`GetAliases` 的查詢端對應版本——把用戶輸入的某一個查詢詞，改寫成這個
+  provider 自己的別名所使用的那種帶分隔結構的形式，這樣一段用戶按普通字元連續打出來的查詢詞，
+  依然能保留宿主本身理解不了的內部結構(比如拼音的音節邊界，這正是阻止查詢跨越兩個不相關音節誤
+  匹配的關鍵)。預設不返回任何形式，代表"這個詞根本不在我的字母表裏"——這正是防止一個這個
+  provider 無法表達的查詢詞，誤命中本不該命中的別名。每條查詢裏每個詞只會調用一次，不會按候選
+  項逐一調用，所以在這裏做一些實際工作是划算的——但每返回一種形式，就會多出一個要拿去跟每個候
+  選項匹配的備選項，所以返回得越多，代價也越大。
 
 ### `IQueryTokenProvider`
 

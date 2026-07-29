@@ -79,6 +79,7 @@ interface IAliasProvider
     int Version { get; } // default 1
     int[]? MapAliasToSourceIndices(string text, string alias); // default null
     void GetAliasesUtf8(string text, AliasByteSink dest); // default: adapts GetAliases
+    IEnumerable<string> GetQueryForms(string term); // default: none
 }
 ```
 
@@ -107,6 +108,15 @@ interface IAliasProvider
   を内部で呼び出すため、既存のプロバイダーは変更なしでそのまま動作します。プロバイダーが非常に大
   量のエイリアスを生成し、その文字列生成のコストが実際に問題になる場合にのみ、文字列の実体化を完
   全に省略するためオーバーライドしてください。
+- **`GetQueryForms`**:`GetAliases` のクエリ側に対応するものです——ユーザーが入力したクエリ項を、
+  このプロバイダー自身のエイリアスが使っているのと同じ区切り構造の形に書き換えます。これにより、
+  ユーザーが単なる文字の並びとして入力したクエリ項でも、ホストには理解できない構造(例えばピンイ
+  ンの音節境界。これがあるおかげで、クエリが 2 つの無関係な音節をまたいで一致してしまうことを防
+  げます)を保持したままにできます。何も返さない(デフォルト)ことは「この項は自分のアルファベッ
+  トにまったく存在しない」ことを意味し、これによって、このプロバイダーが表現できないクエリが、本
+  来一致するはずのないエイリアスに一致してしまうのを防いでいます。クエリごと・項ごとに 1 回だけ
+  呼び出され、候補ごとには呼び出されないため、ここで実質的な処理を行っても問題ありません——ただ
+  し返す形の数が増えるほど、それぞれが候補と照合される追加の候補になるため、コストがかさみます。
 
 ### `IQueryTokenProvider`
 
