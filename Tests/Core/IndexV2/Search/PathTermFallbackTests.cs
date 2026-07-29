@@ -65,16 +65,83 @@ public sealed class PathTermFallbackTests
     }
 
     [TestMethod]
-    public void SearchStreaming_NameOnlyMatchWins_FallbackNeverRuns()
+    public void SearchStreaming_TopUpAddsNothingWhenNoAncestorSatisfiesTheRest()
     {
         using var fixture = BuildSeriesDrive();
 
-        // Both terms match one file name outright, so the ordinary name search satisfies the query and
-        // the ancestor pass must not add the episode files sitting under a folder called "Rose".
+        // "Rose Notes.txt" answers both terms by name. The ancestor pass still runs alongside it, but
+        // nothing above the "Rose Season" folder answers "notes", so it contributes nothing and the
+        // episodes underneath stay out.
         var results = Search(fixture, "rose notes");
 
         Assert.HasCount(1, results);
         Assert.AreEqual(@"T:\library\drama\Rose Notes.txt", results[0].Path);
+    }
+
+    // The shape from the field report: the same two terms are answered both by one file's name and by
+    // a folder that several other files sit under.
+    private static LiveIndexFixture BuildOverlapDrive() => LiveIndexFixture.Build("Z", new[]
+    {
+        LiveIndexFixture.Root(),
+        new FileRecord(2, 1, "Tulip Report 2024.pdf", FileRecordFlags.None),
+        new FileRecord(3, 1, "Tulip Archive", FileRecordFlags.Directory),
+        new FileRecord(4, 3, "Report A.pdf", FileRecordFlags.None),
+        new FileRecord(5, 3, "Report B.pdf", FileRecordFlags.None),
+    });
+
+    [TestMethod]
+    public void SearchStreaming_AnIncidentalNameHitDoesNotSuppressTheAncestorPass()
+    {
+        using var fixture = BuildOverlapDrive();
+
+        // Gating the ancestor pass on an empty result set meant "Tulip Report 2024.pdf" alone -- one
+        // file happening to carry both words -- hid every file under the folder that answers "tulip".
+        var results = Search(fixture, "tulip report");
+
+        CollectionAssert.AreEquivalent(
+            new[]
+            {
+                @"Z:\Tulip Report 2024.pdf",
+                @"Z:\Tulip Archive\Report A.pdf",
+                @"Z:\Tulip Archive\Report B.pdf",
+            },
+            results.Select(r => r.Path).ToList());
+    }
+
+    [TestMethod]
+    public void SearchStreaming_NameHitsComeBeforeAncestorOnes()
+    {
+        using var fixture = BuildOverlapDrive();
+
+        var results = Search(fixture, "tulip report");
+
+        // The pass appends rather than merges, which is what keeps a genuine name match from being
+        // pushed down by a weaker path-derived one.
+        Assert.AreEqual(@"Z:\Tulip Report 2024.pdf", results[0].Path);
+    }
+
+    [TestMethod]
+    public void SearchStreaming_TopUpRespectsTheRemainingLimit()
+    {
+        using var fixture = BuildOverlapDrive();
+
+        // The ancestor pass gets what the name hits left over, not the caller's whole limit again.
+        var results = Search(fixture, "tulip report", limit: 2);
+
+        Assert.HasCount(2, results);
+        Assert.AreEqual(@"Z:\Tulip Report 2024.pdf", results[0].Path);
+    }
+
+    [TestMethod]
+    public void SearchStreaming_AFullPageIsNotToppedUp()
+    {
+        using var fixture = BuildOverlapDrive();
+
+        // Nothing is left to fill, so the pass never runs and costs nothing.
+        var results = Search(fixture, "tulip report", limit: 1);
+
+        Assert.HasCount(1, results);
+        Assert.AreEqual(@"Z:\Tulip Report 2024.pdf", results[0].Path);
     }
 
     [TestMethod]

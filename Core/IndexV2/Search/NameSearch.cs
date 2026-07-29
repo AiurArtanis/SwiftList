@@ -56,11 +56,16 @@ internal static class NameSearch
                 break;
         }
 
-        // Nothing matched by name alone: retry allowing each term to be satisfied by an ancestor
-        // folder instead. Gated on the empty result so an ordinary query never pays for it, and so a
-        // real name match can never be diluted by a weaker path-derived one.
-        if (emitted == 0)
-            PathTermFallback.SearchStreaming(snapshot, delta, pattern, limit, onResult, token, directoryFilterLower);
+        // The names alone did not fill the page: top it up with rows where a term is satisfied by an
+        // ancestor folder instead. Gated on there being room left, so a query that already answers in
+        // full never pays for it -- and since these are appended after every name hit, a real name
+        // match still cannot be pushed down by a weaker path-derived one.
+        //
+        // Gating on emitted == 0 instead was too strict to be useful: one incidental name hit
+        // suppressed the entire path pass, so a query whose initials matched both a file and a folder
+        // returned only the file and hid every result under the folder.
+        if (emitted < limit)
+            PathTermFallback.SearchStreaming(snapshot, delta, pattern, limit - emitted, onResult, token, directoryFilterLower);
     }
 
     // Bounded refinement: only ever runs over the scanKeep-sized headroom set above, never the full

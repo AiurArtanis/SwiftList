@@ -7,10 +7,10 @@ using SwiftList.Core.IndexV2.Persistence;
 namespace SwiftList.Core.IndexV2.Search;
 
 // Order-free "a term may be satisfied by an ancestor folder instead of the file name" pass, run by
-// NameSearch only when plain name matching emitted nothing at all. That trigger is what keeps this
-// cheap: an ordinary query never reaches it, and because there are no real name hits to interleave
-// with, the ranking can reuse the matched term's own sort key untouched -- no sort-key surgery and no
-// risk of pushing a genuine name match down.
+// NameSearch to top up a page the names alone did not fill. That trigger is what keeps this cheap: a
+// query that already answers in full never reaches it. Everything found here is appended after the
+// name hits rather than merged with them, so the ranking can reuse the matched term's own sort key
+// untouched -- no sort-key surgery, and no risk of pushing a genuine name match down.
 //
 // Distinct from PathSearch, which models a POSITIONAL "dir\subdir\file" query: there the query's
 // segments must appear in ancestors in that same order. Here the terms carry no position at all, so
@@ -81,9 +81,10 @@ internal static class PathTermFallback
             foreach (var (uid, nameMask) in nameMasks)
             {
                 token.ThrowIfCancellationRequested();
-                // A name satisfying every term on its own would already have been emitted by the name
-                // search that came up empty, so it cannot occur here -- but skipping it costs nothing
-                // and keeps this pass from ever double-reporting if the trigger is ever loosened.
+                // A name satisfying every term on its own is exactly what the name search matches, so
+                // it has already been reported (or was cut by its limit, which this pass must not
+                // undo by re-reporting it further down). Skipping is what keeps the two passes from
+                // double-reporting now that this one runs alongside a non-empty result set.
                 if (nameMask == fullMask)
                     continue;
 
