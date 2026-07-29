@@ -1,4 +1,4 @@
-﻿namespace SwiftList.Core.Tests.IndexV2.Delta;
+namespace SwiftList.Core.Tests.IndexV2.Delta;
 
 [TestClass]
 public sealed class DeltaOverlayTests

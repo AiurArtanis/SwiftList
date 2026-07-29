@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
