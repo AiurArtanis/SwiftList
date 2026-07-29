@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Runtime.InteropServices;
+using System.Text;
 using SwiftList.Core.SearchIndex.Fzf;
 
 using SwiftList.Core.IndexV2.Delta;
@@ -23,6 +24,15 @@ namespace SwiftList.Core.IndexV2.Search;
 // is exactly what keeps the row walk here bounded to the same order of work as an ordinary search.
 internal static class PathTermFallback
 {
+    /// <summary>What one unique name contributed: which terms its own name satisfied, and the best
+    /// match among them for a matching row to rank by.</summary>
+    private struct NameHit
+    {
+        public int Mask;
+        public int Score;
+        public ulong SortKey;
+    }
+
     // The satisfied-term set is carried as a bitmask, so a query with more terms than bits simply
     // opts out rather than silently matching on a truncated set.
     private const int MaxTerms = 16;
@@ -50,25 +60,34 @@ internal static class PathTermFallback
 
         // Phase A once per term instead of once per query: which unique names satisfy term i, and with
         // what sort key (kept so an emitted row can rank by the term that actually hit its name).
-        var nameMasks = new Dictionary<int, int>();
-        var nameRanks = new Dictionary<int, (int Score, ulong SortKey)>();
+        //
+        // One entry per unique rather than a mask table and a rank table side by side. Both were keyed
+        // the same way and written in the same breath, so every hit paid four hash lookups where it
+        // needs one, and the row walk below then looked the rank up a second time. A broad term set can
+        // reach tens of thousands of uniques per query.
+        var nameHits = new Dictionary<int, NameHit>();
         var fullMask = (1 << termCount) - 1;
         for (var i = 0; i < termCount; i++)
         {
             token.ThrowIfCancellationRequested();
             var hits = SearchMatcher.RentHitList();
             SearchMatcher.MatchUniques(snapshot, termPatterns[i], hits, token);
+            var bit = 1 << i;
             foreach (var m in hits)
             {
-                nameMasks[m.Uid] = nameMasks.TryGetValue(m.Uid, out var existing) ? existing | (1 << i) : 1 << i;
+                ref var entry = ref CollectionsMarshal.GetValueRefOrAddDefault(nameHits, m.Uid, out var existed);
+                entry.Mask |= bit;
                 // Keep the strongest term hit as the row's ranking basis.
-                if (!nameRanks.TryGetValue(m.Uid, out var best) || m.Match.Score > best.Score)
-                    nameRanks[m.Uid] = (m.Match.Score, m.SortKey);
+                if (!existed || m.Match.Score > entry.Score)
+                {
+                    entry.Score = m.Match.Score;
+                    entry.SortKey = m.SortKey;
+                }
             }
             SearchMatcher.ReturnHitList(hits);
         }
 
-        if (nameMasks.Count == 0)
+        if (nameHits.Count == 0)
             return;
 
         // The source root's segments are the same for every row in the query, but the ancestor walk
@@ -86,17 +105,17 @@ internal static class PathTermFallback
         var topN = new FzfTopN(keep);
         try
         {
-            foreach (var (uid, nameMask) in nameMasks)
+            foreach (var (uid, hit) in nameHits)
             {
                 token.ThrowIfCancellationRequested();
                 // A name satisfying every term on its own is exactly what the name search matches, so
                 // it has already been reported (or was cut by its limit, which this pass must not
                 // undo by re-reporting it further down). Skipping is what keeps the two passes from
                 // double-reporting now that this one runs alongside a non-empty result set.
+                var nameMask = hit.Mask;
                 if (nameMask == fullMask)
                     continue;
 
-                var rank = nameRanks[uid];
                 foreach (var row in snapshot.RowsForUid(uid))
                 {
                     if (snapshot.IsDeleted(row) || delta.IsSuperseded(row))
@@ -110,7 +129,7 @@ internal static class PathTermFallback
                     if ((nameMask | AncestorMask(snapshot, delta, parent, termPatterns, termBytePatterns, worker, ancestorMemo, fullMask, rootMask, ancestorChain)) != fullMask)
                         continue;
 
-                    topN.Add(new FzfRank(row, rank.Score, rank.SortKey));
+                    topN.Add(new FzfRank(row, hit.Score, hit.SortKey));
                 }
             }
         }
