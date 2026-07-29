@@ -1,4 +1,4 @@
-namespace SwiftList.Core.Tests.IndexV2.Delta;
+﻿namespace SwiftList.Core.Tests.IndexV2.Delta;
 
 [TestClass]
 public sealed class DeltaOverlayTests
@@ -11,6 +11,39 @@ public sealed class DeltaOverlayTests
         new FileRecord(4, 2, "sub", FileRecordFlags.Directory),
         new FileRecord(5, 4, "deep.txt", FileRecordFlags.None),
     });
+
+    // Name search skips IsSuperseded's three hash lookups per row when this holds, and a broad query
+    // reaches tens of thousands of rows -- so it has to be false the moment any of the three is
+    // populated, or those rows silently stay visible after being deleted, renamed away or overridden.
+    [TestMethod]
+    public void HasNoBaseChanges_IsTrueOnlyWhileNoBaseRowHasBeenTouched()
+    {
+        using var fixture = BuildSampleDrive();
+        fixture.Index.Mutate((_, delta) =>
+        {
+            Assert.IsTrue(delta.HasNoBaseChanges, "a freshly opened snapshot has no base changes");
+
+            // An added row is not a base change: it lives past the snapshot's rows and is matched
+            // separately, so the fanout's fast path over base rows stays valid.
+            delta.Upsert(100, 2, "new.txt", FileRecordFlags.None, 10, 0, 0, 0);
+            Assert.IsTrue(delta.HasNoBaseChanges, "an added row does not supersede any base row");
+
+            delta.Remove(3);
+            Assert.IsFalse(delta.HasNoBaseChanges, "a deleted base row supersedes");
+        });
+    }
+
+    [TestMethod]
+    public void HasNoBaseChanges_IsFalseAfterABaseRowIsOverridden()
+    {
+        using var fixture = BuildSampleDrive();
+        fixture.Index.Mutate((_, delta) =>
+        {
+            delta.Upsert(3, 2, "renamed.txt", FileRecordFlags.None, 10, 0, 0, 0);
+
+            Assert.IsFalse(delta.HasNoBaseChanges);
+        });
+    }
 
     [TestMethod]
     public void Upsert_NewId_AddsAsAddedRecordAndCountsAsAFile()

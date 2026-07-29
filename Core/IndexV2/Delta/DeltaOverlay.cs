@@ -133,6 +133,11 @@ public sealed class DeltaOverlay
 
     // A base row no longer visible under its snapshot identity: deleted, renamed away (USN old-name
     // record), or represented by its override record (which the delta pass matches under the new name).
+    // The usual state: nothing has been deleted, renamed away or overridden since the snapshot was
+    // written. Lets a scan over many rows skip IsSuperseded's three hash lookups per row outright
+    // rather than performing them to learn that every set is empty.
+    public bool HasNoBaseChanges => DeletedBase.Count == 0 && RenamedAway.Count == 0 && BaseOverrides.Count == 0;
+
     public bool IsSuperseded(int baseRow) => DeletedBase.Contains(baseRow) || RenamedAway.ContainsKey(baseRow) || BaseOverrides.ContainsKey(baseRow);
 
     // Gone from visibility under its base identity: hard-deleted, or renamed away (the new identity

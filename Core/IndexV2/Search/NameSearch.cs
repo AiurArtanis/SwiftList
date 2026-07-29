@@ -38,7 +38,7 @@ internal static class NameSearch
         var keep = Math.Max(limit * 8, 64);
         var scanKeep = matchAll || pattern.IsEmpty ? keep : Math.Min(keep * RefinementHeadroomFactor, RefinementScanCap);
         var topN = new FzfTopN(scanKeep);
-        CollectRanks(snapshot, delta, pattern, matchAll, directoryContext, rank => topN.Add(rank), token);
+        CollectRanks(snapshot, delta, pattern, matchAll, directoryContext, topN, token);
 
         var ranks = topN.Finish(scanKeep);
         if (!matchAll && !pattern.IsEmpty)
@@ -141,9 +141,16 @@ internal static class NameSearch
         return path.StartsWith(ctx.FilterLower, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void CollectRanks(Snapshot snapshot, DeltaOverlay delta, FzfPattern pattern, bool matchAll, DirectoryContext ctx, Action<FzfRank> add, CancellationToken token)
+    private static void CollectRanks(Snapshot snapshot, DeltaOverlay delta, FzfPattern pattern, bool matchAll, DirectoryContext ctx, FzfTopN topN, CancellationToken token)
     {
         var membership = ctx.FilterLower != null ? new Dictionary<int, bool>() : null;
+
+        // Hoisted out of the per-row loops below. Snapshot.Flags builds a span over mapped memory on
+        // every access and IsSuperseded is three hash lookups, both of which the fanout was paying for
+        // every one of the tens of thousands of rows a broad query reaches.
+        var flags = snapshot.Flags;
+        const ushort deletedFlag = (ushort)FileRecordFlags.Deleted;
+        var mayBeSuperseded = !delta.HasNoBaseChanges;
 
         if (matchAll)
         {
@@ -161,11 +168,11 @@ internal static class NameSearch
                 var sortKey = MatchAllSortKey(snapshot, uid, worker, utf8);
                 foreach (var row in snapshot.RowsForUid(uid))
                 {
-                    if (snapshot.IsDeleted(row) || delta.IsSuperseded(row))
+                    if ((flags[row] & deletedFlag) != 0 || (mayBeSuperseded && delta.IsSuperseded(row)))
                         continue;
                     if (membership != null && !RowMatchesFilter(snapshot, delta, row, delta.GetFullPath(row), ctx, membership))
                         continue;
-                    add(new FzfRank(row, 0, sortKey));
+                    topN.Add(new FzfRank(row, 0, sortKey));
                 }
             }
             SearchMatcher.ReturnWorker(worker);
@@ -178,19 +185,19 @@ internal static class NameSearch
             {
                 foreach (var row in snapshot.RowsForUid(m.Uid))
                 {
-                    if (snapshot.IsDeleted(row) || delta.IsSuperseded(row))
+                    if ((flags[row] & deletedFlag) != 0 || (mayBeSuperseded && delta.IsSuperseded(row)))
                         continue;
                     if (membership != null && !RowMatchesFilter(snapshot, delta, row, delta.GetFullPath(row), ctx, membership))
                         continue;
                     // The per-unique sort key applies verbatim to every row of that unique --
                     // EntryIndex isn't packed into the key, so nothing is recomputed per row.
-                    add(new FzfRank(row, m.Match.Score, m.SortKey));
+                    topN.Add(new FzfRank(row, m.Match.Score, m.SortKey));
                 }
             }
             SearchMatcher.ReturnHitList(hits);
         }
 
-        MatchDeltaRows(snapshot, delta, pattern, matchAll, ctx, add);
+        MatchDeltaRows(snapshot, delta, pattern, matchAll, ctx, topN);
     }
 
     private static ulong MatchAllSortKey(Snapshot snapshot, int uid, SearchMatcher.Worker worker, ReadOnlySpan<byte> utf8)
@@ -206,7 +213,7 @@ internal static class NameSearch
     // Delta churn is always small (live USN/watcher batches, not bulk scans), so both loops just check
     // the row's own full path against the filter prefix -- correct for renamed/moved/added rows alike,
     // unlike the row-index ancestor cache above (a snapshot-only optimization for the hot base-row path).
-    private static void MatchDeltaRows(Snapshot snapshot, DeltaOverlay delta, FzfPattern pattern, bool matchAll, DirectoryContext ctx, Action<FzfRank> add)
+    private static void MatchDeltaRows(Snapshot snapshot, DeltaOverlay delta, FzfPattern pattern, bool matchAll, DirectoryContext ctx, FzfTopN topN)
     {
         var slab = new FzfSlab();
         var queryLen = pattern.GetTotalTermLength();
@@ -220,7 +227,7 @@ internal static class NameSearch
                 continue;
             if (ctx.FilterLower != null && !delta.GetFullPath(row).StartsWith(ctx.FilterLower, StringComparison.OrdinalIgnoreCase))
                 continue;
-            add(FzfResultRank.ForDefaultScheme(row, record.Name, match));
+            topN.Add(FzfResultRank.ForDefaultScheme(row, record.Name, match));
         }
         for (var i = 0; i < delta.Added.Count; i++)
         {
@@ -232,7 +239,7 @@ internal static class NameSearch
                 continue;
             if (ctx.FilterLower != null && !delta.GetFullPath(record).StartsWith(ctx.FilterLower, StringComparison.OrdinalIgnoreCase))
                 continue;
-            add(FzfResultRank.ForDefaultScheme(snapshot.Count + i, record.Name, match));
+            topN.Add(FzfResultRank.ForDefaultScheme(snapshot.Count + i, record.Name, match));
         }
     }
 }
