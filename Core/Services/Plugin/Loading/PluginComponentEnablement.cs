@@ -17,6 +17,11 @@ internal static class PluginComponentEnablement
         InlineSearchAdapterRegistry.FilterFunc = a => IsComponentEnabled(a);
         FileDialogAdapterRegistry.FilterFunc = a => IsComponentEnabled(a);
         ActivePathCollectorRegistry.FilterFunc = a => IsComponentEnabled(a);
+        // Alias providers were left out even though IsComponentEnabled below already builds and checks
+        // their id form, so this process treated a disabled one as enabled. Only wired here, for the
+        // hook: the service reads no user settings of its own (its account's LocalApplicationData is
+        // not the user's), which is why disabled aliases reach it as a per-request id set instead.
+        SwiftList.Core.SearchIndex.AliasProviderRegistry.FilterFunc = a => IsComponentEnabled(a);
     }
 
     public static bool IsComponentEnabled(object obj)

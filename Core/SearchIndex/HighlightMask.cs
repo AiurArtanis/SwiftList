@@ -210,12 +210,24 @@ internal static class HighlightMask
     private static bool MarkViaAliasProviders(string text, string term, bool caseSensitive, FzfTermKind kind, Span<bool> highlights)
     {
         var termLower = caseSensitive ? term : term.ToLowerInvariant();
+        // Both of the ways a provider can be switched off, because neither works in both processes.
+        // GetActiveProviders consults a filter that reads the user's settings, which only the UI process
+        // can do -- the service runs under an account whose LocalApplicationData is not the user's, so
+        // it sees an empty settings file and considers everything enabled. What reaches the service is
+        // the per-request id set below, carried over the pipe. Matching already honours that set (it
+        // reads the ids baked into the snapshot); this, which generates aliases from the provider
+        // directly, did not -- so a disabled provider still shaped the ranking weight and lit up
+        // characters in the result the user never typed.
+        var disabledIds = SearchContext.DisabledAliasIds;
 
         foreach (var provider in AliasProviderRegistry.GetActiveProviders())
         {
             var matchedAny = false;
             try
             {
+                if (disabledIds != null && disabledIds.Contains(AliasProviderRegistry.GetProviderId(provider)))
+                    continue;
+
                 if (!provider.CanHandle(text))
                     continue;
 

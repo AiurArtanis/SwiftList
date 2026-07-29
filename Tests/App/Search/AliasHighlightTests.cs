@@ -119,10 +119,15 @@ public sealed class AliasHighlightTests
             _registered = true;
         }
         SearchContext.DefaultFuzzyMatchEnabled = false;
+        SearchContext.DisabledAliasIds = null;
     }
 
     [TestCleanup]
-    public void Cleanup() => SearchContext.DefaultFuzzyMatchEnabled = true;
+    public void Cleanup()
+    {
+        SearchContext.DefaultFuzzyMatchEnabled = true;
+        SearchContext.DisabledAliasIds = null;
+    }
 
     private static int[] Lit(string text, string query)
     {
@@ -219,6 +224,33 @@ public sealed class AliasHighlightTests
         Assert.IsTrue(FuzzyMatcher.IsMatch(MixedShapeQuery, "甲乙丙丁"), "unquoted and fuzzy, this matches");
         Assert.IsFalse(FuzzyMatcher.IsMatch("'" + MixedShapeQuery, "甲乙丙丁"));
         Assert.IsEmpty(Lit("甲乙丙丁", "'" + MixedShapeQuery));
+    }
+
+    // Turning a provider off has to reach the highlight too, and the way it reaches it differs by
+    // process. The UI filters the provider list against the user's settings; the service cannot -- it
+    // runs under an account whose LocalApplicationData is not the user's, so it reads an empty settings
+    // file and considers everything enabled. What it gets is this id set, carried per request over the
+    // pipe. Matching already honoured it (the ids are baked into the snapshot); generating aliases from
+    // the provider directly did not, so a disabled provider still lit up characters nobody typed.
+    [TestMethod]
+    public void ADisabledProvidersAliasesLightNothing()
+    {
+        var id = AliasProviderRegistry.GetProviderId(new FakeAliasProvider());
+        Assert.IsNotEmpty(Lit("甲乙丙丁", "jtqg"), "the initials alias lights up while the provider is enabled");
+
+        SearchContext.DisabledAliasIds = new HashSet<byte> { id };
+
+        Assert.IsEmpty(Lit("甲乙丙丁", "jtqg"), "a disabled provider must not light anything");
+    }
+
+    [TestMethod]
+    public void DisablingOneProviderLeavesTheOtherTiersAlone()
+    {
+        // Only the alias tier is switched off. A term that matches the text itself must still light up,
+        // or disabling pinyin would quietly stop highlighting ordinary names as well.
+        SearchContext.DisabledAliasIds = new HashSet<byte> { AliasProviderRegistry.GetProviderId(new FakeAliasProvider()) };
+
+        CollectionAssert.AreEqual(new[] { 0, 1, 2, 3, 4, 5 }, Lit("readme.md", "readme"));
     }
 
     [TestMethod]
