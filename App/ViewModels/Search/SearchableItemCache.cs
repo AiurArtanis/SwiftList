@@ -23,11 +23,32 @@ internal static class SearchableItemCache
     // ItemsChanged, which most never fire for a language change (it's meant for the provider's own
     // underlying data changing, e.g. Start Menu file-system events) -- so without this, every cached
     // provider's item text stays frozen in whatever language was active the first time it loaded.
-    static SearchableItemCache() => TranslationManager.Instance.PropertyChanged += (_, _) =>
-                                         {
-                                             _cache.Clear();
-                                             _loadingTasks.Clear();
-                                         };
+    //
+    // The same applies to the alias list each entry carries, which EnsureLoaded builds from the
+    // ENABLED alias providers at that moment. Turning one off afterwards left those aliases baked in,
+    // so a settings item kept being found by a disabled provider's spelling while the highlight -- which
+    // is recomputed live and does honour the setting -- came back empty: found but not lit up.
+    static SearchableItemCache() => TranslationManager.Instance.PropertyChanged += (_, _) => Clear();
+
+    private static int _watchingComponentChanges;
+
+    // Subscribed on first real use rather than from the static constructor. Reading
+    // PluginManager.Instance during type initialization would touch a Lazy singleton whose own
+    // constructor loads every plugin -- and if that path is ever made to touch this cache, type
+    // initialization would re-enter the Lazy that is still initializing. It does not today, but the
+    // constructor already carries a comment about having been caught by exactly that once. By the time
+    // anything asks this cache for entries, the singleton is long since built.
+    private static void WatchComponentChanges()
+    {
+        if (Interlocked.Exchange(ref _watchingComponentChanges, 1) == 0)
+            PluginManager.Instance.ComponentsRefreshed += Clear;
+    }
+
+    private static void Clear()
+    {
+        _cache.Clear();
+        _loadingTasks.Clear();
+    }
 
     // Providers load on a background thread and a query issued before a given provider finishes is
     // silently missing its items -- there is no synchronous "wait for everything" alternative without
@@ -52,6 +73,7 @@ internal static class SearchableItemCache
 
     public static void EnsureLoaded(ISearchableItemProvider provider)
     {
+        WatchComponentChanges();
         var id = provider.GetType().Name;
         if (_subscribed.TryAdd(id, true))
         {
