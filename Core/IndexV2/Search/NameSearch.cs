@@ -1,3 +1,4 @@
+﻿using System.Runtime.InteropServices;
 using SwiftList.Core.SearchIndex;
 using SwiftList.Core.SearchIndex.Fzf;
 
@@ -68,17 +69,30 @@ internal static class NameSearch
             PathTermFallback.SearchStreaming(snapshot, delta, pattern, limit - emitted, onResult, token, directoryFilterLower);
     }
 
+    [ThreadStatic]
+    private static Dictionary<string, double>? _weightsByName;
+
     // Bounded refinement: only ever runs over the scanKeep-sized headroom set above, never the full
     // matched set. Ranking-only (FzfResultRank.ApplyWeight never rejects), so this can't drop a result.
     private static void RefineWithWeight(Snapshot snapshot, DeltaOverlay delta, FzfPattern pattern, List<FzfRank> ranks)
     {
+        // The weight depends on the name and the pattern, and on nothing else about the row -- so every
+        // row sharing a name shares its weight, and a set of a few thousand holds only about two thirds
+        // that many distinct names. Worth remembering because the calculation is not cheap for a query
+        // that matches through an alias: it has to ask the provider for the candidate's own spellings.
+        // Reused per thread rather than built per search: a query whose names all match literally gets
+        // no benefit from the memo and should not pay to allocate one either.
+        var weights = _weightsByName ??= new Dictionary<string, double>(StringComparer.Ordinal);
+        weights.Clear();
         for (var i = 0; i < ranks.Count; i++)
         {
             var rank = ranks[i];
             var name = GetNameForEntry(snapshot, delta, rank.EntryIndex);
             if (name.Length == 0)
                 continue;
-            var weight = HighlightMask.ComputeWeight(name, pattern);
+            ref var weight = ref CollectionsMarshal.GetValueRefOrAddDefault(weights, name, out var known);
+            if (!known)
+                weight = HighlightMask.ComputeWeight(name, pattern);
             ranks[i] = FzfResultRank.ApplyWeight(rank, weight);
         }
         FzfRankRadixSorter.Sort(ranks);
