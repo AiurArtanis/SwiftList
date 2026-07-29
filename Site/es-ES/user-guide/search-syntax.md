@@ -84,6 +84,8 @@ d: report
 
 busca solo en la unidad `D:`.
 
+El espacio es opcional: `d:report` significa lo mismo que `d: report`.
+
 ## Modo de ruta
 
 Si tu consulta contiene un separador de ruta (`\` o `/`), SwiftList cambia al modo de ruta y compara contra rutas

@@ -82,6 +82,8 @@ d: report
 
 searches only on the `D:` drive.
 
+The space is optional: `d:report` means the same thing as `d: report`.
+
 ## Path mode
 
 If your query contains a path separator (`\` or `/`), SwiftList switches to path mode and matches
