@@ -71,12 +71,12 @@ internal static class HighlightMask
                 if (term.Inverse || term.AliasForm)
                     continue;
 
-                MarkTerm(fullText, term.Text, term.CaseSensitive, highlights, ref materialized, slab);
+                MarkTerm(fullText, term.Text, term.CaseSensitive, term.Kind, highlights, ref materialized, slab);
             }
         }
     }
 
-    private static void MarkTerm(ReadOnlySpan<char> fullText, string term, bool caseSensitive, Span<bool> highlights, ref string? materialized, FzfSlab slab)
+    private static void MarkTerm(ReadOnlySpan<char> fullText, string term, bool caseSensitive, FzfTermKind kind, Span<bool> highlights, ref string? materialized, FzfSlab slab)
     {
         var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
         if (MarkLiteralSpan(fullText, term, comparison, highlights))
@@ -86,7 +86,7 @@ internal static class HighlightMask
             return;
 
         materialized ??= fullText.ToString();
-        if (MarkViaAliasProviders(materialized, term, caseSensitive, highlights))
+        if (MarkViaAliasProviders(materialized, term, caseSensitive, kind, highlights))
             return;
 
         MarkViaMixedQuery(materialized, term, caseSensitive, highlights);
@@ -163,7 +163,7 @@ internal static class HighlightMask
     // camelCase/word-boundary structure for the real algorithm's bonus scoring to add value from -- so
     // paying its full DP cost per candidate measured slower overall than this simpler scan, for a mask
     // that (per real name/text) comes out effectively identical either way.
-    private static bool MarkViaAliasProviders(string text, string term, bool caseSensitive, Span<bool> highlights)
+    private static bool MarkViaAliasProviders(string text, string term, bool caseSensitive, FzfTermKind kind, Span<bool> highlights)
     {
         var termLower = caseSensitive ? term : term.ToLowerInvariant();
 
@@ -199,15 +199,20 @@ internal static class HighlightMask
                             continue;
 
                         var aliasLower = caseSensitive ? alias : alias.ToLowerInvariant();
-                        // Follow the same rule matching does. With fuzzy off a term only matches an
-                        // alias as a contiguous run, so highlighting it as a scattered subsequence
-                        // lights up characters that had nothing to do with the hit: "gsh" matches
-                        // 格式化 through the initials alias, but a subsequence search also finds
-                        // g...s...h spread across the full pinyin and lit 创 along with it.
+                        // Follow the same rule matching does -- which is this TERM's kind, not the
+                        // fuzzy setting. Reading the setting instead was right until a "'" was
+                        // involved, since that flips one term's exactness against it: with fuzzy off,
+                        // "'abc" searches as a subsequence but was highlighted as a contiguous run,
+                        // found nothing, and lit up nothing at all while the row itself was a hit.
+                        //
+                        // Contiguous for every other kind, because a scattered subsequence lights up
+                        // characters that had nothing to do with the hit: "gsh" matches 格式化 through
+                        // the initials alias, but a subsequence search also finds g...s...h spread
+                        // across the full pinyin and lit 创 along with it.
                         int[]? positions = null;
                         foreach (var probe in probes)
                         {
-                            positions = SearchContext.FuzzyMatchEnabled
+                            positions = kind == FzfTermKind.Fuzzy
                                 ? FindSubsequencePositions(aliasLower, probe)
                                 : FindContiguousPositions(aliasLower, probe);
                             if (positions != null)

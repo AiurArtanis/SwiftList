@@ -190,4 +190,34 @@ public sealed class AliasHighlightTests
             }
         }
     }
+
+    // "jtqin" is two initials followed by one full reading -- a subsequence of the readings alias, never
+    // a contiguous run of it. So it is matchable only where the term is fuzzy, which is exactly what "'"
+    // controls, and it is the shape a real pinyin query takes ("jtqinzi").
+    private const string MixedShapeQuery = "jtqin";
+
+    [TestMethod]
+    public void FuzzyDisabled_AQuotedTermFlipsBackToFuzzyAndStillLights()
+    {
+        // Reported: with fuzzy off, "'jtqinzi" found the row and lit nothing on it. Which rule applies
+        // is the TERM's, and "'" flips that term against the setting -- but highlighting was reading the
+        // setting, so it went looking for a contiguous run that a fuzzy term never had to have.
+        SearchContext.DefaultFuzzyMatchEnabled = false;
+
+        Assert.IsFalse(FuzzyMatcher.IsMatch(MixedShapeQuery, "甲乙丙丁"), "unquoted, this must not match at all");
+        Assert.IsTrue(FuzzyMatcher.IsMatch("'" + MixedShapeQuery, "甲乙丙丁"));
+        Assert.IsNotEmpty(Lit("甲乙丙丁", "'" + MixedShapeQuery), "matched but lit nothing");
+    }
+
+    [TestMethod]
+    public void FuzzyEnabled_AQuotedTermIsExactAndLightsNothingItDidNotMatch()
+    {
+        // The mirror: with fuzzy on, "'" makes the term exact, so the same query stops matching and
+        // stops lighting. Following the setting instead of the term got this half right by accident.
+        SearchContext.DefaultFuzzyMatchEnabled = true;
+
+        Assert.IsTrue(FuzzyMatcher.IsMatch(MixedShapeQuery, "甲乙丙丁"), "unquoted and fuzzy, this matches");
+        Assert.IsFalse(FuzzyMatcher.IsMatch("'" + MixedShapeQuery, "甲乙丙丁"));
+        Assert.IsEmpty(Lit("甲乙丙丁", "'" + MixedShapeQuery));
+    }
 }
