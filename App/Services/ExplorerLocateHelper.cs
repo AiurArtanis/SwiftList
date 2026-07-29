@@ -13,7 +13,14 @@ namespace SwiftList.App.Services;
 // it respects the user's default file manager instead of always opening explorer.exe.
 internal static class ExplorerLocateHelper
 {
-    public static void LocateInExplorer(string path)
+    /// <summary>
+    /// Opens the folder holding <paramref name="path"/> with that item selected. Returns immediately;
+    /// the shell work runs on a ShellThread, which is where the reasoning for that lives.
+    /// </summary>
+    public static void LocateInExplorer(string path) =>
+        ShellThread.Run("ExplorerLocate", () => LocateInExplorerCore(path));
+
+    private static void LocateInExplorerCore(string path)
     {
         // A user-configured default file manager (see GitHub issue #180, FileExecutor.
         // TryBuildDefaultFileManagerStartInfo) takes over "open containing folder" too -- it can only open

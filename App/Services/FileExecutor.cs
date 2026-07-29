@@ -24,28 +24,35 @@ public static class FileExecutor
             return;
         }
 
-        // Web-address (http/https) favorites: hand straight to the default browser, no filesystem I/O
-        // needed, so no reason to leave the UI thread for these.
+        // Web-address (http/https) favorites: hand straight to the default browser. No filesystem I/O
+        // here, but UseShellExecute still means ShellExecuteEx, which resolves the protocol handler and
+        // may be starting a cold browser -- no reason for the UI thread to wait on any of that.
         if (Helpers.FavoriteUrlHelper.IsWebUrl(path))
         {
-            try
+            ShellThread.Run("UrlLaunch", () =>
             {
-                Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"[FileExecutor] OpenFileOrFolder failed for '{path}': {ex}", LogLevel.Error);
-                MessageBox.Show(string.Format(TranslationManager.Instance["Executor_OpenFailed"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                try
+                {
+                    Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"[FileExecutor] OpenFileOrFolder failed for '{path}': {ex}", LogLevel.Error);
+                    MessageBox.Show(string.Format(TranslationManager.Instance["Executor_OpenFailed"], ex.Message), TranslationManager.Instance["Service_Error"], MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            });
             return;
         }
 
         // Everything below can block for seconds on a slow or heavily-indexed network share
         // (File.Exists/Directory.Exists have no timeout) -- run it off the UI thread so launching
         // something doesn't freeze the whole app while a background scan is hammering the same share.
-        // Process.Start itself doesn't need the UI thread either (UseShellExecute hands off to the shell
-        // and returns); CustomMessageBox.Show already marshals itself back when called off-thread.
-        Task.Run(() => LaunchExistingPath(path, asAdmin));
+        // CustomMessageBox.Show already marshals itself back when called off-thread.
+        //
+        // On a ShellThread rather than the pool: Process.Start with UseShellExecute is ShellExecuteEx,
+        // which delegates to whatever shell extension handles the target, and some of those require an
+        // STA. The pool is MTA.
+        ShellThread.Run("FileLaunch", () => LaunchExistingPath(path, asAdmin));
     }
 
     private static void LaunchExistingPath(string path, bool asAdmin)
