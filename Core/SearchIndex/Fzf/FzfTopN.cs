@@ -1,128 +1,164 @@
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
-
 namespace SwiftList.Core.SearchIndex.Fzf;
 
+// Keeps the `capacity` best (smallest sort key) of an unbounded stream of ranks.
+//
+// Buffered rather than kept exactly at capacity: the buffer holds twice what is retained, and is
+// trimmed back down to the best half only when it fills. Between trims an incoming rank is one compare
+// against the threshold from the last trim, and a trim costs O(capacity) once per capacity accepted
+// ranks, so the amortised cost per rank is constant.
+//
+// It used to hold exactly capacity entries and, whenever one was displaced, rescan all of them to find
+// the new worst -- O(capacity) per accepted rank rather than per capacity of them. A broad query
+// accepts a large fraction of what it scans, so this was the dominant cost of the whole search: a
+// single-character query over 400k rows spent more time here than in matching.
+//
+// Ties in sort key are common (every row of one unique name shares its key), and which of them survives
+// at the capacity boundary is arbitrary -- as it was before. It does not reach the user: callers keep a
+// capacity many times the number of results they display, and Finish sorts by EntryIndex within a key.
 internal sealed class FzfTopN
 {
     private readonly int _capacity;
     private readonly ulong[] _sortKeys;
     private readonly int[] _entryIndices;
     private readonly int[] _scores;
-    private int _count = 0;
-    private int _worstIndex = -1;
+    private int _count;
+
+    // Only meaningful once the buffer has been trimmed at least once: the worst key then retained.
+    // Matches the old comparison exactly, including that an equal key is rejected rather than kept.
+    private ulong _threshold;
+    private bool _trimmed;
 
     public FzfTopN(int capacity)
     {
         _capacity = Math.Max(capacity, 1);
-        _sortKeys = new ulong[_capacity];
-        _entryIndices = new int[_capacity];
-        _scores = new int[_capacity];
+        var buffered = _capacity * 2;
+        _sortKeys = new ulong[buffered];
+        _entryIndices = new int[buffered];
+        _scores = new int[buffered];
     }
 
-    public int Count => _count;
+    /// <summary>How many ranks would be retained if the set were finished now.</summary>
+    public int Count => Math.Min(_count, _capacity);
+
     public int Capacity => _capacity;
 
-    // Lets an instance (and its three arrays) be pooled across searches instead of re-allocated per
-    // query -- entries above _count are never read, so no clearing is needed.
+    // Lets an instance (and its arrays) be pooled across searches instead of re-allocated per query --
+    // entries above _count are never read, so no clearing is needed.
     public void Reset()
     {
         _count = 0;
-        _worstIndex = -1;
+        _trimmed = false;
+        _threshold = 0;
     }
 
     public void Add(FzfRank rank)
     {
-        if (_count < _capacity)
-        {
-            _sortKeys[_count] = rank.SortKey;
-            _entryIndices[_count] = rank.EntryIndex;
-            _scores[_count] = rank.Score;
-            _count++;
-            if (_worstIndex < 0 || rank.SortKey > _sortKeys[_worstIndex])
-                _worstIndex = _count - 1;
-            return;
-        }
-
-        if (rank.SortKey >= _sortKeys[_worstIndex])
+        if (_trimmed && rank.SortKey >= _threshold)
             return;
 
-        _sortKeys[_worstIndex] = rank.SortKey;
-        _entryIndices[_worstIndex] = rank.EntryIndex;
-        _scores[_worstIndex] = rank.Score;
-        _worstIndex = FindWorstIndexSIMD(_sortKeys, _count);
+        _sortKeys[_count] = rank.SortKey;
+        _entryIndices[_count] = rank.EntryIndex;
+        _scores[_count] = rank.Score;
+        _count++;
+
+        if (_count == _sortKeys.Length)
+            Trim();
     }
 
     // Merges this instance's retained entries into another -- lets parallel workers keep private,
-    // bounded top-N sets and fold them together at the end instead of contending on one shared set.
+    // bounded sets and fold them together at the end instead of contending on one shared set.
     public void DrainInto(FzfTopN other)
     {
+        TrimIfOverCapacity();
         for (var i = 0; i < _count; i++)
             other.Add(new FzfRank(_entryIndices[i], _scores[i], _sortKeys[i]));
     }
 
     public List<FzfRank> Finish(int limit)
     {
+        TrimIfOverCapacity();
         var list = new List<FzfRank>(_count);
         for (var i = 0; i < _count; i++)
-        {
             list.Add(new FzfRank(_entryIndices[i], _scores[i], _sortKeys[i]));
-        }
+
         FzfRankRadixSorter.Sort(list);
         if (list.Count > limit)
             list.RemoveRange(limit, list.Count - limit);
         return list;
     }
 
-    private static int FindWorstIndexSIMD(ulong[] sortKeys, int count)
+    private void TrimIfOverCapacity()
     {
-        if (count < 8 || !Avx2.IsSupported)
+        if (_count > _capacity)
+            Trim();
+    }
+
+    /// <summary>Moves the best <see cref="_capacity"/> entries to the front and drops the rest.</summary>
+    private void Trim()
+    {
+        SelectSmallest(_capacity, _count);
+        _count = _capacity;
+
+        var worst = _sortKeys[0];
+        for (var i = 1; i < _capacity; i++)
         {
-            var worst = 0;
-            for (var i = 1; i < count; i++)
-            {
-                if (sortKeys[i] > sortKeys[worst])
-                    worst = i;
-            }
-            return worst;
+            if (_sortKeys[i] > worst)
+                worst = _sortKeys[i];
         }
+        _threshold = worst;
+        _trimmed = true;
+    }
 
-        var maxVals = Vector256.Create(sortKeys[0], sortKeys[1], sortKeys[2], sortKeys[3]);
-        var maxIndices = Vector256.Create(0UL, 1UL, 2UL, 3UL);
-
-        var limit = count - (count % 4);
-        for (var i = 4; i < limit; i += 4)
+    /// <summary>
+    /// Partitions so that the <paramref name="k"/> smallest sort keys occupy [0, k), in no particular
+    /// order among themselves. Quickselect rather than a sort: the order inside the retained half is
+    /// irrelevant here because Finish sorts anyway, and sorting the whole buffer on every trim would
+    /// put back a log factor this exists to remove.
+    /// </summary>
+    private void SelectSmallest(int k, int length)
+    {
+        var low = 0;
+        var high = length - 1;
+        while (low < high)
         {
-            var nextVals = Vector256.Create(sortKeys[i], sortKeys[i + 1], sortKeys[i + 2], sortKeys[i + 3]);
-            var nextIndices = Vector256.Create((ulong)i, (ulong)(i + 1), (ulong)(i + 2), (ulong)(i + 3));
-
-            var cmp = Vector256.GreaterThan(nextVals, maxVals);
-
-            maxVals = Vector256.ConditionalSelect(cmp, nextVals, maxVals);
-            maxIndices = Vector256.ConditionalSelect(cmp, nextIndices, maxIndices);
+            var pivot = PartitionAroundMedian(low, high);
+            if (pivot == k)
+                return;
+            if (pivot < k)
+                low = pivot + 1;
+            else
+                high = pivot - 1;
         }
+    }
 
-        var bestVal = maxVals.GetElement(0);
-        var bestIdx = (int)maxIndices.GetElement(0);
+    private int PartitionAroundMedian(int low, int high)
+    {
+        // Median of three. Sort keys arrive in scan order, which correlates with the underlying name
+        // table's order and so is far from random; a fixed pivot degrades badly on that.
+        var mid = low + ((high - low) >> 1);
+        if (_sortKeys[mid] < _sortKeys[low]) Swap(mid, low);
+        if (_sortKeys[high] < _sortKeys[low]) Swap(high, low);
+        if (_sortKeys[high] < _sortKeys[mid]) Swap(high, mid);
+        Swap(mid, high - 1 >= low ? high - 1 : high);
 
-        for (var i = 1; i < 4; i++)
+        var pivotIndex = high - 1 >= low ? high - 1 : high;
+        var pivot = _sortKeys[pivotIndex];
+        var store = low;
+        for (var i = low; i < pivotIndex; i++)
         {
-            if (maxVals.GetElement(i) > bestVal)
-            {
-                bestVal = maxVals.GetElement(i);
-                bestIdx = (int)maxIndices.GetElement(i);
-            }
+            if (_sortKeys[i] < pivot)
+                Swap(i, store++);
         }
+        Swap(store, pivotIndex);
+        return store;
+    }
 
-        for (var i = limit; i < count; i++)
-        {
-            if (sortKeys[i] > bestVal)
-            {
-                bestVal = sortKeys[i];
-                bestIdx = i;
-            }
-        }
-
-        return bestIdx;
+    private void Swap(int a, int b)
+    {
+        if (a == b)
+            return;
+        (_sortKeys[a], _sortKeys[b]) = (_sortKeys[b], _sortKeys[a]);
+        (_entryIndices[a], _entryIndices[b]) = (_entryIndices[b], _entryIndices[a]);
+        (_scores[a], _scores[b]) = (_scores[b], _scores[a]);
     }
 }

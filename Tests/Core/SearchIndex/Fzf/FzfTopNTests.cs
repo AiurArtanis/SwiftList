@@ -94,6 +94,85 @@ public sealed class FzfTopNTests
         Assert.AreEqual(1, topN.Count);
     }
 
+    // The set buffers twice its capacity and only trims back to the best half when that fills, so
+    // everything below covers a stream long enough to trim several times -- the shorter cases above all
+    // finish inside the first buffer and never exercise it.
+    [TestMethod]
+    public void FarMoreEntriesThanCapacity_RetainsExactlyTheBest()
+    {
+        const int capacity = 8;
+        var topN = new FzfTopN(capacity);
+
+        // Interleaved so the good keys are scattered across the stream rather than arriving together:
+        // a trim in the middle must not be able to drop one that arrived early.
+        for (var i = 0; i < 1000; i++)
+            topN.Add(new FzfRank(i, 0, (ulong)((i * 7919) % 1000)));
+
+        var finished = topN.Finish(capacity);
+
+        Assert.HasCount(capacity, finished);
+        CollectionAssert.AreEqual(
+            Enumerable.Range(0, capacity).Select(k => (ulong)k).ToArray(),
+            finished.ConvertAll(r => r.SortKey));
+    }
+
+    [TestMethod]
+    public void AnEntryArrivingAfterATrim_StillWinsIfItIsBetter()
+    {
+        // The trim leaves behind a threshold that later entries are compared against. A threshold left
+        // too tight would silently discard the best entry of the whole stream for arriving last.
+        var topN = new FzfTopN(4);
+        for (var i = 0; i < 500; i++)
+            topN.Add(new FzfRank(i, 0, 1000 + (ulong)i));
+        topN.Add(new FzfRank(999, 0, 1));
+
+        var finished = topN.Finish(4);
+
+        Assert.AreEqual(999, finished[0].EntryIndex);
+        Assert.AreEqual(1UL, finished[0].SortKey);
+    }
+
+    [TestMethod]
+    public void Count_NeverExceedsCapacity_EvenWhileBuffered()
+    {
+        var topN = new FzfTopN(3);
+        for (var i = 0; i < 50; i++)
+            topN.Add(new FzfRank(i, 0, (ulong)i));
+
+        Assert.AreEqual(3, topN.Count);
+    }
+
+    [TestMethod]
+    public void DrainInto_AfterBuffering_MovesOnlyTheRetainedEntries()
+    {
+        var worker = new FzfTopN(2);
+        for (var i = 0; i < 100; i++)
+            worker.Add(new FzfRank(i, 0, (ulong)(100 - i)));
+
+        var merged = new FzfTopN(2);
+        worker.DrainInto(merged);
+        var finished = merged.Finish(10);
+
+        Assert.HasCount(2, finished);
+        CollectionAssert.AreEqual(new ulong[] { 1, 2 }, finished.ConvertAll(r => r.SortKey));
+    }
+
+    [TestMethod]
+    public void Reset_AfterTrimming_ForgetsTheThresholdToo()
+    {
+        // The threshold outliving a Reset would reject everything worse than the previous query's
+        // results -- on a pooled instance, that is the next search silently returning nothing.
+        var topN = new FzfTopN(2);
+        for (var i = 0; i < 100; i++)
+            topN.Add(new FzfRank(i, 0, (ulong)i));
+        topN.Reset();
+
+        topN.Add(new FzfRank(500, 0, 99_999));
+
+        Assert.AreEqual(1, topN.Count);
+        Assert.AreEqual(500, topN.Finish(10)[0].EntryIndex);
+    }
+
     [TestMethod]
     public void DrainInto_MergesEntriesRespectingTargetCapacity()
     {
