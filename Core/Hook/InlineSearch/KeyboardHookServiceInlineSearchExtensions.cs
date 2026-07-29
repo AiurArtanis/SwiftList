@@ -67,7 +67,10 @@ internal static class KeyboardHookServiceInlineSearchExtensions
 
         var processName = ForegroundProcessGate.GetProcessNameWithoutExtension(fgPid);
 
-        Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: targetFocus=0x{0:X}, className={1}, processName={2}", targetFocus.ToInt64(), className, processName), LogLevel.Debug);
+        // Guarded rather than left to Logger.Log's own level check: this runs for every key pressed outside
+        // a recognised text box, and string.Format would build the message even with Debug logging off.
+        if (Logger.IsEnabled(LogLevel.Debug))
+            Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: targetFocus=0x{0:X}, className={1}, processName={2}", targetFocus.ToInt64(), className, processName), LogLevel.Debug);
 
         if (service._explorerTracker.ActiveInlineAdapter == null)
         {
@@ -78,13 +81,15 @@ internal static class KeyboardHookServiceInlineSearchExtensions
             }
         }
         var isAdapterActive = service._explorerTracker.ActiveInlineAdapter != null;
-        Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: isAdapterActive={0}, ActiveInlineAdapter={1}", isAdapterActive, service._explorerTracker.ActiveInlineAdapter?.GetType().Name ?? "null"), LogLevel.Debug);
+        if (Logger.IsEnabled(LogLevel.Debug))
+            Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: isAdapterActive={0}, ActiveInlineAdapter={1}", isAdapterActive, service._explorerTracker.ActiveInlineAdapter?.GetType().Name ?? "null"), LogLevel.Debug);
         if (service.IsInlineSearchVisible || isAdapterActive)
         {
             if (!service.IsInlineSearchVisible && isAdapterActive)
             {
                 var canTrigger = service._explorerTracker.ActiveInlineAdapter!.CanTrigger(targetFocus, className);
-                Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: CanTrigger={0}", canTrigger), LogLevel.Debug);
+                if (Logger.IsEnabled(LogLevel.Debug))
+                    Logger.Log(string.Format("[KeyboardHookService] HandleInlineSearchKeys: CanTrigger={0}", canTrigger), LogLevel.Debug);
                 if (!canTrigger)
                 {
                     return false;

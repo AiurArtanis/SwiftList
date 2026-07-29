@@ -41,24 +41,8 @@ internal static class ForegroundProcessGate
 
     private static string? GetProcessNameById(uint processId)
     {
-        var hProcess = KeyboardNativeMethods.OpenProcess(0x1000, false, processId); // 0x1000 = PROCESS_QUERY_LIMITED_INFORMATION
-        if (hProcess != IntPtr.Zero)
-        {
-            try
-            {
-                var sb = new System.Text.StringBuilder(1024);
-                var size = (uint)sb.Capacity;
-                if (KeyboardNativeMethods.QueryFullProcessImageName(hProcess, 0, sb, ref size))
-                {
-                    var fullPath = sb.ToString();
-                    return Path.GetFileName(fullPath); // Returns name with extension, e.g. "cmd.exe"
-                }
-            }
-            finally
-            {
-                KeyboardNativeMethods.CloseHandle(hProcess);
-            }
-        }
+        if (ProcessNameResolver.TryGetImagePath(processId, out var fullPath))
+            return Path.GetFileName(fullPath); // Returns name with extension, e.g. "cmd.exe"
 
         // Fallback to .NET Process class (in case OpenProcess fails or limited info is not available, though unlikely)
         try
@@ -72,16 +56,9 @@ internal static class ForegroundProcessGate
         }
     }
 
-    public static string GetProcessNameWithoutExtension(uint processId)
-    {
-        try
-        {
-            using var process = System.Diagnostics.Process.GetProcessById((int)processId);
-            return process.ProcessName;
-        }
-        catch
-        {
-            return "Unknown";
-        }
-    }
+    // Called for every keystroke the inline-search hook sees, so it goes through ProcessNameResolver
+    // rather than Process.GetProcessById -- a low-level keyboard hook that takes too long is dropped by
+    // Windows outright.
+    public static string GetProcessNameWithoutExtension(uint processId) =>
+        ProcessNameResolver.GetNameWithoutExtension(processId);
 }

@@ -90,6 +90,13 @@ public static class Logger
         }
     }
 
+    /// <summary>
+    /// Whether a message at <paramref name="level"/> would be written. <see cref="Log"/> drops it either
+    /// way; this is for callers on hot paths that would otherwise build the message string first -- an
+    /// interpolation or string.Format at the call site runs even when the message is about to be discarded.
+    /// </summary>
+    public static bool IsEnabled(LogLevel level) => level <= _minimumLevel;
+
     public static void Log(string message, LogLevel level = LogLevel.Info)
     {
         if (level > _minimumLevel)
