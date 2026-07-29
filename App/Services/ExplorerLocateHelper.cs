@@ -84,17 +84,21 @@ internal static class ExplorerLocateHelper
         {
             dynamic? window = FindExplorerWindow(explorerHwnd);
             if (window == null) return false;
-            var targetFolder = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
+
+            // The parent, whatever the item is. Navigating to the item itself when it happened to be a
+            // folder made "open containing folder" step INTO that folder and select nothing -- which is
+            // just what "open" does, and not what the action says. A drive root has no parent to show,
+            // so it falls through to LocateInExplorer rather than pretending it worked.
+            var targetFolder = Path.GetDirectoryName(path);
             if (string.IsNullOrWhiteSpace(targetFolder) || !Directory.Exists(targetFolder))
             {
                 return false;
             }
 
             window.Navigate2(targetFolder);
-            if (File.Exists(path))
-            {
-                SelectItemInExplorerLater(path, explorerHwnd);
-            }
+            // Folders get selected too, for the same reason: the gate used to be File.Exists, so a
+            // located folder was never highlighted once the window arrived.
+            SelectItemInExplorerLater(path, explorerHwnd);
 
             return true;
         }
