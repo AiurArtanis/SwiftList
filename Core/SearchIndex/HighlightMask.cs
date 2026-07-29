@@ -82,8 +82,18 @@ internal static class HighlightMask
         if (MarkLiteralSpan(fullText, term, comparison, highlights))
             return;
 
-        if (FzfPositionMatcher.FuzzyMatchV2WithPositions(fullText, term, caseSensitive, FzfScoringScheme.Default, highlights, slab).IsMatch)
+        // Scattered positions are only ever what a fuzzy term matched on. Every other kind is built on
+        // FzfExactMatcher, which is IndexOf under the same two StringComparisons the literal pass above
+        // already used -- so if one of those matched at all, that pass found it, and reaching here means
+        // it did not match this text. Running the fuzzy search anyway lit characters the term had
+        // nothing to do with, and worse, returned before the alias tier below could be tried: a pinyin
+        // term that happened to be a subsequence of some Latin run in a long path was answered by that
+        // run instead of by the alias it actually matched.
+        if (kind == FzfTermKind.Fuzzy &&
+            FzfPositionMatcher.FuzzyMatchV2WithPositions(fullText, term, caseSensitive, FzfScoringScheme.Default, highlights, slab).IsMatch)
+        {
             return;
+        }
 
         materialized ??= fullText.ToString();
         if (MarkViaAliasProviders(materialized, term, caseSensitive, kind, highlights))

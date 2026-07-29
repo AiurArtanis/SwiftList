@@ -220,4 +220,32 @@ public sealed class AliasHighlightTests
         Assert.IsFalse(FuzzyMatcher.IsMatch("'" + MixedShapeQuery, "甲乙丙丁"));
         Assert.IsEmpty(Lit("甲乙丙丁", "'" + MixedShapeQuery));
     }
+
+    [TestMethod]
+    public void ANonFuzzyTermNeverLightsAScatteredSubsequence()
+    {
+        // "rdm" is a subsequence of readme.md and nothing else. Where the term is not fuzzy, no such
+        // match exists, so nothing may light -- the mask used to run a fuzzy position search regardless
+        // of kind and lit r, d and m on a row this term had not matched at all.
+        foreach (var (fuzzy, query) in new[] { (false, "rdm"), (true, "'rdm") })
+        {
+            SearchContext.DefaultFuzzyMatchEnabled = fuzzy;
+            Assert.IsFalse(FuzzyMatcher.IsMatch(query, "readme.md"), $"fuzzy={fuzzy} {query}");
+            Assert.IsEmpty(Lit("readme.md", query), $"fuzzy={fuzzy} {query} lit something it did not match");
+        }
+    }
+
+    [TestMethod]
+    public void ANonFuzzyTermStillReachesTheAliasTier()
+    {
+        // The fuzzy pass returned as soon as it found anything, so it could answer for a term whose real
+        // match was through an alias. Skipping it for a non-fuzzy kind must not cost the alias its turn:
+        // "jtqg" is the initials alias exactly, a contiguous run, so it matches either way.
+        foreach (var (fuzzy, query) in new[] { (false, "jtqg"), (true, "'jtqg") })
+        {
+            SearchContext.DefaultFuzzyMatchEnabled = fuzzy;
+            Assert.IsTrue(FuzzyMatcher.IsMatch(query, "甲乙丙丁"), $"fuzzy={fuzzy} {query}");
+            CollectionAssert.AreEqual(new[] { 0, 1, 2, 3 }, Lit("甲乙丙丁", query), $"fuzzy={fuzzy} {query}");
+        }
+    }
 }
