@@ -174,6 +174,42 @@ public sealed class FzfTopNTests
     }
 
     [TestMethod]
+    public void EntriesSharingOneSortKey_AreStillSelectedCorrectly()
+    {
+        // Sort keys are computed per unique NAME, so every row of one name shares a key and duplicates
+        // are the rule. Selecting the best half of a buffer where most keys are equal has to keep
+        // exactly capacity of them, and keep the genuinely better ones that are mixed in.
+        var topN = new FzfTopN(10);
+        for (var i = 0; i < 5000; i++)
+            topN.Add(new FzfRank(i, 0, 42));
+        topN.Add(new FzfRank(90_001, 0, 1));
+        topN.Add(new FzfRank(90_002, 0, 2));
+
+        var finished = topN.Finish(10);
+
+        Assert.HasCount(10, finished);
+        Assert.AreEqual(1UL, finished[0].SortKey);
+        Assert.AreEqual(2UL, finished[1].SortKey);
+        Assert.IsTrue(finished.Skip(2).All(r => r.SortKey == 42));
+    }
+
+    [TestMethod]
+    [Timeout(20_000)]
+    public void AStreamOfIdenticalSortKeys_DoesNotDegradeToQuadratic()
+    {
+        // A guard on cost, not on the answer. Selecting with a two-way partition sends every key equal
+        // to the pivot to one side, so an all-equal buffer advances the bound by a single element per
+        // pass and each trim costs the square of the buffer instead of its length -- measured at 1.6
+        // million comparisons for one 3200-element trim in the real search. This shape takes a moment
+        // three-way and minutes two-way, so the timeout is what actually asserts.
+        var topN = new FzfTopN(2000);
+        for (var i = 0; i < 400_000; i++)
+            topN.Add(new FzfRank(i, 0, 7));
+
+        Assert.AreEqual(2000, topN.Count);
+    }
+
+    [TestMethod]
     public void DrainInto_MergesEntriesRespectingTargetCapacity()
     {
         var worker = new FzfTopN(2);

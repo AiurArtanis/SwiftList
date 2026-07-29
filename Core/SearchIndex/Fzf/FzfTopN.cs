@@ -115,23 +115,35 @@ internal sealed class FzfTopN
     /// irrelevant here because Finish sorts anyway, and sorting the whole buffer on every trim would
     /// put back a log factor this exists to remove.
     /// </summary>
+    /// <remarks>
+    /// The partition is three-way, which here is not a refinement but the difference between linear and
+    /// quadratic. A sort key is computed per unique NAME, so every row sharing a name shares its key and
+    /// duplicates are the rule rather than the exception. A two-way partition sends every key equal to
+    /// the pivot to the same side, so an all-equal run advances the bound by one element per pass:
+    /// measured at 1.6 million comparisons for a single 3200-element trim, against the 3200 it should
+    /// cost. Collecting the equal keys in the middle lets the search skip all of them at once.
+    /// </remarks>
     private void SelectSmallest(int k, int length)
     {
         var low = 0;
         var high = length - 1;
         while (low < high)
         {
-            var pivot = PartitionAroundMedian(low, high);
-            if (pivot == k)
-                return;
-            if (pivot < k)
-                low = pivot + 1;
+            var (lessEnd, equalEnd) = PartitionThreeWay(low, high);
+            if (k <= lessEnd)
+                high = lessEnd - 1;          // the k smallest are all below the pivot
+            else if (k <= equalEnd + 1)
+                return;                      // [0, k) is filled by keys <= the pivot: settled
             else
-                high = pivot - 1;
+                low = equalEnd + 1;
         }
     }
 
-    private int PartitionAroundMedian(int low, int high)
+    /// <summary>
+    /// Splits [low, high] into keys below the pivot, equal to it, and above it, and returns where the
+    /// first two end: [low, lessEnd) below, [lessEnd, equalEnd] equal, (equalEnd, high] above.
+    /// </summary>
+    private (int LessEnd, int EqualEnd) PartitionThreeWay(int low, int high)
     {
         // Median of three. Sort keys arrive in scan order, which correlates with the underlying name
         // table's order and so is far from random; a fixed pivot degrades badly on that.
@@ -139,18 +151,22 @@ internal sealed class FzfTopN
         if (_sortKeys[mid] < _sortKeys[low]) Swap(mid, low);
         if (_sortKeys[high] < _sortKeys[low]) Swap(high, low);
         if (_sortKeys[high] < _sortKeys[mid]) Swap(high, mid);
-        Swap(mid, high - 1 >= low ? high - 1 : high);
+        var pivot = _sortKeys[mid];
 
-        var pivotIndex = high - 1 >= low ? high - 1 : high;
-        var pivot = _sortKeys[pivotIndex];
-        var store = low;
-        for (var i = low; i < pivotIndex; i++)
+        var less = low;
+        var i = low;
+        var greater = high;
+        while (i <= greater)
         {
-            if (_sortKeys[i] < pivot)
-                Swap(i, store++);
+            var key = _sortKeys[i];
+            if (key < pivot)
+                Swap(i++, less++);
+            else if (key > pivot)
+                Swap(i, greater--);
+            else
+                i++;
         }
-        Swap(store, pivotIndex);
-        return store;
+        return (less, greater);
     }
 
     private void Swap(int a, int b)
