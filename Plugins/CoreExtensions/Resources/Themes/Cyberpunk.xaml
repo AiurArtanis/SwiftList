@@ -108,9 +108,9 @@
     <SolidColorBrush x:Key="DefaultPluginIconColor" Color="#FFFF00"/>
 
     <!-- ScrollBar and CloseButton custom dynamic colors -->
-    <SolidColorBrush x:Key="ScrollBarThumbBackground" Color="#2A1B4E"/>
-    <SolidColorBrush x:Key="ScrollBarThumbHover" Color="#00FFFF"/>
-    <SolidColorBrush x:Key="ScrollBarThumbDragging" Color="#FF007F"/>
+    <SolidColorBrush x:Key="ScrollBarThumbBackground" Color="#422B7B"/>
+    <SolidColorBrush x:Key="ScrollBarThumbHover" Color="#3DFFFF"/>
+    <SolidColorBrush x:Key="ScrollBarThumbDragging" Color="#FF3D9E"/>
     <SolidColorBrush x:Key="CloseButtonHoverBg" Color="#FF007F"/>
     <SolidColorBrush x:Key="CalculatorIconColor" Color="#39FF14"/>
 

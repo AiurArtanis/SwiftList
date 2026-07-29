@@ -229,16 +229,16 @@
     <SolidColorBrush x:Key="DefaultPluginIconColor" Color="#FF00A3E0"/>
 
     <LinearGradientBrush x:Key="ScrollBarThumbBackground" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#FFBCD2E6" Offset="0.0"/>
-        <GradientStop Color="#FFA5C2DE" Offset="1.0"/>
+        <GradientStop Color="#FFB1CBE2" Offset="0.0"/>
+        <GradientStop Color="#FF9ABADA" Offset="1.0"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="ScrollBarThumbHover" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#FFA5C2DE" Offset="0.0"/>
-        <GradientStop Color="#FF8FB1D6" Offset="1.0"/>
+        <GradientStop Color="#FF9ABADA" Offset="0.0"/>
+        <GradientStop Color="#FF84A9D2" Offset="1.0"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="ScrollBarThumbDragging" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#FF8FB1D6" Offset="0.0"/>
-        <GradientStop Color="#FF5C82A6" Offset="1.0"/>
+        <GradientStop Color="#FF84A9D2" Offset="0.0"/>
+        <GradientStop Color="#FF567A9D" Offset="1.0"/>
     </LinearGradientBrush>
     <SolidColorBrush x:Key="CloseButtonHoverBg" Color="#FFFF5B7F"/>
     <SolidColorBrush x:Key="CalculatorIconColor" Color="#FF00A3E0"/>

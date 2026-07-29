@@ -104,12 +104,17 @@
     <SolidColorBrush x:Key="ArchiveIconColor" Color="#A855F7"/>
     <SolidColorBrush x:Key="DefaultPluginIconColor" Color="#007ACC"/>
 
-    <!-- ScrollBar and CloseButton custom dynamic colors. VS Code's own scrollbarSlider colors are
-         semi-transparent grays (rgba(121,121,121,.4) base); flattened over this theme's background,
-         lightening further on hover/drag to signal interaction, matching VS Code's own hover behavior. -->
-    <SolidColorBrush x:Key="ScrollBarThumbBackground" Color="#424242"/>
-    <SolidColorBrush x:Key="ScrollBarThumbHover" Color="#525252"/>
-    <SolidColorBrush x:Key="ScrollBarThumbDragging" Color="#666666"/>
+    <!-- ScrollBar and CloseButton custom dynamic colors, lightening on hover/drag to signal
+         interaction, matching VS Code's own hover behavior.
+         These were VS Code's semi-transparent scrollbarSlider grays (rgba(121,121,121,.4) base)
+         flattened over ContentBg: 0.4x121 + 0.6x30 is #424242, exactly the value this used to hold.
+         That is right for a scrollbar on the window and wrong for one on a control, which is 30
+         levels lighter at #3C3C3C: the thumb composited to within 4 levels of it and was invisible
+         in every multi-line text box. Raised so the thumb clears whatever it lands on;
+         ThemeContrastTests holds the line. -->
+    <SolidColorBrush x:Key="ScrollBarThumbBackground" Color="#616161"/>
+    <SolidColorBrush x:Key="ScrollBarThumbHover" Color="#717171"/>
+    <SolidColorBrush x:Key="ScrollBarThumbDragging" Color="#858585"/>
     <SolidColorBrush x:Key="CloseButtonHoverBg" Color="#E81123"/>
     <SolidColorBrush x:Key="CalculatorIconColor" Color="#22C55E"/>
 
