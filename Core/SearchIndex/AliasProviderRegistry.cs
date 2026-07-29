@@ -9,6 +9,12 @@ public static class AliasProviderRegistry
 {
     private static readonly ConcurrentBag<IAliasProvider> Providers = new();
     private static readonly ConcurrentDictionary<string, byte> ProviderIdMap = new(StringComparer.OrdinalIgnoreCase);
+
+    // The same ids again, keyed by the instance. GetComponentId builds a string from the assembly path
+    // on every call, which is fine for the registration-time and settings-time callers but not for the
+    // highlight mask, which asks once per candidate -- thousands of times per keystroke. Registration
+    // already knows the answer, so it records it here.
+    private static readonly ConcurrentDictionary<IAliasProvider, byte> IdByInstance = new(ReferenceEqualityComparer.Instance);
     private static byte _nextId = 0;
 
     public static Func<IAliasProvider, bool> FilterFunc { get; set; } = _ => true;
@@ -20,11 +26,13 @@ public static class AliasProviderRegistry
 
         var componentId = GetComponentId(provider);
         var id = ProviderIdMap.GetOrAdd(componentId, _ => _nextId++);
+        IdByInstance[provider] = id;
         Logger.Log($"[AliasProviderRegistry] Registered alias provider: {provider.Name} with ID: {id} ({componentId})");
     }
 
     public static byte GetProviderId(IAliasProvider provider)
-        => ProviderIdMap.TryGetValue(GetComponentId(provider), out var id) ? id : (byte)0;
+        => IdByInstance.TryGetValue(provider, out var cached) ? cached
+            : ProviderIdMap.TryGetValue(GetComponentId(provider), out var id) ? id : (byte)0;
 
     public static byte GetProviderIdByComponentId(string componentId) => ProviderIdMap.TryGetValue(componentId, out var id) ? id : (byte)255; // 255 represents not found
 
