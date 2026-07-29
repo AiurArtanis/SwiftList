@@ -2,7 +2,17 @@ using SwiftList.Core.SearchIndex.Fzf;
 
 namespace SwiftList.Core.Tests.SearchIndex.Fzf;
 
+// Some of these flip SearchContext.DefaultFuzzyMatchEnabled, which is one process-wide field rather
+// than a per-flow one -- while this assembly runs test METHODS in parallel. Anything that parses a
+// query during that window reads whichever value it happens to see, so a handful of unrelated tests
+// failed at random and never the same ones twice. MSTest runs non-parallelizable tests after the
+// parallel batch, so this keeps the flip from overlapping anything.
+//
+// Reproduced before fixing, by holding the flip open for three seconds: four unrelated tests failed in
+// one run, none in the next. AliasHighlightTests in the App project carries this attribute for exactly
+// the same reason.
 [TestClass]
+[DoNotParallelize]
 public sealed class FzfPatternTests
 {
     [TestMethod]
