@@ -110,9 +110,9 @@ sin necesidad de saber o escribir la ruta exacta. Combina varios filtros con una
 
 ## Cuando un término describe la carpeta, no el archivo
 
-Si los términos de una consulta no dan ningún resultado por nombre de archivo/carpeta, SwiftList vuelve a
-intentarlo automáticamente permitiendo además que los términos coincidan con carpetas antecesoras — sin
-necesidad de ninguna sintaxis especial:
+Si la coincidencia por nombre de archivo/carpeta no llega a llenar los resultados, SwiftList los completa
+automáticamente permitiendo además que los términos coincidan con carpetas antecesoras — sin necesidad de
+ninguna sintaxis especial:
 
 ```
 d01j dcj
@@ -121,8 +121,9 @@ d01j dcj
 encuentra un archivo llamado `d01j` que vive en una carpeta llamada (o con alias) `dcj`, aunque `dcj` nunca
 aparezca en el propio nombre del archivo. Esto solo rellena el resto de una consulta a partir de las carpetas
 por encima de un archivo — al menos un término todavía tiene que coincidir con el propio nombre del archivo, y
-solo entra en acción una vez que una búsqueda normal por nombre no devuelve absolutamente nada, así que nunca
-puede desplazar ni reordenar un resultado que una búsqueda normal ya habría encontrado. Las carpetas
+solo entra en acción cuando una búsqueda normal por nombre no ha llenado la página. Lo que encuentra se añade
+después de esos resultados en lugar de mezclarse con ellos, así que nunca puede desplazar ni reordenar un
+resultado que una búsqueda normal ya habría encontrado. Las carpetas
 antecesoras se comparan de la misma forma que los nombres de archivo, así que el pinyin llega aquí también a
 un nombre de carpeta en chino.
 

@@ -109,8 +109,8 @@ without needing to know or type the exact path. Combine multiple filters with a 
 
 ## When a term describes the folder, not the file
 
-If a query's terms produce no matches at all by file/folder name, SwiftList automatically retries
-by additionally letting terms match ancestor folders — no special syntax needed:
+If matching by file and folder names alone doesn't fill the results, SwiftList tops them up by
+additionally letting terms match ancestor folders — no special syntax needed:
 
 ```
 d01j dcj
@@ -118,10 +118,11 @@ d01j dcj
 
 finds a file named `d01j` that lives in a folder named (or aliased to) `dcj`, even though `dcj`
 never appears in the file's own name. This only fills in the rest of a query from the folders above
-a file — at least one term still has to match the file name itself, and it only kicks in once an
-ordinary name-only search comes back completely empty, so it can never displace or reorder a result
-an ordinary search would already have found. Ancestor folders are matched the same way file names
-are, so pinyin reaches a Chinese folder name here too.
+a file — at least one term still has to match the file name itself, and it only runs when an
+ordinary name-only search has not filled the page. What it finds is appended after those results
+rather than mixed into them, so it can never displace or reorder a result an ordinary search would
+already have found. Ancestor folders are matched the same way file names are, so pinyin reaches a
+Chinese folder name here too.
 
 ## Bypassing exclusion rules for one search
 
