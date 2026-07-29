@@ -162,16 +162,31 @@ public sealed class UsnServicePipeServer : IDisposable
 
     private async Task StreamStatusUpdatesAsync(NamedPipeServerStream pipe, CancellationToken token)
     {
-        if (_engine == null)
+        // Held in a local for the whole subscription. This loop lives as long as the client stays
+        // subscribed and spends nearly all of it parked on the wait below, while Stop() cancels the
+        // token and then clears the field -- so by the time the wait resumes on a pool thread, the
+        // field is routinely already null. Reading it again after any await, and above all in the
+        // finally that every exit path runs through, made shutting the service down terminate it with
+        // a NullReferenceException instead. The subscription belongs to the engine it was made on
+        // anyway, not to whatever the field happens to hold when it is torn down.
+        var engine = _engine;
+        if (engine == null)
             return;
 
         var signal = new SemaphoreSlim(0);
-        void Handler(Indexer.Usn.UsnIndexer.IndexerStatus _) => signal.Release();
+
+        void Handler(Indexer.Usn.UsnIndexer.IndexerStatus _)
+        {
+            // Unsubscribing does not wait for a handler already running on the indexer's thread, so
+            // one can still arrive between the removal below and the dispose that follows it.
+            try { signal.Release(); }
+            catch (ObjectDisposedException) { }
+        }
 
         try
         {
-            _engine.StatusChanged += Handler;
-            await PipeResponseBinarySerializer.WriteStatusAsync(pipe, _engine.GetStatus(), token).ConfigureAwait(false);
+            engine.StatusChanged += Handler;
+            await PipeResponseBinarySerializer.WriteStatusAsync(pipe, engine.GetStatus(), token).ConfigureAwait(false);
 
             while (!token.IsCancellationRequested && pipe.IsConnected)
             {
@@ -179,7 +194,7 @@ public sealed class UsnServicePipeServer : IDisposable
                 if (!pipe.IsConnected)
                     break;
 
-                await PipeResponseBinarySerializer.WriteStatusAsync(pipe, _engine.GetStatus(), token).ConfigureAwait(false);
+                await PipeResponseBinarySerializer.WriteStatusAsync(pipe, engine.GetStatus(), token).ConfigureAwait(false);
             }
         }
         catch (Exception ex) when (IsClientDisconnect(ex) || ex is OperationCanceledException)
@@ -187,7 +202,7 @@ public sealed class UsnServicePipeServer : IDisposable
         }
         finally
         {
-            _engine.StatusChanged -= Handler;
+            engine.StatusChanged -= Handler;
             signal.Dispose();
         }
     }
