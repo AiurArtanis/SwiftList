@@ -72,14 +72,114 @@ public class TotalCommanderInlineSearchAdapter : IInlineSearchAdapter
         return CanTrigger(hwndUnderCursor, classNameUnderCursor);
     }
 
-    public string? GetSearchScope(IntPtr hwnd)
+    private string? _lastScopePath;
+
+    public string? GetSearchScope(IntPtr hwnd) =>
+        GetSearchScopeCore(hwnd, IsQuickRenameOpen, Win32Helper.QuerySourcePanelPath);
+
+    // The lookups are passed in so the skip can be exercised without a live Total Commander.
+    internal string? GetSearchScopeCore(IntPtr hwnd, Func<IntPtr, bool> isQuickRenameOpen, Func<IntPtr, string?> querySourcePanelPath)
     {
-        var path = Win32Helper.QuerySourcePanelPath(hwnd);
-        if (string.IsNullOrEmpty(path)) return null;
-        if (path.Length > 3 && path.EndsWith('\\'))
+        // Asking Total Commander for its source panel path is a synchronous WM_COPYDATA into its UI thread,
+        // and TC abandons an in-progress quick rename as soon as it services one (reproduced on its own,
+        // with SwiftList not running, by scratch/tcquerykill.ps1). Renaming was impossible for as long as
+        // SwiftList ran -- by F2 or by the context menu alike, since both open this same editor -- because
+        // the editor was cancelled again before a character could be typed (issue #189). The panel cannot
+        // change directory while its own rename is up, so the last answer is still the right one.
+        if (isQuickRenameOpen(hwnd))
+            return _lastScopePath;
+
+        var path = querySourcePanelPath(hwnd);
+        if (path is { Length: > 3 } && path.EndsWith('\\'))
             path = path.TrimEnd('\\');
-        return path;
+
+        _lastScopePath = string.IsNullOrEmpty(path) ? null : path;
+        return _lastScopePath;
     }
+
+    private static bool IsQuickRenameOpen(IntPtr mainHwnd)
+    {
+        var focused = Win32Helper.GetFocusedControl(mainHwnd);
+        if (focused == IntPtr.Zero)
+            return false;
+
+        return IsQuickRenameOpenCore(Win32Helper.GetClassName(focused), () => HasVisibleEditor(focused, mainHwnd));
+    }
+
+    internal static bool IsQuickRenameOpenCore(string focusedClassName, Func<bool> paneHasVisibleEditor)
+    {
+        // Total Commander moves keyboard focus into the editor, so this catches it outright -- confirmed
+        // from the hook log, which reported the focused control as Edit for as long as the box was up. It
+        // also covers the command line, which is no better a moment to interrupt.
+        if (IsEditorClass(focusedClassName))
+            return true;
+
+        // Focus takes a moment to land there though (measured at ~36ms after F2), and an event arriving in
+        // that gap still reports the pane as focused. Look underneath it for the editor as well, or a poll
+        // landing in that window would sail past the check and cancel the rename after all.
+        return IsFileList(focusedClassName) && paneHasVisibleEditor();
+    }
+
+    // "Edit" on the Lazarus build; matched loosely so a Delphi build naming it TEdit/TMyEdit, or a future
+    // rename of the control, still counts.
+    internal static bool IsEditorClass(string className) =>
+        !string.IsNullOrEmpty(className) && className.Contains("Edit", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Whether <paramref name="pane"/>'s quick-rename editor is up, for the moment before focus reaches it.
+    /// </summary>
+    private static bool HasVisibleEditor(IntPtr pane, IntPtr mainHwnd)
+    {
+        var found = false;
+
+        bool Inspect(IntPtr window)
+        {
+            if (!IsWindowVisible(window) || !IsEditorClass(Win32Helper.GetClassName(window)))
+                return true;
+            found = true;
+            return false; // stop enumerating
+        }
+
+        EnumChildWindows(pane, (child, _) => Inspect(child), IntPtr.Zero);
+        if (found)
+            return true;
+
+        // The editor need not be a child: it can equally be a top-level window merely OWNED by the pane,
+        // which EnumChildWindows never visits, and the two are indistinguishable from outside (GetParent
+        // reports the owner of an unparented window exactly as it reports the parent of a child). Walk both
+        // so whichever shape a given build uses is covered. EnumThreadWindows yields only non-child windows,
+        // which is why the command line -- a child Edit of the main window -- still cannot match here.
+        var threadId = GetWindowThreadProcessId(pane, IntPtr.Zero);
+        if (threadId == 0)
+            return false;
+
+        EnumThreadWindows(threadId, (window, _) =>
+        {
+            var owner = GetParent(window);
+            return (owner == pane || owner == mainHwnd) ? Inspect(window) : true;
+        }, IntPtr.Zero);
+        return found;
+    }
+
+    private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumChildWindows(IntPtr hWndParent, EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumThreadWindows(uint dwThreadId, EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr lpdwProcessId);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetParent(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
 
     public bool ExecuteItem(IntPtr hwnd, string path, string searchInput)
     {
