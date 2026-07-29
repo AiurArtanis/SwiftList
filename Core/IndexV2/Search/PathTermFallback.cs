@@ -172,7 +172,13 @@ internal static class PathTermFallback
         var mask = 0;
         var current = parentRow;
         var composable = false;
-        for (var depth = 0; depth < 512 && current >= 0; depth++)
+        // Bounded by the row count rather than a fixed 512. The bound is only there to stop a corrupt
+        // parent cycle spinning forever, and an acyclic chain cannot be longer than the number of rows,
+        // so this never cuts a real one short -- while 512 did, and once answers are shared that became
+        // order-dependent: a walk that truncated returned less than the same walk did after a shallower
+        // one had already filled in the folders above it. Same query, different answer depending on
+        // which row the pass happened to reach first.
+        for (var depth = 0; depth < snapshot.Count && current >= 0; depth++)
         {
             if (memo.TryGetValue(current, out var known))
             {
