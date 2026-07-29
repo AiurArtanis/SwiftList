@@ -226,7 +226,7 @@ public class ExplorerTracker : IDisposable
             if (root == ExplorerNativeHooks.GetForegroundWindow())
                 _classifier.CheckActiveWindow(root);
         }
-        _pathPoller.Poll(this);
+        _pathPoller.Poll(this, eventType);
     }
     internal void Deactivate()
     {
@@ -236,7 +236,13 @@ public class ExplorerTracker : IDisposable
         LastPath = null;
         if (wasActive) OnExplorerDeactivated?.Invoke();
     }
-    public void Dispose() => Stop();
+    public void Dispose()
+    {
+        Stop();
+        // Only on Dispose, not in Stop: Stop/Start is a restart, and the poller's deferred-poll timer is
+        // owned for the tracker's whole life.
+        _pathPoller.Dispose();
+    }
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     public struct RECT
     {

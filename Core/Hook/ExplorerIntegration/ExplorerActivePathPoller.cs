@@ -3,11 +3,48 @@ using SwiftList.PluginSdk.Registries;
 using SwiftList.Core.Hook.InlineSearch;
 namespace SwiftList.Core.Hook;
 
-internal sealed class ExplorerActivePathPoller
+internal sealed class ExplorerActivePathPoller : IDisposable
 {
+    // How long a moving window has to hold still before its position is taken as settled. Short enough to
+    // be imperceptible on the occasions a move really did change the path, long enough that a drag or
+    // resize -- which emits EVENT_OBJECT_LOCATIONCHANGE continuously, measured at roughly 200 a second --
+    // produces one poll rather than hundreds.
+    private const int LocationSettleMs = 200;
+
     private readonly ExplorerWindowClassifier _classifier;
-    public ExplorerActivePathPoller(ExplorerWindowClassifier classifier) => _classifier = classifier;
-    public void Poll(ExplorerTracker tracker)
+    private readonly QuietPeriodScheduler _scheduler;
+    private ExplorerTracker? _tracker;
+
+    public ExplorerActivePathPoller(ExplorerWindowClassifier classifier)
+    {
+        _classifier = classifier;
+        _scheduler = new QuietPeriodScheduler(() =>
+        {
+            var tracker = _tracker;
+            if (tracker != null) PollCore(tracker);
+        }, LocationSettleMs);
+    }
+
+    public void Poll(ExplorerTracker tracker, uint eventType)
+    {
+        _tracker = tracker;
+
+        // A window moving or resizing says nothing about the tracked window's path most of the time, but it
+        // does occasionally carry one (measured for Explorer, Total Commander and file dialogs alike), so it
+        // cannot just be dropped. Wait for the movement to stop and poll once for the whole burst. Every
+        // other event polls straight away, as all of them did before.
+        if (eventType == ExplorerNativeHooks.EVENT_OBJECT_LOCATIONCHANGE)
+        {
+            _scheduler.RunWhenQuiet();
+            return;
+        }
+
+        _scheduler.RunNow();
+    }
+
+    public void Dispose() => _scheduler.Dispose();
+
+    private void PollCore(ExplorerTracker tracker)
     {
         var currentFg = ExplorerNativeHooks.GetForegroundWindow();
         if (currentFg != IntPtr.Zero && currentFg != tracker.ActiveHwnd)
