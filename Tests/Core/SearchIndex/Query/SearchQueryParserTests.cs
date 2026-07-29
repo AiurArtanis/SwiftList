@@ -23,6 +23,20 @@ public sealed class SearchQueryParserTests
         Assert.AreEqual("c", result.TargetDrive);
     }
 
+    // The drive test here has to stay identical to FzfPattern.Parse's, or the two disagree about what
+    // the same query says. This one only reads the drive and never consumes anything, which is why the
+    // swallowed-term bug lived on the other side alone; pinned on both
+    // (FzfPatternTests.Parse_DriveLetterWithNoSpace_KeepsTheRestAsATerm) so a change to either rule
+    // without the other shows up as a failure rather than as a search that quietly misbehaves.
+    [TestMethod]
+    public void Parse_DriveLetterWithNoSpace_StillSetsTargetDrive()
+    {
+        var result = SearchQueryParser.Parse("c:readme");
+
+        Assert.IsFalse(result.IsPathMode, "no separator, so this is not a path");
+        Assert.AreEqual("c", result.TargetDrive);
+    }
+
     [TestMethod]
     public void Parse_DrivePath_IsPathModeWithNormalizedDrive()
     {

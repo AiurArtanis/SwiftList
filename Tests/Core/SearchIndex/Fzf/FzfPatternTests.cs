@@ -18,6 +18,61 @@ public sealed class FzfPatternTests
         Assert.AreEqual("readme", pattern.TermSets[0].Terms[0].Text);
     }
 
+    // The space after the drive is optional. It used not to be: the drive test matched on the first two
+    // characters and then dropped the WHOLE token, so "c:readme" searched drive C for nothing at all
+    // while "c: readme" searched it for readme -- reported by a user who could see the two behaved
+    // differently but had no way to tell why.
+    [TestMethod]
+    public void Parse_DriveLetterWithNoSpace_KeepsTheRestAsATerm()
+    {
+        var pattern = FzfPattern.Parse("c:readme");
+
+        Assert.AreEqual("c", pattern.TargetDrive);
+        Assert.HasCount(1, pattern.TermSets);
+        Assert.AreEqual("readme", pattern.TermSets[0].Terms[0].Text);
+    }
+
+    [TestMethod]
+    public void Parse_DriveLetterWithAndWithoutASpace_AgreeExactly()
+    {
+        var spaced = FzfPattern.Parse("c: readme report");
+        var joined = FzfPattern.Parse("c:readme report");
+
+        Assert.AreEqual(spaced.TargetDrive, joined.TargetDrive);
+        Assert.HasCount(spaced.TermSets.Length, joined.TermSets);
+        for (var i = 0; i < spaced.TermSets.Length; i++)
+            Assert.AreEqual(spaced.TermSets[i].Terms[0].Text, joined.TermSets[i].Terms[0].Text);
+    }
+
+    [TestMethod]
+    public void Parse_DriveLetterWithNoSpace_LeavesLaterTermsAlone()
+    {
+        var pattern = FzfPattern.Parse("c:readme report");
+
+        Assert.AreEqual("c", pattern.TargetDrive);
+        Assert.HasCount(2, pattern.TermSets);
+        Assert.AreEqual("readme", pattern.TermSets[0].Terms[0].Text);
+        Assert.AreEqual("report", pattern.TermSets[1].Terms[0].Text);
+    }
+
+    [TestMethod]
+    public void Parse_DriveLetterAlone_HasNoTerms()
+    {
+        var pattern = FzfPattern.Parse("c:");
+
+        Assert.AreEqual("c", pattern.TargetDrive);
+        Assert.IsEmpty(pattern.TermSets);
+    }
+
+    [TestMethod]
+    public void Parse_LastDriveTokenWins()
+    {
+        var pattern = FzfPattern.Parse("c: d: readme");
+
+        Assert.AreEqual("d", pattern.TargetDrive);
+        Assert.HasCount(1, pattern.TermSets);
+    }
+
     [TestMethod]
     public void TryMatch_PlainFuzzyTerm_MatchesSubsequence()
     {

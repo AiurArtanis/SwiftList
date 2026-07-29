@@ -41,8 +41,8 @@ public class TextHighlighterTests
         // "t:" is a filter rather than a term -- FzfPattern.Parse folds it into TargetDrive and drops it,
         // so nothing downstream marked it and the one part of the query visible in the Path column
         // stayed dark while every other word lit up.
-        Assert.AreEqual("T:", Marked(@"T:\Projects\Report", "t:"));
-        Assert.AreEqual("T:|Report", Marked(@"T:\Projects\Report", "t: report"));
+        Assert.AreEqual(@"T:\", Marked(@"T:\Projects\Report", "t:"));
+        Assert.AreEqual(@"T:\|Report", Marked(@"T:\Projects\Report", "t: report"));
     }
 
     [TestMethod]
@@ -60,12 +60,31 @@ public class TextHighlighterTests
     }
 
     [TestMethod]
-    public void APathQueryMarksOnlyItsLastSegment()
+    public void APathQueryMarksBothItsPartsWhereTheyLand()
     {
-        // Deliberate: in path mode the user dictated the location, so restating it in the Path column is
-        // noise. Only the segment they are narrowing on is marked, and it lands in the Name column.
+        // The file part lights up the Name column, the drive and directory the Path column.
         Assert.AreEqual("Report", Marked("Report.docx", @"t:\projects\report"));
-        Assert.AreEqual(string.Empty, Marked(@"T:\Projects", @"t:\projects\report"));
+        Assert.AreEqual(@"T:\Projects", Marked(@"T:\Projects", @"t:\projects\report"));
+    }
+
+    [TestMethod]
+    public void APathQueryMarksTheDirectoryTheSameWithOrWithoutADriveLetter()
+    {
+        // The directory part used to disagree between the two: with a drive letter it reached
+        // FzfPattern.Parse as a "<letter>:..." token and was dropped whole, so nothing lit up; without
+        // one it was matched and the Path column lit up. Only the drive-letter half was ever looked at,
+        // which is how the split went unnoticed. The drive itself is naturally only marked when named.
+        Assert.AreEqual(@"T:\Projects", Marked(@"T:\Projects", @"t:\projects\report"));
+        Assert.AreEqual("Projects", Marked(@"T:\Projects", @"projects\report"));
+    }
+
+    [TestMethod]
+    public void APathQueryMarksTheDriveAndItsSeparatorAsOneRun()
+    {
+        // The separator between them is marked too, so "T:\" and the folder after it read as one match
+        // rather than two with a gap.
+        Assert.AreEqual(@"T:\Projects", Marked(@"T:\Projects", @"t:\projects"));
+        Assert.AreEqual(@"T:\Projects", Marked(@"T:\Projects\Report", @"t:\projects\"));
     }
 
     [TestMethod]

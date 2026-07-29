@@ -51,6 +51,15 @@ internal sealed class FzfPattern
             if (rawTerm.Length >= 2 && char.IsLetter(rawTerm[0]) && rawTerm[1] == Path.VolumeSeparatorChar)
             {
                 targetDrive = rawTerm[0].ToString();
+
+                // Only the "d:" itself is the filter. Whatever follows it is still text the user typed
+                // and meant to search for, so it stays a term -- dropping the whole token made "d:report"
+                // quietly search drive D for nothing at all while "d: report" searched it for report,
+                // with no way to tell from the results why the two differed. A file name can never
+                // contain a colon, so a token in this shape has no other reading to preserve.
+                var rest = rawTerm.Substring(2);
+                if (rest.Length > 0)
+                    terms.Add(rest);
                 continue;
             }
 

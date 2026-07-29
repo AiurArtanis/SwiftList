@@ -34,7 +34,20 @@ internal static class PathSearchFuzzy
         PathGate? gate = null;
         FzfPattern? filePattern = null;
         if (!string.IsNullOrEmpty(dirQuery))
-            (gate, filePattern) = SearchWithDirectory(snapshot, delta, dirQuery, fileQuery, topN, scanKeep, token, directoryFilterLower);
+        {
+            // Parse, not ParseText: a drive named in the file part ("dcj\ d01j y:") is a filter here for
+            // the same reason it is one in a name-mode query. ParseText has no notion of a drive, so the
+            // token stayed a plain term -- and a term containing a colon can never match a file name, so
+            // one of those anywhere in the query took the whole thing down to no results at all.
+            filePattern = !string.IsNullOrEmpty(fileQuery) ? FzfPattern.Parse(fileQuery) : null;
+            if (filePattern?.TargetDrive != null &&
+                !filePattern.TargetDrive.Equals(snapshot.SourceKey, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            gate = SearchWithDirectory(snapshot, delta, dirQuery, filePattern, topN, scanKeep, token, directoryFilterLower);
+        }
         else
             filePattern = SearchFilenameOnly(snapshot, delta, pathQuery, topN, token, directoryFilterLower);
 
@@ -97,10 +110,9 @@ internal static class PathSearchFuzzy
     private static string GetNameForEntry(Snapshot snapshot, DeltaOverlay delta, int entryIndex)
         => entryIndex >= snapshot.Count ? delta.Added[entryIndex - snapshot.Count].Name : delta.NameOf(entryIndex);
 
-    private static (PathGate Gate, FzfPattern? FilePattern) SearchWithDirectory(Snapshot snapshot, DeltaOverlay delta, string dirQuery, string fileQuery,
+    private static PathGate SearchWithDirectory(Snapshot snapshot, DeltaOverlay delta, string dirQuery, FzfPattern? filePattern,
         FzfTopN topN, int keep, CancellationToken token, string? directoryFilterLower)
     {
-        var filePattern = !string.IsNullOrEmpty(fileQuery) ? FzfPattern.ParseText(fileQuery) : null;
         var gate = new PathGate(snapshot, delta, dirQuery);
         var matches = SearchMatcherPath.MatchUniquesForPath(snapshot, filePattern);
 
@@ -139,7 +151,7 @@ internal static class PathSearchFuzzy
         }
 
         MatchDeltaRowsWithDirectory(snapshot, delta, gate, filePattern, topN, directoryFilterLower);
-        return (gate, filePattern);
+        return gate;
     }
 
     private static void FanoutRange(Snapshot snapshot, DeltaOverlay delta, List<PathUniqueMatch> matches, int from, int to,

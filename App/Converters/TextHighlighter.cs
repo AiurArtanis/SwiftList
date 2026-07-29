@@ -132,9 +132,16 @@ public static class TextHighlighter
 
         if (ContainsPathSeparator(normalizedHighlight))
         {
-            var term = TryNormalizeDrivePath(normalizedHighlight, out _, out var normalizedDrivePath)
+            var term = TryNormalizeDrivePath(normalizedHighlight, out var pathDrive, out var normalizedDrivePath)
                 ? normalizedDrivePath
                 : normalizedHighlight;
+
+            // Drop the drive before splitting, so a query that names one produces the same terms as one
+            // that doesn't. Left on, the directory part reached FzfPattern.Parse still looking like a
+            // drive filter, and "t:\projects" would mark "\Projects" -- separator included -- where
+            // "projects\..." marked just "Projects".
+            if (pathDrive is { Length: > 0 } && term.Length >= 2 && term[1] == Path.VolumeSeparatorChar)
+                term = term[2..].TrimStart(Path.DirectorySeparatorChar);
 
             // Mirrors Core's real path-mode split (PathSearchFuzzy.SearchStreaming): everything
             // after the LAST separator is the file-part query (its own multi-term match against a
@@ -155,9 +162,7 @@ public static class TextHighlighter
             if (!string.IsNullOrEmpty(dirPart))
                 OrInto(highlights, FuzzyMatcher.ComputeHighlightMask(fullText, dirPart));
 
-            // No drive marking here on purpose. In path mode the user dictated the location themselves,
-            // so restating it in the Path column is noise -- what they are actually narrowing on is the
-            // last segment, and that already lights up in the Name column.
+            MarkDrivePrefix(highlights, fullText, pathDrive);
             return highlights;
         }
 
@@ -181,14 +186,17 @@ public static class TextHighlighter
     }
 
     /// <summary>
-    /// Lights up the leading "d:" of a path when the query named that drive.
+    /// Lights up the leading "d:\" of a path when the query named that drive.
     /// </summary>
     /// <remarks>
     /// The drive is a filter, not a term: FzfPattern.Parse folds it into TargetDrive and drops it, so
     /// nothing downstream ever marks it and the one part of the query visible in the Path column stayed
     /// dark. Done here rather than inside HighlightMask because that same mask is what the ranking weight
-    /// is computed from -- two extra marked characters would move scores. A Name can never begin "d:"
+    /// is computed from -- extra marked characters would move scores. A Name can never begin "d:"
     /// (a colon is not legal in a Windows file name), so this only ever reaches the Path column.
+    ///
+    /// The separator after it is marked as well, so that in path mode -- where the folder right after it
+    /// is marked too -- the two do not read as two separate matches with a gap between them.
     /// </remarks>
     private static void MarkDrivePrefix(bool[] highlights, string fullText, string? drive)
     {
@@ -199,6 +207,8 @@ public static class TextHighlighter
 
         highlights[0] = true;
         highlights[1] = true;
+        if (fullText.Length > 2 && fullText[2] == Path.DirectorySeparatorChar)
+            highlights[2] = true;
     }
 
     private static bool TryNormalizeDrivePath(string path, out string? drive, out string normalizedPath)

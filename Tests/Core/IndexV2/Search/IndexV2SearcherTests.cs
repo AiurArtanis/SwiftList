@@ -126,4 +126,46 @@ public sealed class IndexV2SearcherTests
         var names = results.Select(r => r.Name).ToList();
         CollectionAssert.AreEquivalent(new[] { "Projects", "notes.md", "readme.txt" }, names);
     }
+
+    private static List<SearchResult> Search(LiveIndexFixture fixture, string query)
+    {
+        var results = new List<SearchResult>();
+        IndexV2Searcher.SearchStreaming(fixture.Index, query, 10, results.Add, CancellationToken.None);
+        return results;
+    }
+
+    [TestMethod]
+    public void SearchStreaming_PathModeWithADriveInTheFilePart_StillMatches()
+    {
+        // Reported case: "projects\ readme c:" came back empty. The file part was parsed by a routine
+        // with no notion of a drive, so "c:" stayed an ordinary term -- and a term containing a colon can
+        // never match a file name, so one anywhere in the query took the whole thing to no results.
+        using var fixture = BuildSampleDrive();
+
+        var results = Search(fixture, @"projects\ readme c:");
+
+        Assert.HasCount(1, results);
+        Assert.AreEqual("readme.txt", results[0].Name);
+    }
+
+    [TestMethod]
+    public void SearchStreaming_PathModeWithAForeignDriveInTheFilePart_MatchesNothing()
+    {
+        // And it is a filter, not merely something to drop: naming a drive the results are not on has to
+        // exclude them, the same as it does in a name-mode query.
+        using var fixture = BuildSampleDrive();
+
+        Assert.IsEmpty(Search(fixture, @"projects\ readme z:"));
+    }
+
+    [TestMethod]
+    public void SearchStreaming_PathModeWithADriveAndNoSpace_StillMatches()
+    {
+        using var fixture = BuildSampleDrive();
+
+        var results = Search(fixture, @"projects\ c:readme");
+
+        Assert.HasCount(1, results);
+        Assert.AreEqual("readme.txt", results[0].Name);
+    }
 }
