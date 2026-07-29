@@ -73,21 +73,6 @@ internal sealed class SearchExecutionEngine : IDisposable
 
         onSearchStateChanged(true);
 
-        // Show instant-provider results (web URL, calculator, env vars, …) right away instead of
-        // waiting for the file search to stream in — those providers are cheap and synchronous,
-        // and a query like a pasted URL may match no files (so the streaming render never fires
-        // until the whole search finishes). Gated on there being instant results so normal file
-        // queries keep their existing behaviour.
-        var instantResults = new List<AppSearchResult>();
-        PluginSearchResultMapper.AddInstantResults(instantResults, query, null, isInlineSearchContext);
-        // Emit instant results up-front only when the caller opts in — the quick window allows this
-        // only while its list is empty. During continuous typing the list already has rows, and an
-        // instant-only snapshot would collapse the existing file rows away and then re-expand them
-        // on the next (file) render — that's the flicker. When skipped, the upcoming file render
-        // still includes the instant results, so nothing is lost, just no separate collapsing frame.
-        if (instantResults.Count > 0 && (shouldEmitInstantResults?.Invoke() ?? true))
-            onResultsUpdated(instantResults, string.Empty, false);
-
         var cts = new CancellationTokenSource();
         var searchVersion = Interlocked.Increment(ref _searchVersion);
 
@@ -97,6 +82,44 @@ internal sealed class SearchExecutionEngine : IDisposable
         }
 
         var token = cts.Token;
+
+        // Show instant-provider results (web URL, calculator, env vars, …) ahead of the file search
+        // rather than waiting for it to stream in -- a query like a pasted URL may match no files at
+        // all, so the streaming render never fires until the whole search finishes.
+        //
+        // Off the UI thread, even though this used to run inline here because the providers were
+        // assumed cheap and synchronous. They are neither, necessarily: a provider is third-party code,
+        // and PluginSearchResultMapper then probes whatever path it hands back with File.Exists /
+        // Directory.Exists and asks the shell for its icon. Any of those blocks for the SMB timeout --
+        // tens of seconds -- when the path is a UNC or a mapped drive whose server is gone, which froze
+        // the window mid-keystroke and then released it on its own once the timeout expired. The same
+        // call already runs on a background thread through BuildQuickResults on every streaming render,
+        // so this only makes the two paths agree.
+        _ = Task.Run(() =>
+        {
+            var instantResults = new List<AppSearchResult>();
+            PluginSearchResultMapper.AddInstantResults(instantResults, query, null, isInlineSearchContext);
+            if (instantResults.Count == 0 || token.IsCancellationRequested)
+                return;
+
+            _ = System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                // Re-checked here rather than only above: this render is now asynchronous, so a newer
+                // keystroke's results can already be on screen by the time it arrives, and painting
+                // this stale instant-only snapshot over them would collapse them away.
+                if (token.IsCancellationRequested || searchVersion != Volatile.Read(ref _searchVersion))
+                    return;
+
+                // Emit up-front only when the caller opts in -- the quick window allows this only while
+                // its list is empty. During continuous typing the list already has rows, and an
+                // instant-only snapshot would collapse the existing file rows away and then re-expand
+                // them on the next (file) render -- that's the flicker. When skipped, the upcoming file
+                // render still includes the instant results, so nothing is lost, just no separate
+                // collapsing frame. Evaluated on the UI thread because it reads that list's state.
+                if (shouldEmitInstantResults?.Invoke() ?? true)
+                    onResultsUpdated(instantResults, string.Empty, false);
+            }));
+        }, token);
 
         _ = Task.Run(async () =>
         {
