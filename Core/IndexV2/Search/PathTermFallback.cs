@@ -33,6 +33,34 @@ internal static class PathTermFallback
         public ulong SortKey;
     }
 
+    // The two tables below hold one entry per unique name and one per folder walked, which on a broad
+    // query is tens of thousands each. Built and thrown away per search, they were most of what this
+    // pass allocated; rented and cleared, the buckets survive and only the first search of a size pays
+    // for them. Pooled the way SearchMatcher pools its workers and hit lists, because searches on
+    // different drives run at the same time and a single shared instance would be a race.
+    private sealed class Scratch
+    {
+        public readonly Dictionary<int, NameHit> NameHits = new();
+        public readonly Dictionary<int, int> AncestorMemo = new();
+        public readonly List<int> AncestorChain = new(64);
+
+        public void Reset()
+        {
+            NameHits.Clear();
+            AncestorMemo.Clear();
+            AncestorChain.Clear();
+        }
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentBag<Scratch> ScratchPool = new();
+
+    private static Scratch RentScratch()
+    {
+        var scratch = ScratchPool.TryTake(out var pooled) ? pooled : new Scratch();
+        scratch.Reset();
+        return scratch;
+    }
+
     // The satisfied-term set is carried as a bitmask, so a query with more terms than bits simply
     // opts out rather than silently matching on a truncated set.
     private const int MaxTerms = 16;
@@ -65,7 +93,8 @@ internal static class PathTermFallback
         // the same way and written in the same breath, so every hit paid four hash lookups where it
         // needs one, and the row walk below then looked the rank up a second time. A broad term set can
         // reach tens of thousands of uniques per query.
-        var nameHits = new Dictionary<int, NameHit>();
+        var scratch = RentScratch();
+        var nameHits = scratch.NameHits;
         var fullMask = (1 << termCount) - 1;
         for (var i = 0; i < termCount; i++)
         {
@@ -88,7 +117,10 @@ internal static class PathTermFallback
         }
 
         if (nameHits.Count == 0)
+        {
+            ScratchPool.Add(scratch);
             return;
+        }
 
         // The source root's segments are the same for every row in the query, but the ancestor walk
         // below consulted them on each of its (many) memo misses -- re-splitting the root string and
@@ -97,8 +129,8 @@ internal static class PathTermFallback
         var rootMask = MaskFromSegments(snapshot.SourceRoot.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries), termPatterns, rootWorker, 0);
         SearchMatcher.ReturnWorker(rootWorker);
 
-        var ancestorMemo = new Dictionary<int, int>();
-        var ancestorChain = new List<int>(64);
+        var ancestorMemo = scratch.AncestorMemo;
+        var ancestorChain = scratch.AncestorChain;
         var membership = directoryContext.FilterLower != null ? new Dictionary<int, bool>() : null;
         var worker = SearchMatcher.RentWorker();
         var keep = Math.Max(limit * 8, 64);
@@ -136,6 +168,9 @@ internal static class PathTermFallback
         finally
         {
             SearchMatcher.ReturnWorker(worker);
+            // Returned before the results are emitted: nothing below reads it, and a caller that stops
+            // consuming partway through must not strand it.
+            ScratchPool.Add(scratch);
         }
 
         var emitted = 0;
