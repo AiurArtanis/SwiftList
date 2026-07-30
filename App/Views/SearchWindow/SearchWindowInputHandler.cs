@@ -271,6 +271,10 @@ public class SearchWindowInputHandler
         }
     }
 
+    // Wraps at both ends, and skips the rows that exist only to be looked at, the same way the quick,
+    // inline and actions lists already do -- this window was the one still clamping at the first and
+    // last row. ListSelectionNavigator also declines to move when nothing else is selectable, so a list
+    // holding a single result no longer re-selects and re-scrolls it on every key press.
     private void MoveSelection(int delta)
     {
         var count = _window.LstGridResultsControl.Items.Count;
@@ -280,8 +284,11 @@ public class SearchWindowInputHandler
             return;
         }
 
-        var current = _window.LstGridResultsControl.SelectedIndex;
-        var next = current < 0 ? 0 : Math.Clamp(current + delta, 0, count - 1);
+        var next = ListSelectionNavigator.NextSelectable(_window.LstGridResultsControl.SelectedIndex, delta, count,
+            i => _window.LstGridResultsControl.Items[i] is AppSearchResult item && !item.IsEmptyResult && !item.IsSearchSectionHeader);
+        if (next < 0)
+            return;
+
         _window.LstGridResultsControl.SelectedIndex = next;
         _window.LstGridResultsControl.ScrollIntoView(_window.LstGridResultsControl.SelectedItem);
     }
