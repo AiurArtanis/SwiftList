@@ -99,6 +99,20 @@ public class QuickLookManager
         Hide();
     }
 
+    /// <summary>
+    /// Whether the user currently wants the preview following the selection. Read when one search window
+    /// hands over to another so the replacement can reopen it.
+    /// </summary>
+    public bool IsPreviewWanted => _userWantsPreview;
+
+    /// <summary>Opens the preview and records that the user wants it.</summary>
+    public void Open(Window owner, string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+        _userWantsPreview = true;
+        ShowOrUpdate(owner, path);
+    }
+
     public void Toggle(Window owner, string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -115,8 +129,28 @@ public class QuickLookManager
         }
     }
 
+    // Only the window that owns the preview may move or close it. A window handing over keeps running its
+    // own teardown for a moment: the quick window's hide clears its search query, which re-fires its own
+    // selection handler. Whether that lands before or after the full window has opened the preview it
+    // inherited is a race -- the search debounce is 150ms for an ordinary query but ZERO for a
+    // single-character one, either side of the fade-out this is racing.
+    private bool IsSupersededCaller(Window caller) =>
+        _owner != null && !ReferenceEquals(_owner, caller) && _owner.IsVisible;
+
+    /// <summary>
+    /// Hides the preview on behalf of one window, for a selection with nothing to preview. Ignored once
+    /// another window has taken the preview over.
+    /// </summary>
+    public void HideFrom(Window caller)
+    {
+        if (IsSupersededCaller(caller)) return;
+        Hide();
+    }
+
     public void UpdateOrShow(Window owner, string path)
     {
+        if (IsSupersededCaller(owner)) return;
+
         if (string.IsNullOrEmpty(path))
         {
             Hide();

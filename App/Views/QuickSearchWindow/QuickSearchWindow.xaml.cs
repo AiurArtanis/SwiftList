@@ -160,7 +160,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
             }
             else
             {
-                QuickLookManager.Instance.Hide();
+                QuickLookManager.Instance.HideFrom(this);
             }
         };
     }
@@ -213,6 +213,13 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         {
             timer.Stop();
             if (IsActive) return;
+            // Already hidden, so there is nothing here to react to -- something else put this window away
+            // and losing activation is just a consequence of that. Without this, opening the full window
+            // ran a second, full HideWindow() over the top of the deliberate one: two hundred milliseconds
+            // after the full window had opened the preview it inherited, this tore it down again through
+            // QuickLookManager.Reset, which is global and by then belonged to the other window. Traced from
+            // the symptom -- the preview appearing for an instant and never returning.
+            if (!IsVisible) return;
             // QuickLookManager just Hide()'d this window itself, for a preview handler's own popup
             // dialog (see its own comment) -- not a real deactivation to react to.
             if (QuickLookManager.Instance.IsHiddenForDialog) return;
