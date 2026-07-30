@@ -23,7 +23,7 @@
 
 
     <Grid x:Name="RootGrid">
-        <Border Margin="24,40,24,24" CornerRadius="8" Background="{DynamicResource CardBackground}"
+        <Border x:Name="SearchCardBorder" Margin="24,40,24,24" CornerRadius="8" Background="{DynamicResource CardBackground}"
                 BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1"
                 MouseLeftButtonDown="Border_MouseLeftButtonDown"
                 MouseMove="Border_MouseMove"

@@ -1,0 +1,12 @@
+{
+  "WindowGuides_PluginName": "Shift 拖曳引導線",
+  "WindowGuides_PluginDesc": "拖曳搜尋視窗時按住 Shift，顯示螢幕中軸引導線並自動貼齊。",
+  "WindowGuides_Config_GuideOpacityLabel": "引導線顏色透明度",
+  "WindowGuides_Config_GuideOpacityDesc": "水平和垂直中軸引導線的不透明度。",
+  "WindowGuides_Config_GuideThicknessLabel": "引導線粗細",
+  "WindowGuides_Config_GuideThicknessDesc": "水平和垂直中軸引導線的線條粗細。",
+  "WindowGuides_Config_OutlineOpacityLabel": "描邊顏色透明度",
+  "WindowGuides_Config_OutlineOpacityDesc": "拖曳時搜尋卡片描邊的不透明度。",
+  "WindowGuides_Config_OutlineThicknessLabel": "描邊顏色粗細",
+  "WindowGuides_Config_OutlineThicknessDesc": "拖曳時搜尋卡片描邊的線條粗細。"
+}

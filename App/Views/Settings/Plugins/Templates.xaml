@@ -8,6 +8,7 @@
         <ResourceDictionary Source="pack://application:,,,/SwiftList.App;component/Resources/Styles.xaml"/>
         <ResourceDictionary Source="../../../Resources/Styles/Windows/SearchWindow.xaml"/>
         <ResourceDictionary Source="../../../Resources/Styles/Windows/SettingsWindow.xaml"/>
+        <ResourceDictionary Source="SliderFieldTemplate.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
     <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
@@ -154,6 +155,11 @@
                         </DataTemplate>
                     </Setter.Value>
                 </Setter>
+            </DataTrigger>
+
+            <!-- Slider fields -->
+            <DataTrigger Binding="{Binding IsSlider}" Value="True">
+                <Setter Property="ContentTemplate" Value="{StaticResource SliderFieldTemplate}"/>
             </DataTrigger>
 
             <!-- Hotkey fields -->

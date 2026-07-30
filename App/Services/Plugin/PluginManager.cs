@@ -15,7 +15,7 @@ namespace SwiftList.App.Services.Plugin;
 /// component enable/disable state is managed by <see cref="ComponentFilter"/>.
 /// </para>
 /// </summary>
-public class PluginManager : PluginRegistry
+public partial class PluginManager : PluginRegistry
 {
     private static readonly Lazy<PluginManager> _instance = new(() => new PluginManager());
 
@@ -78,65 +78,7 @@ public class PluginManager : PluginRegistry
         _pluginSchemaDefaults = Helpers.PluginLoaderHelper.BuildSchemaDefaultsMap(this);
     }
 
-    // ── PluginRegistry callbacks ──────────────────────────────────────────
-
-    void PluginRegistry.RegisterPlugin(PluginSdk.Abstractions.Plugins.IPlugin plugin) => RegisterPlugin(plugin);
-
-    void PluginRegistry.AddInstantResultProvider(PluginSdk.Abstractions.Plugins.IInstantResultProvider p) => _instantResultProviders.Add(p);
-    void PluginRegistry.AddSearchableItemProvider(PluginSdk.Abstractions.Plugins.ISearchableItemProvider p) => _searchableItemProviders.Add(p);
-    void PluginRegistry.AddSidebarFilterProvider(PluginSdk.Abstractions.Plugins.ISidebarFilterProvider p) => _sidebarFilterProviders.Add(p);
-    void PluginRegistry.AddResultColumnProvider(PluginSdk.Abstractions.Plugins.IResultColumnProvider p) => _resultColumnProviders.Add(p);
-    void PluginRegistry.AddTranslationProvider(PluginSdk.Abstractions.Plugins.ITranslationProvider p) => _translationProviders.Add(p);
-    void PluginRegistry.AddThemeProvider(PluginSdk.Abstractions.Plugins.IThemeProvider p) => _themeProviders.Add(p);
-    void PluginRegistry.AddActivePathCollector(IActivePathCollector p)
-    {
-        _pathCollectors.Add(p);
-        PluginSdk.Registries.ActivePathCollectorRegistry.Register(p);
-    }
-    void PluginRegistry.AddFilePreviewProvider(IFilePreviewProvider p) => _previewProviders.Add(p);
-    void PluginRegistry.AddQuickNavigationProvider(IQuickNavigationProvider p) => _quickNavigationProviders.Add(p);
-    void PluginRegistry.AddThumbnailProvider(IThumbnailProvider p) => _thumbnailProviders.Add(p);
-    void PluginRegistry.AddQueryTokenProvider(PluginSdk.Abstractions.Plugins.IQueryTokenProvider p) => _queryTokenProviders.Add(p);
-    void PluginRegistry.AddStartupPanelTabProvider(PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider p) => _startupPanelTabProviders.Add(p);
-
     // ── Public API ────────────────────────────────────────────────────────
-
-    // Backs PluginSdkBridge's PluginSettingsService.GetSettingFunc wiring: falls back to a plugin's own
-    // schema-declared DefaultValue (see _pluginSchemaDefaults) when nothing has been persisted yet,
-    // before falling back to whatever default the call site itself passed in -- so a plugin's config
-    // schema is the single source of truth for its defaults instead of needing a second hardcoded copy
-    // in code for the "never opened settings" case.
-    internal object? GetPluginSetting(string pluginId, string key, object? defaultValue)
-    {
-        var settings = UserSettings.Load();
-        if (settings.PluginSettings.TryGetValue(pluginId, out var pluginDict) && pluginDict.ContainsKey(key))
-        {
-            return settings.GetPluginSetting(pluginId, key, defaultValue);
-        }
-        if (_pluginSchemaDefaults.TryGetValue(pluginId, out var fieldDefaults) && fieldDefaults.TryGetValue(key, out var schemaDefault))
-        {
-            return schemaDefault;
-        }
-        return defaultValue;
-    }
-
-    // Backs PluginSdkBridge's PluginSettingsService.SetSettingFunc wiring -- a plugin writing its own
-    // setting back at runtime (as opposed to the Settings UI's own batched apply/save flow), so this
-    // saves immediately rather than waiting for anything else to trigger a save.
-    internal void SetPluginSetting(string pluginId, string key, object? value)
-    {
-        var settings = UserSettings.Load();
-        // Normalized to a JsonElement -- the same shape a fresh disk reload of UserSettings would
-        // produce for this value (System.Text.Json deserializes an `object`-typed property as
-        // JsonElement). Without this, a plugin passing a strongly-typed object (e.g. a
-        // List<SomePocoClass>) leaves a shape in memory that the Settings UI's own generic
-        // Dictionary/JsonElement-based readers (ConfigValueHelper.UnpackValue, used by
-        // PluginConfigArrayFieldSupport to populate each array row's fields) can't read field-by-field --
-        // the row appears but every field in it shows blank until the app restarts and reloads from disk.
-        object? normalized = value == null ? null : System.Text.Json.JsonSerializer.SerializeToElement(value);
-        settings.SetPluginSetting(pluginId, key, normalized);
-        settings.Save();
-    }
 
     // Raised so callers that cache anything derived from IsEnabled-filtered collections (e.g.
     // StartupPanelTabProviders, which RefreshDisabledComponents can change the membership of) know to
@@ -282,8 +224,6 @@ public class PluginManager : PluginRegistry
 
     public IEnumerable<PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider> StartupPanelTabProviders
         => _startupPanelTabProviders.Where(p => _filter.IsEnabled(ComponentFilter.GetDllName(p), PluginComponentType.StartupPanelTabProvider, p.GetType().Name));
-
-    // ── Unfiltered collections (settings UI ?show disabled as unchecked) ─
 
     public IEnumerable<IFilePreviewProvider> AllFilePreviewProviders => _previewProviders;
     public IEnumerable<IThumbnailProvider> AllThumbnailProviders => _thumbnailProviders;

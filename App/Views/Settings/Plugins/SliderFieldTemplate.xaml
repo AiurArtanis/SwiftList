@@ -1,0 +1,14 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DataTemplate x:Key="SliderFieldTemplate">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Slider Minimum="{Binding SliderMinimum}" Maximum="{Binding SliderMaximum}"
+                    TickFrequency="{Binding SliderStep}" SmallChange="{Binding SliderStep}"
+                    LargeChange="{Binding SliderStep}" IsSnapToTickEnabled="True"
+                    Value="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    Width="180" Height="26"/>
+            <TextBlock Text="{Binding Value}" Width="32" Margin="8,0,0,0"
+                       VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}"/>
+        </StackPanel>
+    </DataTemplate>
+</ResourceDictionary>

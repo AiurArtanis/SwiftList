@@ -3,6 +3,7 @@ using System.Reflection;
 using SwiftList.Core;
 using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowEffects;
 
 using SwiftList.Core.SearchIndex;
 namespace SwiftList.App.Services.PluginManagerCore;
@@ -166,6 +167,13 @@ internal static class PluginLoader
                     var provider = (PluginSdk.Abstractions.Plugins.IStartupPanelTabProvider)Activator.CreateInstance(type)!;
                     registry.AddStartupPanelTabProvider(provider);
                     Logger.Log($"[PluginManager] Loaded startup panel tab provider: '{type.Name}' from {fileName}");
+                }
+
+                if (typeof(IQuickSearchWindowDragEffectProvider).IsAssignableFrom(type))
+                {
+                    var provider = (IQuickSearchWindowDragEffectProvider)Activator.CreateInstance(type)!;
+                    registry.AddQuickSearchWindowDragEffectProvider(provider);
+                    Logger.Log($"[PluginManager] Loaded quick-search drag effect provider: '{type.Name}' from {fileName}");
                 }
             }
         }

@@ -1,0 +1,12 @@
+{
+  "WindowGuides_PluginName": "Shift 드래그 안내선",
+  "WindowGuides_PluginDesc": "드래그 중 Shift를 누르면 화면 중앙 안내선을 표시하고 빠른 검색 창을 스냅합니다.",
+  "WindowGuides_Config_GuideOpacityLabel": "안내선 불투명도",
+  "WindowGuides_Config_GuideOpacityDesc": "가로 및 세로 중앙 안내선의 불투명도입니다.",
+  "WindowGuides_Config_GuideThicknessLabel": "안내선 두께",
+  "WindowGuides_Config_GuideThicknessDesc": "가로 및 세로 중앙 안내선의 선 두께입니다.",
+  "WindowGuides_Config_OutlineOpacityLabel": "윤곽선 불투명도",
+  "WindowGuides_Config_OutlineOpacityDesc": "드래그 중 검색 카드 윤곽선의 불투명도입니다.",
+  "WindowGuides_Config_OutlineThicknessLabel": "윤곽선 두께",
+  "WindowGuides_Config_OutlineThicknessDesc": "드래그 중 검색 카드 윤곽선의 선 두께입니다."
+}

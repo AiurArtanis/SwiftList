@@ -59,6 +59,23 @@ of the strip entirely rather than shown empty. The user can hide a tab from the 
 are deliberately separate; the host uses the component's concrete class type name (`GetType().Name`)
 as the stable key to persist the closed state.
 
+## Quick-search drag effects
+
+### `IQuickSearchWindowDragEffectProvider`
+
+Receives the quick-search window's drag lifecycle. Use it for short-lived visuals such as alignment
+guides, or to adjust the window's position during a user-initiated drag. The callbacks run on the
+WPF UI thread; implementations must return quickly and must never take focus from the search window.
+
+```csharp
+interface IQuickSearchWindowDragEffectProvider
+{
+    void OnDragStarted(Window window);
+    void OnDragMoved(Window window, FrameworkElement searchCard);
+    void OnDragEnded(Window window);
+}
+```
+
 ## Preview & thumbnails
 
 ### `IFilePreviewProvider`

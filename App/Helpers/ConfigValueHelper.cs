@@ -50,7 +50,7 @@ public static class ConfigValueHelper
     public static object? ConvertValue(object? val, ConfigFieldType fieldType)
     {
         if (val == null) return null;
-        if (fieldType == ConfigFieldType.Integer)
+        if (fieldType is ConfigFieldType.Integer or ConfigFieldType.Slider)
         {
             if (val is string strVal)
             {

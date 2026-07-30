@@ -2,6 +2,7 @@ using SwiftList.PluginSdk.Abstractions.Plugins;
 
 using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowEffects;
 namespace SwiftList.App.Services.PluginManagerCore;
 
 /// <summary>
@@ -23,4 +24,5 @@ internal interface PluginRegistry
     void AddThumbnailProvider(IThumbnailProvider provider);
     void AddQueryTokenProvider(IQueryTokenProvider provider);
     void AddStartupPanelTabProvider(IStartupPanelTabProvider provider);
+    void AddQuickSearchWindowDragEffectProvider(IQuickSearchWindowDragEffectProvider provider);
 }

@@ -40,9 +40,13 @@ public class PluginConfigFieldViewModel : ViewModelBase
     public bool IsHotkey => FieldType == ConfigFieldType.Hotkey;
     public bool IsFilePath => FieldType == ConfigFieldType.FilePath;
     public bool IsFolderPath => FieldType == ConfigFieldType.FolderPath;
+    public bool IsSlider => FieldType == ConfigFieldType.Slider;
+    public double SliderMinimum => SchemaField.Minimum;
+    public double SliderMaximum => SchemaField.Maximum;
+    public double SliderStep => SchemaField.Step;
     public bool HotkeyRequireModifier => SchemaField.RequireModifier;
     public bool IsIconField => SchemaField.Key.Equals("Icon", StringComparison.OrdinalIgnoreCase);
-    public bool IsSimpleField => IsBoolean || IsText || IsInteger || IsChoice || IsStringList || IsHotkey || IsFilePath || IsFolderPath;
+    public bool IsSimpleField => IsBoolean || IsText || IsInteger || IsChoice || IsStringList || IsHotkey || IsFilePath || IsFolderPath || IsSlider;
 
     public ObservableCollection<PluginConfigFieldViewModel> Children { get; } = new();
     public ObservableCollection<PluginConfigArrayItemViewModel> ArrayItems { get; } = new();

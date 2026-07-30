@@ -12,7 +12,8 @@ public enum ConfigFieldType
     StringList,
     Hotkey,
     FilePath,
-    FolderPath
+    FolderPath,
+    Slider
 }
 
 public class PluginConfigField
@@ -25,6 +26,12 @@ public class PluginConfigField
     public object DefaultValue { get; set; } = null!;
     public List<string>? Choices { get; set; }
     public List<PluginConfigField>? SubFields { get; set; }
+    /// <summary>For Slider fields: the inclusive minimum value.</summary>
+    public double Minimum { get; set; }
+    /// <summary>For Slider fields: the inclusive maximum value.</summary>
+    public double Maximum { get; set; } = 100;
+    /// <summary>For Slider fields: the value increment used by the UI.</summary>
+    public double Step { get; set; } = 1;
     /// <summary>For Hotkey fields: when true, single keys without modifier keys (Ctrl/Alt/Shift/Win) are rejected.</summary>
     public bool RequireModifier { get; set; }
     /// <summary>When true, saving this field with an empty/whitespace value falls back to <see cref="DefaultValue"/>

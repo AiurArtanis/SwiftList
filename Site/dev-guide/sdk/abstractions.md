@@ -75,7 +75,8 @@ a keyword field would silently make whatever depends on it unreachable rather th
 sane default.
 
 `ConfigFieldType` covers: `Boolean`, `Text`, `Integer`, `Choice`, `Array`, `Object`, `Group`,
-`StringList`, `Hotkey`, `FilePath`, `FolderPath`. See
+`StringList`, `Hotkey`, `FilePath`, `FolderPath`, `Slider`. A `Slider` uses `Minimum`, `Maximum`,
+and `Step` to render a drag-adjustable numeric value. See
 [CoreExtensions](../examples#coreextensions-actions-and-the-shell-context-menu) for a real schema
 using nested groups and `StringList`.
 
