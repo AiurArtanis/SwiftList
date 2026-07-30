@@ -43,7 +43,7 @@ internal static class FzfRankRadixSorter
             // whole-drive query sizes this to its own result count, and holding that forever is a high
             // water mark nothing ever gives back -- see SearchScratchPolicy. An existing smaller one is
             // deliberately left in place rather than replaced by the oversized one.
-            if (SearchScratchPolicy.WorthRetaining(buffer.Length))
+            if (SearchScratchPolicy.WorthRetaining<FzfRank>(buffer.Length))
                 _scratch = buffer;
         }
         var scratch = buffer.AsSpan(0, count);
