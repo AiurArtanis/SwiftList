@@ -113,4 +113,44 @@ public sealed class NetworkGlobPatternLiteralTests
         Matches("te?t.txt", "test.txt", "text.txt");
         DoesNotMatch("te?t.txt", "teeest.txt");
     }
+
+    // A pattern shaped to backtrack: eight unbounded groups over the same character, anchored, against an
+    // input that cannot satisfy the tail. Paired with a one-tick budget so the runaway path is reached
+    // deterministically rather than by actually spending the real one.
+    private const string RunawayGlob = "**a**a**a**a**a**a**a**a**z";
+    private static readonly string RunawayInput = new string('a', 200) + "q";
+
+    [TestMethod]
+    public void APatternThatExceedsTheTimeout_IsAbandonedRatherThanRetriedPerEntry()
+    {
+        // The timeout is a per-match ceiling and this is asked about every entry on a drive, so without
+        // retiring the pattern a runaway one costs the whole budget, and writes a log line, once per
+        // entry -- millions of times.
+        var pattern = new NetworkGlobPattern(RunawayGlob, TimeSpan.FromTicks(1));
+
+        Assert.IsFalse(pattern.IsMatch(RunawayInput));
+        Assert.IsTrue(pattern.IsAbandoned, "the pattern should have been retired on its first timeout");
+    }
+
+    [TestMethod]
+    public void AnAbandonedPattern_StopsMatchingEntirely()
+    {
+        // Not merely "returns false for the input that timed out" -- it must stop running at all, which is
+        // observable as it no longer matching something it otherwise would.
+        var pattern = new NetworkGlobPattern(RunawayGlob, TimeSpan.FromTicks(1));
+        pattern.IsMatch(RunawayInput);
+        Assert.IsTrue(pattern.IsAbandoned);
+
+        Assert.IsFalse(pattern.IsMatch("aaaaaaaaz"), "an abandoned pattern must not be run again");
+    }
+
+    [TestMethod]
+    public void APatternWithinTheTimeout_IsNeverAbandoned()
+    {
+        var pattern = new NetworkGlobPattern("node_modules");
+
+        Assert.IsTrue(pattern.IsMatch(@"c:\app\node_modules"));
+        Assert.IsFalse(pattern.IsMatch(@"c:\app\src"));
+        Assert.IsFalse(pattern.IsAbandoned);
+    }
 }

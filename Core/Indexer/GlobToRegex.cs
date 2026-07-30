@@ -16,7 +16,7 @@ public static class GlobToRegex
     // pattern silently stops ignoring, with nothing but a log line to say so.
     private static readonly TimeSpan MatchTimeout = TimeSpan.FromSeconds(1);
 
-    public static Regex Compile(string glob, bool ignoreCase = true)
+    public static Regex Compile(string glob, bool ignoreCase = true, TimeSpan? matchTimeout = null)
     {
         var pattern = Convert(glob);
         var options = RegexOptions.CultureInvariant | RegexOptions.Compiled;
@@ -24,7 +24,7 @@ public static class GlobToRegex
         {
             options |= RegexOptions.IgnoreCase;
         }
-        return new Regex(pattern, options, MatchTimeout);
+        return new Regex(pattern, options, matchTimeout ?? MatchTimeout);
     }
 
     public static string Convert(string glob)

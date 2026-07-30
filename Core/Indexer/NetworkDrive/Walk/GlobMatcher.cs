@@ -16,14 +16,21 @@ internal sealed class NetworkGlobPattern
     private readonly Regex? _regex;
     private readonly string? _requiredLiteral;
 
-    public NetworkGlobPattern(string pattern)
+    // Set once this pattern has proved it can run away, after which it is not run again. See IsMatch.
+    private volatile bool _abandoned;
+
+    public NetworkGlobPattern(string pattern) : this(pattern, null) { }
+
+    // The timeout override exists so a test can force the runaway path deterministically instead of
+    // having to actually spend the real budget on a pattern engineered to burn it.
+    internal NetworkGlobPattern(string pattern, TimeSpan? matchTimeout)
     {
         _rawPattern = pattern ?? string.Empty;
         if (!string.IsNullOrWhiteSpace(_rawPattern))
         {
             try
             {
-                _regex = GlobToRegex.Compile(_rawPattern.Trim());
+                _regex = GlobToRegex.Compile(_rawPattern.Trim(), matchTimeout: matchTimeout);
                 _requiredLiteral = LongestRequiredLiteral(_rawPattern.Trim());
             }
             catch (Exception ex)
@@ -33,12 +40,20 @@ internal sealed class NetworkGlobPattern
         }
     }
 
+    /// <summary>Whether this pattern has been abandoned for exceeding the match timeout.</summary>
+    internal bool IsAbandoned => _abandoned;
+
     public bool IsEmpty => string.IsNullOrWhiteSpace(_rawPattern);
 
     public bool IsMatch(string text)
     {
         if (IsEmpty)
             return string.IsNullOrEmpty(text);
+
+        // Already known to run away: matching nothing is the answer the timeout produced anyway, so
+        // there is nothing to gain by spending the budget again on every remaining entry.
+        if (_abandoned)
+            return false;
 
         // Anything this pattern can match has to contain that literal, so a text that doesn't is a
         // no-match without running the regex at all. Contains is a vectorised scan against a compiled
@@ -55,7 +70,20 @@ internal sealed class NetworkGlobPattern
             }
             catch (RegexMatchTimeoutException)
             {
-                Logger.Log($"[NetworkGlobPattern] Timeout matching '{text}' against regex for glob '{_rawPattern}'", LogLevel.Warn);
+                // The timeout is a per-match ceiling, and this is asked about every entry on a drive --
+                // so a pattern that backtracks catastrophically used to cost the full budget, and write a
+                // log line, MILLIONS of times over. Retiring it on the first occurrence makes that cost
+                // once, and turns a log flood into one line that names the pattern to go and fix.
+                //
+                // Safe to treat one occurrence as proof now that the budget is a second: an ordinary
+                // match measures well under a microsecond, so reaching it means overshooting by six
+                // orders of magnitude, which no amount of machine load accounts for. It would not have
+                // been safe at the 50ms this used to be -- ordinary matches reached that under load,
+                // which is the bug that led here.
+                _abandoned = true;
+                Logger.Log(
+                    $"[NetworkGlobPattern] Glob '{_rawPattern}' exceeded the match timeout and will be ignored for the rest of this session -- it is almost certainly backtracking catastrophically. First offending input: '{text}'",
+                    LogLevel.Warn);
             }
         }
 
