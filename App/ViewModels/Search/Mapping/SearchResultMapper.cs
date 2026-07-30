@@ -262,6 +262,17 @@ public static class SearchResultMapper
         return normalizedQuery != null && string.Equals(SearchResultHelper.NormalizePath(path), normalizedQuery, StringComparison.OrdinalIgnoreCase);
     }
 
+    // Same rule again, but resolved ONCE for a caller that then tests many results against it.
+    // IsQueriedDirectoryItself re-derives this per call, and deriving it can hit the disk
+    // (Directory.Exists) -- fine for the handful of results a streaming pipe callback sees, ruinous for
+    // a caller filtering hundreds of thousands. Returns null when the query isn't a directory path at
+    // all, which is the common case and means there is nothing to strip.
+    internal static string? GetQueriedDirectory(string query) => GetQueriedDirectoryNormalized(query);
+
+    internal static bool IsQueriedDirectory(string path, string? normalizedQueriedDirectory) =>
+        normalizedQueriedDirectory != null &&
+        string.Equals(SearchResultHelper.NormalizePath(path), normalizedQueriedDirectory, StringComparison.OrdinalIgnoreCase);
+
     private static string? GetQueriedDirectoryNormalized(string query)
     {
         if (string.IsNullOrWhiteSpace(query))

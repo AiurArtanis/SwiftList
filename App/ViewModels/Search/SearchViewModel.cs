@@ -229,16 +229,25 @@ public class SearchViewModel : ViewModelBase, IDisposable
         (_currentSortColumn, _isSortAscending) = SearchResultSortCycle.Advance(_currentSortColumn, _isSortAscending, columnId);
         SearchResultSortMemory.CurrentSortColumn = _currentSortColumn;
         SearchResultSortMemory.IsSortAscending = _isSortAscending;
-        ApplyFiltersAndRender();
+        // Re-sorting by a column reorders everything under the user, so whatever row they were looking
+        // at is no longer where -- or what -- it was. Same for a sidebar filter. Both are a new result
+        // set as far as the list's scroll position is concerned, however unchanged the query is.
+        ApplyFiltersAndRender(extendsContent: false);
     }
 
-    public void OnDynamicFilterChanged() => ApplyFiltersAndRender();
+    public void OnDynamicFilterChanged() => ApplyFiltersAndRender(extendsContent: false);
 
     private readonly DynamicFilterCoordinator _dynamicFilterCoordinator = new();
 
-    private void ApplyFiltersAndRender()
+    // DynamicFilterCoordinator renders through an Action<List<AppSearchResult>> and can do so twice
+    // (immediately with the unfiltered list, then again once async predicates resolve), so the flag
+    // rides on the instance rather than through that callback's signature.
+    private bool _renderExtendsContent;
+
+    private void ApplyFiltersAndRender(bool extendsContent)
     {
         if (_allResults == null) return;
+        _renderExtendsContent = extendsContent;
 
         var activeFilters = DynamicSidebarGroups
             .Select(g => g.CombinedPredicate)
@@ -267,7 +276,7 @@ public class SearchViewModel : ViewModelBase, IDisposable
         // window has no VM-level "selected result" property to preserve in the first place (ResultsControl
         // .xaml.cs's own shared OnCollectionChanged already resets ActiveListBox.SelectedIndex on every
         // change here, same as it always has).
-        FilteredResults.ReconcileTo(finalResults, SearchResultsReconciler.ItemsEqual);
+        FilteredResults.ReconcileTo(finalResults, SearchResultsReconciler.ItemsEqual, _renderExtendsContent);
         ResultCountText = string.Format(TranslationManager.Instance["Search_Total"], finalResults.Count);
         OnPropertyChanged(nameof(ShowNoResultsHint));
         OnPropertyChanged(nameof(ShowWelcomeHint));

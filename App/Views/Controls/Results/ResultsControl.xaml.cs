@@ -182,8 +182,51 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
     // with none of the wasted intermediate work.
     private bool _collectionChangedPending;
 
+    // Where the user last put themselves in the CURRENT result set: the row they selected and how far
+    // down they scrolled. Both stay at 0 until they actually do something, so a set nobody has touched
+    // restores to exactly the top-of-list state this handler has always produced.
+    //
+    // Needed because a Reset (which is what a large update raises -- see ObservableRangeCollection's
+    // ResetInsteadOfReconcileThreshold) tells WPF that every item is gone, so Selector drops the
+    // selection outright and the panel is free to drop the scroll offset with it. Nothing survives for
+    // the handler below to notice, which is why the position has to be recorded as the user creates it
+    // rather than read back afterwards.
+    private int _anchorIndex;
+    private double _anchorOffset;
+    private ScrollViewer? _resultsScrollViewer;
+    private bool _suppressAnchorCapture;
+
+    private void OnResultsScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (e.OriginalSource is not ScrollViewer scrollViewer)
+            return;
+        _resultsScrollViewer = scrollViewer;
+
+        // ExtentHeightChange separates a scroll the user performed from the offset moving because rows
+        // were added or removed underneath them. Only the former is a statement about where they want
+        // to be; recording the latter would let a repaint that resets the offset overwrite the very
+        // position this exists to restore.
+        if (!_suppressAnchorCapture && e.ExtentHeightChange == 0 && e.VerticalChange != 0)
+            _anchorOffset = scrollViewer.VerticalOffset;
+    }
+
+    private void CaptureSelectionAnchor(int index)
+    {
+        // A deselection is never recorded. Nothing the user does produces one here, but a Reset does:
+        // Selector drops the selection while handling it and raises SelectionChanged with -1, which
+        // arrives before the callback below runs -- so without this guard the teardown would erase the
+        // very anchor that teardown is the reason for keeping.
+        if (!_suppressAnchorCapture && index >= 0)
+            _anchorIndex = index;
+    }
+
     private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        // Read here rather than in the deferred callback below only for clarity -- the flag is set
+        // before the notification and outlives it -- but it does mean a burst is judged by its first
+        // event, which is what the rest of this handler already assumes.
+        var extendsContent = sender is Helpers.ObservableRangeCollection<AppSearchResult> { LastUpdateExtendedContent: true };
+
         if (_collectionChangedPending) return;
         _collectionChangedPending = true;
 
@@ -194,18 +237,41 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
             if (GridActions != null && GridActions.Visibility == Visibility.Visible)
                 return;
 
-            var list = ActiveListBox;
-            if (list != null && list.Items.Count > 0)
+            // A different result set: forget where the user was, because it was a position in a list
+            // that no longer exists.
+            if (!extendsContent)
             {
-                list.SelectedIndex = 0;
-                if (ViewMode == ResultsViewMode.Grid)
-                    LstGridResults.ScrollIntoView(LstGridResults.SelectedItem);
-                else
-                    LstResults.ScrollIntoView(LstResults.SelectedItem);
+                _anchorIndex = 0;
+                _anchorOffset = 0;
             }
-            else
+
+            var list = ActiveListBox;
+            _suppressAnchorCapture = true;
+            try
             {
-                list?.SelectedIndex = -1;
+                if (list != null && list.Items.Count > 0)
+                {
+                    list.SelectedIndex = Math.Clamp(_anchorIndex, 0, list.Items.Count - 1);
+
+                    // ScrollIntoView on its own would put the restored row wherever it takes least
+                    // scrolling to reveal it, which is not where the user left it. Replaying the exact
+                    // offset keeps the viewport still; ScrollIntoView stays as the fallback for the
+                    // top-of-list case and for before the ScrollViewer has been seen at all.
+                    if (extendsContent && _anchorOffset > 0 && _resultsScrollViewer != null)
+                        _resultsScrollViewer.ScrollToVerticalOffset(_anchorOffset);
+                    else if (ViewMode == ResultsViewMode.Grid)
+                        LstGridResults.ScrollIntoView(LstGridResults.SelectedItem);
+                    else
+                        LstResults.ScrollIntoView(LstResults.SelectedItem);
+                }
+                else
+                {
+                    list?.SelectedIndex = -1;
+                }
+            }
+            finally
+            {
+                _suppressAnchorCapture = false;
             }
 
             // Reseed the hover baseline to the cursor's current spot so the MouseMove WPF synthesizes
@@ -261,6 +327,7 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
     {
         LstResults.SelectionChanged += (s, e) =>
         {
+            CaptureSelectionAnchor(LstResults.SelectedIndex);
             if (_isUpdatingSelection) return;
             _isUpdatingSelection = true;
             try
@@ -275,6 +342,7 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
 
         LstGridResults.SelectionChanged += (s, e) =>
         {
+            CaptureSelectionAnchor(LstGridResults.SelectedIndex);
             if (_isUpdatingSelection) return;
             _isUpdatingSelection = true;
             try
@@ -286,6 +354,12 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
                 _isUpdatingSelection = false;
             }
         };
+
+        // Attached at the ListBox/ListView because the ScrollViewer that raises this lives inside the
+        // control template and isn't reachable until it has been applied -- the event bubbles out to
+        // here regardless, and carries the ScrollViewer as its OriginalSource.
+        LstResults.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler(OnResultsScrollChanged));
+        LstGridResults.AddHandler(ScrollViewer.ScrollChangedEvent, new ScrollChangedEventHandler(OnResultsScrollChanged));
     }
 
     private bool _columnsLoaded;

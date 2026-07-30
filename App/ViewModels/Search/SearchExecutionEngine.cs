@@ -7,6 +7,19 @@ namespace SwiftList.App.ViewModels.Search;
 
 internal sealed class SearchExecutionEngine : IDisposable
 {
+    // How long to let results accumulate before the first paint. Short enough to feel immediate, long
+    // enough that a search resolving in a few milliseconds paints once (already complete) rather than
+    // twice.
+    private const int FirstRenderDelayMs = 40;
+
+    // Cadence of every paint after the first, while results are still arriving.
+    private const int ProgressiveRenderIntervalMs = 150;
+
+    // Cadence once the stream has ended and the pump is working through what it hasn't painted yet.
+    // Only there to leave the UI thread room between paints -- each of those ticks does a full bite's
+    // worth of real work anyway, which is the real pacing.
+    private const int DrainRenderIntervalMs = 25;
+
     private readonly SearchService _searchService;
     private CancellationTokenSource? _searchCts;
     private readonly object _searchCtsLock = new();
@@ -193,14 +206,13 @@ internal sealed class SearchExecutionEngine : IDisposable
         var streamedResponse = new List<SearchResult>();
         object responseLock = new();
         var streamedCount = 0;
-        var renderState = 0;
-        var startTime = Environment.TickCount;
+        var streamDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         // Both RenderSnapshot callers (the streaming result callback below, and the final call after
         // localSearchTask) already run on a background thread -- PerformStreamingSearchAsync executes
         // inside PerformSearch's Task.Run, which doesn't flow a SynchronizationContext, so every await
         // in this method resumes on a ThreadPool thread throughout. resultMapper (rank-sorts up to
-        // FullSearchFileLimit=1000 results via SearchResultRankComparer, then builds one AppSearchResult
+        // every streamed result via SearchResultRankComparer, then builds one AppSearchResult
         // per row) and the rest of the snapshot-building logic below have no WPF/UI-thread dependency at
         // all -- they only read the locked snapshot and build plain lists. This used to run wrapped
         // inside the Dispatcher.BeginInvoke below regardless, meaning that CPU cost blocked the UI thread
@@ -208,14 +220,21 @@ internal sealed class SearchExecutionEngine : IDisposable
         // UI-touching step (onResultsUpdated, which assigns FilteredResults and triggers sort/filter/
         // render) is marshaled, after re-checking staleness once more in case the search was superseded
         // while this thread was busy computing.
-        void RenderSnapshot(bool final)
+        // take: how many of the results received so far to paint. int.MaxValue for the final render,
+        // ProgressiveRenderPlan's current cap for an intermediate one -- see that class for why an
+        // intermediate render must not touch the whole snapshot.
+        void RenderSnapshot(bool final, int take)
         {
             if (searchVersion != Volatile.Read(ref _searchVersion) || token.IsCancellationRequested)
                 return;
             List<SearchResult> snapshot;
+            var received = 0;
             lock (responseLock)
             {
-                snapshot = new List<SearchResult>(streamedResponse);
+                received = streamedResponse.Count;
+                snapshot = take >= received
+                    ? new List<SearchResult>(streamedResponse)
+                    : streamedResponse.GetRange(0, take);
             }
 
             var uiResults = resultMapper(snapshot, contextDirectory);
@@ -241,7 +260,10 @@ internal sealed class SearchExecutionEngine : IDisposable
                 uiResults.Add(SearchResultMapper.CreateNoResultsResult(query));
             var statusText = "";
             if (uiResults.Count > 0)
-                statusText = SearchResultMapper.FormatSearchStatus(0, snapshot.Count);
+                // The count RECEIVED, not the capped count rendered -- an intermediate render paints a
+                // prefix, and reporting the prefix's length would make the status bar understate what
+                // the search has actually found so far and then jump at the end.
+                statusText = SearchResultMapper.FormatSearchStatus(0, received);
             else if (final)
                 statusText = "No matching results";
 
@@ -253,63 +275,107 @@ internal sealed class SearchExecutionEngine : IDisposable
             }));
         }
 
-        await _searchService.SearchStreamingAsync(query, fileLimit, appLimit, searchScope, result =>
+        // Repaints on a fixed cadence for as long as results keep arriving, where this used to schedule
+        // exactly one intermediate paint (nine results in, at the 40ms mark) and then show nothing more
+        // until the entire search had finished. That was fine while the full window asked for a thousand
+        // results; unbounded, a broad query spends seconds in the stream and the window sat on those
+        // first nine rows for all of it, looking like the search had stalled rather than like it was
+        // working. The cadence is deliberately slower than the first paint: 40ms to get something on
+        // screen, then every 150ms, which is frequent enough to read as continuous growth and rare
+        // enough that the render cost stays noise next to the stream itself.
+        using var pumpCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+        var pumpToken = pumpCts.Token;
+        var pump = Task.Run(async () =>
         {
-            token.ThrowIfCancellationRequested();
-
-            // Excludes a result whose source (local drive, network drive, WSL, folder index) was found
-            // unreachable by this session's own SearchReachabilityGate.BeginSession probe -- see its own
-            // comment on why that's a better fit here than either source type's existing periodic signal.
-            if (!SearchReachabilityGate.IsResultReachable(result))
-                return;
-
-            lock (responseLock)
-            {
-                streamedResponse.Add(result);
-                streamedCount++;
-            }
-
-            if (Volatile.Read(ref renderState) == 0 && Volatile.Read(ref streamedCount) < 9)
-                return;
-            if (Interlocked.CompareExchange(ref renderState, 1, 0) == 0)
-            {
-                var elapsed = Environment.TickCount - startTime;
-                if (elapsed < 40)
-                {
-                    _ = Task.Delay(40 - elapsed, token).ContinueWith(t =>
-                    {
-                        if (t.IsCanceled) return;
-                        if (Volatile.Read(ref renderState) == 1)
-                        {
-                            RenderSnapshot(final: false);
-                        }
-                    }, token);
-                }
-                else
-                {
-                    RenderSnapshot(final: false);
-                }
-            }
-
-        }, token, () => _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-        {
-            if (!token.IsCancellationRequested && searchVersion == Volatile.Read(ref _searchVersion))
-            {
-                onLocalServiceUnavailable?.Invoke();
-            }
-        })), bypassExclusions);
-
-        token.ThrowIfCancellationRequested();
-        if (localSearchTask != null)
-        {
+            var plan = new ProgressiveRenderPlan();
+            var interval = FirstRenderDelayMs;
             try
             {
-                await localSearchTask;
+                while (true)
+                {
+                    if (streamDone.Task.IsCompleted)
+                        await Task.Delay(interval, pumpToken).ConfigureAwait(false);
+                    else
+                        // Woken early when the stream ends, so a search that resolves in a few
+                        // milliseconds isn't held behind a cadence meant for one that takes seconds.
+                        await Task.WhenAny(Task.Delay(interval, pumpToken), streamDone.Task).ConfigureAwait(false);
+                    pumpToken.ThrowIfCancellationRequested();
+
+                    var finished = streamDone.Task.IsCompleted;
+                    var take = plan.NextRenderSize(Volatile.Read(ref streamedCount));
+                    if (take == 0)
+                    {
+                        // Nothing new to show. Once the stream has ended that is also true of every
+                        // later tick -- no more results can arrive -- so hand over to the final render
+                        // instead of idling on the cadence forever.
+                        if (finished)
+                            return;
+                        interval = ProgressiveRenderIntervalMs;
+                        continue;
+                    }
+
+                    // While draining, the cadence only exists to leave the UI thread room between
+                    // paints: the backlog is already in memory and every remaining tick has real work,
+                    // so holding the full 150ms between them just stretches the tail for no benefit.
+                    interval = finished ? DrainRenderIntervalMs : ProgressiveRenderIntervalMs;
+
+                    // Synchronous inside the loop on purpose: awaiting the pump below then guarantees no
+                    // intermediate render can still be computing once the final one starts, so the two
+                    // can't reach the Dispatcher out of order and leave a truncated prefix on screen.
+                    RenderSnapshot(final: false, take);
+                }
             }
-            catch { }
+            catch (OperationCanceledException) { }
+        }, pumpToken);
+
+        try
+        {
+            await _searchService.SearchStreamingAsync(query, fileLimit, appLimit, searchScope, result =>
+            {
+                token.ThrowIfCancellationRequested();
+
+                // Excludes a result whose source (local drive, network drive, WSL, folder index) was found
+                // unreachable by this session's own SearchReachabilityGate.BeginSession probe -- see its own
+                // comment on why that's a better fit here than either source type's existing periodic signal.
+                if (!SearchReachabilityGate.IsResultReachable(result))
+                    return;
+
+                lock (responseLock)
+                {
+                    streamedResponse.Add(result);
+                    streamedCount++;
+                }
+            }, token, () => _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!token.IsCancellationRequested && searchVersion == Volatile.Read(ref _searchVersion))
+                {
+                    onLocalServiceUnavailable?.Invoke();
+                }
+            })), bypassExclusions);
+
+            token.ThrowIfCancellationRequested();
+            if (localSearchTask != null)
+            {
+                try
+                {
+                    await localSearchTask;
+                }
+                catch { }
+            }
         }
-        Interlocked.Exchange(ref renderState, 2);
-        RenderSnapshot(final: true);
+        finally
+        {
+            // Flagged first, then awaited, so the pump gets to DRAIN the backlog rather than being cut
+            // off at whatever it had reached: a search whose results all arrive faster than they can be
+            // mapped leaves most of the set unpainted at this point, and cancelling here would dump all
+            // of it into one final render -- the multi-second freeze the whole progressive path exists
+            // to break up. Awaiting also means no intermediate render is still computing once the final
+            // one begins, so the two can't reach the Dispatcher out of order.
+            streamDone.TrySetResult();
+            try { await pump.ConfigureAwait(false); } catch (OperationCanceledException) { }
+        }
+
+        RenderSnapshot(final: true, int.MaxValue);
     }
 
     public void CancelPendingSearch()
