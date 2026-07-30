@@ -121,6 +121,10 @@ public static class ActionFlyout
         border.SetResourceReference(Border.CornerRadiusProperty, "CornerRadiusPopover");
         border.SetResourceReference(UIElement.EffectProperty, "Elevation1");
 
+        // anchor must be an element that outlives the flyout. A Popup goes away with its PlacementTarget,
+        // so anchoring to something WPF can recycle -- a virtualized list's row container being the trap
+        // here -- makes the flyout close by itself the moment that happens, with nothing about the
+        // selection or the window having changed. See SearchWindowInputHandler.ShowActionFlyout.
         _popup = new Popup
         {
             PlacementTarget = anchor,
