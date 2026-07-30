@@ -27,6 +27,15 @@ clicking the **Path** column instead opens the result's containing folder in Exp
 thing `Ctrl`+Enter does anywhere else on the row. A plugin's own custom column can define this same
 kind of double-click override for itself.
 
+The grid holds every match rather than a capped page of them, and fills in as the results arrive
+instead of appearing all at once when the search finishes — a broad query on a large drive can run
+for several seconds, and the rows are usable throughout. Arrow-key navigation wraps at both ends:
+pressing Up on the first row moves to the last, and Down on the last row moves back to the first.
+
+The window has no title bar, so its header is the drag area: press anywhere in it that isn't the
+search box or a window button and drag to move the window. While the pointer is over the header a
+grip fades in across the top of it, marking where to grab.
+
 ## QuickLook preview
 
 Press the **QuickLook** hotkey (`Alt+P` by default) on a selected result to open a preview pane
@@ -52,6 +61,13 @@ the preview pane hide themselves for as long as that popup is open, since it wou
 unreachable behind them. This isn't SwiftList closing or crashing: resolve the popup (enter the
 password, dismiss it, whatever it's asking) and both windows come back exactly as you left them,
 search text and selection included.
+
+The preview window's header is itself a drag source for the file being previewed — drag it into
+Explorer, an editor, or any other drop target and it behaves exactly like dragging the result row
+out of the search window.
+
+Opening the full window from the quick one carries the preview's open state across, so a preview you
+already had open stays open.
 
 ### External preview via QuickLook (optional)
 

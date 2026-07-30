@@ -28,6 +28,16 @@ en la columna **Ruta** en su lugar abre la carpeta contenedora del resultado en 
 `Ctrl`+Intro en cualquier otro punto de la fila. Una columna personalizada de un plugin puede definir este mismo
 tipo de sobrescritura de doble clic para sí misma.
 
+La cuadrícula conserva todas las coincidencias en lugar de una página limitada de ellas, y se va rellenando a
+medida que llegan los resultados en lugar de aparecer de golpe cuando termina la búsqueda: una consulta amplia
+en una unidad grande puede tardar varios segundos, y las filas se pueden usar durante todo ese tiempo. La
+navegación con las flechas da la vuelta en ambos extremos: pulsar ↑ en la primera fila lleva a la última, y ↓ en
+la última vuelve a la primera.
+
+La ventana no tiene barra de título, así que su encabezado es la zona de arrastre: pulsa en cualquier punto que
+no sea el cuadro de búsqueda ni un botón de ventana y arrastra para moverla. Mientras el puntero está sobre el
+encabezado aparece de forma gradual un asa en su parte superior que indica dónde agarrar.
+
 ## Vista previa QuickLook
 
 Pulsa el atajo **QuickLook** (`Alt+P` por defecto) sobre un resultado seleccionado para abrir un panel de vista
@@ -55,6 +65,13 @@ como el panel de vista previa se ocultan mientras esa ventana emergente esté ab
 quedaría inalcanzable detrás de ellas. Esto no es SwiftList cerrándose ni fallando: resuelve la ventana emergente
 (introduce la contraseña, ciérrala, lo que sea que esté pidiendo) y ambas ventanas vuelven exactamente como las
 dejaste, texto de búsqueda y selección incluidos.
+
+El encabezado de la ventana de vista previa es en sí mismo un origen de arrastre para el archivo que se está
+previsualizando: arrástralo al Explorador, a un editor o a cualquier otro destino y se comporta igual que si
+arrastraras la fila del resultado desde la ventana de búsqueda.
+
+Al abrir la ventana completa desde la rápida, el estado de la vista previa se traslada, así que una vista previa
+que ya tuvieras abierta permanece abierta.
 
 ### Vista previa externa mediante QuickLook (opcional)
 
