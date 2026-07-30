@@ -21,6 +21,7 @@ here. See [Settings → Hotkeys page](./settings/hotkeys-page) for the settings 
 | Open full window | *(none)* | Opens the full window directly, carrying over the current query — same effect as left-clicking the [Quick Window's own logo](#search-box-logo-icon) and choosing Show Main Window from the menu that opens, without that extra step. Not bound by default; set one from **Settings → Hotkeys**. |
 | Next Startup Panel tab | `Ctrl+Right` | Wraps from the last tab back to the first. Only active while the [Startup Panel](./settings/startup-panel) is showing — otherwise the key does its normal job (e.g. moving the caret while typing a query). |
 | Previous Startup Panel tab | `Ctrl+Left` | Wraps from the first tab back to the last. Same active-only-while-showing rule as above. |
+| Keep window open | `Ctrl+T` | Quick window only. Stops it hiding when focus moves elsewhere, so a query can be assembled out of text copied from other windows — hiding would otherwise clear the search box each time. Lasts for the current summon and ends with the next hide. Middle-clicking the logo does the same thing, and the logo brightens while it is on; pressing the summon hotkey while it is up but unfocused brings it back rather than hiding it. |
 
 ## Search box logo icon
 
