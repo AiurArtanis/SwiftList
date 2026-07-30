@@ -41,7 +41,7 @@ public class PasteFileAction : ISearchResultAction
     private static bool Exists(ISearchResult result)
     {
         if (result == null || string.IsNullOrEmpty(result.FullPath)) return false;
-        return System.IO.File.Exists(result.FullPath) || System.IO.Directory.Exists(result.FullPath);
+        return SwiftList.PluginSdk.Helpers.PathExistenceCache.Exists(result.FullPath);
     }
 
     private static string? GetDestinationFolder(ISearchResult result) =>

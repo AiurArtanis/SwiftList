@@ -3,6 +3,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using SwiftList.App.Helpers;
 using SwiftList.Core;
+using SwiftList.PluginSdk.Helpers;
 using SwiftList.PluginSdk.Abstractions;
 using SwiftList.PluginSdk.Abstractions.Plugins;
 using MenuItem = System.Windows.Controls.MenuItem;
@@ -52,8 +53,16 @@ public static class ActionFlyout
 
         // Build the shell group off the UI thread (2s cap), then the built-in actions on the UI thread,
         // and show once ready — a slow shell extension never freezes the window.
-        _ = Task.Run(() =>
+        _ = Task.Run(async () =>
         {
+            // Spans the whole build, the UI-thread half included, so every action's own
+            // File.Exists/Directory.Exists gate is answered from one pass over the selection instead of
+            // one pass each. Primed here rather than left to the first action that asks, so the probing
+            // happens on this thread and not on the UI thread where BuildStatic runs. Prime stops at the
+            // first missing path exactly as those All() gates do, so this is never more work than before.
+            using var existence = PathExistenceCache.BeginScope();
+            PathExistenceCache.Prime(selection.Select(r => r.FullPath));
+
             List<ActionMenuItem>? dynamicItems = null;
             try
             {
@@ -68,7 +77,9 @@ public static class ActionFlyout
                 Logger.Log($"[ActionFlyout] Shell menu build failed: {ex.Message}", LogLevel.Error);
             }
 
-            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            // Awaited, not fired and forgotten: the scope above has to outlive BuildStatic, which runs
+            // inside this callback on the UI thread.
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 if (generation != _generation || !ownerWindow.IsVisible)
                     return;
@@ -79,7 +90,7 @@ public static class ActionFlyout
                 if (finalItems.Count == 0) return;
 
                 BuildAndShow(finalItems, selection, cmdMap, subMap, view, ownerWindow, anchor, placement);
-            }));
+            }).Task.ConfigureAwait(false);
         });
     }
 
