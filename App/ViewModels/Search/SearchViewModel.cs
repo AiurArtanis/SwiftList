@@ -14,8 +14,18 @@ namespace SwiftList.App.ViewModels.Search;
 
 public class SearchViewModel : ViewModelBase, IDisposable
 {
-    internal const int FullSearchFileLimit = 1000;
+    // The full window returns everything that matches rather than a ranked first page. Core bounds this
+    // by the index itself (see NameSearch), so the value only has to be larger than any drive's row
+    // count. What it costs is linear in the number of matches -- measured at roughly 1.5us and 2KB per
+    // result -- so a one-character query over a multi-million-row drive is seconds and gigabytes, not
+    // milliseconds. That is the trade this constant makes.
+    internal const int FullSearchFileLimit = int.MaxValue;
     internal const int FullSearchAppLimit = 0;
+
+    // What the quick window borrows on its token path. It used to borrow FullSearchFileLimit, which was
+    // 1000 -- now that the full window is unbounded, borrowing it would make an ordinary keystroke in the
+    // quick window pay for every match on the drive, which is the opposite of what that path is for.
+    internal const int TokenQuickSearchFileLimit = 1000;
 
     private readonly SearchService _searchService;
     private readonly SearchExecutionEngine _searchEngine;

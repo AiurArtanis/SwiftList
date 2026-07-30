@@ -17,14 +17,12 @@ internal static class NameSearch
 {
     private static readonly FzfPatternResult EmptyPatternMatch = new(0, int.MaxValue, int.MaxValue, 0, false);
 
-    // The percentage*consecutiveness ranking weight (HighlightMask.ComputeWeight) is too expensive to
-    // compute per-candidate in the hot scan (measured ~10us/candidate for a typical fuzzy multi-term
-    // query -- dominated by the DP fuzzy-highlight fallback for scattered matches) when a broad query
-    // can match tens of thousands of names. Instead, the scan keeps a WIDER unweighted top-N than what
-    // gets displayed, and only that bounded headroom set gets refined with the real weight afterward --
-    // cost becomes a small constant, independent of how many candidates the query actually matched.
+    // The scan keeps a WIDER unweighted top-N than what gets displayed, and only that headroom set gets
+    // refined with the real percentage*consecutiveness weight (HighlightMask.ComputeWeight) afterward.
+    // The weight is far too expensive to compute per candidate inside the hot scan -- it is dominated by
+    // the DP fuzzy-highlight fallback for scattered matches -- so it is only ever paid for candidates
+    // that could plausibly be shown.
     private const int RefinementHeadroomFactor = 5;
-    private const int RefinementScanCap = 4000;
 
     public static void SearchStreaming(Snapshot snapshot, DeltaOverlay delta, FzfPattern pattern, int limit,
         Action<SearchResult> onResult, CancellationToken token, string? directoryFilterLower)
@@ -36,9 +34,20 @@ internal static class NameSearch
         if (directoryContext.Excluded)
             return;
 
-        var keep = Math.Max(limit * 8, 64);
-        var scanKeep = matchAll || pattern.IsEmpty ? keep : Math.Min(keep * RefinementHeadroomFactor, RefinementScanCap);
-        var topN = new FzfTopN(scanKeep);
+        // Nothing is truncated on the way through: the only ceiling is the index itself, since a search
+        // cannot return more rows than exist. That bound matters for more than tidiness -- FzfTopN
+        // pre-allocates twice its capacity, so deriving it from the caller's limit (which is now
+        // effectively unbounded) would reserve arrays for a number of results nobody can reach.
+        //
+        // The arithmetic is widened deliberately. keep * RefinementHeadroomFactor overflows int once the
+        // limit passes about 53 million, and a negative capacity used to reach FzfTopN.Finish and throw
+        // from RemoveRange -- unreachable while the limit was clamped to 2000, immediate once it is not.
+        var everything = snapshot.Count + delta.Added.Count;
+        var keep = (int)Math.Min((long)Math.Max(limit, 8) * 8, everything);
+        var scanKeep = matchAll || pattern.IsEmpty
+            ? keep
+            : (int)Math.Min((long)keep * RefinementHeadroomFactor, everything);
+        var topN = new FzfTopN(Math.Max(scanKeep, 1));
         CollectRanks(snapshot, delta, pattern, matchAll, directoryContext, topN, token);
 
         var ranks = topN.Finish(scanKeep);

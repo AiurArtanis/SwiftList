@@ -31,7 +31,8 @@ internal static class PathSearch
         if (!DirectoryFilterResolver.TryResolve(snapshot, delta, parsed.ExactPathLower, forceLastSegmentAsQuery: !parsed.PathEndsWithSeparator, out var current, out var childPrefix))
             return false;
 
-        var keep = Math.Max(limit * 8, 64);
+        // See NameSearch: bounded by the index, and widened so a large limit cannot overflow.
+        var keep = (int)Math.Min((long)Math.Max(limit, 8) * 8, snapshot.Count + delta.Added.Count);
         var matches = new FzfTopN(keep);
 
         if (childPrefix.Length == 0 && !delta.IsSuperseded(current))

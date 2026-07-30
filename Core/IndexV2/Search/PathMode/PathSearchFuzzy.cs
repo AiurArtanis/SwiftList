@@ -23,7 +23,8 @@ internal static class PathSearchFuzzy
     public static void SearchStreaming(Snapshot snapshot, DeltaOverlay delta, string pathQuery, int limit,
         Action<SearchResult> onResult, CancellationToken token, string? directoryFilterLower)
     {
-        var keep = Math.Max(limit * 8, 64);
+        // See NameSearch: bounded by the index, and widened so a large limit cannot overflow.
+        var keep = (int)Math.Min((long)Math.Max(limit, 8) * 8, snapshot.Count + delta.Added.Count);
         var scanKeep = Math.Min(keep * RefinementHeadroomFactor, RefinementScanCap);
         var topN = new FzfTopN(scanKeep);
 
