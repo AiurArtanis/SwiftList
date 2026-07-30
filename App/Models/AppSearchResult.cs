@@ -3,12 +3,59 @@ using SwiftList.App.Services;
 
 using SwiftList.App.Services.Plugin;
 using SwiftList.App.Services.ShellIcons;
+using SwiftList.App.ViewModels.Search;
 namespace SwiftList.App;
 
+/// <summary>
+/// One row of a result list.
+/// </summary>
+/// <remarks>
+/// A row built from the index keeps the record it came from and derives its displayed values from that
+/// on demand, rather than copying them out at construction. It used to copy: measured over 300,000
+/// rows, each one cost 577 bytes, of which 353 were strings it had built and would hold for the life of
+/// the search. Two thirds of those were a duplicate -- the parent directory was computed once here and
+/// again inside GetParentDisplayText, and both copies were kept.
+///
+/// That was affordable when the full window showed a page of a thousand results. It is not now that it
+/// shows every match on the drive: a single-letter query returns six hundred thousand rows, of which the
+/// grid ever realizes a few dozen, and the rest were paying 366MB to hold strings nobody would read.
+///
+/// Everything a row needs beyond its source record lives in a lazily-allocated
+/// <see cref="AppSearchResultExtras"/> -- see there for what and why. A synthetic row (a section header,
+/// a plugin action, "no results") has no source record and writes through the same property setters,
+/// which allocate one; there are never many of those. A row the grid realizes allocates one too, to
+/// cache its icon and its parent-directory text; there are never many of those on screen at once.
+/// </remarks>
 public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, PluginSdk.Abstractions.ISearchResult
 {
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     protected virtual void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+
+    // The index record this row displays, for rows that came from a search. Null for synthetic rows,
+    // which carry their own values in Extras instead.
+    private SwiftList.Core.SearchResult? _source;
+    private AppSearchResultExtras? _extras;
+
+    private AppSearchResultExtras Extras => _extras ??= new AppSearchResultExtras();
+
+    /// <summary>
+    /// Builds a row backed by an index record, holding the record rather than copying values out of it.
+    /// </summary>
+    internal static AppSearchResult FromIndexResult(SwiftList.Core.SearchResult item, string query, int index, bool isApplication, string? scope)
+    {
+        var row = new AppSearchResult
+        {
+            _source = item,
+            ResultKind = isApplication ? "Application" : "File",
+            Index = index,
+            SearchQuery = query
+        };
+        // Left unallocated in the overwhelmingly common unscoped case -- only a scoped quick-window
+        // search needs somewhere to remember the scope, and that is capped at a few dozen rows.
+        if (!string.IsNullOrEmpty(scope))
+            row.Extras.Scope = scope;
+        return row;
+    }
 
     // Every Scaled* property below reads UiMetrics live at get-time, but WPF only re-queries a binding
     // when ITS OWN PropertyChanged fires for that property -- an existing row never picks up a change
@@ -18,12 +65,65 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     // search. Empty property name means "every property on this object changed".
     public void RefreshScale() => OnPropertyChanged(string.Empty);
 
-    public string Name { get; set; } = string.Empty;
-    public string FullPath { get; set; } = string.Empty;
-    public string ParentDir { get; set; } = string.Empty;
-    public string ContextDirectory { get; set; } = string.Empty;
-    public bool IsDir { get; set; }
-    public string Drive { get; set; } = string.Empty;
+    public string Name
+    {
+        get
+        {
+            if (_extras?.Name is { } set) return set;
+            if (_source is not { } s) return string.Empty;
+            return string.IsNullOrWhiteSpace(s.Name) ? s.Path : s.Name;
+        }
+        set => Extras.Name = value;
+    }
+
+    public string FullPath
+    {
+        get => _extras?.FullPath ?? _source?.Path ?? string.Empty;
+        set => Extras.FullPath = value;
+    }
+
+    /// <summary>
+    /// The path text shown under the name. Derived from the source record rather than stored, then
+    /// cached -- deriving it allocates a string, and a row the grid never realizes must not pay for one.
+    /// </summary>
+    public string ParentDir
+    {
+        get
+        {
+            if (_extras?.ParentDir is { } set) return set;
+            if (_source is not { } s) return string.Empty;
+            // Cached on the way out: several bindings on a realized row read this (the subtitle itself,
+            // HasPathSubtitle, and the font size that depends on it), and re-deriving it per binding
+            // would run GetDirectoryName over and over for one row.
+            return Extras.ParentDir = SearchResultHelper.GetParentDisplayText(s, IsApplication, _extras?.Scope);
+        }
+        set => Extras.ParentDir = value;
+    }
+
+    public string ContextDirectory
+    {
+        get
+        {
+            if (_extras?.ContextDirectory is { } set) return set;
+            if (_source is not { } s) return string.Empty;
+            if (s.IsDir) return s.Path;
+            return Extras.ContextDirectory = System.IO.Path.GetDirectoryName(s.Path) ?? s.Drive + ":\\";
+        }
+        set => Extras.ContextDirectory = value;
+    }
+
+    public bool IsDir
+    {
+        get => _extras?.IsDir ?? _source?.IsDir ?? false;
+        set => Extras.IsDir = value;
+    }
+
+    public string Drive
+    {
+        get => _extras?.Drive ?? _source?.Drive ?? string.Empty;
+        set => Extras.Drive = value;
+    }
+
     public string ResultKind { get; set; } = "File";
     public int Index { get; set; }
     public string SearchQuery { get; set; } = string.Empty;
@@ -70,14 +170,54 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     public double InlineItemHeight => IsListItem ? ItemHeight : UiMetrics.InlineRowHeight;
     public double ActionsHeaderHeight => Math.Round(ItemHeight * 0.7);
     public string DisplayPath => IsApplication ? ParentDir : FullPath;
-    public uint PluginActionId { get; set; }
-    public string PluginActionArgumentText { get; set; } = string.Empty;
-    public System.Windows.Media.ImageSource? IconOverride { get; set; }
-    public string InstantResultActionType { get; set; } = "Copy";
-    public string InstantResultActionArgument { get; set; } = string.Empty;
-    public Action? InstantResultOnExecute { get; set; }
-    public string? TabCompletion { get; set; }
-    public object? SourceProvider { get; set; }
+
+    public uint PluginActionId
+    {
+        get => _extras?.PluginActionId ?? 0;
+        set => Extras.PluginActionId = value;
+    }
+
+    public string PluginActionArgumentText
+    {
+        get => _extras?.PluginActionArgumentText ?? string.Empty;
+        set => Extras.PluginActionArgumentText = value;
+    }
+
+    public System.Windows.Media.ImageSource? IconOverride
+    {
+        get => _extras?.IconOverride;
+        set => Extras.IconOverride = value;
+    }
+
+    public string InstantResultActionType
+    {
+        get => _extras?.InstantResultActionType ?? "Copy";
+        set => Extras.InstantResultActionType = value;
+    }
+
+    public string InstantResultActionArgument
+    {
+        get => _extras?.InstantResultActionArgument ?? string.Empty;
+        set => Extras.InstantResultActionArgument = value;
+    }
+
+    public Action? InstantResultOnExecute
+    {
+        get => _extras?.InstantResultOnExecute;
+        set => Extras.InstantResultOnExecute = value;
+    }
+
+    public string? TabCompletion
+    {
+        get => _extras?.TabCompletion;
+        set => Extras.TabCompletion = value;
+    }
+
+    public object? SourceProvider
+    {
+        get => _extras?.SourceProvider;
+        set => Extras.SourceProvider = value;
+    }
 
     public bool[]? GetHighlightMask(string text, string query)
     {
@@ -101,28 +241,26 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
     private static readonly SemaphoreSlim _iconSemaphore = new(4);
     private static readonly SemaphoreSlim _dateModifiedSemaphore = new(8);
 
-    private System.Windows.Media.ImageSource? _icon;
-    private bool _iconLoadingStarted;
-
     public System.Windows.Media.ImageSource? Icon
     {
         get
         {
             if (IsEmptyResult || IsListItem)
                 return null;
-            if (IconOverride != null)
-                return IconOverride;
+            if (_extras?.IconOverride is { } over)
+                return over;
 
-            if (_icon == null)
+            var extras = Extras;
+            if (extras.Icon == null)
             {
-                _icon = ShellIconHelper.GetIconFromCacheOnly(FullPath, IsDir, out var needsLoad);
-                if (needsLoad && !_iconLoadingStarted)
+                extras.Icon = ShellIconHelper.GetIconFromCacheOnly(FullPath, IsDir, out var needsLoad);
+                if (needsLoad && !extras.IconLoadingStarted)
                 {
-                    _iconLoadingStarted = true;
+                    extras.IconLoadingStarted = true;
                     LoadIconAsync();
                 }
             }
-            return _icon;
+            return extras.Icon;
         }
     }
 
@@ -138,7 +276,7 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
             {
                 LazyBackgroundLoader.ApplyOnUiThread(() =>
                 {
-                    _icon = realIcon;
+                    Extras.Icon = realIcon;
                     OnPropertyChanged(nameof(Icon));
                 });
             }
@@ -146,29 +284,27 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         });
     }
 
-    private string _shortcutHint = string.Empty;
     public string ShortcutHint
     {
-        get => _shortcutHint;
+        get => _extras?.ShortcutHint ?? string.Empty;
         set
         {
-            if (_shortcutHint != value)
+            if (ShortcutHint != value)
             {
-                _shortcutHint = value;
+                Extras.ShortcutHint = value;
                 OnPropertyChanged(nameof(ShortcutHint));
             }
         }
     }
 
-    private Visibility _shortcutVisibility = Visibility.Collapsed;
     public Visibility ShortcutVisibility
     {
-        get => _shortcutVisibility;
+        get => _extras?.ShortcutVisibility ?? Visibility.Collapsed;
         set
         {
-            if (_shortcutVisibility != value)
+            if (ShortcutVisibility != value)
             {
-                _shortcutVisibility = value;
+                Extras.ShortcutVisibility = value;
                 OnPropertyChanged(nameof(ShortcutVisibility));
             }
         }
@@ -176,21 +312,28 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
 
     // Already known from the index (Core.SearchResult.Metadata) for most results; DateTime.MinValue
     // (see FileMetadata) falls back below.
-    public PluginSdk.Abstractions.FileMetadata Metadata { get; set; }
+    public PluginSdk.Abstractions.FileMetadata Metadata
+    {
+        get => _extras?.Metadata ?? _source?.Metadata ?? default;
+        set => Extras.Metadata = value;
+    }
 
     // Lazy-loaded File Date Modified
-    private DateTime? _dateModified;
-    private bool _dateModifiedLoadingStarted;
     public DateTime DateModified
     {
         get
         {
-            if (_dateModified.HasValue) return _dateModified.Value;
-            if (Metadata.Modified != DateTime.MinValue)
-                return (_dateModified = Metadata.Modified).Value;
-            if (!_dateModifiedLoadingStarted)
+            if (_extras?.DateModified is { } cached) return cached;
+            // Deliberately ahead of any Extras allocation: the index knows the date for almost every
+            // result, and the date column sorts by reading this on every row. A row that can answer
+            // from its own record must not have to allocate to do it.
+            var known = Metadata.Modified;
+            if (known != DateTime.MinValue)
+                return (Extras.DateModified = known).Value;
+            var extras = Extras;
+            if (!extras.DateModifiedLoadingStarted)
             {
-                _dateModifiedLoadingStarted = true;
+                extras.DateModifiedLoadingStarted = true;
                 LoadDateModifiedAsync();
             }
             return DateTime.MinValue;
@@ -224,7 +367,7 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
 
             LazyBackgroundLoader.ApplyOnUiThread(() =>
             {
-                _dateModified = dt;
+                Extras.DateModified = dt;
                 OnPropertyChanged(nameof(DateModified));
                 OnPropertyChanged(nameof(DateModifiedText));
             });
@@ -241,19 +384,13 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         }
     }
 
-    // Created on first use, not per instance. Only the handful of rows the virtualizing list actually
-    // realizes ever gets a plugin cell value read out of it, but a result set is now every match on the
-    // drive rather than a page of a thousand -- allocating an empty dictionary alongside each of those
-    // costs tens of megabytes to hold nothing.
-    private Dictionary<string, string>? _extendedValues;
-
     public string this[string columnId]
     {
         get
         {
             if (string.IsNullOrEmpty(columnId)) return string.Empty;
 
-            if (_extendedValues != null && _extendedValues.TryGetValue(columnId, out var cachedVal))
+            if (_extras?.ExtendedValues != null && _extras.ExtendedValues.TryGetValue(columnId, out var cachedVal))
                 return cachedVal;
 
             foreach (var provider in PluginManager.Instance.ResultColumnProviders)
@@ -263,7 +400,8 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
                     try
                     {
                         var cellVal = provider.GetCellValue(this, columnId);
-                        (_extendedValues ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))[columnId] = cellVal;
+                        var extras = Extras;
+                        (extras.ExtendedValues ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))[columnId] = cellVal;
                         return cellVal;
                     }
                     catch
@@ -277,7 +415,8 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         }
         set
         {
-            (_extendedValues ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))[columnId] = value;
+            var extras = Extras;
+            (extras.ExtendedValues ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))[columnId] = value;
             OnPropertyChanged("Item[]");
         }
     }
