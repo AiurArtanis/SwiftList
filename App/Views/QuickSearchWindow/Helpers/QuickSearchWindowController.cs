@@ -122,6 +122,9 @@ public class QuickSearchWindowController
         // scheduling level, so lifting it only after this window has already started painting would miss
         // the very first frame the user is waiting on. See PowerThrottlingHelper's own comment.
         PowerThrottlingHelper.WindowShowing("quick");
+        // Cancels a trim that is armed but has not fired: emptying the working set moments before a
+        // summon is strictly worse than never emptying it.
+        IdleWorkingSetTrimmer.WindowShowing();
 
         // Must run before anything below touches this window (Show()/Activate()/ForceForeground):
         // once any of those runs, GetForegroundWindow() starts reporting THIS window as foreground
@@ -282,10 +285,16 @@ public class QuickSearchWindowController
             Task.Run(async () =>
             {
                 await Task.Delay(100);
+                // These two genuinely free memory, so they still run on every hide.
                 try { ShellIconHelper.ClearCache(); } catch { }
                 try { PathCacheMaintenance.ClearAllPathCaches(); } catch { }
-                try { Win32Api.TrimWorkingSet(); } catch { }
             });
+
+            // Trimming the working set frees nothing -- it only evicts pages the next summon has to
+            // fault straight back in, which measured at ~17MB and 70% of a summon's time every single
+            // time, and at 4.7 seconds once when the machine was under an index rebuild's memory and
+            // disk pressure. Deferred until the window has been left alone; see IdleWorkingSetTrimGate.
+            IdleWorkingSetTrimmer.WindowHidden();
         }
 
         if (_window.Content is UIElement fadeContent)
