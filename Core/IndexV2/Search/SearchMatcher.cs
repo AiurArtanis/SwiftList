@@ -50,7 +50,9 @@ internal static class SearchMatcher
 
     internal static void ReturnWorker(Worker worker)
     {
-        worker.Hits.Clear();
+        // The worker itself is still worth pooling (its slab and byte buffers are bounded by name
+        // length, not by how many rows matched); only its hit list scales with the search.
+        SearchScratchPolicy.ClearAndTrim(worker.Hits);
         WorkerPool.Add(worker);
     }
 
@@ -121,7 +123,7 @@ internal static class SearchMatcher
 
     internal static void ReturnHitList(List<UniqueMatch> list)
     {
-        list.Clear();
+        SearchScratchPolicy.ClearAndTrim(list);
         HitListPool.Add(list);
     }
 

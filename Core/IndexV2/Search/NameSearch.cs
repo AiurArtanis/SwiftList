@@ -105,6 +105,11 @@ internal static class NameSearch
             ranks[i] = FzfResultRank.ApplyWeight(rank, weight);
         }
         FzfRankRadixSorter.Sort(ranks);
+
+        // Emptied here rather than only on the way in. Clearing on entry leaves the buckets from the last
+        // search sitting in a thread static for as long as the process is idle, and a whole-drive query
+        // sizes them to its own name count -- see SearchScratchPolicy.
+        SearchScratchPolicy.ClearAndTrim(weights);
     }
 
     // Mirrors ResultBuilder.ToResult's entryIndex->name resolution (base row, possibly overridden, vs

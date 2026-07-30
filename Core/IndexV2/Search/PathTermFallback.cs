@@ -5,6 +5,8 @@ using SwiftList.Core.SearchIndex.Fzf;
 using SwiftList.Core.IndexV2.Delta;
 
 using SwiftList.Core.IndexV2.Persistence;
+using SwiftList.Core.SearchIndex;
+
 namespace SwiftList.Core.IndexV2.Search;
 
 // Order-free "a term may be satisfied by an ancestor folder instead of the file name" pass, run by
@@ -46,8 +48,11 @@ internal static class PathTermFallback
 
         public void Reset()
         {
-            NameHits.Clear();
-            AncestorMemo.Clear();
+            // Trimmed rather than merely cleared: both dictionaries scale with the search (one entry per
+            // matched name, one per directory walked), and Clear keeps the buckets, so a whole-drive
+            // query would leave this pooled scratch sized for it forever. See SearchScratchPolicy.
+            SearchScratchPolicy.ClearAndTrim(NameHits);
+            SearchScratchPolicy.ClearAndTrim(AncestorMemo);
             AncestorChain.Clear();
         }
     }
