@@ -81,6 +81,7 @@
   "QuickLook_Inaccessible": "項目が存在しないか、アクセスできません。",
   "QuickLook_Error": "エラー",
   "QuickLook_Modified": "更新日時",
+  "QuickLook_DragHint": "ドラッグしてこのファイルを別の場所にコピーします",
   "QuickLook_FolderProviderName": "既定のフォルダープレビュープロバイダー",
   "QuickLook_ImageProviderName": "既定の画像プレビュープロバイダー",
   "QuickLook_TextProviderName": "既定のテキストプレビュープロバイダー",

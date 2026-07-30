@@ -255,6 +255,15 @@ public class QuickLookManager
         // clicked into. Only hide when something outside this process took the foreground.
         if (IsForegroundWindowInThisProcess())
             return;
+
+        // Dragging the preview's header out to another application makes that application the foreground
+        // window, which lands here. Hiding now would pull this window out from under the DoDragDrop still
+        // running on its own header -- the same hazard the inline window's own teardown guards against
+        // with this flag. The drag's own completion hides the search windows anyway (see
+        // ResultsDragDropHelper.HideSearchWindows).
+        if (Views.Controls.Results.ResultsDragDropHelper.IsDragActive)
+            return;
+
         Hide();
     }
 

@@ -81,6 +81,7 @@
   "QuickLook_Inaccessible": "项目不存在或无法访问。",
   "QuickLook_Error": "错误",
   "QuickLook_Modified": "修改时间",
+  "QuickLook_DragHint": "拖拽可将此文件复制到别处",
   "QuickLook_FolderProviderName": "默认文件夹预览器",
   "QuickLook_ImageProviderName": "默认图片预览器",
   "QuickLook_TextProviderName": "默认文本预览器",
