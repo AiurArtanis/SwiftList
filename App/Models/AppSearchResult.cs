@@ -241,7 +241,11 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         }
     }
 
-    private readonly Dictionary<string, string> _extendedValues = new(StringComparer.OrdinalIgnoreCase);
+    // Created on first use, not per instance. Only the handful of rows the virtualizing list actually
+    // realizes ever gets a plugin cell value read out of it, but a result set is now every match on the
+    // drive rather than a page of a thousand -- allocating an empty dictionary alongside each of those
+    // costs tens of megabytes to hold nothing.
+    private Dictionary<string, string>? _extendedValues;
 
     public string this[string columnId]
     {
@@ -249,7 +253,7 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         {
             if (string.IsNullOrEmpty(columnId)) return string.Empty;
 
-            if (_extendedValues.TryGetValue(columnId, out var cachedVal))
+            if (_extendedValues != null && _extendedValues.TryGetValue(columnId, out var cachedVal))
                 return cachedVal;
 
             foreach (var provider in PluginManager.Instance.ResultColumnProviders)
@@ -259,7 +263,7 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
                     try
                     {
                         var cellVal = provider.GetCellValue(this, columnId);
-                        _extendedValues[columnId] = cellVal;
+                        (_extendedValues ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))[columnId] = cellVal;
                         return cellVal;
                     }
                     catch
@@ -273,7 +277,7 @@ public class AppSearchResult : System.ComponentModel.INotifyPropertyChanged, Plu
         }
         set
         {
-            _extendedValues[columnId] = value;
+            (_extendedValues ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))[columnId] = value;
             OnPropertyChanged("Item[]");
         }
     }
