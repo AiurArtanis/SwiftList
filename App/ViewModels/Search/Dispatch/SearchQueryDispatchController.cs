@@ -104,7 +104,6 @@ internal sealed class SearchQueryDispatchController
                     ? results.FindAll(r => !r.IsEmptyResult)
                     : results;
                 var extendsContent = rendersSoFar++ > 0;
-                _setAllResults(filteredResults);
                 // Token providers (e.g. the built-in ":[SCMA]"/".ext"/"::expr" sort+filter+match
                 // plugin) render via a follow-up ApplyFiltersAndRender inside
                 // RefreshAfterTokenDispatchAsync instead of the call below -- a provider with no
@@ -113,12 +112,25 @@ internal sealed class SearchQueryDispatchController
                 // completion synchronously right here; rendering the raw (pre-token) results below
                 // would then immediately clobber its filtered result with the unfiltered one.
                 if (_queryTokens.Count > 0)
+                {
                     // Copied because this outlives the render: the accumulator hands back one buffer it
-                    // reuses on the next paint, which is safe for a synchronous consumer and not for
-                    // one that awaits.
-                    _ = RefreshAfterTokenDispatchAsync(new List<AppSearchResult>(filteredResults), _queryTokens, extendsContent);
+                    // reuses on the next paint, which is safe for a synchronous consumer and not for one
+                    // that awaits.
+                    //
+                    // The SAME copy has to become _allResults. RefreshAfterTokenDispatchAsync decides
+                    // whether its result is still wanted by comparing the snapshot it was handed against
+                    // _allResults BY REFERENCE, so handing it a copy while _allResults kept the original
+                    // made that check fail every single time and silently discard every token dispatch --
+                    // tokens in this window quietly stopped doing anything at all.
+                    var snapshot = new List<AppSearchResult>(filteredResults);
+                    _setAllResults(snapshot);
+                    _ = RefreshAfterTokenDispatchAsync(snapshot, _queryTokens, extendsContent);
+                }
                 else
+                {
+                    _setAllResults(filteredResults);
                     _applyFiltersAndRender(extendsContent, accumulator.FirstChangedIndex);
+                }
                 if (final)
                     _setIsSearching(false);
             },
