@@ -25,6 +25,11 @@ public partial class SearchBoxControl : UserControl
     // same way it does after a drag started elsewhere on its own chrome.
     public event Action? IconDragCompleted;
 
+    // Middle-clicking the logo toggles Stay Open (#197), as a second way in alongside the hotkey -- the
+    // reporter asked for a mouse gesture as well, and the logo is already where this window's state is
+    // shown, so it is where the state is worth being able to flip.
+    public event Action? IconMiddleClicked;
+
     // Screen-space (not element-relative) so a real drag's own re-layout of this control underneath the
     // cursor can't skew the distance measurement mid-gesture.
     private System.Windows.Point? _iconPressScreenPoint;
@@ -37,6 +42,17 @@ public partial class SearchBoxControl : UserControl
     private Helpers.Visuals.WindowDragTracker? _iconDragTracker;
 
     private void Icon_MouseRightButtonUp(object sender, MouseButtonEventArgs e) => IconRightClicked?.Invoke();
+
+    // WPF has no middle-button event of its own, so this is the general MouseUp filtered down to it.
+    // Deliberately not gated on IsIconClickable, unlike the left-click menu: that gate exists because a
+    // plain click on a non-clickable icon should fall through to the window drag underneath, and a
+    // middle click has nothing underneath it to fall through to.
+    private void Icon_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Middle) return;
+        e.Handled = true;
+        IconMiddleClicked?.Invoke();
+    }
 
     // Marks the press handled so it never bubbles up to a hosting window's own MouseLeftButtonDown (e.g.
     // the quick window's own Border drag): without this, a plain click on a clickable icon would also be
@@ -291,6 +307,18 @@ public partial class SearchBoxControl : UserControl
     {
         get => (bool)GetValue(IsInActionsModeProperty);
         set => SetValue(IsInActionsModeProperty, value);
+    }
+
+    // Shown on the logo while the quick window has been asked not to auto-hide (see
+    // QuickSearchWindowController.ToggleStayOpen) -- an invisible mode nobody can tell they are in is
+    // the same mistake the full window's invisible drag region was.
+    public static readonly DependencyProperty IsStayOpenProperty = DependencyProperty.Register(
+        nameof(IsStayOpen), typeof(bool), typeof(SearchBoxControl), new PropertyMetadata(false));
+
+    public bool IsStayOpen
+    {
+        get => (bool)GetValue(IsStayOpenProperty);
+        set => SetValue(IsStayOpenProperty, value);
     }
 
     // IsServiceRunning DependencyProperty

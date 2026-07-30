@@ -413,6 +413,7 @@
   "Hotkeys_KeywordHistoryNext": "下一條關鍵字紀錄",
   "Hotkeys_KeywordHistoryDelete": "刪除目前關鍵字紀錄",
   "Hotkeys_OpenFullWindow": "開啟完整視窗",
+  "Hotkeys_StayOpen": "保持視窗不消失",
   "Hotkeys_StartupPanelNextTab": "起始面板:下一個分頁",
   "Hotkeys_StartupPanelPreviousTab": "起始面板:上一個分頁",
   "Hotkeys_QuickNavTitle": "快捷導航觸發",

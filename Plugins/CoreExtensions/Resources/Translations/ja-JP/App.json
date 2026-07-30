@@ -413,6 +413,7 @@
   "Hotkeys_KeywordHistoryNext": "次のキーワード履歴項目",
   "Hotkeys_KeywordHistoryDelete": "現在のキーワード履歴項目を削除",
   "Hotkeys_OpenFullWindow": "フルウィンドウを開く",
+  "Hotkeys_StayOpen": "ウィンドウを閉じない",
   "Hotkeys_StartupPanelNextTab": "スタートアップパネルの次のタブ",
   "Hotkeys_StartupPanelPreviousTab": "スタートアップパネルの前のタブ",
   "Hotkeys_QuickNavTitle": "クイックナビゲーションのトリガー",

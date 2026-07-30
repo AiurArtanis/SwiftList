@@ -81,6 +81,13 @@ public class HotkeyPageSettings
     // action as the Quick Window's own expand ("Open More") button.
     public string OpenFullWindowHotkey { get; set; } = "Ctrl+F";
 
+    // Stops the Quick Window auto-hiding when it loses focus, for the current summon only -- for
+    // assembling a query out of text copied from several other windows, which otherwise means the window
+    // (and with it the half-typed query) disappearing on every switch away. See #197. Scoped to the one
+    // summon deliberately: it is a temporary escape from the window's whole reason for existing, not a
+    // mode to leave switched on.
+    public string StayOpenHotkey { get; set; } = "Ctrl+T";
+
     /// <summary>
     /// User overrides for plugin action hotkeys, keyed by plugin ID (the DLL file name without its
     /// extension, matching <see cref="PluginSettings"/>'s convention) then by

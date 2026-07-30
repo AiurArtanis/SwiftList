@@ -45,6 +45,12 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         _viewModel = new QuickSearchViewModel();
         this.DataContext = _viewModel;
         _controller = new QuickSearchWindowController(this);
+        // Mirrors the flag onto the logo. Subscribed rather than set from ToggleStayOpen alone, because
+        // the flag also clears itself on the next real hide (see the controller's FinishHide).
+        _controller.StayOpenChanged += stayOpen =>
+        {
+            if (SearchBox != null) SearchBox.IsStayOpen = stayOpen;
+        };
         _inputHandler = new QuickSearchWindowInputHandler(this);
         _layoutManager = new QuickSearchWindowLayoutManager(this);
         _resultExecutor = new QuickSearchWindowResultExecutor(this);
@@ -117,6 +123,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         // Wire up event handlers to subcontrols
 
         SearchBox.IconRightClicked += _controller.ResetPosition;
+        SearchBox.IconMiddleClicked += _controller.ToggleStayOpen;
         // IsIconDraggable keeps the logo's existing "drag moves the window" behavior working alongside
         // IconLeftClicked: SearchBoxControl tells a real drag apart from a plain click by movement
         // distance (see its own Icon_MouseMove), so this needs BOTH flags rather than picking one.
@@ -196,6 +203,8 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     public void HideWindow() => _controller.HideWindow(true);
     public void HideWindowNoRestore() => _controller.HideWindow(false);
     public void SuppressNextForegroundRestore() => _controller.SuppressNextRestore();
+    public void ToggleStayOpen() => _controller.ToggleStayOpen();
+
     public void ToggleVisibility() => _controller.ToggleVisibility();
     public void OpenFileOrFolderExternal(string path) => FileExecutor.OpenFileOrFolder(path, TxtSearch.Text, HideWindow);
     public void OpenFileOrFolderAsAdminExternal(string path) => FileExecutor.OpenFileOrFolderAsAdmin(path, TxtSearch.Text, HideWindow);
@@ -241,7 +250,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
             foreach (Window w in System.Windows.Application.Current.Windows)
                 if (w != this && w.IsActive) { movedToOwnWindow = true; break; }
 
-            _controller.HideWindow(restoreFocus: !movedToOwnWindow);
+            _controller.HideOnFocusLoss(restoreFocus: !movedToOwnWindow);
         };
         timer.Start();
     }
