@@ -237,37 +237,60 @@ public partial class ResultsControl : System.Windows.Controls.UserControl
             if (GridActions != null && GridActions.Visibility == Visibility.Visible)
                 return;
 
-            // A different result set: forget where the user was, because it was a position in a list
-            // that no longer exists.
-            if (!extendsContent)
+            var list = ActiveListBox;
+            if (list == null)
+                return;
+
+            if (list.Items.Count == 0)
             {
                 _anchorIndex = 0;
                 _anchorOffset = 0;
+                list.SelectedIndex = -1;
+                return;
             }
 
-            var list = ActiveListBox;
+            if (extendsContent)
+            {
+                // The same result set got longer. Now that a tail append updates the rows it added and
+                // nothing else, the selection survives it -- and if it survived there is nothing here
+                // worth doing. Reassigning it anyway is not the harmless no-op it looks like: on a
+                // multi-select list it collapses the selection to one row, and it closes a context menu
+                // the user has open over that selection, which is how this surfaced -- a menu that
+                // dismissed itself every time more results arrived behind it.
+                if (list.SelectedIndex >= 0)
+                    return;
+
+                // Selection gone, so this update went through a Reset -- a late result that outranked
+                // what was already shown, reordering rather than appending. Put the user back where
+                // they were rather than at the top.
+                _suppressAnchorCapture = true;
+                try
+                {
+                    list.SelectedIndex = Math.Clamp(_anchorIndex, 0, list.Items.Count - 1);
+                    // Replaying the exact offset rather than ScrollIntoView, which would put the row
+                    // wherever it takes least scrolling to reveal -- not where the user left it.
+                    if (_anchorOffset > 0 && _resultsScrollViewer != null)
+                        _resultsScrollViewer.ScrollToVerticalOffset(_anchorOffset);
+                }
+                finally
+                {
+                    _suppressAnchorCapture = false;
+                }
+                return;
+            }
+
+            // A different result set: whatever position the user had was a position in a list that no
+            // longer exists, so it goes back to the top.
+            _anchorIndex = 0;
+            _anchorOffset = 0;
             _suppressAnchorCapture = true;
             try
             {
-                if (list != null && list.Items.Count > 0)
-                {
-                    list.SelectedIndex = Math.Clamp(_anchorIndex, 0, list.Items.Count - 1);
-
-                    // ScrollIntoView on its own would put the restored row wherever it takes least
-                    // scrolling to reveal it, which is not where the user left it. Replaying the exact
-                    // offset keeps the viewport still; ScrollIntoView stays as the fallback for the
-                    // top-of-list case and for before the ScrollViewer has been seen at all.
-                    if (extendsContent && _anchorOffset > 0 && _resultsScrollViewer != null)
-                        _resultsScrollViewer.ScrollToVerticalOffset(_anchorOffset);
-                    else if (ViewMode == ResultsViewMode.Grid)
-                        LstGridResults.ScrollIntoView(LstGridResults.SelectedItem);
-                    else
-                        LstResults.ScrollIntoView(LstResults.SelectedItem);
-                }
+                list.SelectedIndex = 0;
+                if (ViewMode == ResultsViewMode.Grid)
+                    LstGridResults.ScrollIntoView(LstGridResults.SelectedItem);
                 else
-                {
-                    list?.SelectedIndex = -1;
-                }
+                    LstResults.ScrollIntoView(LstResults.SelectedItem);
             }
             finally
             {
