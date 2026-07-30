@@ -3,8 +3,17 @@ using SwiftList.Plugins.CoreExtensions.Providers.InstantAnswers;
 namespace SwiftList.Plugins.CoreExtensions.Tests.Providers.InstantAnswers;
 
 // Environment.SetEnvironmentVariable(..., EnvironmentVariableTarget.Process) only affects this test
-// process's own environment block, never the real user/machine environment -- safe to set/clear freely.
+// process's own environment block, never the real user/machine environment -- safe to set and clear
+// without touching anything outside the run.
+//
+// Safe for the machine is not the same as safe for the other tests, though: that environment block is
+// shared by every test in the process, and TestCleanup below clears the variable after EVERY method in
+// this class, not just the ones that set it. MSTest parallelizes at the method level here (see
+// MSTestSettings), so a sibling test finishing would delete the variable out from under the test that
+// had just set it, which failed intermittently and only when the machine was loaded enough to overlap
+// them. [DoNotParallelize] for the same reason nineteen other classes in this suite have it.
 [TestClass]
+[DoNotParallelize]
 public sealed class EnvironmentVariableInstantProviderTests
 {
     private const string TestVarName = "SWIFTLISTTESTVARXYZ";
