@@ -223,7 +223,14 @@ internal sealed class SearchExecutionEngine : IDisposable
         // take: how many of the results received so far to paint. int.MaxValue for the final render,
         // ProgressiveRenderPlan's current cap for an intermediate one -- see that class for why an
         // intermediate render must not touch the whole snapshot.
-        void RenderSnapshot(bool final, int take)
+        // Awaits the UI thread rather than posting and moving on. Fire-and-forget let this method run
+        // far ahead of the thread that actually applies its output: the pump produced a paint every
+        // 150ms while each one took the UI a second to apply, so the dispatcher queue grew without
+        // bound, and since every queued callback holds its own full-size row list, hundreds of them
+        // pinned gigabytes. A real run ended up 54 seconds and ~150 stale paints behind its own search,
+        // still grinding through them long after the results were complete. Awaiting means at most one
+        // paint is ever in flight, so the queue cannot build and neither can the memory behind it.
+        async Task RenderSnapshotAsync(bool final, int take)
         {
             if (searchVersion != Volatile.Read(ref _searchVersion) || token.IsCancellationRequested)
                 return;
@@ -267,12 +274,12 @@ internal sealed class SearchExecutionEngine : IDisposable
             else if (final)
                 statusText = "No matching results";
 
-            _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 if (searchVersion != Volatile.Read(ref _searchVersion) || token.IsCancellationRequested)
                     return;
                 onResultsUpdated(uiResults, statusText, final);
-            }));
+            }).Task.ConfigureAwait(false);
         }
 
         // Repaints on a fixed cadence for as long as results keep arriving, where this used to schedule
@@ -289,6 +296,7 @@ internal sealed class SearchExecutionEngine : IDisposable
         {
             var plan = new ProgressiveRenderPlan();
             var interval = FirstRenderDelayMs;
+            var sinceLastPaint = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 while (true)
@@ -302,7 +310,9 @@ internal sealed class SearchExecutionEngine : IDisposable
                     pumpToken.ThrowIfCancellationRequested();
 
                     var finished = streamDone.Task.IsCompleted;
-                    var take = plan.NextRenderSize(Volatile.Read(ref streamedCount));
+                    var received = Volatile.Read(ref streamedCount);
+
+                    var take = plan.NextRenderSize(received, sinceLastPaint.ElapsedMilliseconds);
                     if (take == 0)
                     {
                         // Nothing new to show. Once the stream has ended that is also true of every
@@ -319,10 +329,16 @@ internal sealed class SearchExecutionEngine : IDisposable
                     // so holding the full 150ms between them just stretches the tail for no benefit.
                     interval = finished ? DrainRenderIntervalMs : ProgressiveRenderIntervalMs;
 
-                    // Synchronous inside the loop on purpose: awaiting the pump below then guarantees no
-                    // intermediate render can still be computing once the final one starts, so the two
-                    // can't reach the Dispatcher out of order and leave a truncated prefix on screen.
-                    RenderSnapshot(final: false, take);
+                    // Awaited inside the loop, so the interval above is time the UI gets ON TOP of
+                    // however long the paint itself took, not time that overlaps it. That is what keeps
+                    // the window able to process input between paints instead of being pinned by a
+                    // queue of them. Awaiting the pump below then also guarantees no intermediate paint
+                    // is still in flight once the final one starts, so the two can't reach the
+                    // Dispatcher out of order and leave a truncated prefix on screen.
+                    var paintClock = System.Diagnostics.Stopwatch.StartNew();
+                    await RenderSnapshotAsync(final: false, take).ConfigureAwait(false);
+                    plan.PaintCompleted(paintClock.ElapsedMilliseconds);
+                    sinceLastPaint.Restart();
                 }
             }
             catch (OperationCanceledException) { }
@@ -375,7 +391,7 @@ internal sealed class SearchExecutionEngine : IDisposable
             try { await pump.ConfigureAwait(false); } catch (OperationCanceledException) { }
         }
 
-        RenderSnapshot(final: true, int.MaxValue);
+        await RenderSnapshotAsync(final: true, int.MaxValue).ConfigureAwait(false);
     }
 
     public void CancelPendingSearch()

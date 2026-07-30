@@ -10,7 +10,7 @@ public sealed class ProgressiveRenderPlanTests
     {
         var plan = new ProgressiveRenderPlan();
 
-        Assert.AreEqual(0, plan.NextRenderSize(ProgressiveRenderPlan.MinimumFirstRender - 1));
+        Assert.AreEqual(0, plan.NextRenderSize(ProgressiveRenderPlan.MinimumFirstRender - 1, 0));
         Assert.AreEqual(0, plan.Rendered);
     }
 
@@ -19,124 +19,102 @@ public sealed class ProgressiveRenderPlanTests
     {
         var plan = new ProgressiveRenderPlan();
 
-        Assert.AreEqual(ProgressiveRenderPlan.MinimumFirstRender, plan.NextRenderSize(ProgressiveRenderPlan.MinimumFirstRender));
+        Assert.AreEqual(ProgressiveRenderPlan.MinimumFirstRender, plan.NextRenderSize(ProgressiveRenderPlan.MinimumFirstRender, 0));
     }
 
     [TestMethod]
-    public void TheThresholdGatesOnlyTheFirstPaint()
+    public void TheFirstPaintIsCappedEvenWhenEverythingHasAlreadyArrived()
     {
-        // A search that trickles must still be able to paint its 10th, 11th, ... result once it has
-        // cleared the threshold once -- the gate exists to avoid painting a two-row list that's about
-        // to be superseded, not to impose a floor on every later render.
+        // A search resolving faster than the first tick must not turn that tick into a paint of the
+        // entire result set -- the first paint is the one that has to be immediate.
         var plan = new ProgressiveRenderPlan();
-        plan.NextRenderSize(20);
 
-        Assert.AreEqual(21, plan.NextRenderSize(21));
+        Assert.AreEqual(ProgressiveRenderPlan.FirstRenderCap, plan.NextRenderSize(5_000_000, 0));
     }
 
     [TestMethod]
-    public void AFirstPaintTakesOneBiteEvenWhenEverythingHasAlreadyArrived()
+    public void NothingNew_PaintsNothing()
     {
-        // A search resolving faster than the first 40ms tick must not turn that tick into a render of
-        // the entire result set -- the first paint is the one that has to be immediate.
         var plan = new ProgressiveRenderPlan();
+        plan.NextRenderSize(500, 0);
 
-        Assert.AreEqual(ProgressiveRenderPlan.InitialBite, plan.NextRenderSize(5_000_000));
+        Assert.AreEqual(0, plan.NextRenderSize(500, 10_000));
     }
 
     [TestMethod]
-    public void TheBiteGrowsGeometricallyThenHoldsAtItsMaximum()
+    public void ACheapPaint_LetsTheNextTickThroughImmediately()
     {
+        // The behaviour the displayed count depends on. Once a paint only touches the rows that
+        // actually changed it costs almost nothing, and there is no reason to make the list -- and so
+        // the number the user is reading -- wait for an arbitrary growth factor before moving again.
         var plan = new ProgressiveRenderPlan();
-        var totals = new List<int>();
-        for (var i = 0; i < 5; i++)
-            totals.Add(plan.NextRenderSize(5_000_000));
+        plan.NextRenderSize(2_000, 0);
+        plan.PaintCompleted(0);
 
-        var first = ProgressiveRenderPlan.InitialBite;
-        var second = first * ProgressiveRenderPlan.BiteGrowthFactor;
-        var third = second * ProgressiveRenderPlan.BiteGrowthFactor;
-        CollectionAssert.AreEqual(
-            new[]
-            {
-                first,
-                first + second,
-                first + second + third,
-                first + second + third + ProgressiveRenderPlan.MaxBite,
-                first + second + third + ProgressiveRenderPlan.MaxBite * 2,
-            },
-            totals);
+        Assert.AreEqual(2_050, plan.NextRenderSize(2_050, 0));
+        plan.PaintCompleted(1);
+        Assert.AreEqual(2_100, plan.NextRenderSize(2_100, 150));
     }
 
     [TestMethod]
-    public void TheBiteNeverExceedsItsMaximum()
+    public void AnExpensivePaint_HoldsTheNextOneOff()
     {
         var plan = new ProgressiveRenderPlan();
-        for (var i = 0; i < 20; i++)
-            plan.NextRenderSize(50_000_000);
+        plan.NextRenderSize(2_000, 0);
+        plan.PaintCompleted(200);
 
-        Assert.AreEqual(ProgressiveRenderPlan.MaxBite, plan.Bite);
+        Assert.AreEqual(0, plan.NextRenderSize(500_000, 200 * ProgressiveRenderPlan.IdleMultiplier - 1));
+        Assert.AreEqual(500_000, plan.NextRenderSize(500_000, 200 * ProgressiveRenderPlan.IdleMultiplier));
     }
 
     [TestMethod]
-    public void TheTotalKeepsClimbingForAsLongAsResultsRemain()
+    public void TheBudgetScalesWithHowExpensiveTheLastPaintWas()
     {
-        // The behaviour this class was rewritten for. Capping the TOTAL made the list stop dead at a
-        // round number and sit there for the rest of a multi-second search, which reads as a hang --
-        // only the size of each step is capped, never how far the list is allowed to get.
-        var plan = new ProgressiveRenderPlan();
-        const int received = 3_000_000;
-        var ticks = 0;
-        while (plan.NextRenderSize(received) != 0)
-        {
-            ticks++;
-            Assert.IsLessThan(500, ticks, "the plan must converge, not tick forever");
-        }
+        // A share of wall-clock, not a fixed delay: a paint that took ten times as long waits ten times
+        // as long, which is what holds the UI thread's share roughly constant however the cost moves.
+        var cheap = new ProgressiveRenderPlan();
+        cheap.NextRenderSize(2_000, 0);
+        cheap.PaintCompleted(10);
+        var dear = new ProgressiveRenderPlan();
+        dear.NextRenderSize(2_000, 0);
+        dear.PaintCompleted(100);
 
-        Assert.AreEqual(received, plan.Rendered);
+        var idle = 10 * ProgressiveRenderPlan.IdleMultiplier;
+        Assert.AreEqual(3_000, cheap.NextRenderSize(3_000, idle));
+        Assert.AreEqual(0, dear.NextRenderSize(3_000, idle));
     }
 
     [TestMethod]
-    public void OnceEverythingReceivedIsPainted_FurtherTicksPaintNothing()
+    public void EachPaintShowsEverythingReceivedByThen()
     {
         var plan = new ProgressiveRenderPlan();
-        Assert.AreEqual(50, plan.NextRenderSize(50));
+        plan.NextRenderSize(3_000, 0);
+        plan.PaintCompleted(0);
 
-        Assert.AreEqual(0, plan.NextRenderSize(50));
+        Assert.AreEqual(50_000, plan.NextRenderSize(50_000, 0));
     }
 
     [TestMethod]
-    public void ASkippedTickDoesNotConsumeBiteGrowth()
+    public void ASkippedTickLeavesThePlanExactlyWhereItWas()
     {
-        // A skipped tick must leave the plan exactly where it was -- otherwise a slow stream, which
-        // produces many nothing-new ticks, would burn through the whole growth ramp while still showing
-        // a handful of rows, and the ramp would be spent by the time results actually arrived.
         var plan = new ProgressiveRenderPlan();
-        plan.NextRenderSize(50);
-        var biteAfterFirst = plan.Bite;
+        plan.NextRenderSize(50, 0);
+        plan.PaintCompleted(100);
 
-        plan.NextRenderSize(50);
-        plan.NextRenderSize(50);
+        plan.NextRenderSize(60, 0);
+        plan.NextRenderSize(70, 0);
 
-        Assert.AreEqual(biteAfterFirst, plan.Bite);
         Assert.AreEqual(50, plan.Rendered);
+        Assert.AreEqual(100, plan.NextRenderSize(100, 100 * ProgressiveRenderPlan.IdleMultiplier));
     }
 
     [TestMethod]
-    public void PaintsOnlyWhatHasActuallyArrived()
+    public void AHugeBacklogDoesNotOverflowTheBudgetComparison()
     {
         var plan = new ProgressiveRenderPlan();
+        plan.NextRenderSize(int.MaxValue, 0);
+        plan.PaintCompleted(long.MaxValue / 4);
 
-        Assert.AreEqual(300, plan.NextRenderSize(300));
-        Assert.AreEqual(900, plan.NextRenderSize(900));
-    }
-
-    [TestMethod]
-    public void AHugeBacklogDoesNotOverflowTheRunningTotal()
-    {
-        var plan = new ProgressiveRenderPlan();
-        for (var i = 0; i < 30; i++)
-            plan.NextRenderSize(int.MaxValue);
-
-        Assert.IsGreaterThan(0, plan.Rendered);
+        Assert.AreEqual(0, plan.NextRenderSize(int.MaxValue, 1));
     }
 }

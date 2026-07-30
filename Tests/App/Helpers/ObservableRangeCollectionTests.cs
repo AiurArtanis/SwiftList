@@ -196,6 +196,67 @@ public sealed class ObservableRangeCollectionTests
     }
 
     [TestMethod]
+    public void ReconcileTo_AnUnchangedPrefix_KeepsALargeGrowthGranular()
+    {
+        // The whole point: a search whose new results all rank below the hundreds of thousands already
+        // shown changes a handful of rows. Judged on total size it looks like a wholesale replacement
+        // and takes the Reset shortcut, which costs the whole list and throws the view away with it.
+        var collection = new ObservableRangeCollection<int>();
+        collection.ReplaceRange(Enumerable.Range(0, 50_000));
+        var resets = 0;
+        collection.CollectionChanged += (_, e) =>
+        {
+            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+                resets++;
+        };
+
+        collection.ReconcileTo(Enumerable.Range(0, 50_010).ToList(), (x, y) => x == y, unchangedPrefix: 50_000);
+
+        Assert.HasCount(50_010, collection);
+        Assert.AreEqual(0, resets, "only ten rows changed -- this must not tear the list down");
+    }
+
+    [TestMethod]
+    public void ReconcileTo_AnUnchangedPrefix_StillResetsWhenTheTailIsHuge()
+    {
+        var collection = new ObservableRangeCollection<int>();
+        collection.ReplaceRange(Enumerable.Range(0, 1_000));
+        var resets = 0;
+        collection.CollectionChanged += (_, e) =>
+        {
+            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+                resets++;
+        };
+
+        collection.ReconcileTo(Enumerable.Range(0, 50_000).ToList(), (x, y) => x == y, unchangedPrefix: 1_000);
+
+        Assert.AreEqual(1, resets);
+    }
+
+    [TestMethod]
+    public void ReconcileTo_AnImpossiblePrefix_IsIgnoredRatherThanClampedDownTo()
+    {
+        // Clamping it to what fits would be treating a claim that cannot be true as if it were true of
+        // as much of the list as possible -- here that skips both rows that actually changed and leaves
+        // the old content in place. Falling back to comparing everything is slower and correct.
+        var collection = new ObservableRangeCollection<int> { 1, 2, 3 };
+
+        collection.ReconcileTo(new[] { 9, 8 }, (x, y) => x == y, unchangedPrefix: 999);
+
+        CollectionAssert.AreEqual(new[] { 9, 8 }, collection);
+    }
+
+    [TestMethod]
+    public void ReconcileTo_NoPrefixClaimed_StillComparesEveryRow()
+    {
+        var collection = new ObservableRangeCollection<int> { 1, 2, 3 };
+
+        collection.ReconcileTo(new[] { 1, 9, 3 }, (x, y) => x == y);
+
+        CollectionAssert.AreEqual(new[] { 1, 9, 3 }, collection);
+    }
+
+    [TestMethod]
     public void ReconcileTo_NullTarget_Throws() =>
         Assert.ThrowsExactly<ArgumentNullException>(() => new ObservableRangeCollection<int>().ReconcileTo(null!, (x, y) => x == y));
 

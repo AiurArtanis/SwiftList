@@ -60,6 +60,13 @@ public class ObservableRangeCollection<T> : ObservableCollection<T>
         try
         {
             Items.Clear();
+            // Grown to its final size up front where that size is known. Adding one at a time lets the
+            // backing list double its way there, and every doubling past ~8k references allocates a
+            // fresh multi-megabyte array on the large object heap and abandons the previous one -- per
+            // call, which for a progressively-painted search is once per paint.
+            if (Items is List<T> backing && collection is ICollection<T> sized && sized.Count > backing.Capacity)
+                backing.Capacity = sized.Count;
+
             foreach (var item in collection)
             {
                 Items.Add(item);
@@ -98,21 +105,40 @@ public class ObservableRangeCollection<T> : ObservableCollection<T>
     /// paint of a search that is still streaming -- rather than a different result set. Surfaced to
     /// views through <see cref="LastUpdateExtendedContent"/>; it changes nothing about the update itself.
     /// </param>
-    public void ReconcileTo(IReadOnlyList<T> target, Func<T, T, bool> equals, bool extendsContent = false)
+    /// <param name="unchangedPrefix">
+    /// Number of leading rows the caller guarantees are identical to what is already here, so neither
+    /// the comparison walk nor the Reset shortcut needs to consider them. This is what makes an update
+    /// cost what actually changed rather than what is on screen: a search whose new results all rank
+    /// below the six hundred thousand already shown changes a handful of rows, and without the promise
+    /// there is no way to tell that apart from six hundred thousand rows all changing at once. Pass 0
+    /// when nothing is guaranteed -- a re-sort, a filter, a different result set.
+    /// </param>
+    public void ReconcileTo(IReadOnlyList<T> target, Func<T, T, bool> equals, bool extendsContent = false, int unchangedPrefix = 0)
     {
         if (target == null) throw new ArgumentNullException(nameof(target));
         if (equals == null) throw new ArgumentNullException(nameof(equals));
 
         LastUpdateExtendedContent = extendsContent;
 
-        if (Math.Abs(target.Count - Items.Count) >= ResetInsteadOfReconcileThreshold)
+        // A prefix claiming more rows than either list holds cannot be true of both, and there is no way
+        // to tell an over-claim apart from a mistake. Trusting it -- by clamping down to what fits --
+        // would skip comparing rows that really had changed and leave stale content on screen with
+        // nothing to reveal it, so an impossible claim falls back to comparing everything: slower, and
+        // right.
+        var from = unchangedPrefix >= 0 && unchangedPrefix <= Items.Count && unchangedPrefix <= target.Count
+            ? unchangedPrefix
+            : 0;
+
+        // Measured against the rows that can actually differ, not the size of the list. A Reset makes
+        // WPF discard and rebuild the view, which costs the whole list however few rows moved.
+        if (Math.Max(target.Count, Items.Count) - from >= ResetInsteadOfReconcileThreshold)
         {
             ReplaceRangeCore(target);
             return;
         }
 
         var shared = Math.Min(Items.Count, target.Count);
-        for (var i = 0; i < shared; i++)
+        for (var i = from; i < shared; i++)
         {
             if (!equals(Items[i], target[i]))
                 this[i] = target[i]; // Replace notification for this row only

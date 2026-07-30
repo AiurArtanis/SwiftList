@@ -77,8 +77,7 @@ public sealed class StreamingResultAccumulatorTests
         // the cost would be quadratic in the number of paints and we would be back to rationing them.
         var accumulator = new StreamingResultAccumulator("a", NoHistory);
         var growing = Arrivals(@"D:\aa", @"D:\aaa");
-        var first = accumulator.Absorb(growing);
-        var originals = first.ToList();
+        var originals = accumulator.Absorb(growing).ToList();
 
         growing.Add(Result(@"D:\aaaa"));
         var second = accumulator.Absorb(growing);
@@ -176,5 +175,99 @@ public sealed class StreamingResultAccumulatorTests
         var lengths = rows.Select(r => r.FullPath.Length).ToList();
         for (var i = 1; i < lengths.Count; i++)
             Assert.IsLessThanOrEqualTo(lengths[i], lengths[i - 1], $"row {i} is out of rank order");
+    }
+
+    [TestMethod]
+    public void Absorb_ReusesOneOutputBuffer()
+    {
+        // A fresh multi-megabyte list per paint would be a large-object allocation several times a
+        // second on a big search. Safe because the render pump waits for the UI to finish applying one
+        // paint before computing the next, so no synchronous consumer ever overlaps a call.
+        var accumulator = new StreamingResultAccumulator("a", NoHistory);
+        var growing = Arrivals(@"D:\aa");
+        var first = accumulator.Absorb(growing);
+
+        growing.Add(Result(@"D:\aaa"));
+
+        Assert.AreSame(first, accumulator.Absorb(growing));
+    }
+
+    [TestMethod]
+    public void FirstChangedIndex_APureAppend_PointsAtTheOldEnd()
+    {
+        // The case that makes late-search paints affordable: arrivals that rank below everything shown
+        // leave the existing rows exactly where they were, so the view has only the tail to update.
+        var accumulator = new StreamingResultAccumulator("a", NoHistory);
+        var growing = Arrivals(@"D:\a", @"D:\aa");
+        accumulator.Absorb(growing);
+
+        growing.Add(Result(@"D:\aaaa"));
+        growing.Add(Result(@"D:\aaaaa"));
+        accumulator.Absorb(growing);
+
+        Assert.AreEqual(2, accumulator.FirstChangedIndex);
+    }
+
+    [TestMethod]
+    public void FirstChangedIndex_AnArrivalThatOutranksEverything_PointsAtZero()
+    {
+        var accumulator = new StreamingResultAccumulator("a", NoHistory);
+        var growing = Arrivals(@"D:\aaaa", @"D:\aaaaa");
+        accumulator.Absorb(growing);
+
+        growing.Add(Result(@"D:\a"));
+        accumulator.Absorb(growing);
+
+        Assert.AreEqual(0, accumulator.FirstChangedIndex);
+    }
+
+    [TestMethod]
+    public void FirstChangedIndex_AnArrivalLandingMidList_PointsAtWhereItLanded()
+    {
+        var accumulator = new StreamingResultAccumulator("a", NoHistory);
+        var growing = Arrivals(@"D:\a", @"D:\aa", @"D:\aaaa");
+        accumulator.Absorb(growing);
+
+        growing.Add(Result(@"D:\aaa"));
+        accumulator.Absorb(growing);
+
+        Assert.AreEqual(2, accumulator.FirstChangedIndex);
+    }
+
+    [TestMethod]
+    public void FirstChangedIndex_NothingNew_PointsPastTheEnd()
+    {
+        var accumulator = new StreamingResultAccumulator("a", NoHistory);
+        var growing = Arrivals(@"D:\a", @"D:\aa");
+        accumulator.Absorb(growing);
+
+        accumulator.Absorb(growing);
+
+        Assert.AreEqual(2, accumulator.FirstChangedIndex);
+    }
+
+    [TestMethod]
+    public void FirstChangedIndex_NeverUnderstatesWhatMoved()
+    {
+        // The promise the view acts on: every row before FirstChangedIndex must already be correct on
+        // screen. If it ever pointed too far right, rows that had genuinely moved would be left showing
+        // stale content with nothing to reveal it.
+        var rnd = 11;
+        var accumulator = new StreamingResultAccumulator("f", NoHistory);
+        var growing = new List<SearchResult>();
+        var previous = new List<string>();
+        for (var round = 0; round < 30; round++)
+        {
+            for (var i = 0; i < 9; i++)
+            {
+                rnd = rnd * 1103515245 + 12345;
+                growing.Add(Result(@"D:\" + new string('f', 1 + Math.Abs(rnd % 50)) + growing.Count));
+            }
+
+            var paths = Paths(accumulator.Absorb(growing));
+            for (var i = 0; i < Math.Min(accumulator.FirstChangedIndex, previous.Count); i++)
+                Assert.AreEqual(previous[i], paths[i], $"round {round}: row {i} moved but was reported unchanged");
+            previous = paths;
+        }
     }
 }

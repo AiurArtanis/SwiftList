@@ -35,6 +35,7 @@ internal sealed class StreamingResultAccumulator
     // The merge writes into this and the two swap, so a search does not allocate a fresh full-size
     // list on every paint just to hold the same rows in a slightly different order.
     private List<Entry> _spare = new();
+    private readonly List<AppSearchResult> _rows = new();
 
     public StreamingResultAccumulator(string query, IReadOnlyDictionary<string, int> historySnapshot)
     {
@@ -52,12 +53,35 @@ internal sealed class StreamingResultAccumulator
     public int Count => _ranked.Count;
 
     /// <summary>
+    /// Index of the first row the most recent <see cref="Absorb"/> changed. Everything before it is
+    /// untouched, which is what lets the view update only the tail instead of rebuilding.
+    /// </summary>
+    /// <remarks>
+    /// A merge only disturbs the list from the position the best NEW entry lands at. Late in a search
+    /// the arrivals are the dregs -- they rank below almost everything already shown -- so that
+    /// position is near the end and the change is a handful of rows, even though the list is hundreds
+    /// of thousands long. Reporting it turns a repaint from work proportional to the whole list into
+    /// work proportional to what actually moved, which is the difference between a paint the list can
+    /// afford several times a second and one it can afford every few minutes.
+    /// </remarks>
+    public int FirstChangedIndex { get; private set; }
+
+    /// <summary>
     /// Absorbs everything in <paramref name="arrivals"/> past what previous calls already took, and
     /// returns the complete ranked row list. <paramref name="arrivals"/> must be arrival-ordered and
     /// must never rewrite the prefix a previous call read.
     /// </summary>
+    /// <remarks>
+    /// The SAME list instance comes back every time, updated in place -- a fresh one per paint would be
+    /// a multi-megabyte large-object allocation several times a second for a big search. It is valid
+    /// until the next call, which is all any synchronous consumer needs; the render pump waits for the
+    /// UI to finish applying a paint before computing the next, so no consumer overlaps one. A caller
+    /// that does keep it across an await (the query-token path) must copy it first.
+    /// </remarks>
     public List<AppSearchResult> Absorb(IReadOnlyList<SearchResult> arrivals)
     {
+        FirstChangedIndex = _ranked.Count;
+
         if (arrivals.Count > _consumed)
         {
             var chunk = new List<Entry>(arrivals.Count - _consumed);
@@ -76,14 +100,20 @@ internal sealed class StreamingResultAccumulator
             Merge(chunk);
         }
 
-        var rows = new List<AppSearchResult>(_ranked.Count);
-        for (var i = 0; i < _ranked.Count; i++)
+        // Only the disturbed suffix is rewritten. Index is restamped over the same range because a row
+        // inserted in the middle shifts every position after it.
+        while (_rows.Count < _ranked.Count)
+            _rows.Add(null!);
+        if (_rows.Count > _ranked.Count)
+            _rows.RemoveRange(_ranked.Count, _rows.Count - _ranked.Count);
+
+        for (var i = FirstChangedIndex; i < _ranked.Count; i++)
         {
             var row = _ranked[i].Row;
             row.Index = i;
-            rows.Add(row);
+            _rows[i] = row;
         }
-        return rows;
+        return _rows;
     }
 
     private int CompareEntries(Entry left, Entry right) => _rankComparer.Compare(left.Raw, right.Raw);
@@ -96,6 +126,7 @@ internal sealed class StreamingResultAccumulator
         if (_ranked.Count == 0)
         {
             _ranked = chunk;
+            FirstChangedIndex = 0;
             return;
         }
 
@@ -107,11 +138,27 @@ internal sealed class StreamingResultAccumulator
 
         int a = 0, b = 0;
         while (a < _ranked.Count && b < chunk.Count)
-            target.Add(CompareEntries(chunk[b], _ranked[a]) < 0 ? chunk[b++] : _ranked[a++]);
+        {
+            if (CompareEntries(chunk[b], _ranked[a]) < 0)
+            {
+                // The first time a new entry wins is the first position that differs from the old list.
+                if (target.Count < FirstChangedIndex)
+                    FirstChangedIndex = target.Count;
+                target.Add(chunk[b++]);
+            }
+            else
+            {
+                target.Add(_ranked[a++]);
+            }
+        }
         while (a < _ranked.Count)
             target.Add(_ranked[a++]);
         while (b < chunk.Count)
+        {
+            if (target.Count < FirstChangedIndex)
+                FirstChangedIndex = target.Count;
             target.Add(chunk[b++]);
+        }
 
         _spare = _ranked;
         _ranked = target;

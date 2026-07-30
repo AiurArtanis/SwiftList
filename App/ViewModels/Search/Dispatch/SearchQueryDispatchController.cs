@@ -20,7 +20,9 @@ internal sealed class SearchQueryDispatchController
     private readonly Action<bool> _setIsSearchBoxEnabled;
     // bool: whether this render extends what is already on screen (a later paint of a search still
     // streaming) rather than replacing it with a different result set.
-    private readonly Action<bool> _applyFiltersAndRender;
+    // int: index of the first row this render changed -- everything before it is already correct on
+    // screen. See StreamingResultAccumulator.FirstChangedIndex.
+    private readonly Action<bool, int> _applyFiltersAndRender;
 
     private IReadOnlyList<string> _queryTokens = Array.Empty<string>();
 
@@ -32,7 +34,7 @@ internal sealed class SearchQueryDispatchController
         Action<bool> setIsSearching,
         Action<Visibility> setLoadingPanelVisibility,
         Action<bool> setIsSearchBoxEnabled,
-        Action<bool> applyFiltersAndRender)
+        Action<bool, int> applyFiltersAndRender)
     {
         _searchEngine = searchEngine;
         _serviceStatus = serviceStatus;
@@ -94,7 +96,13 @@ internal sealed class SearchQueryDispatchController
                 // FilteredResults) -- the shared engine's synthetic "Empty" placeholder row is meant
                 // for the quick/inline windows, which have no such hint and render it inline instead.
                 // Left in here, it counts toward FilteredResults.Count and shows up as a real grid row.
-                var filteredResults = results.Where(r => !r.IsEmptyResult).ToList();
+                // Copied only when there is genuinely something to drop. The engine appends its
+                // synthetic "Empty" placeholder in exactly one case (a final render that found nothing),
+                // so on every other paint this filter used to duplicate the entire row list -- megabytes
+                // onto the large object heap, on the UI thread, once per paint -- to remove nothing.
+                var filteredResults = results.Exists(r => r.IsEmptyResult)
+                    ? results.FindAll(r => !r.IsEmptyResult)
+                    : results;
                 var extendsContent = rendersSoFar++ > 0;
                 _setAllResults(filteredResults);
                 // Token providers (e.g. the built-in ":[SCMA]"/".ext"/"::expr" sort+filter+match
@@ -105,9 +113,12 @@ internal sealed class SearchQueryDispatchController
                 // completion synchronously right here; rendering the raw (pre-token) results below
                 // would then immediately clobber its filtered result with the unfiltered one.
                 if (_queryTokens.Count > 0)
-                    _ = RefreshAfterTokenDispatchAsync(filteredResults, _queryTokens, extendsContent);
+                    // Copied because this outlives the render: the accumulator hands back one buffer it
+                    // reuses on the next paint, which is safe for a synchronous consumer and not for
+                    // one that awaits.
+                    _ = RefreshAfterTokenDispatchAsync(new List<AppSearchResult>(filteredResults), _queryTokens, extendsContent);
                 else
-                    _applyFiltersAndRender(extendsContent);
+                    _applyFiltersAndRender(extendsContent, accumulator.FirstChangedIndex);
                 if (final)
                     _setIsSearching(false);
             },
@@ -133,7 +144,8 @@ internal sealed class SearchQueryDispatchController
         if (!ReferenceEquals(_getAllResults(), resultsSnapshot) || !ReferenceEquals(_queryTokens, tokensSnapshot))
             return;
         _setAllResults(dispatched);
-        _applyFiltersAndRender(extendsContent);
+        // A token provider may filter or reorder anything, so no prefix survives.
+        _applyFiltersAndRender(extendsContent, 0);
     }
 
     public void PerformSearch(string query)
@@ -152,7 +164,7 @@ internal sealed class SearchQueryDispatchController
         _searchEngine.CancelPendingSearch();
         _setIsSearching(false);
         _getAllResults().Clear();
-        _applyFiltersAndRender(false);
+        _applyFiltersAndRender(false, 0);
         _setLoadingPanelVisibility(Visibility.Collapsed);
     }
 }
