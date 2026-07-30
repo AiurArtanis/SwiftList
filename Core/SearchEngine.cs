@@ -147,13 +147,23 @@ public class SearchEngine : IDisposable
             }
         }
 
-        var status = GetStatus();
-        if (status.State != "ready")
-        {
-            Logger.Log($"[SearchEngine] File search skipped because index is not ready. State: {status.State}", LogLevel.Warn);
-            return true;
-        }
-
+        // Deliberately no "is the index ready" check. There used to be one, on the single GLOBAL status
+        // field, and it skipped the search outright for anything other than "ready" -- so rebuilding one
+        // drive stopped every OTHER drive from being searched too, along with network and WSL sources
+        // that have nothing to do with the local index at all. It reported success while doing it, so
+        // the caller could not tell "no matches" from "never looked".
+        //
+        // Nothing was unavailable. A per-drive rebuild passes clearExisting: false
+        // (SearchEngineDriveMaintenance.ForceRebuildDrive), and that flag is the only thing that clears
+        // _recordIndexes -- so every drive's existing LiveIndex, including the one being rebuilt, stays
+        // mapped and searchable for the whole scan, and the replacement is swapped in at the end. The
+        // complete previous index was sitting right there the entire time.
+        //
+        // So the search simply runs over whatever indexes are currently loaded. SearchCoordinator fans
+        // out across exactly those and no others, which degrades in the right direction on its own: a
+        // drive is missing from the results only while it genuinely has no index -- the brief window
+        // inside OnDriveCompleted where the old one is dropped before the new one is mapped, or a
+        // from-scratch first build (clearExisting: true), which really does have nothing to offer yet.
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(searchCts.Token, requestToken);
         var searchToken = linkedCts.Token;
 
