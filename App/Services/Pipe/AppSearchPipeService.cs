@@ -118,9 +118,25 @@ public static class AppSearchPipeService
     // can filter or reorder the already-ranked results. Passing the raw (unstripped) query straight into
     // SearchStreamingAsync -- what this used to do -- searched for the literal ":xxx" substring instead
     // of treating it as an operator, which is why that syntax silently did nothing here.
+    // Every result used to be its own write straight onto the pipe. That is a syscall each, and a
+    // whole-drive query returns hundreds of thousands of them -- the same shape, on the GUI's own pipe,
+    // measured 30us a result against 2.1 once the bytes were batched. Buffered here with the flush
+    // policy SearchStreamPump already uses on the elevated service's pipe: the first ten results go out
+    // immediately so a client sees something at once, then every fiftieth, then whatever is left at the
+    // end. Without those flushes a short search would sit in the buffer until the End frame, which for a
+    // CLI reading progressively is the difference between streaming and not.
+    private const int WriteBufferSize = 8192;
+    private const int FlushEveryResults = 50;
+    private const int FlushEveryResultUntil = 10;
+
     private static async Task RunFullWindowSearchAsync(string query, Stream pipe)
     {
-        await SearchResultWithHighlightBinarySerializer.WriteHeaderAsync(pipe);
+        // Deliberately not disposed: disposing a BufferedStream closes what it wraps, and HandleClientAsync
+        // reads the NEXT request off this same pipe when this returns. Everything written is flushed
+        // explicitly below instead, so nothing is left in the buffer for a dispose to have to push out.
+        var buffered = new BufferedStream(pipe, WriteBufferSize);
+        await SearchResultWithHighlightBinarySerializer.WriteHeaderAsync(buffered);
+        await buffered.FlushAsync();
 
         if (!string.IsNullOrWhiteSpace(query))
         {
@@ -128,13 +144,13 @@ public static class AppSearchPipeService
             var cleanQuery = SearchQuerySortParser.StripExclusionBypass(strippedTrailing, out var bypassExclusions);
 
             if (tokens.Count > 0)
-                await RunTokenizedSearchAsync(cleanQuery, tokens, bypassExclusions, pipe);
+                await RunTokenizedSearchAsync(cleanQuery, tokens, bypassExclusions, buffered);
             else
-                await RunStreamingSearchAsync(cleanQuery, bypassExclusions, pipe);
+                await RunStreamingSearchAsync(cleanQuery, bypassExclusions, buffered);
         }
 
-        await SearchResultWithHighlightBinarySerializer.WriteEndAsync(pipe);
-        await pipe.FlushAsync();
+        await SearchResultWithHighlightBinarySerializer.WriteEndAsync(buffered);
+        await buffered.FlushAsync();
     }
 
     // The plain (no token) path: forwards each result to the pipe the instant SearchStreamingAsync
@@ -153,6 +169,7 @@ public static class AppSearchPipeService
         // loaded plugins to correctly mark which characters of a pinyin/alias-matched CJK name matched,
         // which a bare client process has no way to reproduce.
         var writeLock = new SemaphoreSlim(1, 1);
+        var written = 0;
         await SharedSearchService.SearchStreamingAsync(
             query,
             SearchViewModel.FullSearchFileLimit,
@@ -168,6 +185,13 @@ public static class AppSearchPipeService
                 try
                 {
                     SearchResultWithHighlightBinarySerializer.WriteFileResultAsync(pipe, r, ranges).GetAwaiter().GetResult();
+
+                    // Inside the lock, because the buffer this flushes is the one the write above filled
+                    // and BufferedStream is not safe to touch from two threads at once. The lock already
+                    // serialises the writes for exactly that reason.
+                    written++;
+                    if (written <= FlushEveryResultUntil || written % FlushEveryResults == 0)
+                        pipe.Flush();
                 }
                 finally
                 {
@@ -217,12 +241,19 @@ public static class AppSearchPipeService
         // `query` -- so a result kept alive by e.g. an "::expr" token highlights the same characters the
         // real GUI's TextHighlighter would, since QueryTokenDispatcher.ApplyAsync can append extra
         // highlight terms onto SearchQuery per result.
+        var written = 0;
         foreach (var item in dispatched)
         {
             if (!byPath.TryGetValue(item.FullPath, out var original))
                 continue;
             var ranges = SearchResultWithHighlightBinarySerializer.FlattenMask(FuzzyMatcher.ComputeHighlightMask(item.Name, item.SearchQuery));
             await SearchResultWithHighlightBinarySerializer.WriteFileResultAsync(pipe, original, ranges);
+
+            // This path already has the whole ranked set in hand, so the flushes are purely so a large
+            // one reaches the client as it goes rather than in a single burst at the End frame.
+            written++;
+            if (written <= FlushEveryResultUntil || written % FlushEveryResults == 0)
+                await pipe.FlushAsync();
         }
     }
 }
