@@ -18,10 +18,9 @@ public class SearchEngine : IDisposable
     private readonly object _searchLock = new();
     private static readonly string IndexCacheDir = Path.Combine(Logger.SharedDataDir, "indexes");
 
-    private long _lastSearchTimeTicks = Environment.TickCount64;
-    private bool _needsTrim;
     private long _lastDriveDetectTime = 0;
-    private readonly object _trimLock = new();
+    private const long IdleTrimAfterMs = 3000;
+    private readonly IdleTrimGate _idleTrim = new(IdleTrimAfterMs, Environment.TickCount64);
     private readonly Timer? _idleTimer;
 
     public SearchEngine()
@@ -32,7 +31,7 @@ public class SearchEngine : IDisposable
             () => _cts?.Token ?? CancellationToken.None,
             () => _isRebuilding,
             TryReleaseRuntimeAfterActivity);
-        _idleTimer = new Timer(OnIdleTimerTick, null, 3000, 3000);
+        _idleTimer = new Timer(OnIdleTimerTick, null, IdleTrimAfterMs, IdleTrimAfterMs);
     }
 
     public event Action<UsnIndexer.IndexerStatus> StatusChanged
@@ -41,39 +40,15 @@ public class SearchEngine : IDisposable
         remove => _indexer.StatusChanged -= value;
     }
 
-    private void RecordSearchActivity()
-    {
-        Interlocked.Exchange(ref _lastSearchTimeTicks, Environment.TickCount64);
-        lock (_trimLock)
-        {
-            _needsTrim = true;
-        }
-    }
-
     private void OnIdleTimerTick(object? state)
     {
-        var now = Environment.TickCount64;
-        var last = Interlocked.Read(ref _lastSearchTimeTicks);
-        if (now - last > 3000) // 3 seconds idle
-        {
-            var shouldTrim = false;
-            lock (_trimLock)
-            {
-                if (_needsTrim)
-                {
-                    _needsTrim = false;
-                    shouldTrim = true;
-                }
-            }
+        if (!_idleTrim.ShouldTrim(Environment.TickCount64))
+            return;
 
-            if (shouldTrim)
-            {
-                Logger.Log("[SearchEngine] Service has been idle for 3s. Trimming working set...", LogLevel.Debug);
-                _indexer.ClearCaches();
-                GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
-                Win32Api.TrimWorkingSet();
-            }
-        }
+        Logger.Log("[SearchEngine] Service has been idle for 3s. Trimming working set...", LogLevel.Debug);
+        _indexer.ClearCaches();
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        Win32Api.TrimWorkingSet();
     }
 
     public Dictionary<string, FileMetadataEntry> GetFileMetadataBatch(IReadOnlyList<string> paths) => _indexer.GetFileMetadataBatch(paths);
@@ -130,7 +105,28 @@ public class SearchEngine : IDisposable
         Action<SearchResult> onResult,
         CancellationToken requestToken = default)
     {
-        RecordSearchActivity();
+        // Marked in flight for the duration, and stamped again on the way out: this method blocks until
+        // the whole search is done, so a query taking longer than the idle window would otherwise look
+        // idle while it was still running. See IdleTrimGate for what that cost.
+        _idleTrim.SearchStarted(Environment.TickCount64);
+        try
+        {
+            return SearchStreamingCore(query, fileLimit, appLimit, directoryFilter, onResult, requestToken);
+        }
+        finally
+        {
+            _idleTrim.SearchFinished(Environment.TickCount64);
+        }
+    }
+
+    private bool SearchStreamingCore(
+        string query,
+        int fileLimit,
+        int appLimit,
+        string? directoryFilter,
+        Action<SearchResult> onResult,
+        CancellationToken requestToken)
+    {
         if (string.IsNullOrWhiteSpace(query))
             return true;
 
