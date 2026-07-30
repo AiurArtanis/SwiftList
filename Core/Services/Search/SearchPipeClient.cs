@@ -82,12 +82,31 @@ internal sealed class SearchPipeClient
         }
     }
 
+    // Response buffer for the streaming read below. Large enough that one read covers several hundred
+    // results, small enough to stay off the large object heap.
+    private const int ResponseReadBufferSize = 64 * 1024;
+
     public static async Task SendSearchPipeCommandAsync(SearchRequestMessage msg, Action<SearchResult> onResult, CancellationToken token)
     {
         using var pipe = await GetPipeAsync(token).ConfigureAwait(false);
         await SearchRequestBinarySerializer.WriteSearchRequestAsync(pipe, msg, token).ConfigureAwait(false);
 
-        await SearchResponseBinarySerializer.ReadAsync(pipe, result =>
+        // Read through a buffer, because SearchResponseBinarySerializer.ReadAsync reads a result's magic,
+        // frame type, payload length and payload as four separate calls. Straight onto the pipe -- whose
+        // own buffer is 4KB -- that is four syscalls per result and it dominated everything: measured
+        // over 200k results with the service's real write path, 6.0 seconds against 0.41 with this
+        // buffer, 30us a result against 2.1. For a search returning every match on a drive that was
+        // twenty seconds of the wall clock.
+        //
+        // Reading ahead past the End frame is safe here specifically because GetPipeAsync hands back a
+        // brand new connection per request and it is disposed on the way out of this method -- nothing
+        // else ever reads from it, so there are no following bytes to steal. Buffering only affects how
+        // the bytes are fetched, never what they are, so a new client still talks to an old service.
+        // The request above is deliberately written to the raw pipe rather than through this, so the two
+        // directions cannot interleave in one buffer.
+        await using var buffered = new BufferedStream(pipe, ResponseReadBufferSize);
+
+        await SearchResponseBinarySerializer.ReadAsync(buffered, result =>
         {
             token.ThrowIfCancellationRequested();
             onResult(result);
