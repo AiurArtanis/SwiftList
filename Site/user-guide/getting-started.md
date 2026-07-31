@@ -17,6 +17,12 @@ published for every release:
   registration and its "start with Windows" entry. Both are per-user (HKCU) only, so no
   administrator prompt is needed.
 
+Each of those is published for **x64** and for **ARM64**. The names above are the x64 builds, which
+run on any recent PC — including Windows on ARM, where they run emulated. On an ARM machine prefer
+`SwiftList-Setup_arm64.exe` or `SwiftList-Portable_arm64.zip`, which are native. Automatic updates
+stay on the architecture you installed, so moving between them means downloading the other build
+yourself.
+
 On first run, SwiftList installs and starts a Windows service (`SwiftList.Service`) that owns file
 indexing. This split exists on purpose — see [Architecture](../dev-guide/architecture) if you're
 curious why — but as a user, the only thing you need to know is: **Settings → Service Status**

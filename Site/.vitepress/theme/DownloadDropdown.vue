@@ -61,7 +61,9 @@ onUnmounted(() => {
     <!-- Dropdown Menu -->
     <transition name="fade-slide">
       <div v-if="isOpen" class="dropdown-menu">
-        <a 
+        <div class="menu-section">{{ t('downloadX64Section') }}</div>
+
+        <a
           href="https://github.com/SwiftList/SwiftList/releases/latest/download/SwiftList-Setup.exe"
           class="menu-item"
         >
@@ -72,7 +74,7 @@ onUnmounted(() => {
           </div>
         </a>
 
-        <a 
+        <a
           href="https://github.com/SwiftList/SwiftList/releases/latest/download/SwiftList-Portable.zip"
           class="menu-item"
         >
@@ -80,6 +82,30 @@ onUnmounted(() => {
           <div class="item-content">
             <span class="item-title">{{ t('downloadPortableTitle') }}</span>
             <span class="item-desc">{{ t('downloadPortableDesc') }}</span>
+          </div>
+        </a>
+
+        <!-- The two builds differ only by architecture, so these repeat the titles above without
+             repeating their descriptions: the section heading is what distinguishes them. -->
+        <div class="menu-section">{{ t('downloadArmSection') }}</div>
+
+        <a
+          href="https://github.com/SwiftList/SwiftList/releases/latest/download/SwiftList-Setup_arm64.exe"
+          class="menu-item compact"
+        >
+          <span class="item-icon">💾</span>
+          <div class="item-content">
+            <span class="item-title">{{ t('downloadInstallerTitle') }}</span>
+          </div>
+        </a>
+
+        <a
+          href="https://github.com/SwiftList/SwiftList/releases/latest/download/SwiftList-Portable_arm64.zip"
+          class="menu-item compact"
+        >
+          <span class="item-icon">📦</span>
+          <div class="item-content">
+            <span class="item-title">{{ t('downloadPortableTitle') }}</span>
           </div>
         </a>
       </div>
@@ -167,6 +193,19 @@ onUnmounted(() => {
   gap: 4px;
 }
 
+.menu-section {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--vp-c-text-3, #999999);
+  padding: 6px 12px 2px;
+  line-height: 1.3;
+}
+
+/* The first heading sits right under the menu's own padding, so it does not need its own. */
+.menu-section:first-child {
+  padding-top: 2px;
+}
+
 .menu-item {
   display: flex;
   align-items: flex-start;
@@ -185,6 +224,17 @@ onUnmounted(() => {
   font-size: 18px;
   margin-right: 12px;
   margin-top: 2px;
+}
+
+/* Used by the entries that carry a title only, so the icon centres instead of hanging. */
+.menu-item.compact {
+  padding: 6px 12px;
+  align-items: center;
+}
+
+.menu-item.compact .item-icon {
+  font-size: 15px;
+  margin-top: 0;
 }
 
 .item-content {
