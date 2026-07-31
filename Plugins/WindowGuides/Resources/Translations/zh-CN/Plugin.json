@@ -1,5 +1,5 @@
 {
-  "WindowGuides_PluginName": "Alt 拖动引导线",
+  "WindowGuides_PluginName": "窗口拖动增强",
   "WindowGuides_PluginDesc": "拖动搜索窗口时按住 Alt，显示屏幕中轴引导线并自动吸附。",
   "WindowGuides_Config_GuideOpacityLabel": "引导线颜色透明度",
   "WindowGuides_Config_GuideOpacityDesc": "水平和垂直中轴引导线的不透明度。",
