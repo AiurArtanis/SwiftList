@@ -18,8 +18,14 @@
 
 ; The x64 installer deliberately keeps its unsuffixed name. Existing installs and the release assets
 ; they update from are matched by name (see UpdateAssetSelector), so renaming it would strand them.
+;
+; The arm64 suffix uses an underscore rather than a hyphen to keep the portable zip it is paired with
+; sorting after the x64 one: GitHub returns a release's assets sorted by name in byte order, '-' (0x2D)
+; falls below '.' (0x2E), and installs predating UpdateAssetSelector take the first asset ending in
+; ".zip". Only the zip name actually decides that, but both artifacts carry the same suffix so there is
+; one convention to keep rather than two, and no hyphen sitting here to be copied back onto the zip.
 #if Arch == "arm64"
-  #define ArchSuffix "-arm64"
+  #define ArchSuffix "_arm64"
   #define SetupArchitectures "arm64"
   #define DotNetRuntimeFile "windowsdesktop-runtime-10-win-arm64.exe"
   #define DotNetRuntimeUrl "https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-arm64.exe"

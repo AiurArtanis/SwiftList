@@ -65,7 +65,12 @@ if errorlevel 1 exit /b 1
 echo.
 echo === Building arm64 ===
 set "ARCH=arm64"
-set "ARCHSUFFIX=-arm64"
+:: Underscore, not hyphen, and not a style choice. Releases are still polled by installs that take the
+:: first asset whose name ends in ".zip", and GitHub returns a release's assets sorted by name in byte
+:: order: '-' is 0x2D, below '.' at 0x2E, so "SwiftList-Portable-arm64.zip" would sort ahead of
+:: "SwiftList-Portable.zip" and those x64 installs would silently update themselves to the arm64 build.
+:: '_' is 0x5F and sorts after '.'. Kept in step with UpdateAssetSelector.SuffixFor and installer.iss.
+set "ARCHSUFFIX=_arm64"
 set "RIDARGS=-r win-arm64 --self-contained false"
 call :build_arch
 if errorlevel 1 exit /b 1
@@ -80,8 +85,8 @@ echo ==========================================
 echo Build and Package Completed Successfully!
 echo Installer (x64):     %DIST%\SwiftList-Setup.exe
 echo Portable ZIP (x64):  %DIST%\SwiftList-Portable.zip
-echo Installer (arm64):   %DIST%\SwiftList-Setup-arm64.exe
-echo Portable ZIP (arm64):%DIST%\SwiftList-Portable-arm64.zip
+echo Installer (arm64):   %DIST%\SwiftList-Setup_arm64.exe
+echo Portable ZIP (arm64):%DIST%\SwiftList-Portable_arm64.zip
 echo ==========================================
 exit /b 0
 
