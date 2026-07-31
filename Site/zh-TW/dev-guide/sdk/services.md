@@ -1,7 +1,6 @@
 # 宿主服務
 
-`PluginSdk.Services` 裡的靜態服務，把宿主應用程式的功能公開給外掛——每一個都是包裝了宿主啟動時接
-好的委派的薄靜態類別，所以不管底層實際執行的是什麼，外掛的呼叫方式都一樣。
+`PluginSdk.Services` 裡的靜態服務，把宿主應用程式的功能公開給外掛——每一個都是包裝了宿主啟動時接好的委派的薄靜態類別，所以不管底層實際執行的是什麼，外掛的呼叫方式都一樣。
 
 | 服務 | 用途 |
 |---|---|
@@ -17,5 +16,4 @@
 | `Logger` | `Log(message, level = LogLevel.Info)` —— 寫入 App 的記錄檔，和宿主自己的記錄行一樣，顯示在**設定 → 執行狀態 → App** 裡。 |
 | `PluginPromptService` | `Prompt(title, fields, initialValues?)` —— 彈出一個小的強制回應視窗，向使用者詢問給定[`PluginConfigField`](./abstractions#iconfigurable)欄位的值(用的正是 `IConfigurable` 的設定對話方塊那套欄位 schema/繪製邏輯)，按 `Key` 比對從 `initialValues` 預先填入，沒有就用各欄位自己的 `DefaultValue`。回傳按欄位 `Key` 索引的填寫結果，使用者取消則回傳 `null`——這些值不會讀取或寫入外掛真正持久化的設定，所以可以放心重複使用某個設定欄位的 schema 單純做一次性輸入(比如「新增前先給它取個名字」)，不會碰到背後真實的那個設定項目。 |
 
-`LogLevel` 是 `Error` / `Warn` / `Info` / `Debug`，與
-[執行狀態記錄檢視器](../../user-guide/settings/service-status)裡的層級篩選器一致。
+`LogLevel` 是 `Error` / `Warn` / `Info` / `Debug`，與[執行狀態記錄檢視器](../../user-guide/settings/service-status)裡的層級篩選器一致。

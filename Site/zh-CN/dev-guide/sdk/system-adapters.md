@@ -1,12 +1,10 @@
 # 系统与对话框适配
 
-这些接口让插件可以和*其他*窗口集成——文件资源管理器、原生文件选择对话框、第三方文件管理器——而
-不仅仅是 SwiftList 自己的搜索窗口。
+这些接口让插件可以和*其他*窗口集成——文件资源管理器、原生文件选择对话框、第三方文件管理器——而不仅仅是 SwiftList 自己的搜索窗口。
 
 ## `IActivePathCollector`
 
-从当前活动的前台窗口中提取"当前目录"，让 SwiftList 知道该把搜索范围限定在哪里(或者相对什么路径
-解析动作)。
+从当前活动的前台窗口中提取"当前目录"，让 SwiftList 知道该把搜索范围限定在哪里(或者相对什么路径解析动作)。
 
 ```csharp
 interface IActivePathCollector
@@ -21,8 +19,7 @@ interface IActivePathCollector
 }
 ```
 
-活动(获得焦点)的元素和它所在的窗口是分开传入的，因为很多文件管理器把实际路径放在子控件里(地址
-栏、树形视图的选中项)，而不是顶层窗口本身。
+活动(获得焦点)的元素和它所在的窗口是分开传入的，因为很多文件管理器把实际路径放在子控件里(地址栏、树形视图的选中项)，而不是顶层窗口本身。
 
 ## `IFileDialogAdapter`
 
@@ -44,16 +41,12 @@ interface IFileDialogAdapter
 ```
 
 `TargetIsFolderOnly` 为 `true` 表示这个对话框的目标输入框只能填文件夹——比如压缩软件的"解压到"
-目标路径——不像 Open/Save 对话框的文件名输入框那样还能填具体文件。宿主用它来判断:如果用户从搜索
-结果里选中的是一个文件，需不需要在传给 `NavigateTo` 之前先解析成它所在的文件夹，而不是把这个判断
-留给 `NavigateTo` 自己——因为那个调用是在提升权限的 Hook 进程里执行的，`File.Exists`/
-`Directory.Exists` 在那里没法信任(用户在非提升权限下映射的驱动器，在那边可能"不存在")。如果目标
-输入框本身就是能填具体文件的，保持默认值 `false` 即可。
+目标路径——不像 Open/Save 对话框的文件名输入框那样还能填具体文件。宿主用它来判断:如果用户从搜索结果里选中的是一个文件，需不需要在传给 `NavigateTo` 之前先解析成它所在的文件夹，而不是把这个判断留给 `NavigateTo` 自己——因为那个调用是在提升权限的 Hook 进程里执行的，`File.Exists`/
+`Directory.Exists` 在那里没法信任(用户在非提升权限下映射的驱动器，在那边可能"不存在")。如果目标输入框本身就是能填具体文件的，保持默认值 `false` 即可。
 
 ## `IInlineSearchAdapter`
 
-把 SwiftList 搜索栏直接嵌入目标文件对话框或文件资源管理器窗口(即用户手册里说的"内嵌窗口")，双
-向保持选中状态同步。
+把 SwiftList 搜索栏直接嵌入目标文件对话框或文件资源管理器窗口(即用户手册里说的"内嵌窗口")，双向保持选中状态同步。
 
 ```csharp
 interface IInlineSearchAdapter
@@ -73,15 +66,11 @@ interface IInlineSearchAdapter
 }
 ```
 
-`AdapterRect`(与 `IFileDialogAdapter` 共用)是一个简单的 `{ Left, Top, Right, Bottom }` `int` 矩
-形。
+`AdapterRect`(与 `IFileDialogAdapter` 共用)是一个简单的 `{ Left, Top, Right, Bottom }` `int` 矩形。
 
 ## `IQuickNavigationProvider`
 
-为快速导航菜单提供内容(通常是级联菜单)——见
-[热键 → 快速导航](../../user-guide/hotkeys#快速导航鼠标)。菜单该不该弹出由宿主决定，不是这个接口
-的职责:任何已被 `IInlineSearchAdapter`/`IFileDialogAdapter` 识别的窗口，触发菜单的工作已经有人做
-了，所以这个接口纯粹是内容来源。
+为快速导航菜单提供内容(通常是级联菜单)——见[热键 → 快速导航](../../user-guide/hotkeys#快速导航鼠标)。菜单该不该弹出由宿主决定，不是这个接口的职责:任何已被 `IInlineSearchAdapter`/`IFileDialogAdapter` 识别的窗口，触发菜单的工作已经有人做了，所以这个接口纯粹是内容来源。
 
 ```csharp
 interface IQuickNavigationProvider
@@ -101,11 +90,9 @@ interface IQuickNavigationProvider
 
 `HeaderAction`(可选，默认 `null`)会在同一个根层级分组标题上加一个小按钮——比如一个书签类的
 provider 可以用它做"添加当前文件夹"。回调参数用的是 `GetMenuItems` 在根层级收到的同一个
-`ISearchResult`;`HeaderActionTooltip` 设置这个按钮的提示文字，`HeaderAction` 为空时会被忽略。嵌
-套的子菜单(根层级以下的任意深度)没有宿主渲染的标题栏，所以 `HeaderAction` 的效果只到根层级为止
+`ISearchResult`;`HeaderActionTooltip` 设置这个按钮的提示文字，`HeaderAction` 为空时会被忽略。嵌套的子菜单(根层级以下的任意深度)没有宿主渲染的标题栏，所以 `HeaderAction` 的效果只到根层级为止
 ——想在子菜单上做同样的"+"按钮，需要在该子菜单的第一项里返回一个 `IsHeader = true` 的
 `DynamicMenuItem`(见下文)，用它自己的 `OnExecute` 起同样的作用。
 
 `DynamicMenuItem` 与
-[`IDynamicActionProvider`](./core-search-actions#idynamicactionprovider) 用的是同一个模型，包括
-子菜单层级标题行用的 `IsHeader` 标记。
+[`IDynamicActionProvider`](./core-search-actions#idynamicactionprovider) 用的是同一个模型，包括子菜单层级标题行用的 `IsHeader` 标记。

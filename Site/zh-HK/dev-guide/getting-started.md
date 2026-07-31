@@ -21,8 +21,7 @@
 </Project>
 ```
 
-只有當插件自己要渲染 WPF 介面(自訂預覽、主題資源字典等)時才需要 `UseWPF`——純搜尋源邏輯的插
-件不需要它。
+只有當插件自己要渲染 WPF 介面(自訂預覽、主題資源字典等)時才需要 `UseWPF`——純搜尋源邏輯的插件不需要它。
 
 ## 實現 `IPlugin`
 
@@ -35,16 +34,13 @@ public class YourPlugin : IPlugin
 }
 ```
 
-在此基礎上，按需實現其他接口——完整列表見
-[插件 SDK 參考](./sdk/core-search-actions)。大多數真實插件會實現 `IPlugin` 再加一兩個其他接口
-(`CoreExtensionsPlugin` 實現了 `IPlugin`、`IActionProvider` 和 `IConfigurable`；參見
-[插件示例](./examples))。
+在此基礎上，按需實現其他接口——完整列表見[插件 SDK 參考](./sdk/core-search-actions)。大多數真實插件會實現 `IPlugin` 再加一兩個其他接口
+(`CoreExtensionsPlugin` 實現了 `IPlugin`、`IActionProvider` 和 `IConfigurable`；參見[插件示例](./examples))。
 
 ## 加載插件
 
 編譯插件，把生成的 DLL 複製到 SwiftList App 的 `Plugins/` 資料夾(與 `SwiftList.App.exe` 同級)
-——App 啓動時會掃描這個資料夾並加載找到的每一個插件程式集。這一步如何在構建時自動完成，見
-[打包與發佈](./packaging)。
+——App 啓動時會掃描這個資料夾並加載找到的每一個插件程式集。這一步如何在構建時自動完成，見[打包與發佈](./packaging)。
 
 ## 調試
 

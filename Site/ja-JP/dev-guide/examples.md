@@ -5,50 +5,28 @@ SwiftList リポジトリの `Plugins/` フォルダーにあります。
 
 ## CoreExtensions — アクションとシェルのコンテキストメニュー
 
-`CoreExtensionsPlugin` は `IPlugin`、`IActionProvider`、`IConfigurable` の3つのインターフェースを
-同時に実装しています。
+`CoreExtensionsPlugin` は `IPlugin`、`IActionProvider`、`IConfigurable` の3つのインターフェースを同時に実装しています。
 
 - **`IActionProvider.GetActions()`** は10個の組み込み `ISearchResultAction` を返します——開く、
-  Explorer で開く場所を表示、パスのコピー、ファイル自体のコピー/切り取り、その場所でコマンドプロン
-  プトを開く、touch/mkdir、そして開くとコマンドプロンプトの昇格(管理者として実行)バリアントです。
+  Explorer で開く場所を表示、パスのコピー、ファイル自体のコピー/切り取り、その場所でコマンドプロンプトを開く、touch/mkdir、そして開くとコマンドプロンプトの昇格(管理者として実行)バリアントです。
 - **`IActionProvider.GetDynamicActionProviders()`** は単一の `IDynamicActionProvider` である
-  `ShellMenuActionProvider` を返します。これが、実際の Windows 右クリックメニュー(「送る」のような
-  ネストされたカスケードサブメニューを含む)を SwiftList 自身のアクションメニューの中に表示させてい
-  る仕組みです。固定のアクションリストではなく、*任意の*外部の、動的に構築されるメニューを SwiftList
+  `ShellMenuActionProvider` を返します。これが、実際の Windows 右クリックメニュー(「送る」のようなネストされたカスケードサブメニューを含む)を SwiftList 自身のアクションメニューの中に表示させている仕組みです。固定のアクションリストではなく、*任意の*外部の、動的に構築されるメニューを SwiftList
   内に表示したい場合に真似すべきパターンです。
-- **`IConfigurable.GetConfigSchema()`** は、ネストされたフィールドグループと `StringList` フィール
-  ドタイプを使った設定スキーマの例を示しています——自分のプラグインの 設定 → プラグイン の設定ダイ
-  アログに、フラットなブール値のリスト以上のものが必要な場合は一読の価値があります。
+- **`IConfigurable.GetConfigSchema()`** は、ネストされたフィールドグループと `StringList` フィールドタイプを使った設定スキーマの例を示しています——自分のプラグインの 設定 → プラグイン の設定ダイアログに、フラットなブール値のリスト以上のものが必要な場合は一読の価値があります。
 - `FavoritesTabProvider` と `HistoryTabProvider` はそれぞれ
-  [`IStartupPanelTabProvider`](./sdk/ui-extensions#istartuppaneltabprovider) を実装し、既存のリスト
-  を[スタートアップパネル](../user-guide/settings/startup-panel)のタブとして表示しています——どちら
-  もすでにクエリ済みの項目リストをラップしているだけで、独自の状態を持たないため、このインターフェ
-  ースの最小限のリファレンス実装になっています。
+  [`IStartupPanelTabProvider`](./sdk/ui-extensions#istartuppaneltabprovider) を実装し、既存のリストを[スタートアップパネル](../user-guide/settings/startup-panel)のタブとして表示しています——どちらもすでにクエリ済みの項目リストをラップしているだけで、独自の状態を持たないため、このインターフェースの最小限のリファレンス実装になっています。
 
 ## PinyinAlias — 中国語ファイル名向けのピンインエイリアス
 
-`PinyinAliasProvider` は `IAliasProvider` と `ITranslationProvider` の両方を実装しています——プラグ
-インは関連する SDK の役割を自由に組み合わせることができ、これはその良いテンプレートです。
+`PinyinAliasProvider` は `IAliasProvider` と `ITranslationProvider` の両方を実装しています——プラグインは関連する SDK の役割を自由に組み合わせることができ、これはその良いテンプレートです。
 
-- **`IAliasProvider.InputRanges`/`OutputRanges`** は、`PinyinEngine` 自身のテーブルの境界値から2つ
-  のアルファベットをそのまま宣言しています(`InputRanges`:CJK ブロック、`OutputRanges`:`a`-`z`)。
-  マジックナンバーを重複させないためです——ホストはこれら両方を使って、`大长今` に対する `大cj` の
-  ような、文字リテラルとピンインを混在させたクエリをサポートします。
-- **`IAliasProvider.CanHandle(text)`** は、実際の処理を行う前にまず中国語文字が含まれているかをス
-  キャンするため、中国語以外のファイル名はエイリアス生成を完全にスキップします。
-- **`IAliasProvider.GetAliases(text)`** は文字単位の音節テーブル(各漢字が取りうるピンイン読みへの
-  マッピング)を構築し、フルピンインのエイリアスと頭文字のみのエイリアスの両方を生成します。多音字
-  (有効な読みが複数ある文字)を含むファイル名については、一般的な組み合わせすべてに対してエイリア
-  スを生成します——病的な入力での組み合わせ爆発を避けるため上限は32通りです——各候補は `|` で連結さ
-  れ、検索エンジンはそれらすべてが同時に一致することを要求するのではなく、それぞれを個別の候補とし
-  て扱います。
+- **`IAliasProvider.InputRanges`/`OutputRanges`** は、`PinyinEngine` 自身のテーブルの境界値から2つのアルファベットをそのまま宣言しています(`InputRanges`:CJK ブロック、`OutputRanges`:`a`-`z`)。マジックナンバーを重複させないためです——ホストはこれら両方を使って、`大长今` に対する `大cj` のような、文字リテラルとピンインを混在させたクエリをサポートします。
+- **`IAliasProvider.CanHandle(text)`** は、実際の処理を行う前にまず中国語文字が含まれているかをスキャンするため、中国語以外のファイル名はエイリアス生成を完全にスキップします。
+- **`IAliasProvider.GetAliases(text)`** は文字単位の音節テーブル(各漢字が取りうるピンイン読みへのマッピング)を構築し、フルピンインのエイリアスと頭文字のみのエイリアスの両方を生成します。多音字
+  (有効な読みが複数ある文字)を含むファイル名については、一般的な組み合わせすべてに対してエイリアスを生成します——病的な入力での組み合わせ爆発を避けるため上限は32通りです——各候補は `|` で連結され、検索エンジンはそれらすべてが同時に一致することを要求するのではなく、それぞれを個別の候補として扱います。
 - **`ITranslationProvider`** は*同じ*クラスに実装されていますが、これは純粋にこのプラグイン自身の
-  UI 文字列(表示名など)を `TranslationService.LoadEmbeddedTranslations` 経由で提供するためのもので
-  す——両インターフェースは目的としては無関係ですが、この小さな単一ファイルのプラグインではたまたま
+  UI 文字列(表示名など)を `TranslationService.LoadEmbeddedTranslations` 経由で提供するためのものです——両インターフェースは目的としては無関係ですが、この小さな単一ファイルのプラグインではたまたま
   1つの型にまとまっています。
-- `lock` で保護された `Dictionary<string, Dictionary<string, string>>` のキャッシュにより、呼び出し
-  のたびに埋め込みの翻訳 JSON を再パースすることを避けています——`GetTranslations` の中で軽くない処
-  理を行うプラグインにとっての標準的なパターンです。
+- `lock` で保護された `Dictionary<string, Dictionary<string, string>>` のキャッシュにより、呼び出しのたびに埋め込みの翻訳 JSON を再パースすることを避けています——`GetTranslations` の中で軽くない処理を行うプラグインにとっての標準的なパターンです。
 
-両方のプラグインを並べて読むことが、[プラグイン SDK リファレンス](./sdk/core-search-actions)の各パ
-ーツが実際にどう組み合わさるかを理解する最も手っ取り早い方法です。
+両方のプラグインを並べて読むことが、[プラグイン SDK リファレンス](./sdk/core-search-actions)の各パーツが実際にどう組み合わさるかを理解する最も手っ取り早い方法です。
