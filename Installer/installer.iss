@@ -149,7 +149,15 @@ var
   Path: string;
 begin
   Result := False;
-  Path := ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.WindowsDesktop.App');
+  // Which directory holds "the runtime this build needs" is not fixed: on an arm64 machine the arm64
+  // runtime installs under dotnet\ and the x64 one under dotnet\x64\. This installer is allowed to run
+  // on arm64 (x64compatible), so the x64 build has to look in the x64 subdirectory there -- checking
+  // dotnet\ would find the ARM64 runtime, conclude everything was in place, and skip an install the
+  // x64 app cannot start without.
+  if IsArm64 and ('{#Arch}' = 'x64') then
+    Path := ExpandConstant('{commonpf64}\dotnet\x64\shared\Microsoft.WindowsDesktop.App')
+  else
+    Path := ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.WindowsDesktop.App');
   if FindFirst(Path + '\10.*', FindRec) then
   begin
     Result := True;
