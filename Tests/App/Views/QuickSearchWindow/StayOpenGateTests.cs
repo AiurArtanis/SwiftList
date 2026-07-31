@@ -65,7 +65,7 @@ public sealed class StayOpenGateTests
         // that one), so comparing raw file offsets would pick up the OTHER logo's service-down trigger.
         var stayOpen = xaml.IndexOf("IsStayOpen, ElementName=root", StringComparison.Ordinal);
         Assert.IsGreaterThan(-1, stayOpen, "the indicator trigger is missing");
-        Assert.AreEqual(1, System.Text.RegularExpressions.Regex.Matches(xaml, "IsStayOpen, ElementName=root").Count,
+        Assert.HasCount(1, System.Text.RegularExpressions.Regex.Matches(xaml, "IsStayOpen, ElementName=root"),
             "only the logo the quick window actually shows should carry the indicator");
 
         var serviceDown = xaml.IndexOf("IsServiceRunning, ElementName=root", stayOpen, StringComparison.Ordinal);
@@ -119,7 +119,7 @@ public sealed class StayOpenGateTests
         var control = Source("App/Views/Controls/SearchBoxControl.xaml.cs");
         var window = Source("App/Views/QuickSearchWindow/QuickSearchWindow.xaml.cs");
 
-        Assert.AreEqual(1, System.Text.RegularExpressions.Regex.Matches(xaml, @"MouseUp=""Icon_MouseUp""").Count,
+        Assert.HasCount(1, System.Text.RegularExpressions.Regex.Matches(xaml, @"MouseUp=""Icon_MouseUp"""),
             "exactly one icon should carry the middle-click handler");
 
         var rightIcon = xaml.IndexOf(@"Grid.Column=""3""", StringComparison.Ordinal);
