@@ -10,6 +10,28 @@
 #define ServiceName "SwiftListService"
 #define CliExeName "slf.exe"
 
+; Architecture this installer is being built for, passed by make.bat as /DArch=x64 or /DArch=arm64.
+; Defaults to x64 so compiling this script by hand still produces what it always produced.
+#ifndef Arch
+  #define Arch "x64"
+#endif
+
+; The x64 installer deliberately keeps its unsuffixed name. Existing installs and the release assets
+; they update from are matched by name (see UpdateAssetSelector), so renaming it would strand them.
+#if Arch == "arm64"
+  #define ArchSuffix "-arm64"
+  #define SetupArchitectures "arm64"
+  #define DotNetRuntimeFile "windowsdesktop-runtime-10-win-arm64.exe"
+  #define DotNetRuntimeUrl "https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-arm64.exe"
+  #define PublishDir "..\publish\arm64\SwiftList"
+#else
+  #define ArchSuffix ""
+  #define SetupArchitectures "x64compatible"
+  #define DotNetRuntimeFile "windowsdesktop-runtime-10-win-x64.exe"
+  #define DotNetRuntimeUrl "https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe"
+  #define PublishDir "..\publish\x64\SwiftList"
+#endif
+
 [Setup]
 AppId={{D37D0B75-B5E3-40D9-92EE-429C7D4D7F2A}
 AppName={#AppName}
@@ -24,13 +46,13 @@ DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE
 OutputDir=..\dist
-OutputBaseFilename=SwiftList-Setup
+OutputBaseFilename=SwiftList-Setup{#ArchSuffix}
 SetupIconFile=..\App\logo.ico
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed={#SetupArchitectures}
+ArchitecturesInstallIn64BitMode={#SetupArchitectures}
 PrivilegesRequired=admin
 VersionInfoVersion={#AppVersion4}
 VersionInfoTextVersion={#AppVersion}
@@ -52,7 +74,7 @@ Name: "startmenuicon"; Description: "{cm:CreateStartMenuIcon}"; GroupDescription
 Name: "addtopath"; Description: "{cm:AddSlfToPath}"; GroupDescription: "{cm:CommandLineTools}"
 
 [Files]
-Source: "..\publish\SwiftList\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb"
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb"
 
 [Icons]
 Name: "{commonprograms}\{#AppName}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: startmenuicon
@@ -173,7 +195,7 @@ begin
     if not IsDotNet10Installed() then
     begin
       DownloadPage.Clear;
-      DownloadPage.Add('https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe', 'windowsdesktop-runtime-10-win-x64.exe', '');
+      DownloadPage.Add('{#DotNetRuntimeUrl}', '{#DotNetRuntimeFile}', '');
       DownloadPage.Show;
       try
         try
@@ -195,7 +217,7 @@ begin
 
       // Install the downloaded runtime
       WizardForm.StatusLabel.Caption := CustomMessage('DotNetInstalling');
-      InstallerPath := ExpandConstant('{tmp}\windowsdesktop-runtime-10-win-x64.exe');
+      InstallerPath := ExpandConstant('{tmp}\{#DotNetRuntimeFile}');
       if not Exec(InstallerPath, '/install /quiet /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
       begin
         Result := FmtMessage(CustomMessage('DotNetInstallFailed'), [IntToStr(ResultCode)]);

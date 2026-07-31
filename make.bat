@@ -3,7 +3,6 @@ setlocal
 chcp 65001 >nul
 
 set "ROOT=%~dp0"
-set "OUT=%ROOT%publish\SwiftList"
 set "DIST=%ROOT%dist"
 
 echo ==========================================
@@ -17,18 +16,9 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: 2. Clean and create directories
+:: 2. Clean and create the output directory (the per-architecture publish dirs are cleaned in :build_arch)
 echo.
-echo [1/6] Cleaning publish and dist directories...
-if exist "%OUT%" (
-    rmdir /s /q "%OUT%" >nul 2>&1
-    if exist "%OUT%" (
-        timeout /t 1 >nul
-        rmdir /s /q "%OUT%" >nul 2>&1
-    )
-)
-mkdir "%OUT%"
-
+echo [1/3] Cleaning dist directory...
 if exist "%DIST%" (
     rmdir /s /q "%DIST%" >nul 2>&1
     if exist "%DIST%" (
@@ -38,7 +28,80 @@ if exist "%DIST%" (
 )
 mkdir "%DIST%"
 
-:: 3. Publish App/Service/Cli in Release mode
+
+:: 3. Find Inno Setup compiler (architecture-independent, so hoisted ahead of both passes)
+set "ISCC="
+where iscc >nul 2>&1
+if "%errorlevel%"=="0" set "ISCC=iscc"
+if "%ISCC%"=="" if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" set "ISCC=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+if "%ISCC%"=="" if exist "C:\Program Files\Inno Setup 6\ISCC.exe" set "ISCC=C:\Program Files\Inno Setup 6\ISCC.exe"
+
+if "%ISCC%"=="" (
+    echo [Error] Inno Setup compiler ISCC.exe not found.
+    echo Please install Inno Setup or add it to your PATH.
+    exit /b 1
+)
+
+:: 4. Extract application version from App.csproj (likewise shared by both passes)
+echo.
+echo Extracting application version...
+for /f "usebackq tokens=*" %%v in (`powershell -NoProfile -Command "([xml](Get-Content '%ROOT%App\App.csproj')).Project.PropertyGroup.Version"`) do set "APP_VER=%%v"
+for /f "usebackq tokens=*" %%v in (`powershell -NoProfile -Command "$a = '%APP_VER%.0.0.0' -split '\.'; $a[0..3] -join '.'"`) do set "APP_VER_4=%%v"
+echo App Version: %APP_VER% (PE Version: %APP_VER_4%)
+
+
+:: Two architectures, same steps. x64 publishes with no RID exactly as it always has, so its output is
+:: unchanged; arm64 is a cross-publish from whatever machine is building. They are separate artifacts
+:: rather than one combined installer because the BrowserData plugin carries a native library and only
+:: one architecture's copy can sit in its (flat, deps.json-less) load directory -- see that project.
+echo.
+echo === Building x64 ===
+set "ARCH=x64"
+set "ARCHSUFFIX="
+set "RIDARGS="
+call :build_arch
+if errorlevel 1 exit /b 1
+
+echo.
+echo === Building arm64 ===
+set "ARCH=arm64"
+set "ARCHSUFFIX=-arm64"
+set "RIDARGS=-r win-arm64 --self-contained false"
+call :build_arch
+if errorlevel 1 exit /b 1
+
+:: 5. Clean up temporary publish folder
+echo.
+echo Cleaning up temporary publish folder...
+rmdir /s /q "%ROOT%publish" >nul 2>&1
+
+echo.
+echo ==========================================
+echo Build and Package Completed Successfully!
+echo Installer (x64):     %DIST%\SwiftList-Setup.exe
+echo Portable ZIP (x64):  %DIST%\SwiftList-Portable.zip
+echo Installer (arm64):   %DIST%\SwiftList-Setup-arm64.exe
+echo Portable ZIP (arm64):%DIST%\SwiftList-Portable-arm64.zip
+echo ==========================================
+exit /b 0
+
+
+:: ---------------------------------------------------------------------------------------------
+:: Per-architecture build. Driven by ARCH / ARCHSUFFIX / RIDARGS set by the caller rather than by
+:: parameters, because an empty argument (x64 passes no RID) is awkward to quote in batch.
+:: ---------------------------------------------------------------------------------------------
+:build_arch
+set "OUT=%ROOT%publish\%ARCH%\SwiftList"
+if exist "%OUT%" (
+    rmdir /s /q "%OUT%" >nul 2>&1
+    if exist "%OUT%" (
+        timeout /t 1 >nul
+        rmdir /s /q "%OUT%" >nul 2>&1
+    )
+)
+mkdir "%OUT%"
+
+:: Publish App/Service/Cli in Release mode
 ::
 :: Solution-level `dotnet publish -o` prints NETSDK1194 ("specifying a solution-level output path...
 :: may result in inconsistent builds") since it's not an officially supported publish mode -- every
@@ -49,28 +112,28 @@ mkdir "%DIST%"
 :: the same merged output (App+Service+Cli+Core+PluginSdk all landing in %OUT%) as the three separate
 :: publishes it replaces.
 echo.
-echo [2/6] Publishing App/Service/Cli in Release mode...
-dotnet publish "%ROOT%SwiftList.slnx" -c Release -o "%OUT%" -v quiet
+echo [1/4] Publishing App/Service/Cli in Release mode...
+dotnet publish "%ROOT%SwiftList.slnx" -c Release -o "%OUT%" %RIDARGS% -v quiet
 set "SLN_EXIT=%errorlevel%"
 if not "%SLN_EXIT%"=="0" (
-    echo [Error] App/Service/Cli publish failed.
+    echo [Error] App/Service/Cli publish failed for %ARCH%.
     exit /b %SLN_EXIT%
 )
 
-:: 4. Publish Plugins in Release mode
+:: Publish Plugins in Release mode
 echo.
-echo [3/6] Publishing Plugins in Release mode...
-dotnet publish "%ROOT%SwiftList.Plugins.slnx" -c Release -o "%OUT%\Plugins" -v quiet
+echo [2/4] Publishing Plugins in Release mode...
+dotnet publish "%ROOT%SwiftList.Plugins.slnx" -c Release -o "%OUT%\Plugins" %RIDARGS% -v quiet
 set "PLUGINS_EXIT=%errorlevel%"
 if not "%PLUGINS_EXIT%"=="0" (
-    echo [Error] Plugins publish failed.
+    echo [Error] Plugins publish failed for %ARCH%.
     exit /b %PLUGINS_EXIT%
 )
 
 
-:: 5. Copy portable updater/cleanup files and clean PDB files
+:: Copy portable updater/cleanup files and clean PDB files
 echo.
-echo [4/6] Copying portable updater/cleanup files and cleaning PDB files...
+echo [3/4] Copying portable updater/cleanup files and cleaning PDB files...
 copy "%ROOT%portable-updater.bat" "%OUT%\" >nul
 if errorlevel 1 (
     echo [Warning] Failed to copy portable-updater.bat.
@@ -85,54 +148,23 @@ if errorlevel 1 (
 )
 del /s /q "%OUT%\*.pdb" >nul 2>&1
 
-:: 6. Find Inno Setup compiler
-set "ISCC="
-where iscc >nul 2>&1
-if "%errorlevel%"=="0" set "ISCC=iscc"
-if "%ISCC%"=="" if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" set "ISCC=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-if "%ISCC%"=="" if exist "C:\Program Files\Inno Setup 6\ISCC.exe" set "ISCC=C:\Program Files\Inno Setup 6\ISCC.exe"
-
-if "%ISCC%"=="" (
-    echo [Error] Inno Setup compiler ISCC.exe not found.
-    echo Please install Inno Setup or add it to your PATH.
-    exit /b 1
-)
-
-:: 7. Extract application version from App.csproj
+:: Compile Inno Setup Installer
 echo.
-echo Extracting application version...
-for /f "usebackq tokens=*" %%v in (`powershell -NoProfile -Command "([xml](Get-Content '%ROOT%App\App.csproj')).Project.PropertyGroup.Version"`) do set "APP_VER=%%v"
-for /f "usebackq tokens=*" %%v in (`powershell -NoProfile -Command "$a = '%APP_VER%.0.0.0' -split '\.'; $a[0..3] -join '.'"`) do set "APP_VER_4=%%v"
-echo App Version: %APP_VER% (PE Version: %APP_VER_4%)
-
-:: 8. Compile Inno Setup Installer
-echo.
-echo [5/6] Compiling Inno Setup Installer...
+echo [4/4] Compiling Inno Setup Installer...
 echo Using Inno Setup compiler: "%ISCC%"
-"%ISCC%" /DAppVersion="%APP_VER%" /DAppVersion4="%APP_VER_4%" "%ROOT%Installer\installer.iss"
+"%ISCC%" /DAppVersion="%APP_VER%" /DAppVersion4="%APP_VER_4%" /DArch="%ARCH%" "%ROOT%Installer\installer.iss"
 if errorlevel 1 (
-    echo [Error] Inno Setup compilation failed.
+    echo [Error] Inno Setup compilation failed for %ARCH%.
     exit /b 1
 )
 
-:: 9. Create Portable ZIP Archive
+:: Create Portable ZIP Archive
 echo.
-echo Creating Portable ZIP Archive...
-powershell -Command "if (Test-Path '%DIST%\SwiftList-Portable.zip') { Remove-Item -Force '%DIST%\SwiftList-Portable.zip' }; Compress-Archive -Path '%OUT%' -DestinationPath '%DIST%\SwiftList-Portable.zip' -Force"
+echo Creating Portable ZIP Archive (%ARCH%)...
+powershell -Command "if (Test-Path '%DIST%\SwiftList-Portable%ARCHSUFFIX%.zip') { Remove-Item -Force '%DIST%\SwiftList-Portable%ARCHSUFFIX%.zip' }; Compress-Archive -Path '%OUT%' -DestinationPath '%DIST%\SwiftList-Portable%ARCHSUFFIX%.zip' -Force"
 if errorlevel 1 (
     echo [Error] Portable ZIP creation failed.
     exit /b 1
 )
 
-:: 10. Clean up temporary publish folder
-echo.
-echo Cleaning up temporary publish folder...
-rmdir /s /q "%ROOT%publish" >nul 2>&1
-
-echo.
-echo ==========================================
-echo Build and Package Completed Successfully!
-echo Installer: %DIST%\SwiftList-Setup.exe
-echo Portable ZIP: %DIST%\SwiftList-Portable.zip
-echo ==========================================
-exit /b 0
+goto :eof
