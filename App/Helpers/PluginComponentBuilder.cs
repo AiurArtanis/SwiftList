@@ -9,6 +9,7 @@ using SwiftList.App.Services.Plugin;
 
 using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 using SwiftList.PluginSdk.Abstractions.Plugins.WindowAdapters;
+using SwiftList.PluginSdk.Abstractions.Plugins.WindowEffects;
 using SwiftList.Core.SearchIndex;
 using SwiftList.App.ViewModels.Settings.General;
 namespace SwiftList.App.Helpers;
@@ -111,6 +112,11 @@ internal static class PluginComponentBuilder
             var id = PluginLoaderHelper.MakeId(dllName, PluginComponentType.StartupPanelTabProvider, prov.GetType().Name);
             components.Add(new PluginComponentViewModel(id, PluginComponentType.StartupPanelTabProvider, prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
         }
+        foreach (var prov in manager.AllQuickSearchWindowDragEffectProviders.Where(p => p.GetType().Assembly == assembly))
+        {
+            var id = PluginLoaderHelper.MakeId(dllName, PluginComponentType.QuickSearchWindowDragEffectProvider, prov.GetType().Name);
+            components.Add(new PluginComponentViewModel(id, PluginComponentType.QuickSearchWindowDragEffectProvider, prov.Name, !disabledSet.Contains(id), GetDescriptionWithFallback(prov)));
+        }
         foreach (var prov in manager.AllTranslationProviders.Where(p => p.GetType().Assembly == assembly))
         {
             var id = PluginLoaderHelper.MakeId(dllName, PluginComponentType.TranslationProvider, prov.GetType().Name);
@@ -160,6 +166,7 @@ internal static class PluginComponentBuilder
         if (component is IResultColumnProvider) return TranslationService.Get("Plugins_TypeDesc_IResultColumnProvider");
         if (component is ISidebarFilterProvider) return TranslationService.Get("Plugins_TypeDesc_ISidebarFilterProvider");
         if (component is IStartupPanelTabProvider) return TranslationService.Get("Plugins_TypeDesc_IStartupPanelTabProvider");
+        if (component is IQuickSearchWindowDragEffectProvider) return TranslationService.Get("Plugins_TypeDesc_IQuickSearchWindowDragEffectProvider");
         if (component is IFileDialogAdapter) return TranslationService.Get("Plugins_TypeDesc_IFileDialogAdapter");
         if (component is IAliasProvider) return TranslationService.Get("Plugins_TypeDesc_IAliasProvider");
         if (component is IDynamicActionProvider) return TranslationService.Get("Plugins_TypeDesc_IDynamicActionProvider");

@@ -23,24 +23,32 @@ public sealed class ShiftDragGuideEffect : IQuickSearchWindowDragEffectProvider
     private Line? _horizontalGuide;
     private Rectangle? _windowOutline;
 
-    public string Name => "Shift Drag Guides";
-    public string Description => "Shows and snaps to the active screen's center guides while Shift is held during a quick-search drag.";
+    public string Name => TranslationService.Get("WindowGuides_PluginName");
+    public string Description => TranslationService.Get("WindowGuides_PluginDesc");
 
     public void OnDragStarted(Window window) { }
 
     public void OnDragMoved(Window window, FrameworkElement searchCard)
     {
-        if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+        var modifiers = Keyboard.Modifiers;
+        if (modifiers.HasFlag(ModifierKeys.Alt) && modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            HideOverlay();
+            MoveSearchCardToCenter(window, searchCard, GetMonitorBounds(window));
+            return;
+        }
+        if (!modifiers.HasFlag(ModifierKeys.Alt))
         {
             HideOverlay();
             return;
         }
 
         var screenBounds = GetMonitorBounds(window);
-        var windowBounds = GetWindowBounds(window);
+        var windowBounds = GetElementBounds(searchCard);
         var center = new Point(screenBounds.Left + screenBounds.Width / 2, screenBounds.Top + screenBounds.Height / 2);
         var snapped = GuideSnapCalculator.Snap(windowBounds, center);
         MoveWindowByPixels(window, snapped.Left - windowBounds.Left, snapped.Top - windowBounds.Top);
+        window.UpdateLayout();
         Draw(window, searchCard, screenBounds, center);
     }
 
@@ -64,17 +72,17 @@ public sealed class ShiftDragGuideEffect : IQuickSearchWindowDragEffectProvider
         var cardTopLeft = _overlay.PointFromScreen(searchCard.PointToScreen(new Point(0, 0)));
         var cardBottomRight = _overlay.PointFromScreen(searchCard.PointToScreen(new Point(searchCard.ActualWidth, searchCard.ActualHeight)));
         var accent = WithOpacity(FindBrush("AccentColor", "AccentBlue").Color, GetSetting("OutlineOpacity", 50));
-        var baseColor = WithOpacity(FindBrush("CardBorderBrush", "BorderColor").Color, GetSetting("GuideOpacity", 50));
+        var baseColor = WithOpacity(FindBrush("SidebarHover", "CardBorderBrush").Color, GetSetting("GuideOpacity", 50));
 
         _canvas.Width = overlayBottomRight.X - overlayTopLeft.X;
         _canvas.Height = overlayBottomRight.Y - overlayTopLeft.Y;
         _verticalGuide.Stroke = new SolidColorBrush(baseColor);
-        _verticalGuide.StrokeThickness = GetThickness("GuideThickness", 1);
+        _verticalGuide.StrokeThickness = GetThickness("GuideThickness", 2);
         _verticalGuide.X1 = _verticalGuide.X2 = overlayCenter.X;
         _verticalGuide.Y1 = 0;
         _verticalGuide.Y2 = _canvas.Height;
         _horizontalGuide.Stroke = new SolidColorBrush(baseColor);
-        _horizontalGuide.StrokeThickness = GetThickness("GuideThickness", 1);
+        _horizontalGuide.StrokeThickness = GetThickness("GuideThickness", 2);
         _horizontalGuide.X1 = 0;
         _horizontalGuide.X2 = _canvas.Width;
         _horizontalGuide.Y1 = _horizontalGuide.Y2 = overlayCenter.Y;
@@ -141,11 +149,18 @@ public sealed class ShiftDragGuideEffect : IQuickSearchWindowDragEffectProvider
         return new Rect(info.rcMonitor.Left, info.rcMonitor.Top, info.rcMonitor.Right - info.rcMonitor.Left, info.rcMonitor.Bottom - info.rcMonitor.Top);
     }
 
-    private static Rect GetWindowBounds(Window window)
+    private static Rect GetElementBounds(FrameworkElement element)
     {
-        var topLeft = window.PointToScreen(new Point(0, 0));
-        var bottomRight = window.PointToScreen(new Point(window.ActualWidth, window.ActualHeight));
+        var topLeft = element.PointToScreen(new Point(0, 0));
+        var bottomRight = element.PointToScreen(new Point(element.ActualWidth, element.ActualHeight));
         return new Rect(topLeft, bottomRight);
+    }
+
+    private static void MoveSearchCardToCenter(Window window, FrameworkElement searchCard, Rect screenBounds)
+    {
+        var cardBounds = GetElementBounds(searchCard);
+        var center = new Point(screenBounds.Left + screenBounds.Width / 2, screenBounds.Top + screenBounds.Height / 2);
+        MoveWindowByPixels(window, center.X - cardBounds.Left - cardBounds.Width / 2, center.Y - cardBounds.Top - cardBounds.Height / 2);
     }
 
     private static void MoveWindowByPixels(Window window, double x, double y)

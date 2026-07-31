@@ -44,6 +44,15 @@ public class PluginConfigFieldViewModel : ViewModelBase
     public double SliderMinimum => SchemaField.Minimum;
     public double SliderMaximum => SchemaField.Maximum;
     public double SliderStep => SchemaField.Step;
+    public double SliderValue
+    {
+        get
+        {
+            try { return Convert.ToDouble(LocalValueStore ?? SchemaField.DefaultValue); }
+            catch { return SliderMinimum; }
+        }
+        set => Value = value;
+    }
     public bool HotkeyRequireModifier => SchemaField.RequireModifier;
     public bool IsIconField => SchemaField.Key.Equals("Icon", StringComparison.OrdinalIgnoreCase);
     public bool IsSimpleField => IsBoolean || IsText || IsInteger || IsChoice || IsStringList || IsHotkey || IsFilePath || IsFolderPath || IsSlider;
@@ -86,6 +95,7 @@ public class PluginConfigFieldViewModel : ViewModelBase
         {
             _localValueStore = ConfigValueHelper.UnpackValue(value);
             OnPropertyChanged(nameof(Value));
+            OnPropertyChanged(nameof(SliderValue));
             _onValueChanged?.Invoke();
         }
     }

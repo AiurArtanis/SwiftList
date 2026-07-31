@@ -4,7 +4,7 @@ namespace SwiftList.Plugins.WindowGuides;
 
 internal static class GuideSnapCalculator
 {
-    internal const double SnapThresholdPixels = 15;
+    internal const double SnapThresholdPixels = 10;
 
     internal static Rect Snap(Rect windowBounds, Point screenCenter)
     {

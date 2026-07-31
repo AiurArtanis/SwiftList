@@ -25,6 +25,7 @@ public enum PluginComponentType
     ThumbnailProvider,
     QueryTokenProvider,
     StartupPanelTabProvider,
+    QuickSearchWindowDragEffectProvider,
     /// <summary>Translation providers are displayed read-only; they cannot be disabled.</summary>
     TranslationProvider,
     /// <summary>Theme providers are displayed read-only; they cannot be disabled.</summary>
@@ -87,7 +88,8 @@ public class PluginInfoViewModel : ViewModelBase
         string sdkVersion,
         List<PluginComponentViewModel> components,
         List<PluginConfigFieldViewModel> configFields,
-        string description = "")
+        string description = "",
+        string usageInstructions = "")
     {
         Name = name;
         Version = version;
@@ -96,6 +98,7 @@ public class PluginInfoViewModel : ViewModelBase
         RawComponents = components;
         ConfigFields = new ObservableCollection<PluginConfigFieldViewModel>(configFields);
         Description = description;
+        UsageInstructions = usageInstructions;
         ToggleAllComponentsCommand = new RelayCommand(ToggleAllComponents);
 
         // Group components by type
@@ -115,6 +118,7 @@ public class PluginInfoViewModel : ViewModelBase
 
     public string Name { get; }
     public string Description { get; }
+    public string UsageInstructions { get; }
     public string Version { get; }
     public string DllFileName { get; }
     public string SdkVersion { get; }

@@ -1,6 +1,6 @@
 {
-  "WindowGuides_PluginName": "Shift ドラッグガイド",
-  "WindowGuides_PluginDesc": "ドラッグ中に Shift を押すと画面中央ガイドを表示し、検索ウィンドウを吸着します。",
+  "WindowGuides_PluginName": "Alt ドラッグガイド",
+  "WindowGuides_PluginDesc": "ドラッグ中に Alt を押すと画面中央ガイドを表示し、クイック検索ウィンドウを吸着します。",
   "WindowGuides_Config_GuideOpacityLabel": "ガイドの不透明度",
   "WindowGuides_Config_GuideOpacityDesc": "水平および垂直の中央ガイドの不透明度です。",
   "WindowGuides_Config_GuideThicknessLabel": "ガイドの太さ",
@@ -8,5 +8,7 @@
   "WindowGuides_Config_OutlineOpacityLabel": "枠線の不透明度",
   "WindowGuides_Config_OutlineOpacityDesc": "ドラッグ中の検索カード枠線の不透明度です。",
   "WindowGuides_Config_OutlineThicknessLabel": "枠線の太さ",
-  "WindowGuides_Config_OutlineThicknessDesc": "ドラッグ中の検索カード枠線の太さです。"
+  "WindowGuides_Config_OutlineThicknessDesc": "ドラッグ中の検索カード枠線の太さです。",
+  "Plugins_TypeQuickSearchWindowDragEffectProvider": "ドラッグ効果",
+  "WindowGuides_UsageInstructions": "ドラッグ中に Alt を押すと、画面中央ガイドを表示して吸着します。Shift を押すと最初の水平または垂直方向に固定され、Alt+Shift で検索カードを現在の画面中央へ移動します。"
 }

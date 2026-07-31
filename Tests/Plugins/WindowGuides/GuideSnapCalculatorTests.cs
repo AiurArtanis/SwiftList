@@ -16,6 +16,7 @@ public sealed class GuideSnapCalculatorTests
         Assert.IsTrue(fields.All(field => field.FieldType == ConfigFieldType.Slider));
         Assert.AreEqual(50, fields.Single(field => field.Key == "GuideOpacity").DefaultValue);
         Assert.AreEqual(50, fields.Single(field => field.Key == "OutlineOpacity").DefaultValue);
+        Assert.AreEqual(2, fields.Single(field => field.Key == "GuideThickness").DefaultValue);
     }
 
     [TestMethod]
@@ -39,9 +40,9 @@ public sealed class GuideSnapCalculatorTests
     [TestMethod]
     public void Snap_OutsideThreshold_LeavesWindowFreeOnThatAxis()
     {
-        var snapped = GuideSnapCalculator.Snap(new Rect(880, 300, 200, 100), new Point(1000, 500));
+        var snapped = GuideSnapCalculator.Snap(new Rect(889, 300, 200, 100), new Point(1000, 500));
 
-        Assert.AreEqual(880d, snapped.Left);
+        Assert.AreEqual(889d, snapped.Left);
         Assert.AreEqual(300d, snapped.Top);
     }
 }

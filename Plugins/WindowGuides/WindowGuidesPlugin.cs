@@ -4,17 +4,26 @@ using SwiftList.PluginSdk.Services;
 
 namespace SwiftList.Plugins.WindowGuides;
 
-public sealed class WindowGuidesPlugin : IPlugin, IConfigurable
+public sealed class WindowGuidesPlugin : IPlugin, IConfigurable, IPluginUsageInfo
 {
     public string Name => TranslationService.Get("WindowGuides_PluginName");
     public string Description => TranslationService.Get("WindowGuides_PluginDesc");
+    public string UsageInstructions
+    {
+        get
+        {
+            const string key = "WindowGuides_UsageInstructions";
+            var instructions = TranslationService.Get(key);
+            return instructions == $"[{key}]" ? string.Empty : instructions;
+        }
+    }
 
     public PluginConfigSchema GetConfigSchema() => new()
     {
         Fields = new List<PluginConfigField>
         {
             Slider("GuideOpacity", "WindowGuides_Config_GuideOpacity", 50, 0, 100),
-            Slider("GuideThickness", "WindowGuides_Config_GuideThickness", 1, 1, 8),
+            Slider("GuideThickness", "WindowGuides_Config_GuideThickness", 2, 1, 8),
             Slider("OutlineOpacity", "WindowGuides_Config_OutlineOpacity", 50, 0, 100),
             Slider("OutlineThickness", "WindowGuides_Config_OutlineThickness", 2, 1, 8)
         }

@@ -5,9 +5,9 @@
             <Slider Minimum="{Binding SliderMinimum}" Maximum="{Binding SliderMaximum}"
                     TickFrequency="{Binding SliderStep}" SmallChange="{Binding SliderStep}"
                     LargeChange="{Binding SliderStep}" IsSnapToTickEnabled="True"
-                    Value="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    Value="{Binding SliderValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                     Width="180" Height="26"/>
-            <TextBlock Text="{Binding Value}" Width="32" Margin="8,0,0,0"
+            <TextBlock Text="{Binding SliderValue}" Width="32" Margin="8,0,0,0"
                        VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}"/>
         </StackPanel>
     </DataTemplate>

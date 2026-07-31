@@ -1,6 +1,6 @@
 {
-  "WindowGuides_PluginName": "Shift Drag Guides",
-  "WindowGuides_PluginDesc": "Shows screen-center guides and snaps the quick search window while Shift is held during a drag.",
+  "WindowGuides_PluginName": "Alt Drag Guides",
+  "WindowGuides_PluginDesc": "Shows screen-center guides and snaps the quick search window while Alt is held during a drag.",
   "WindowGuides_Config_GuideOpacityLabel": "Guide Opacity",
   "WindowGuides_Config_GuideOpacityDesc": "Opacity of the horizontal and vertical center guides.",
   "WindowGuides_Config_GuideThicknessLabel": "Guide Thickness",
@@ -8,5 +8,7 @@
   "WindowGuides_Config_OutlineOpacityLabel": "Outline Opacity",
   "WindowGuides_Config_OutlineOpacityDesc": "Opacity of the search-card outline shown while dragging.",
   "WindowGuides_Config_OutlineThicknessLabel": "Outline Thickness",
-  "WindowGuides_Config_OutlineThicknessDesc": "Line thickness of the search-card outline shown while dragging."
+  "WindowGuides_Config_OutlineThicknessDesc": "Line thickness of the search-card outline shown while dragging.",
+  "Plugins_TypeQuickSearchWindowDragEffectProvider": "Drag Effects",
+  "WindowGuides_UsageInstructions": "Hold Alt while dragging to show and snap to the screen center guides. Hold Shift to lock the drag to its initial horizontal or vertical direction; Alt+Shift centers the search card on the current screen."
 }

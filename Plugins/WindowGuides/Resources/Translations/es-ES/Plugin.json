@@ -1,6 +1,6 @@
 {
-  "WindowGuides_PluginName": "Guías de arrastre con Shift",
-  "WindowGuides_PluginDesc": "Muestra guías centrales de pantalla y ajusta la ventana de búsqueda rápida al mantener Shift durante el arrastre.",
+  "WindowGuides_PluginName": "Guías de arrastre con Alt",
+  "WindowGuides_PluginDesc": "Muestra guías centrales de pantalla y ajusta la ventana de búsqueda rápida al mantener Alt durante el arrastre.",
   "WindowGuides_Config_GuideOpacityLabel": "Opacidad de guías",
   "WindowGuides_Config_GuideOpacityDesc": "Opacidad de las guías centrales horizontal y vertical.",
   "WindowGuides_Config_GuideThicknessLabel": "Grosor de guías",
@@ -8,5 +8,7 @@
   "WindowGuides_Config_OutlineOpacityLabel": "Opacidad del contorno",
   "WindowGuides_Config_OutlineOpacityDesc": "Opacidad del contorno de la tarjeta de búsqueda durante el arrastre.",
   "WindowGuides_Config_OutlineThicknessLabel": "Grosor del contorno",
-  "WindowGuides_Config_OutlineThicknessDesc": "Grosor del contorno de la tarjeta de búsqueda durante el arrastre."
+  "WindowGuides_Config_OutlineThicknessDesc": "Grosor del contorno de la tarjeta de búsqueda durante el arrastre.",
+  "Plugins_TypeQuickSearchWindowDragEffectProvider": "Efectos de arrastre",
+  "WindowGuides_UsageInstructions": "Mantén Alt mientras arrastras para mostrar y ajustar a las guías centrales de la pantalla. Mantén Shift para bloquear el arrastre en su dirección horizontal o vertical inicial; Alt+Shift centra la tarjeta de búsqueda en la pantalla actual."
 }

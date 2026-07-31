@@ -1,6 +1,6 @@
 {
-  "WindowGuides_PluginName": "Shift 拖动引导线",
-  "WindowGuides_PluginDesc": "拖动搜索窗口时按住 Shift，显示屏幕中轴引导线并自动吸附。",
+  "WindowGuides_PluginName": "Alt 拖动引导线",
+  "WindowGuides_PluginDesc": "拖动搜索窗口时按住 Alt，显示屏幕中轴引导线并自动吸附。",
   "WindowGuides_Config_GuideOpacityLabel": "引导线颜色透明度",
   "WindowGuides_Config_GuideOpacityDesc": "水平和垂直中轴引导线的不透明度。",
   "WindowGuides_Config_GuideThicknessLabel": "引导线粗细",
@@ -8,5 +8,7 @@
   "WindowGuides_Config_OutlineOpacityLabel": "描边颜色透明度",
   "WindowGuides_Config_OutlineOpacityDesc": "拖动时搜索框本体描边的不透明度。",
   "WindowGuides_Config_OutlineThicknessLabel": "描边颜色粗细",
-  "WindowGuides_Config_OutlineThicknessDesc": "拖动时搜索框本体描边的线条粗细。"
+  "WindowGuides_Config_OutlineThicknessDesc": "拖动时搜索框本体描边的线条粗细。",
+  "Plugins_TypeQuickSearchWindowDragEffectProvider": "拖动效果",
+  "WindowGuides_UsageInstructions": "按住 Alt 拖动可显示屏幕中轴引导线并吸附；按住 Shift 会锁定初始的水平或垂直移动方向；同时按住 Alt+Shift 可将搜索卡片居中到当前屏幕。"
 }

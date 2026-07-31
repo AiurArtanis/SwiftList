@@ -16,6 +16,7 @@ public sealed class WindowDragTracker
 {
     private readonly Window _window;
     private Point? _lastScreenPoint;
+    private DragAxis? _shiftAxis;
 
     public WindowDragTracker(Window window) => _window = window;
 
@@ -43,12 +44,33 @@ public sealed class WindowDragTracker
         var deltaX = (currentScreenPoint.X - _lastScreenPoint.Value.X) * dpiScaleX;
         var deltaY = (currentScreenPoint.Y - _lastScreenPoint.Value.Y) * dpiScaleY;
 
-        if (Keyboard.Modifiers != ModifierKeys.Control)
-            _window.Left += deltaX;
-        _window.Top += deltaY;
+        var modifiers = Keyboard.Modifiers;
+        if (modifiers.HasFlag(ModifierKeys.Alt) && modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            _lastScreenPoint = currentScreenPoint;
+            return;
+        }
+        if (modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            _shiftAxis ??= Math.Abs(deltaX) >= Math.Abs(deltaY) ? DragAxis.Horizontal : DragAxis.Vertical;
+            if (_shiftAxis == DragAxis.Horizontal) _window.Left += deltaX;
+            else _window.Top += deltaY;
+        }
+        else
+        {
+            _shiftAxis = null;
+            if (!modifiers.HasFlag(ModifierKeys.Control)) _window.Left += deltaX;
+            _window.Top += deltaY;
+        }
 
         _lastScreenPoint = currentScreenPoint;
     }
 
-    public void End() => _lastScreenPoint = null;
+    public void End()
+    {
+        _lastScreenPoint = null;
+        _shiftAxis = null;
+    }
+
+    private enum DragAxis { Horizontal, Vertical }
 }

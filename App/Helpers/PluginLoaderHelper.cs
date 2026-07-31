@@ -68,7 +68,8 @@ public static class PluginLoaderHelper
                 continue;
 
             var description = pluginInstance != null ? PluginComponentBuilder.GetDescriptionWithFallback(pluginInstance) : string.Empty;
-            result.Add(new PluginInfoViewModel(pluginName, pluginVersion, dllName, sdkVersion, components, configFields, description));
+            var usageInstructions = (pluginInstance as IPluginUsageInfo)?.UsageInstructions ?? string.Empty;
+            result.Add(new PluginInfoViewModel(pluginName, pluginVersion, dllName, sdkVersion, components, configFields, description, usageInstructions));
         }
 
         return result;

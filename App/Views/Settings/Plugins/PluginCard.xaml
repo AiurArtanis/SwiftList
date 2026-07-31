@@ -256,6 +256,12 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                <Border Margin="0,-4,0,14" Padding="8,6" CornerRadius="4"
+                        Background="{DynamicResource HoverBackground}"
+                        Visibility="{Binding UsageInstructions, Converter={StaticResource StringToVis}}">
+                    <TextBlock Text="{Binding UsageInstructions}" FontSize="11"
+                               Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap"/>
+                </Border>
              </StackPanel>
 
         </StackPanel>

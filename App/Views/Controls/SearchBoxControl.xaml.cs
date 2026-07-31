@@ -20,107 +20,17 @@ public partial class SearchBoxControl : UserControl
     // meaningful when IsIconClickable is set -- see that property's own comment.
     public event Action<int, int>? IconLeftClicked;
 
-    // Raised right after a real icon-initiated drag finishes moving the window (see Icon_MouseMove).
-    // Only meaningful when IsIconDraggable is set -- lets the host window persist its new position the
-    // same way it does after a drag started elsewhere on its own chrome.
-    public event Action? IconDragCompleted;
-
-    // Middle-clicking the logo toggles Stay Open (#197), as a second way in alongside the hotkey -- the
-    // reporter asked for a mouse gesture as well, and the logo is already where this window's state is
-    // shown, so it is where the state is worth being able to flip.
+    // Middle-clicking the logo toggles Stay Open (#197), as a second way in alongside the hotkey.
     public event Action? IconMiddleClicked;
-
-    // Screen-space (not element-relative) so a real drag's own re-layout of this control underneath the
-    // cursor can't skew the distance measurement mid-gesture.
-    private System.Windows.Point? _iconPressScreenPoint;
-    private bool _iconDragStarted;
-
-    // Set only once a real drag is confirmed (see Icon_MouseMove) -- WindowDragTracker (shared with
-    // QuickSearchWindow's own Border drag) instead of Window.DragMove(), since DragMove()'s native move
-    // loop can't be constrained to vertical-only movement, or even queried, once Ctrl is pressed/released
-    // mid-drag.
-    private Helpers.Visuals.WindowDragTracker? _iconDragTracker;
 
     private void Icon_MouseRightButtonUp(object sender, MouseButtonEventArgs e) => IconRightClicked?.Invoke();
 
-    // WPF has no middle-button event of its own, so this is the general MouseUp filtered down to it.
-    // Deliberately not gated on IsIconClickable, unlike the left-click menu: that gate exists because a
-    // plain click on a non-clickable icon should fall through to the window drag underneath, and a
-    // middle click has nothing underneath it to fall through to.
+    // WPF has no dedicated middle-button event, so filter the general MouseUp event.
     private void Icon_MouseUp(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Middle) return;
         e.Handled = true;
         IconMiddleClicked?.Invoke();
-    }
-
-    // Marks the press handled so it never bubbles up to a hosting window's own MouseLeftButtonDown (e.g.
-    // the quick window's own Border drag): without this, a plain click on a clickable icon would also be
-    // picked up as a drag-start by whatever's underneath it. Left alone when the icon isn't clickable, so
-    // windows that never opted in keep whatever click-to-drag behavior they had.
-    //
-    // When IsIconDraggable is ALSO set (the quick window: its logo still drags the window, same as
-    // before it was clickable at all), capture the mouse and wait to see whether the gesture turns into
-    // a real drag before deciding -- see Icon_MouseMove.
-    private void Icon_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (!IsIconClickable) return;
-        e.Handled = true;
-
-        if (IsIconDraggable && sender is IInputElement el)
-        {
-            _iconDragStarted = false;
-            _iconPressScreenPoint = el is System.Windows.Media.Visual v ? v.PointToScreen(e.GetPosition(el)) : (System.Windows.Point?)null;
-            Mouse.Capture(el);
-        }
-    }
-
-    private void Icon_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (!IsIconDraggable || _iconPressScreenPoint == null || e.LeftButton != MouseButtonState.Pressed)
-            return;
-        if (sender is not System.Windows.Media.Visual visual) return;
-
-        var current = visual.PointToScreen(e.GetPosition((IInputElement)sender));
-
-        if (!_iconDragStarted)
-        {
-            var delta = current - _iconPressScreenPoint.Value;
-            if (Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance &&
-                Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance)
-                return;
-
-            // Real drag confirmed: start tracking from HERE, not the original press point, so the window
-            // doesn't jump to "catch up" for however far the mouse already moved past the drag threshold
-            // before this fired.
-            var window = Window.GetWindow(this);
-            if (window == null) return;
-            _iconDragStarted = true;
-            _iconDragTracker = new Helpers.Visuals.WindowDragTracker(window);
-            _iconDragTracker.Start(current);
-            return;
-        }
-
-        _iconDragTracker?.Update(current);
-    }
-
-    private void Icon_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is IInputElement el) el.ReleaseMouseCapture();
-        var wasDrag = _iconDragStarted;
-        _iconDragStarted = false;
-        _iconPressScreenPoint = null;
-        if (wasDrag)
-        {
-            _iconDragTracker?.End();
-            _iconDragTracker = null;
-            IconDragCompleted?.Invoke();
-            return;
-        }
-
-        if (!IsIconClickable || IconLeftClicked == null) return;
-        var screenPoint = ((System.Windows.Media.Visual)sender).PointToScreen(e.GetPosition((IInputElement)sender));
-        IconLeftClicked.Invoke((int)screenPoint.X, (int)screenPoint.Y);
     }
 
     static SearchBoxControl()
@@ -309,9 +219,7 @@ public partial class SearchBoxControl : UserControl
         set => SetValue(IsInActionsModeProperty, value);
     }
 
-    // Shown on the logo while the quick window has been asked not to auto-hide (see
-    // QuickSearchWindowController.ToggleStayOpen) -- an invisible mode nobody can tell they are in is
-    // the same mistake the full window's invisible drag region was.
+    // Shown on the logo while the quick window has been asked not to auto-hide.
     public static readonly DependencyProperty IsStayOpenProperty = DependencyProperty.Register(
         nameof(IsStayOpen), typeof(bool), typeof(SearchBoxControl), new PropertyMetadata(false));
 
