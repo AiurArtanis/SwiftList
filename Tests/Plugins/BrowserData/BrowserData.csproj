@@ -8,7 +8,11 @@
     <IsPackable>false</IsPackable>
     <AssemblyName>SwiftList.Plugins.BrowserData.Tests</AssemblyName>
     <RootNamespace>SwiftList.Plugins.BrowserData.Tests</RootNamespace>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- Same reason as the plugin this tests (see Plugins/BrowserData/BrowserData.csproj): a RID is
+         what gets Microsoft.Data.Sqlite's native e_sqlite3.dll copied out at all. Taken from the
+         building machine rather than hardcoded, so running these tests on an arm64 host loads an arm64
+         native library instead of an x86-64 one it cannot load. -->
+    <UseCurrentRuntimeIdentifier>true</UseCurrentRuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
