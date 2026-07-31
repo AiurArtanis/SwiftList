@@ -37,7 +37,7 @@ public static class UpdateCheckService
                                                            // If auto silent update is enabled and user is admin, prompt user and execute silent update
                                                            if (settings.AutoSilentUpdate && ElevationHelper.IsUserAdmin())
                                                            {
-                                                               var zipAsset = Array.Find(release.Assets, a => a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+                                                               var zipAsset = UpdateAssetSelector.SelectPortableZip(release.Assets, a => a.Name);
                                                                if (zipAsset != null)
                                                                {
                                                                    _ = dispatcher.BeginInvoke(new Action(async () =>

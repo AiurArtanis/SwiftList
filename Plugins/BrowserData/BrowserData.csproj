@@ -5,16 +5,29 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>SwiftList.Plugins.BrowserData</AssemblyName>
-    <Version>1.0.7</Version>
+    <Version>1.0.8</Version>
     <GenerateDependencyFile>false</GenerateDependencyFile>
     <!-- Microsoft.Data.Sqlite ships a native e_sqlite3.dll. A plain framework-dependent build with no
          RuntimeIdentifier never selects/copies it (that normally only happens on `dotnet publish`).
-         Pinning the RID + forcing local-copy makes a normal `dotnet build` produce the full flattened
+         Having a RID + forcing local-copy makes a normal `dotnet build` produce the full flattened
          dependency set (managed DLLs + the native one, all flat, no runtimes/ subfolder) right next to
          this plugin's own DLL, so Assembly.LoadFrom's own same-directory dependency probing finds
          all of it automatically. Verified end-to-end (loaded from a subdirectory, opened a real
-         profile database) in scratch/SqlitePluginTest before wiring this up for real. -->
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+         profile database) in scratch/SqlitePluginTest before wiring this up for real.
+
+         The RID is taken from whatever machine is building rather than written down, so a build on an
+         arm64 host produces the arm64 native library instead of an x86-64 one it cannot load. This was
+         a hardcoded win-x64 and that is exactly what it got wrong: publishing can always override it
+         with -r, but a plain `dotnet build` (build_and_run.bat, running the tests) had no way to, so
+         local development on arm64 silently got the wrong architecture.
+
+         Deliberately NOT removed altogether, and deliberately not <RuntimeIdentifiers> plural: with no
+         single RID selected the SDK copies the native asset for EVERY platform it ships, which is a
+         67MB runtimes/ tree covering android/ios/wasm (measured) instead of 2.3MB flat. Worse, nothing
+         would find it there: resolving runtimes/{rid}/native/ is what a deps.json is for, and this
+         project switches that off above, because plugins load through Assembly.LoadFrom and it probes
+         the loaded assembly's own directory only. -->
+    <UseCurrentRuntimeIdentifier>true</UseCurrentRuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>

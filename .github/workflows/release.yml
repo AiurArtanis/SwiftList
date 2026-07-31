@@ -60,14 +60,19 @@ jobs:
           # Calculate SHA-256 hashes of build artifacts
           $exeHash = (Get-FileHash -Path "dist/SwiftList-Setup.exe" -Algorithm SHA256).Hash.ToLower()
           $zipHash = (Get-FileHash -Path "dist/SwiftList-Portable.zip" -Algorithm SHA256).Hash.ToLower()
+          $exeHashArm = (Get-FileHash -Path "dist/SwiftList-Setup_arm64.exe" -Algorithm SHA256).Hash.ToLower()
+          $zipHashArm = (Get-FileHash -Path "dist/SwiftList-Portable_arm64.zip" -Algorithm SHA256).Hash.ToLower()
           
           # Sign portable zip if signing key is present
           if ($env:SIGNING_KEY) {
               # Write signing key to temp file
               [System.IO.File]::WriteAllText("tempKey.pem", $env:SIGNING_KEY)
               
-              # Sign using OpenSSL
+              # Sign using OpenSSL. Both portable zips, with the same key: they are the same release,
+              # and an unsigned arm64 download would look less trustworthy than the x64 one for no
+              # reason other than which machine the user happens to have.
               openssl dgst -sha256 -sign tempKey.pem -out dist/SwiftList-Portable.zip.sig dist/SwiftList-Portable.zip
+              openssl dgst -sha256 -sign tempKey.pem -out dist/SwiftList-Portable_arm64.zip.sig dist/SwiftList-Portable_arm64.zip
               
               # Clean up private key file immediately
               if (Test-Path "tempKey.pem") { Remove-Item -Force "tempKey.pem" }
@@ -76,6 +81,7 @@ jobs:
           } else {
               # Write a placeholder file so the release upload step doesn't fail when looking for .sig
               New-Item -Path "dist/SwiftList-Portable.zip.sig" -ItemType File -Value "unsigned" > $null
+              New-Item -Path "dist/SwiftList-Portable_arm64.zip.sig" -ItemType File -Value "unsigned" > $null
               $signedText = "Warning: Release is NOT signed (SIGNING_KEY secret is missing)."
           }
           Write-Host $signedText
@@ -85,8 +91,10 @@ jobs:
           echo '## Security Verification' >> changelog.md
           echo '' >> changelog.md
           echo '### SHA-256 Checksums' >> changelog.md
-          echo "* **SwiftList-Setup.exe**: ``$exeHash``" >> changelog.md
-          echo "* **SwiftList-Portable.zip**: ``$zipHash``" >> changelog.md
+          echo "* **SwiftList-Setup.exe** (x64): ``$exeHash``" >> changelog.md
+          echo "* **SwiftList-Portable.zip** (x64): ``$zipHash``" >> changelog.md
+          echo "* **SwiftList-Setup_arm64.exe** (arm64): ``$exeHashArm``" >> changelog.md
+          echo "* **SwiftList-Portable_arm64.zip** (arm64): ``$zipHashArm``" >> changelog.md
           
           if ($env:SIGNING_KEY) {
               echo '' >> changelog.md
@@ -120,6 +128,11 @@ jobs:
           }
 
       # 6. Publish release and upload artifacts (installer, portable ZIP, and signature)
+      # The arm64 assets are suffixed with an underscore rather than a hyphen, and the order of this
+      # list has nothing to do with it: GitHub returns a release's assets sorted by name in byte order,
+      # not by upload order. Installs predating UpdateAssetSelector take the first asset ending in
+      # ".zip", and '-' (0x2D) sorts below '.' (0x2E), so a hyphen would put the arm64 zip first and
+      # silently update every one of those x64 installs to a build that cannot start. '_' is 0x5F.
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -128,6 +141,9 @@ jobs:
             dist/SwiftList-Setup.exe
             dist/SwiftList-Portable.zip
             dist/SwiftList-Portable.zip.sig
+            dist/SwiftList-Setup_arm64.exe
+            dist/SwiftList-Portable_arm64.zip
+            dist/SwiftList-Portable_arm64.zip.sig
           name: ${{ github.ref_name }}
           draft: false
           prerelease: false

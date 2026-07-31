@@ -1,7 +1,6 @@
 # 宿主服務
 
-`PluginSdk.Services` 裏的靜態服務，把宿主應用的功能暴露給插件——每一個都是包裝了宿主啓動時接好
-的委託的薄靜態類，所以不管底層實際運行的是什麼，插件的調用方式都一樣。
+`PluginSdk.Services` 裏的靜態服務，把宿主應用的功能暴露給插件——每一個都是包裝了宿主啓動時接好的委託的薄靜態類，所以不管底層實際運行的是什麼，插件的調用方式都一樣。
 
 | 服務 | 用途 |
 |---|---|
@@ -17,5 +16,4 @@
 | `Logger` | `Log(message, level = LogLevel.Info)` —— 寫入 App 的日誌檔案，和宿主自己的日誌行一樣，顯示在**設定 → 運行狀態 → App** 裏。 |
 | `PluginPromptService` | `Prompt(title, fields, initialValues?)` —— 彈出一個小的模態視窗，向使用者詢問給定[`PluginConfigField`](./abstractions#iconfigurable)欄位的值(用的正是 `IConfigurable` 的配置對話方塊那套欄位 schema/渲染邏輯)，按 `Key` 匹配從 `initialValues` 預填，沒有就用各欄位自己的 `DefaultValue`。返回按欄位 `Key` 索引的填寫結果，使用者取消則返回 `null`——這些值不會讀取或寫入插件真正持久化的設定，所以可以放心複用某個配置欄位的 schema 單純做一次性輸入(比如"添加前先給它起個名字")，不會碰到背後真實的那個設定項。 |
 
-`LogLevel` 是 `Error` / `Warn` / `Info` / `Debug`，與
-[運行狀態日誌查看器](../../user-guide/settings/service-status)裏的等級過濾器一致。
+`LogLevel` 是 `Error` / `Warn` / `Info` / `Debug`，與[運行狀態日誌查看器](../../user-guide/settings/service-status)裏的等級過濾器一致。

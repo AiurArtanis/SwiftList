@@ -70,6 +70,8 @@ export const dictionary = {
     downloadInstallerDesc: 'Recommended, supports the background service',
     downloadPortableTitle: 'Portable Version',
     downloadPortableDesc: 'Standalone, unzip and run',
+    downloadX64Section: 'x64 — most PCs',
+    downloadArmSection: 'ARM64 — Windows on ARM',
   },
   'zh-CN': {
     userGuide: '用户手册',
@@ -134,6 +136,8 @@ export const dictionary = {
     downloadInstallerDesc: '推荐，支持后台系统服务',
     downloadPortableTitle: '便携版',
     downloadPortableDesc: '绿色免安装，解压即用',
+    downloadX64Section: 'x64 —— 绝大多数电脑',
+    downloadArmSection: 'ARM64 —— Windows on ARM 设备',
   },
   'zh-HK': {
     userGuide: '使用者手冊',
@@ -198,6 +202,8 @@ export const dictionary = {
     downloadInstallerDesc: '推薦，支援後臺系統服務',
     downloadPortableTitle: '便攜版',
     downloadPortableDesc: '綠色免安裝，解壓即用',
+    downloadX64Section: 'x64 —— 絕大多數電腦',
+    downloadArmSection: 'ARM64 —— Windows on ARM 裝置',
   },
   'zh-TW': {
     userGuide: '使用者手冊',
@@ -262,6 +268,8 @@ export const dictionary = {
     downloadInstallerDesc: '推薦，支援背景系統服務',
     downloadPortableTitle: '可攜版',
     downloadPortableDesc: '免安裝，解壓縮即可使用',
+    downloadX64Section: 'x64 —— 絕大多數電腦',
+    downloadArmSection: 'ARM64 —— Windows on ARM 裝置',
   },
   'ja-JP': {
     userGuide: 'ユーザーマニュアル',
@@ -326,6 +334,8 @@ export const dictionary = {
     downloadInstallerDesc: '推奨、バックグラウンドサービスに対応',
     downloadPortableTitle: 'ポータブル版',
     downloadPortableDesc: 'インストール不要、解凍してすぐ使える',
+    downloadX64Section: 'x64 — ほとんどの PC',
+    downloadArmSection: 'ARM64 — Windows on ARM',
   },
   'ko-KR': {
     userGuide: '사용자 매뉴얼',
@@ -390,6 +400,8 @@ export const dictionary = {
     downloadInstallerDesc: '권장, 백그라운드 서비스 지원',
     downloadPortableTitle: '포터블 버전',
     downloadPortableDesc: '독립 실행형, 압축 해제 후 바로 실행',
+    downloadX64Section: 'x64 — 대부분의 PC',
+    downloadArmSection: 'ARM64 — Windows on ARM',
   },
   'es-ES': {
     userGuide: 'Manual de Usuario',
@@ -454,5 +466,7 @@ export const dictionary = {
     downloadInstallerDesc: 'Recomendado, admite el servicio en segundo plano',
     downloadPortableTitle: 'Versión portable',
     downloadPortableDesc: 'Independiente, descomprime y ejecuta',
+    downloadX64Section: 'x64: la mayoría de los PC',
+    downloadArmSection: 'ARM64: Windows on ARM',
   },
 }

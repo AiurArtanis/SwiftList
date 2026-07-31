@@ -17,6 +17,12 @@ cada versión:
   y su entrada de "iniciar con Windows". Ambas son solo por usuario (HKCU), así que no hace falta ningún aviso de
   administrador.
 
+Cada una de ellas se publica para **x64** y para **ARM64**. Los nombres de arriba son las versiones x64, que
+funcionan en cualquier PC reciente — incluido Windows on ARM, donde se ejecutan emuladas. En un equipo ARM es
+preferible `SwiftList-Setup_arm64.exe` o `SwiftList-Portable_arm64.zip`, que son nativas. Las actualizaciones
+automáticas mantienen la arquitectura que instalaste, así que pasar de una a otra implica descargar la otra
+versión tú mismo.
+
 En el primer arranque, SwiftList instala e inicia un servicio de Windows (`SwiftList.Service`) que se encarga de
 la indexación de archivos. Esta división existe a propósito — ver [Arquitectura](../dev-guide/architecture) si
 tienes curiosidad por saber por qué — pero, como usuario, lo único que necesitas saber es: **Configuración →

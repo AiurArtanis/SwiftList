@@ -103,9 +103,11 @@ Thumbs.db
 scratch/
 publish/
 
-# Installer outputs
-SwiftList-Setup.exe
-SwiftList-Portable.zip
+# Installer outputs. Globbed rather than named one by one: make.bat produces a set per architecture,
+# and listing them individually meant the arm64 pair was not covered the moment it was added.
+SwiftList-Setup*.exe
+SwiftList-Portable*.zip
+SwiftList-Portable*.zip.sig
 
 # VitePress site exclusions
 Site/node_modules/

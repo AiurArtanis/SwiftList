@@ -10,6 +10,34 @@
 #define ServiceName "SwiftListService"
 #define CliExeName "slf.exe"
 
+; Architecture this installer is being built for, passed by make.bat as /DArch=x64 or /DArch=arm64.
+; Defaults to x64 so compiling this script by hand still produces what it always produced.
+#ifndef Arch
+  #define Arch "x64"
+#endif
+
+; The x64 installer deliberately keeps its unsuffixed name. Existing installs and the release assets
+; they update from are matched by name (see UpdateAssetSelector), so renaming it would strand them.
+;
+; The arm64 suffix uses an underscore rather than a hyphen to keep the portable zip it is paired with
+; sorting after the x64 one: GitHub returns a release's assets sorted by name in byte order, '-' (0x2D)
+; falls below '.' (0x2E), and installs predating UpdateAssetSelector take the first asset ending in
+; ".zip". Only the zip name actually decides that, but both artifacts carry the same suffix so there is
+; one convention to keep rather than two, and no hyphen sitting here to be copied back onto the zip.
+#if Arch == "arm64"
+  #define ArchSuffix "_arm64"
+  #define SetupArchitectures "arm64"
+  #define DotNetRuntimeFile "windowsdesktop-runtime-10-win-arm64.exe"
+  #define DotNetRuntimeUrl "https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-arm64.exe"
+  #define PublishDir "..\publish\arm64\SwiftList"
+#else
+  #define ArchSuffix ""
+  #define SetupArchitectures "x64compatible"
+  #define DotNetRuntimeFile "windowsdesktop-runtime-10-win-x64.exe"
+  #define DotNetRuntimeUrl "https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe"
+  #define PublishDir "..\publish\x64\SwiftList"
+#endif
+
 [Setup]
 AppId={{D37D0B75-B5E3-40D9-92EE-429C7D4D7F2A}
 AppName={#AppName}
@@ -24,13 +52,13 @@ DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE
 OutputDir=..\dist
-OutputBaseFilename=SwiftList-Setup
+OutputBaseFilename=SwiftList-Setup{#ArchSuffix}
 SetupIconFile=..\App\logo.ico
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed={#SetupArchitectures}
+ArchitecturesInstallIn64BitMode={#SetupArchitectures}
 PrivilegesRequired=admin
 VersionInfoVersion={#AppVersion4}
 VersionInfoTextVersion={#AppVersion}
@@ -52,7 +80,7 @@ Name: "startmenuicon"; Description: "{cm:CreateStartMenuIcon}"; GroupDescription
 Name: "addtopath"; Description: "{cm:AddSlfToPath}"; GroupDescription: "{cm:CommandLineTools}"
 
 [Files]
-Source: "..\publish\SwiftList\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb"
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb"
 
 [Icons]
 Name: "{commonprograms}\{#AppName}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: startmenuicon
@@ -127,7 +155,15 @@ var
   Path: string;
 begin
   Result := False;
-  Path := ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.WindowsDesktop.App');
+  // Which directory holds "the runtime this build needs" is not fixed: on an arm64 machine the arm64
+  // runtime installs under dotnet\ and the x64 one under dotnet\x64\. This installer is allowed to run
+  // on arm64 (x64compatible), so the x64 build has to look in the x64 subdirectory there -- checking
+  // dotnet\ would find the ARM64 runtime, conclude everything was in place, and skip an install the
+  // x64 app cannot start without.
+  if IsArm64 and ('{#Arch}' = 'x64') then
+    Path := ExpandConstant('{commonpf64}\dotnet\x64\shared\Microsoft.WindowsDesktop.App')
+  else
+    Path := ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.WindowsDesktop.App');
   if FindFirst(Path + '\10.*', FindRec) then
   begin
     Result := True;
@@ -173,7 +209,7 @@ begin
     if not IsDotNet10Installed() then
     begin
       DownloadPage.Clear;
-      DownloadPage.Add('https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe', 'windowsdesktop-runtime-10-win-x64.exe', '');
+      DownloadPage.Add('{#DotNetRuntimeUrl}', '{#DotNetRuntimeFile}', '');
       DownloadPage.Show;
       try
         try
@@ -195,7 +231,7 @@ begin
 
       // Install the downloaded runtime
       WizardForm.StatusLabel.Caption := CustomMessage('DotNetInstalling');
-      InstallerPath := ExpandConstant('{tmp}\windowsdesktop-runtime-10-win-x64.exe');
+      InstallerPath := ExpandConstant('{tmp}\{#DotNetRuntimeFile}');
       if not Exec(InstallerPath, '/install /quiet /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
       begin
         Result := FmtMessage(CustomMessage('DotNetInstallFailed'), [IntToStr(ResultCode)]);
