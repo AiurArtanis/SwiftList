@@ -5,6 +5,8 @@ using SwiftList.Core.SearchIndex.Fzf;
 using SwiftList.Core.IndexV2.Delta;
 
 using SwiftList.Core.IndexV2.Persistence;
+using SwiftList.Core.SearchIndex;
+
 namespace SwiftList.Core.IndexV2.Search;
 
 // Order-free "a term may be satisfied by an ancestor folder instead of the file name" pass, run by
@@ -46,8 +48,11 @@ internal static class PathTermFallback
 
         public void Reset()
         {
-            NameHits.Clear();
-            AncestorMemo.Clear();
+            // Trimmed rather than merely cleared: both dictionaries scale with the search (one entry per
+            // matched name, one per directory walked), and Clear keeps the buckets, so a whole-drive
+            // query would leave this pooled scratch sized for it forever. See SearchScratchPolicy.
+            SearchScratchPolicy.ClearAndTrim(NameHits);
+            SearchScratchPolicy.ClearAndTrim(AncestorMemo);
             AncestorChain.Clear();
         }
     }
@@ -133,7 +138,9 @@ internal static class PathTermFallback
         var ancestorChain = scratch.AncestorChain;
         var membership = directoryContext.FilterLower != null ? new Dictionary<int, bool>() : null;
         var worker = SearchMatcher.RentWorker();
-        var keep = Math.Max(limit * 8, 64);
+        // Bounded by the index rather than by the caller's limit, which is no longer capped: the
+        // multiply overflows int for a large enough limit, and FzfTopN reserves twice its capacity.
+        var keep = (int)Math.Min((long)Math.Max(limit, 8) * 8, snapshot.Count + delta.Added.Count);
         var topN = new FzfTopN(keep);
         try
         {

@@ -17,6 +17,31 @@ namespace SwiftList.App.ViewModels.Settings.NetworkDrive;
 // happens to be the thing that also syncs folder rows alongside drive/WSL rows.
 internal static class NetworkDriveRowSyncHelper
 {
+    /// <summary>
+    /// Refreshes the live rows without rebuilding them, for a refresh where the set of rows itself did
+    /// not change.
+    /// </summary>
+    /// <remarks>
+    /// This deliberately does not write IsEnabled. It used to clear it for any row whose target was not
+    /// currently reachable, which took a transient probe and used it to overwrite a persisted user
+    /// decision. That was reported as a LAN folder losing its tick after a laptop came back home, and
+    /// the tick was the least of it -- the whole chain ran without the user ever touching a checkbox:
+    ///
+    /// IsEnabled is set through SetProperty, so clearing it raised PropertyChanged, which set
+    /// HasPendingEdits (see NetworkDriveSettingsViewModel.OnFolderItemChanged) -- an edit the user never
+    /// made. HasPendingEdits then pins NetworkDriveRefreshCoordinator to this method for the rest of the
+    /// session, locking out RebuildRows, which is the one path that recomputes the tick correctly from
+    /// the saved settings. And the next Apply of anything at all filters rows by IsEnabled
+    /// (SettingsViewModel) and replaces the settings list wholesale, so the entry was silently deleted
+    /// from the user's configuration. Coming back, the row read as never configured, and ticking it was
+    /// a fresh add: a full re-scan from zero rather than the re-enable it looked like.
+    ///
+    /// The enabled state is already persisted -- as whether a settings entry exists at all -- and
+    /// reachability already has its own two outlets, IsPresent and the state text, plus CanEditEnabled
+    /// to grey the box out. That is exactly what the Local Drives tab does
+    /// (LocalDriveSettingsViewModel: an existing row keeps its own IsEnabled, and isPresent only feeds
+    /// CanEditEnabled), and these three loops were the ones going around it.
+    /// </remarks>
     public static void UpdateRowsInPlace(
         NetworkDriveSettingsViewModel vm, SearchService searchService,
         List<string> visibleDrives, List<string> visibleWsl, List<string> visibleFolders,
@@ -31,7 +56,7 @@ internal static class NetworkDriveRowSyncHelper
             resolvedByDrive.TryGetValue(letter, out var drive);
             item.Id = NetworkDriveResolver.GetNetworkId(letter);
             item.IsPresent = drive != null;
-            if (!item.IsPresent) item.IsEnabled = false;
+            // IsEnabled is deliberately NOT touched here. See the note above UpdateRowsInPlace.
             vm.TrackPendingRebuild(letter, indexStatus?.State);
             item.State = drive == null ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(drive, indexStatus);
             item.ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-";
@@ -46,7 +71,7 @@ internal static class NetworkDriveRowSyncHelper
             statuses.TryGetValue(unc, out var indexStatus);
             var isPresent = wslDistros.Contains(name, StringComparer.OrdinalIgnoreCase);
             item.IsPresent = isPresent;
-            if (!item.IsPresent) item.IsEnabled = false;
+            // IsEnabled is deliberately NOT touched here. See the note above UpdateRowsInPlace.
             vm.TrackPendingRebuild(unc, indexStatus?.State);
             item.State = !isPresent ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(null, indexStatus);
             item.ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-";
@@ -60,7 +85,7 @@ internal static class NetworkDriveRowSyncHelper
             statuses.TryGetValue(path, out var indexStatus);
             var isPresent = Directory.Exists(path);
             item.IsPresent = isPresent;
-            if (!isPresent) item.IsEnabled = false;
+            // IsEnabled is deliberately NOT touched here. See the note above UpdateRowsInPlace.
             vm.TrackPendingRebuild(path, indexStatus?.State);
             item.State = !isPresent ? TranslationManager.Instance["Network_StatusUnavailable"] : NetworkDriveSettingsHelper.GetStateText(null, indexStatus);
             item.ItemCount = indexStatus?.Items > 0 ? $"{indexStatus.Items:N0}" : "-";

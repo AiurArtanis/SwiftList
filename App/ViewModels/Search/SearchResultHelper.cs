@@ -22,23 +22,12 @@ internal static class SearchResultHelper
         SearchQuery = query
     });
 
+    // The row keeps the record and derives Name/FullPath/ParentDir/ContextDirectory/Drive/Metadata from
+    // it when something asks. Copying them out here is what used to cost 353 bytes of strings per row --
+    // held for the life of the search, on six hundred thousand rows the grid never realizes. See
+    // AppSearchResult.
     public static AppSearchResult CreateUiResult(SearchResult item, string query, int index, bool isApplication, string? scope)
-    {
-        var parentDir = Path.GetDirectoryName(item.Path);
-        return new AppSearchResult
-        {
-            Name = string.IsNullOrWhiteSpace(item.Name) ? item.Path : item.Name,
-            FullPath = item.Path,
-            ParentDir = GetParentDisplayText(item, isApplication, scope),
-            ContextDirectory = item.IsDir ? item.Path : (parentDir ?? item.Drive + ":\\"),
-            IsDir = item.IsDir,
-            Drive = item.Drive.ToString(),
-            ResultKind = isApplication ? "Application" : "File",
-            Index = index,
-            SearchQuery = query,
-            Metadata = item.Metadata
-        };
-    }
+        => AppSearchResult.FromIndexResult(item, query, index, isApplication, scope);
 
     public static AppSearchResult CreateNoResultsResult(string query) => new AppSearchResult
     {

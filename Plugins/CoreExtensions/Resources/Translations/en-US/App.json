@@ -413,6 +413,7 @@
   "Hotkeys_KeywordHistoryNext": "Next Keyword History Entry",
   "Hotkeys_KeywordHistoryDelete": "Delete Current Keyword History Entry",
   "Hotkeys_OpenFullWindow": "Open Full Window",
+  "Hotkeys_StayOpen": "Keep Window Open",
   "Hotkeys_StartupPanelNextTab": "Next Startup Panel Tab",
   "Hotkeys_StartupPanelPreviousTab": "Previous Startup Panel Tab",
   "Hotkeys_QuickNavTitle": "Quick Navigation Trigger",

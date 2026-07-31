@@ -14,8 +14,18 @@ namespace SwiftList.App.ViewModels.Search;
 
 public class SearchViewModel : ViewModelBase, IDisposable
 {
-    internal const int FullSearchFileLimit = 1000;
+    // The full window returns everything that matches rather than a ranked first page. Core bounds this
+    // by the index itself (see NameSearch), so the value only has to be larger than any drive's row
+    // count. What it costs is linear in the number of matches -- measured at roughly 1.5us and 2KB per
+    // result -- so a one-character query over a multi-million-row drive is seconds and gigabytes, not
+    // milliseconds. That is the trade this constant makes.
+    internal const int FullSearchFileLimit = int.MaxValue;
     internal const int FullSearchAppLimit = 0;
+
+    // What the quick window borrows on its token path. It used to borrow FullSearchFileLimit, which was
+    // 1000 -- now that the full window is unbounded, borrowing it would make an ordinary keystroke in the
+    // quick window pay for every match on the drive, which is the opposite of what that path is for.
+    internal const int TokenQuickSearchFileLimit = 1000;
 
     private readonly SearchService _searchService;
     private readonly SearchExecutionEngine _searchEngine;
@@ -219,16 +229,27 @@ public class SearchViewModel : ViewModelBase, IDisposable
         (_currentSortColumn, _isSortAscending) = SearchResultSortCycle.Advance(_currentSortColumn, _isSortAscending, columnId);
         SearchResultSortMemory.CurrentSortColumn = _currentSortColumn;
         SearchResultSortMemory.IsSortAscending = _isSortAscending;
-        ApplyFiltersAndRender();
+        // Re-sorting by a column reorders everything under the user, so whatever row they were looking
+        // at is no longer where -- or what -- it was. Same for a sidebar filter. Both are a new result
+        // set as far as the list's scroll position is concerned, however unchanged the query is.
+        ApplyFiltersAndRender(extendsContent: false, unchangedPrefix: 0);
     }
 
-    public void OnDynamicFilterChanged() => ApplyFiltersAndRender();
+    public void OnDynamicFilterChanged() => ApplyFiltersAndRender(extendsContent: false, unchangedPrefix: 0);
 
     private readonly DynamicFilterCoordinator _dynamicFilterCoordinator = new();
 
-    private void ApplyFiltersAndRender()
+    // DynamicFilterCoordinator renders through an Action<List<AppSearchResult>> and can do so twice
+    // (immediately with the unfiltered list, then again once async predicates resolve), so the flag
+    // rides on the instance rather than through that callback's signature.
+    private bool _renderExtendsContent;
+    private int _renderUnchangedPrefix;
+
+    private void ApplyFiltersAndRender(bool extendsContent, int unchangedPrefix)
     {
         if (_allResults == null) return;
+        _renderExtendsContent = extendsContent;
+        _renderUnchangedPrefix = unchangedPrefix;
 
         var activeFilters = DynamicSidebarGroups
             .Select(g => g.CombinedPredicate)
@@ -241,7 +262,16 @@ public class SearchViewModel : ViewModelBase, IDisposable
         _dynamicFilterCoordinator.Apply(
             _allResults,
             activeFilters,
-            results => SearchResultSorter.Sort(results, _currentSortColumn, _isSortAscending).ToList(),
+            // ToList only when the sort actually reordered something. With no column selected --
+            // relevance order, the default -- Sort hands back the very list it was given, and
+            // materializing that again is another full-size copy per paint for no change at all.
+            results =>
+            {
+                var sorted = SearchResultSorter.Sort(results, _currentSortColumn, _isSortAscending);
+                return ReferenceEquals(sorted, results) && results is List<AppSearchResult> asList
+                    ? asList
+                    : sorted.ToList();
+            },
             () => _allResults,
             RenderFinal,
             v => IsSearching = v);
@@ -257,7 +287,11 @@ public class SearchViewModel : ViewModelBase, IDisposable
         // window has no VM-level "selected result" property to preserve in the first place (ResultsControl
         // .xaml.cs's own shared OnCollectionChanged already resets ActiveListBox.SelectedIndex on every
         // change here, same as it always has).
-        FilteredResults.ReconcileTo(finalResults, SearchResultsReconciler.ItemsEqual);
+        // The unchanged-prefix promise only holds if nothing reordered or removed rows on the way here.
+        // A column sort or a sidebar filter produces a different list object than the one the
+        // accumulator built the promise about, which is exactly the signal that it no longer applies.
+        var unchangedPrefix = ReferenceEquals(finalResults, _allResults) ? _renderUnchangedPrefix : 0;
+        FilteredResults.ReconcileTo(finalResults, SearchResultsReconciler.ItemsEqual, _renderExtendsContent, unchangedPrefix);
         ResultCountText = string.Format(TranslationManager.Instance["Search_Total"], finalResults.Count);
         OnPropertyChanged(nameof(ShowNoResultsHint));
         OnPropertyChanged(nameof(ShowWelcomeHint));

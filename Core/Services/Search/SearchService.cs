@@ -41,7 +41,10 @@ public class SearchService : IDisposable
     {
         var settings = UserSettings.Load();
         var exclusionRules = ExclusionRuleSet.From(settings);
-        var fileCandidateLimit = Math.Clamp(maxResults * 4, maxResults, 2000);
+        // No longer clamped to 2000. The service returns everything that matches and the caller decides
+        // what to do with it; asking for a multiple of maxResults existed only to leave headroom for the
+        // exclusion filtering below, which is pointless once maxResults is itself unbounded.
+        var fileCandidateLimit = maxResults >= int.MaxValue / 4 ? int.MaxValue : Math.Max(maxResults * 4, maxResults);
 
         var isSearchDir = !string.IsNullOrEmpty(directoryFilter);
         var msg = new SearchRequestMessage

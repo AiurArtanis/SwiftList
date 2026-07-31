@@ -38,6 +38,7 @@ public class HotkeySettingsViewModel : ViewModelBase
         _startupPanelNextTabHotkey = hotkeys.StartupPanelNextTabHotkey;
         _startupPanelPreviousTabHotkey = hotkeys.StartupPanelPreviousTabHotkey;
         _openFullWindowHotkey = hotkeys.OpenFullWindowHotkey;
+        _stayOpenHotkey = hotkeys.StayOpenHotkey;
 
         PluginActionGroups = BuildPluginActionGroups(hotkeys.PluginActionHotkeys);
 
@@ -241,6 +242,13 @@ public class HotkeySettingsViewModel : ViewModelBase
         set => SetProperty(ref _openFullWindowHotkey, value);
     }
 
+    private string _stayOpenHotkey;
+    public string StayOpenHotkey
+    {
+        get => _stayOpenHotkey;
+        set => SetProperty(ref _stayOpenHotkey, value);
+    }
+
     public void Apply()
     {
         var hotkeys = _userSettings.Hotkeys;
@@ -264,6 +272,7 @@ public class HotkeySettingsViewModel : ViewModelBase
         hotkeys.StartupPanelNextTabHotkey = StartupPanelNextTabHotkey;
         hotkeys.StartupPanelPreviousTabHotkey = StartupPanelPreviousTabHotkey;
         hotkeys.OpenFullWindowHotkey = OpenFullWindowHotkey;
+        hotkeys.StayOpenHotkey = StayOpenHotkey;
 
         var pluginActionHotkeys = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in PluginActionGroups)

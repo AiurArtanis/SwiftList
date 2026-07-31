@@ -42,19 +42,98 @@
                 <Border Grid.Row="0" Background="{DynamicResource HeaderBg}"
                         BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,0,0,1"
                         CornerRadius="{StaticResource CornerRadiusWindowTop}">
-                    <Grid>
+                    <!-- The drag handler sits HERE, on the header's full-width layout grid, rather than on
+                         the search bar's own container below. On that container it covered almost nothing:
+                         a Margin lies OUTSIDE the element, so the 12px around the search bar belonged to
+                         the parent Border, and the container's own area is filled edge to edge by
+                         SearchBoxControl, whose text box is deliberately excluded (see
+                         SearchWindowChromeHandler) and whose icon has handlers of its own. What was left to
+                         grab was a sliver beside the logo, which is why the window could only be moved by
+                         aiming at its top-left corner (issue #195).
+
+                         Background is Transparent rather than the theme's HeaderBg, which the Border behind
+                         still paints: an element with a null Background is not hit-testable at all, so
+                         hanging the drag region off a themed brush would make it vanish for any theme that
+                         did not define one. Transparent hit-tests, costs nothing to draw, and behaves the
+                         same on every theme. -->
+                    <Grid x:Name="HeaderDragArea" Background="Transparent" MouseLeftButtonDown="Header_MouseLeftButtonDown">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <!-- Search bar area -->
-                        <Grid Grid.Column="0" Margin="12,12,8,12" MouseLeftButtonDown="Header_MouseLeftButtonDown">
-                            <!-- No dedicated drag grip: this whole area (including the SearchBoxControl's
-                                 own logo, IsIconOnLeft below) already drags the window via the
-                                 MouseLeftButtonDown handler above, so a separate six-dot grip icon was
-                                 pure visual redundancy. -->
+                        <!-- Search bar area. The vertical margin is what actually sets how tall the drag
+                             band is: a Margin lies outside the element, so these bands above and below the
+                             search bar belong to HeaderDragArea and are the part of the header that can be
+                             grabbed. Widened from 12 to 16 because 12 still asked for a careful aim, and
+                             because growing the grip alone would have changed nothing: the grip is not
+                             hit-testable, it only shows where the band already is. -->
+                        <Grid Grid.Column="0" Margin="12,16,8,16">
+                            <!-- No dedicated drag grip: the header itself is the grab area now, and the
+                                 logo drags too (this window leaves IsIconClickable false, so the icon's
+                                 own press handler does not mark the event handled and it bubbles up). -->
                             <!-- Shared SearchBoxControl component -->
                             <app:SearchBoxControl x:Name="SearchBox" FontSize="15" Padding="0" IsIconOnLeft="True" SearchText="{Binding AdvancedQuery, Mode=TwoWay}" IsServiceRunning="{Binding IsServiceConnected}"/>
+                        </Grid>
+                        <!-- Drag grip: the affordance for the drag region above, which is otherwise
+                             invisible and so undiscoverable (issue #195 asked for a title bar precisely
+                             because there was nothing to aim at). Hidden at rest so the header stays as
+                             clean as it is now, and fades in whenever the pointer is anywhere in the
+                             header.
+
+                             WindowChromeText rather than the accent: this is chrome, not an action, and it
+                             is the same brush the minimize/maximize/close glyphs beside it already use, so
+                             the grip reads as part of the same furniture on every one of the themes. Every
+                             theme defines it, which a drag affordance has to be able to rely on.
+
+                             IsHitTestVisible is false so it never takes a click away from the drag grid
+                             underneath it: it is a hint about where to grab, not the grabbable thing. It
+                             sits centred in the band above the search bar, which is free space already.
+
+                             Width is 30% of the header, expressed as star columns rather than a binding
+                             with a multiplying converter: proportional layout is what star sizing already
+                             is, so the grip simply stretches into the middle column and tracks the window
+                             as it resizes with no converter, no code and no measure pass of its own.
+
+                             The hover trigger binds to HeaderDragArea by name rather than by ancestor
+                             type, because the nearest ancestor Grid is now this wrapper, whose own
+                             IsMouseOver is always false: it is not hit-testable. -->
+                        <Grid Grid.Column="0" Grid.ColumnSpan="2"
+                              VerticalAlignment="Top" Margin="0,5,0,0" IsHitTestVisible="False">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="35*"/>
+                                <ColumnDefinition Width="30*"/>
+                                <ColumnDefinition Width="35*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="1" Height="6" CornerRadius="3"
+                                    Background="{DynamicResource WindowChromeText}">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Opacity" Value="0"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsMouseOver, ElementName=HeaderDragArea}" Value="True">
+                                                <DataTrigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0.45"
+                                                                             Duration="{StaticResource DurationHover}"
+                                                                             EasingFunction="{StaticResource EaseOutCubic}"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.EnterActions>
+                                                <DataTrigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0"
+                                                                             Duration="{StaticResource DurationHover}"
+                                                                             EasingFunction="{StaticResource EaseOutCubic}"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.ExitActions>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
                         </Grid>
                         <!-- Window controls -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,6,6,0">

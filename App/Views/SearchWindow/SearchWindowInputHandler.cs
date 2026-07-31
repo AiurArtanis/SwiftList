@@ -271,6 +271,10 @@ public class SearchWindowInputHandler
         }
     }
 
+    // Wraps at both ends, and skips the rows that exist only to be looked at, the same way the quick,
+    // inline and actions lists already do -- this window was the one still clamping at the first and
+    // last row. ListSelectionNavigator also declines to move when nothing else is selectable, so a list
+    // holding a single result no longer re-selects and re-scrolls it on every key press.
     private void MoveSelection(int delta)
     {
         var count = _window.LstGridResultsControl.Items.Count;
@@ -280,8 +284,11 @@ public class SearchWindowInputHandler
             return;
         }
 
-        var current = _window.LstGridResultsControl.SelectedIndex;
-        var next = current < 0 ? 0 : Math.Clamp(current + delta, 0, count - 1);
+        var next = ListSelectionNavigator.NextSelectable(_window.LstGridResultsControl.SelectedIndex, delta, count,
+            i => _window.LstGridResultsControl.Items[i] is AppSearchResult item && !item.IsEmptyResult && !item.IsSearchSectionHeader);
+        if (next < 0)
+            return;
+
         _window.LstGridResultsControl.SelectedIndex = next;
         _window.LstGridResultsControl.ScrollIntoView(_window.LstGridResultsControl.SelectedItem);
     }
@@ -302,13 +309,23 @@ public class SearchWindowInputHandler
             if (!_window.LstGridResultsControl.SelectedItems.Contains(result))
                 _window.LstGridResultsControl.SelectedItem = result;
 
-            // Show the action flyout at the cursor, anchored to the right-clicked row.
-            ShowActionFlyout(PlacementMode.MousePoint, listViewItem);
+            // Show the action flyout at the cursor. Anchored to the LIST, not to the row's own
+            // container -- see ShowActionFlyout. MousePoint positions against the pointer, so the row
+            // never contributed anything here anyway.
+            ShowActionFlyout(PlacementMode.MousePoint, _window.LstGridResultsControl);
         }
     }
 
     // Opens the action flyout for the current selection. Gated by the same CanShowActionsMenu check the
     // old in-window actions panel used, so apps / plugin results / empty rows still suppress it.
+    //
+    // The anchor is never a row's own container. A Popup dies with its PlacementTarget, and the results
+    // list virtualizes with recycling, so a container is torn down and rebuilt whenever the collection
+    // changes -- which for a search that is still streaming is every couple of hundred milliseconds. The
+    // flyout closed by itself while the rows it was opened over sat there unchanged, because what went
+    // away was the container and not the selection. Anchoring to the list instead costs nothing:
+    // MousePoint places the popup against the pointer and ignores the target, and the one placement that
+    // does use the target (Bottom, the fallback below) uses the search box.
     private void ShowActionFlyout(PlacementMode placement, UIElement? anchor = null)
     {
         var selection = GetSelectedResults();
@@ -317,9 +334,9 @@ public class SearchWindowInputHandler
 
         if (anchor == null)
         {
-            // Keyboard-triggered: anchor to the selected row's container. Realize it first (scroll into
-            // view) so the popup lands on-screen; if it still isn't realized, fall back to the search box
-            // so the flyout is always visible instead of anchoring off the bottom of the list.
+            // Keyboard-triggered. Scroll the selected row into view first so the flyout opens next to
+            // something the user can see; if it still isn't realized after that, fall back to the search
+            // box so the flyout is always visible rather than off the bottom of the list.
             var lst = _window.LstGridResultsControl;
             var selected = lst.SelectedItem;
             if (selected != null)
@@ -327,8 +344,15 @@ public class SearchWindowInputHandler
                 lst.ScrollIntoView(selected);
                 lst.UpdateLayout();
             }
-            anchor = lst.ItemContainerGenerator.ContainerFromItem(selected) as UIElement;
-            if (anchor == null)
+
+            // The container is asked about, but only to tell whether the row is on screen -- it is not
+            // what gets anchored to.
+            var rowIsRealized = selected != null && lst.ItemContainerGenerator.ContainerFromItem(selected) != null;
+            if (rowIsRealized)
+            {
+                anchor = lst;
+            }
+            else
             {
                 anchor = _window.TxtSearchBoxControl;
                 placement = PlacementMode.Bottom;

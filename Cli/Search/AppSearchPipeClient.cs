@@ -12,6 +12,10 @@ public static class AppSearchPipeClient
 {
     public const int ConnectTimeoutMs = 1500;
 
+    // Response buffer for the streaming read below. Large enough that one read covers several hundred
+    // results, small enough to stay off the large object heap.
+    private const int ResponseReadBufferSize = 64 * 1024;
+
     // Must match AppSearchPipeService's own naming exactly (per-user suffix + ACL) -- see that file's
     // comment for why: a search response can carry another account's own file paths/network-drive
     // contents, so this pipe deliberately isn't shared machine-wide the way the plain activation pipe is.
@@ -69,6 +73,14 @@ public static class AppSearchPipeClient
         var msg = new SearchRequestMessage { Id = SearchRequestId.Search, Query = query };
         await SearchRequestBinarySerializer.WriteSearchRequestAsync(pipe, msg, token);
 
+        // Read through a buffer: ReadAsync takes a result's magic, frame type, payload length and
+        // payload as four separate reads, which straight onto a pipe is four syscalls per result. The
+        // same change on the GUI's own pipe measured 30us a result down to 2.1 over 200k results. Safe
+        // to read ahead past the End frame because this connection is created just above and disposed on
+        // the way out, so nothing else ever reads from it; the request is written to the raw pipe so the
+        // two directions cannot interleave in one buffer.
+        await using var buffered = new BufferedStream(pipe, ResponseReadBufferSize);
+
         var fresh = new List<(SearchResult, int[])>();
         var responseLock = new object();
         var streamedCount = 0;
@@ -82,7 +94,7 @@ public static class AppSearchPipeClient
             onProgress(snapshot);
         }
 
-        await SearchResultWithHighlightBinarySerializer.ReadAsync(pipe, (r, highlights) =>
+        await SearchResultWithHighlightBinarySerializer.ReadAsync(buffered, (r, highlights) =>
         {
             token.ThrowIfCancellationRequested();
             lock (responseLock)

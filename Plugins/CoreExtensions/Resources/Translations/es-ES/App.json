@@ -413,6 +413,7 @@
   "Hotkeys_KeywordHistoryNext": "Siguiente Entrada del Historial de Palabras Clave",
   "Hotkeys_KeywordHistoryDelete": "Eliminar Entrada Actual del Historial de Palabras Clave",
   "Hotkeys_OpenFullWindow": "Abrir Ventana Completa",
+  "Hotkeys_StayOpen": "Mantener la Ventana Abierta",
   "Hotkeys_StartupPanelNextTab": "Siguiente Pestaña del Panel de Inicio",
   "Hotkeys_StartupPanelPreviousTab": "Pestaña Anterior del Panel de Inicio",
   "Hotkeys_QuickNavTitle": "Activador de Navegación Rápida",

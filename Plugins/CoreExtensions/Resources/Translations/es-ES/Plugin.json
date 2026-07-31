@@ -81,6 +81,7 @@
   "QuickLook_Inaccessible": "El elemento no existe o no es accesible.",
   "QuickLook_Error": "Error",
   "QuickLook_Modified": "Modificado",
+  "QuickLook_DragHint": "Arrastra para copiar este archivo a otro lugar",
   "QuickLook_FolderProviderName": "Proveedor de Vista Previa de Carpetas Predeterminado",
   "QuickLook_ImageProviderName": "Proveedor de Vista Previa de Imágenes Predeterminado",
   "QuickLook_TextProviderName": "Proveedor de Vista Previa de Texto Predeterminado",

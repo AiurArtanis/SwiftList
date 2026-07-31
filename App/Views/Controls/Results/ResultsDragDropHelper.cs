@@ -56,6 +56,81 @@ public static class ResultsDragDropHelper
         listBox.AddHandler(UIElement.QueryContinueDragEvent, new System.Windows.QueryContinueDragEventHandler(List_QueryContinueDrag), true);
     }
 
+    /// <summary>
+    /// Makes an element that isn't a results row drag the file it points at, exactly as dragging that
+    /// row out of the list would -- same FileDrop payload, same drag effects, same hide-on-external-drop
+    /// behaviour.
+    /// </summary>
+    /// <param name="element">The drag handle.</param>
+    /// <param name="getPath">
+    /// The path to drag, read at the moment the drag starts rather than when this is called, so a handle
+    /// on something that re-points itself (the preview window's header following the selection) always
+    /// carries whatever it is currently showing.
+    /// </param>
+    /// <remarks>
+    /// Lives here rather than next to its caller so it shares the pieces of the list's own drag that were
+    /// only learned by hitting them: the live GetAsyncKeyState check that keeps a stale WPF button state
+    /// from starting a phantom drag, IsDragActive so a window isn't torn down under a running
+    /// DoDragDrop, and the QueryContinueDrag handling that hides the search windows when the drop lands
+    /// outside the process. A second, independent implementation of this would be a second chance to
+    /// rediscover all of it.
+    /// </remarks>
+    public static void RegisterPathDragSource(FrameworkElement element, Func<string?> getPath)
+    {
+        element.PreviewMouseLeftButtonDown += (s, e) => _dragStartPoint = e.GetPosition(null);
+        element.AddHandler(UIElement.QueryContinueDragEvent, new System.Windows.QueryContinueDragEventHandler(List_QueryContinueDrag), true);
+        element.PreviewMouseMove += (s, e) =>
+        {
+            if (!ShouldStartDrag(e))
+                return;
+
+            var path = getPath();
+            if (string.IsNullOrEmpty(path) || (!File.Exists(path) && !Directory.Exists(path)))
+                return;
+
+            // One path, not a selection: the caller is a handle on a single thing. The list's own drag
+            // carries every selected row because the row it starts from is one of them.
+            StartDrag(element, new[] { path });
+        };
+    }
+
+    // The distance threshold plus the authoritative hardware button check, shared so a second drag
+    // source can't quietly skip either. See List_PreviewMouseMove for what the second one is for.
+    private static bool ShouldStartDrag(System.Windows.Input.MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed)
+            return false;
+        if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0)
+            return false;
+
+        var diff = _dragStartPoint - e.GetPosition(null);
+        return Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance
+            || Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance;
+    }
+
+    // Explicit DataFormats.FileDrop with a string[] -- the format every shell drop target looks for.
+    // Constructed with the format named rather than letting DataObject infer one from the value, so a
+    // change to what is passed can't silently land under a format nothing reads.
+    private static void StartDrag(DependencyObject dragSource, string[] paths)
+    {
+        var dataObject = new System.Windows.DataObject(System.Windows.DataFormats.FileDrop, paths);
+
+        _pendingItem = null;
+        _pendingList = null;
+        _dragEndedInside = false;
+        IsDragActive = true;
+        try
+        {
+            DragDrop.DoDragDrop(dragSource, dataObject, System.Windows.DragDropEffects.Copy | System.Windows.DragDropEffects.Link);
+        }
+        finally
+        {
+            IsDragActive = false;
+            if (!_dragEndedInside)
+                HideSearchWindows();
+        }
+    }
+
     private static void List_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _dragStartPoint = e.GetPosition(null);
@@ -122,72 +197,42 @@ public static class ResultsDragDropHelper
 
     private static void List_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed)
-            return;
-
-        // e.LeftButton (WPF's own tracked button state) can end up stuck reporting Pressed during a
-        // plain hover with no real down/up on this list at all -- when a press elsewhere in the inline
-        // window has its window destroyed (CloseInlineSearch) before the matching release reaches any
+        // ShouldStartDrag holds the distance threshold and, more importantly, the live hardware button
+        // check: e.LeftButton (WPF's own tracked state) can end up stuck reporting Pressed during a plain
+        // hover with no real down/up on this list at all -- when a press elsewhere in the inline window
+        // has its window destroyed (CloseInlineSearch) before the matching release reaches any
         // SwiftList-owned window, WPF's state never resyncs, and the next hover starts a real, phantom
-        // DoDragDrop with no hand left to ever release it. GetAsyncKeyState queries the actual live
-        // hardware button state directly, bypassing WPF's possibly-stale derived state, as an
-        // authoritative final check before ever starting a drag.
-        if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0)
+        // DoDragDrop with no hand left to ever release it.
+        if (!ShouldStartDrag(e))
             return;
 
-        var mousePos = e.GetPosition(null);
-        var diff = _dragStartPoint - mousePos;
+        if (sender is not ItemsControl itemsControl)
+            return;
 
-        if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
-            Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+        var dep = (DependencyObject)e.OriginalSource;
+        while (dep != null && dep != itemsControl)
         {
-            if (sender is ItemsControl itemsControl)
+            if (dep is ListBoxItem item)
             {
-                var dep = (DependencyObject)e.OriginalSource;
-                while (dep != null && dep != itemsControl)
+                var data = item.DataContext;
+                if (data != null)
                 {
-                    if (dep is ListBoxItem item)
+                    try
                     {
-                        var data = item.DataContext;
-                        if (data != null)
+                        dynamic searchResult = data;
+                        string? fullPath = searchResult.FullPath;
+                        if (!string.IsNullOrEmpty(fullPath) && (File.Exists(fullPath) || Directory.Exists(fullPath)))
                         {
-                            try
-                            {
-                                dynamic searchResult = data;
-                                string? fullPath = searchResult.FullPath;
-                                if (!string.IsNullOrEmpty(fullPath) && (File.Exists(fullPath) || Directory.Exists(fullPath)))
-                                {
-                                    var paths = CollectDragPaths(itemsControl, data, fullPath);
-                                    var dataObject = new System.Windows.DataObject(System.Windows.DataFormats.FileDrop, paths);
-
-                                    // A drag is starting — don't collapse the selection on button-up.
-                                    _pendingItem = null;
-                                    _pendingList = null;
-                                    _dragEndedInside = false;
-                                    IsDragActive = true;
-                                    try
-                                    {
-                                        // Perform UI-thread synchronous drag
-                                        DragDrop.DoDragDrop(item, dataObject, System.Windows.DragDropEffects.Copy | System.Windows.DragDropEffects.Link);
-                                    }
-                                    finally
-                                    {
-                                        IsDragActive = false;
-                                        // ponytail: hide the search window immediately after the synchronous drag loop finishes, unless it ended inside the window
-                                        if (!_dragEndedInside)
-                                        {
-                                            HideSearchWindows();
-                                        }
-                                    }
-                                }
-                            }
-                            catch { }
+                            // A drag is starting — StartDrag also clears the pending press so button-up
+                            // doesn't collapse the selection this drag is carrying.
+                            StartDrag(item, CollectDragPaths(itemsControl, data, fullPath));
                         }
-                        break;
                     }
-                    dep = GetParent(dep);
+                    catch { }
                 }
+                break;
             }
+            dep = GetParent(dep);
         }
     }
 

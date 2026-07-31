@@ -44,6 +44,12 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         _viewModel = new QuickSearchViewModel();
         this.DataContext = _viewModel;
         _controller = new QuickSearchWindowController(this);
+        // Mirrors the flag onto the logo. Subscribed rather than set from ToggleStayOpen alone, because
+        // the flag also clears itself on the next real hide (see the controller's FinishHide).
+        _controller.StayOpenChanged += stayOpen =>
+        {
+            if (SearchBox != null) SearchBox.IsStayOpen = stayOpen;
+        };
         _inputHandler = new QuickSearchWindowInputHandler(this);
         _layoutManager = new QuickSearchWindowLayoutManager(this);
         _resultExecutor = new QuickSearchWindowResultExecutor(this);
@@ -116,6 +122,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         // Wire up event handlers to subcontrols
 
         SearchBox.IconRightClicked += _controller.ResetPosition;
+        SearchBox.IconMiddleClicked += _controller.ToggleStayOpen;
         // IsIconDraggable keeps the logo's existing "drag moves the window" behavior working alongside
         // IconLeftClicked: SearchBoxControl tells a real drag apart from a plain click by movement
         // distance (see its own Icon_MouseMove), so this needs BOTH flags rather than picking one.
@@ -165,7 +172,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
             }
             else
             {
-                QuickLookManager.Instance.Hide();
+                QuickLookManager.Instance.HideFrom(this);
             }
         };
     }
@@ -201,6 +208,8 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
     public void HideWindow() => _controller.HideWindow(true);
     public void HideWindowNoRestore() => _controller.HideWindow(false);
     public void SuppressNextForegroundRestore() => _controller.SuppressNextRestore();
+    public void ToggleStayOpen() => _controller.ToggleStayOpen();
+
     public void ToggleVisibility() => _controller.ToggleVisibility();
     public void OpenFileOrFolderExternal(string path) => FileExecutor.OpenFileOrFolder(path, TxtSearch.Text, HideWindow);
     public void OpenFileOrFolderAsAdminExternal(string path) => FileExecutor.OpenFileOrFolderAsAdmin(path, TxtSearch.Text, HideWindow);
@@ -218,6 +227,13 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
         {
             timer.Stop();
             if (IsActive) return;
+            // Already hidden, so there is nothing here to react to -- something else put this window away
+            // and losing activation is just a consequence of that. Without this, opening the full window
+            // ran a second, full HideWindow() over the top of the deliberate one: two hundred milliseconds
+            // after the full window had opened the preview it inherited, this tore it down again through
+            // QuickLookManager.Reset, which is global and by then belonged to the other window. Traced from
+            // the symptom -- the preview appearing for an instant and never returning.
+            if (!IsVisible) return;
             // QuickLookManager just Hide()'d this window itself, for a preview handler's own popup
             // dialog (see its own comment) -- not a real deactivation to react to.
             if (QuickLookManager.Instance.IsHiddenForDialog) return;
@@ -239,7 +255,7 @@ public partial class QuickSearchWindow : Window, ISearchWindow, IHasVisibleConte
             foreach (Window w in System.Windows.Application.Current.Windows)
                 if (w != this && w.IsActive) { movedToOwnWindow = true; break; }
 
-            _controller.HideWindow(restoreFocus: !movedToOwnWindow);
+            _controller.HideOnFocusLoss(restoreFocus: !movedToOwnWindow);
         };
         timer.Start();
     }

@@ -7,6 +7,7 @@ using SwiftList.App.Services.Plugin;
 using SwiftList.App.Services.ShellIcons;
 using SwiftList.App.Services.Theme;
 using SwiftList.App.Helpers.Visuals;
+using SwiftList.App.Views.Controls.Results;
 using SwiftList.PluginSdk.Abstractions.Plugins.Preview;
 namespace SwiftList.App.Views.QuickLook;
 
@@ -48,6 +49,17 @@ public partial class QuickLookWindow : Window
         SystemMenuBlocker.Attach(this);
         ThemedWindowIconHelper.Apply(this);
         _overlay = new PreviewOverlay(this, ContentArea);
+
+        // Dragging the header drags the previewed file, identical to dragging its row out of the results
+        // list -- same helper, so the same FileDrop payload and the same hide-the-search-window-on-an
+        // -external-drop behaviour, rather than a second implementation that would have to rediscover
+        // both. The path is read when the drag starts, not now: this window re-points itself as the
+        // selection moves, and _currentFilePath is what it is currently showing.
+        //
+        // One path where a results-row drag can carry several: this window previews one file, so there is
+        // no selection here for it to carry.
+        ResultsDragDropHelper.RegisterPathDragSource(HeaderDragHandle, () => _currentFilePath);
+        HeaderDragHandle.ToolTip = TranslationService.Get("QuickLook_DragHint");
         IsVisibleChanged += (s, e) =>
         {
             if (!IsVisible)

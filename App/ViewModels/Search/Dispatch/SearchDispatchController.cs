@@ -126,7 +126,7 @@ internal sealed class SearchDispatchController
         // Widening the budget to match the main SearchWindow's own (already-proven-viable) limit, and
         // skipping BuildQuickResults' display cap, only costs anything on the less-common token path.
         var hasTokens = _queryTokens.Count > 0;
-        var fileLimit = hasTokens ? SearchViewModel.FullSearchFileLimit : 51;
+        var fileLimit = hasTokens ? SearchViewModel.TokenQuickSearchFileLimit : 51;
         var appLimit = hasTokens ? SearchViewModel.FullSearchAppLimit : 51;
 
         engineCall(

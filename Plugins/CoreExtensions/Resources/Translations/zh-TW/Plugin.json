@@ -81,6 +81,7 @@
   "QuickLook_Inaccessible": "項目不存在或無法存取。",
   "QuickLook_Error": "錯誤",
   "QuickLook_Modified": "修改時間",
+  "QuickLook_DragHint": "拖曳可將此檔案複製到其他位置",
   "QuickLook_FolderProviderName": "預設資料夾預覽器",
   "QuickLook_ImageProviderName": "預設圖片預覽器",
   "QuickLook_TextProviderName": "預設文字預覽器",

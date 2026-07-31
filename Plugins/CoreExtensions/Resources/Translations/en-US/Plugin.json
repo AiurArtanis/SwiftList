@@ -81,6 +81,7 @@
   "QuickLook_Inaccessible": "Item does not exist or is inaccessible.",
   "QuickLook_Error": "Error",
   "QuickLook_Modified": "Modified",
+  "QuickLook_DragHint": "Drag to copy this file elsewhere",
   "QuickLook_FolderProviderName": "Default Folder Preview Provider",
   "QuickLook_ImageProviderName": "Default Image Preview Provider",
   "QuickLook_TextProviderName": "Default Text Preview Provider",

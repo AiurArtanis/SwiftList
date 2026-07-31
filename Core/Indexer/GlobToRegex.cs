@@ -5,7 +5,18 @@ namespace SwiftList.Core;
 
 public static class GlobToRegex
 {
-    public static Regex Compile(string glob, bool ignoreCase = true)
+    // A backstop against a pattern that backtracks catastrophically, not a per-match budget. It only has
+    // to be long enough that it can never be reached by an ordinary match, and a pattern that genuinely
+    // runs away crosses any threshold on its very first input, so nothing is gained by keeping it tight.
+    //
+    // It was 50ms, which an ordinary match reached: matching a two-star glob against a short path threw
+    // RegexMatchTimeoutException purely because the machine was busy compiling and running nineteen test
+    // assemblies at once. That is worse than a flaky test -- NetworkGlobPattern.IsMatch catches the
+    // timeout and returns false, so under load an exclusion rule silently stops excluding, and an ignore
+    // pattern silently stops ignoring, with nothing but a log line to say so.
+    private static readonly TimeSpan MatchTimeout = TimeSpan.FromSeconds(1);
+
+    public static Regex Compile(string glob, bool ignoreCase = true, TimeSpan? matchTimeout = null)
     {
         var pattern = Convert(glob);
         var options = RegexOptions.CultureInvariant | RegexOptions.Compiled;
@@ -13,7 +24,7 @@ public static class GlobToRegex
         {
             options |= RegexOptions.IgnoreCase;
         }
-        return new Regex(pattern, options, TimeSpan.FromMilliseconds(50));
+        return new Regex(pattern, options, matchTimeout ?? MatchTimeout);
     }
 
     public static string Convert(string glob)

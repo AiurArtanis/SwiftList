@@ -11,9 +11,23 @@ public class QuietPeriodSchedulerTests
 {
     private const int QuietMs = 40;
 
-    // Comfortably longer than the quiet period, so a deferred run has certainly happened by the time it is
-    // asserted on. Kept off the critical path of what is being measured -- these only ever wait, never race.
+    // How long to wait for something that is supposed to happen. Generous because it is only ever reached
+    // when the test is about to fail anyway: a passing run returns as soon as the signal arrives, so
+    // raising this costs nothing and buys tolerance for a machine running nineteen test assemblies at
+    // once. Waiting a fixed period and then asserting -- what this class used to do -- fails on a loaded
+    // machine for no reason other than the load.
+    private const int WaitForRunMs = 10_000;
+
+    // How long to wait before concluding something did NOT happen. A negative can only be established by
+    // waiting, and load can only ever delay a run that should not occur at all, so this is not a source of
+    // false failures the way the positive waits were.
     private const int SettleMs = 400;
+
+    // The burst test needs the whole burst to fit inside one quiet period, which is a claim about wall
+    // clock however it is written. Two hundred Timer.Change calls take microseconds, so a window this wide
+    // tolerates being descheduled for most of a second mid-loop -- where the original 40ms did not, and a
+    // burst straddling the period fired a run partway through and failed the test.
+    private const int BurstQuietMs = 750;
 
     [TestMethod]
     public void RunsImmediatelyWhenAskedTo()
@@ -43,25 +57,29 @@ public class QuietPeriodSchedulerTests
         // The whole point: resizing a window emitted ~200 location changes a second, each of which used to
         // poll the tracked window over a synchronous cross-process call.
         var runs = 0;
-        using var scheduler = new QuietPeriodScheduler(() => Interlocked.Increment(ref runs), QuietMs);
+        var ran = new ManualResetEventSlim();
+        using var scheduler = new QuietPeriodScheduler(
+            () => { Interlocked.Increment(ref runs); ran.Set(); }, BurstQuietMs);
 
         for (var i = 0; i < 200; i++)
             scheduler.RunWhenQuiet();
 
         Assert.AreEqual(0, runs, "nothing should run while the requests are still arriving");
-        Thread.Sleep(SettleMs);
-        Assert.AreEqual(1, runs);
+        Assert.IsTrue(ran.Wait(WaitForRunMs), "the burst never produced its run");
+        Assert.AreEqual(1, runs, "two hundred requests should collapse into one run");
     }
 
     [TestMethod]
     public void ADeferredRunHappensOnceTheBurstStops()
     {
         var runs = 0;
-        using var scheduler = new QuietPeriodScheduler(() => Interlocked.Increment(ref runs), QuietMs);
+        var ran = new ManualResetEventSlim();
+        using var scheduler = new QuietPeriodScheduler(
+            () => { Interlocked.Increment(ref runs); ran.Set(); }, QuietMs);
 
         scheduler.RunWhenQuiet();
-        Thread.Sleep(SettleMs);
 
+        Assert.IsTrue(ran.Wait(WaitForRunMs), "the deferred run never happened");
         Assert.AreEqual(1, runs);
     }
 
@@ -75,8 +93,10 @@ public class QuietPeriodSchedulerTests
 
         scheduler.RunWhenQuiet();
         scheduler.RunNow();
-        Thread.Sleep(SettleMs);
 
+        // A negative: waiting is how it gets established. If the dropped request fired after all, runs
+        // becomes 2 within a quiet period, and this wait is many times that.
+        Thread.Sleep(SettleMs);
         Assert.AreEqual(1, runs);
     }
 
@@ -88,8 +108,8 @@ public class QuietPeriodSchedulerTests
 
         scheduler.RunWhenQuiet();
         scheduler.Cancel();
-        Thread.Sleep(SettleMs);
 
+        Thread.Sleep(SettleMs);
         Assert.AreEqual(0, runs);
     }
 
@@ -113,11 +133,11 @@ public class QuietPeriodSchedulerTests
         }, QuietMs);
 
         var blocker = Task.Run(scheduler.RunNow);
-        Assert.IsTrue(entered.Wait(SettleMs), "the first run never started");
+        Assert.IsTrue(entered.Wait(WaitForRunMs), "the first run never started");
 
         scheduler.RunNow(); // must not join the run already in progress
         release.Set();
-        blocker.Wait(SettleMs * 2);
+        Assert.IsTrue(blocker.Wait(WaitForRunMs), "the blocking run never finished");
 
         Assert.AreEqual(1, maxConcurrent);
     }
@@ -129,26 +149,33 @@ public class QuietPeriodSchedulerTests
         var release = new ManualResetEventSlim();
         var runs = 0;
         var firstRun = new ManualResetEventSlim();
+        var retried = new ManualResetEventSlim();
 
         using var scheduler = new QuietPeriodScheduler(() =>
         {
             if (Interlocked.Increment(ref runs) == 1)
             {
                 firstRun.Set();
-                release.Wait(SettleMs);
+                release.Wait(WaitForRunMs);
+            }
+            else
+            {
+                retried.Set();
             }
         }, QuietMs);
 
         var blocker = Task.Run(scheduler.RunNow);
-        Assert.IsTrue(firstRun.Wait(SettleMs), "the first run never started");
+        Assert.IsTrue(firstRun.Wait(WaitForRunMs), "the first run never started");
 
         scheduler.RunNow();       // skipped: the first is still holding the lock
         Assert.AreEqual(1, runs);
 
         release.Set();
-        blocker.Wait(SettleMs * 2);
-        Thread.Sleep(SettleMs);   // the skipped request re-armed itself
+        Assert.IsTrue(blocker.Wait(WaitForRunMs), "the blocking run never finished");
 
+        // Waited for rather than slept past: the skipped request re-arms itself on the quiet period, and
+        // how long that takes to be picked up is not something to assume on a loaded machine.
+        Assert.IsTrue(retried.Wait(WaitForRunMs), "the skipped request was never retried");
         Assert.AreEqual(2, runs);
     }
 

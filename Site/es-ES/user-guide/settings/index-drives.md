@@ -18,6 +18,10 @@ distribución), **Carpetas**, y **Reglas de exclusión**.
   reinicia a mitad de escaneo), la siguiente reconstrucción continúa desde donde se quedó en lugar de empezar de
   cero.
 
+La búsqueda sigue funcionando mientras se reconstruye un índice. La unidad que se está reconstruyendo continúa
+respondiendo con su índice anterior hasta que el nuevo esté listo, y las demás unidades no se ven afectadas: una
+reconstrucción nunca te deja con una lista de resultados vacía.
+
 ## Unidades de red
 
 - La misma tarjeta de estado y botón **Reconstruir índice** que Unidades locales.

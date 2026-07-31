@@ -17,6 +17,10 @@ is detected), **Folders**, and **Exclusion Rules**.
   sync — and if one gets interrupted (stopped, or the app/service restarts mid-scan), the next
   rebuild picks up from where it left off instead of starting over.
 
+Searching keeps working while a rebuild is running. The drive being rebuilt goes on answering from
+its previous index until the new one is ready, and the other drives are unaffected — a rebuild never
+leaves you with an empty result list.
+
 ## Network Drives
 
 - Same status card and **Rebuild Index** button as Local Drives.

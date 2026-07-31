@@ -194,7 +194,12 @@ public sealed class FzfTopNTests
     }
 
     [TestMethod]
-    [Timeout(20_000)]
+    // CooperativeCancellation because the alternative is MSTest aborting the test thread, which .NET no
+    // longer supports properly. Nothing here polls the token -- the loop below is one tight call into the
+    // code under test -- so a regression is reported once that call returns rather than the moment the
+    // deadline passes. Later, but still a failure, and the quadratic shape this guards against takes
+    // minutes rather than the fraction of a second it should.
+    [Timeout(20_000, CooperativeCancellation = true)]
     public void AStreamOfIdenticalSortKeys_DoesNotDegradeToQuadratic()
     {
         // A guard on cost, not on the answer. Selecting with a two-way partition sends every key equal

@@ -68,6 +68,14 @@ public class QuickSearchWindowInputHandler
             e.Handled = true;
             return;
         }
+        if (WpfUiHelper.MatchesHotkey(settings.StayOpenHotkey, Keyboard.Modifiers, actualKey))
+        {
+            // Keeps this summon on screen when focus goes elsewhere, so a query can be assembled from
+            // text copied out of other windows. See QuickSearchWindowController.ToggleStayOpen.
+            _window.ToggleStayOpen();
+            e.Handled = true;
+            return;
+        }
         if (WpfUiHelper.MatchesHotkey(settings.OpenFullWindowHotkey, Keyboard.Modifiers, actualKey))
         {
             // Opens the full SearchWindow directly (bypassing the search box logo's menu detour), carrying

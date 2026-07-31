@@ -31,9 +31,22 @@ internal static class FzfRankRadixSorter
         }
 
         var live = CollectionsMarshal.AsSpan(ranks);
-        if (_scratch == null || _scratch.Length < count)
-            _scratch = new FzfRank[Math.Max(count, 4096)];
-        var scratch = _scratch.AsSpan(0, count);
+        FzfRank[] buffer;
+        if (_scratch != null && _scratch.Length >= count)
+        {
+            buffer = _scratch;
+        }
+        else
+        {
+            buffer = new FzfRank[Math.Max(count, 4096)];
+            // Kept for the next search only while it is a size a next search would plausibly want. A
+            // whole-drive query sizes this to its own result count, and holding that forever is a high
+            // water mark nothing ever gives back -- see SearchScratchPolicy. An existing smaller one is
+            // deliberately left in place rather than replaced by the oversized one.
+            if (SearchScratchPolicy.WorthRetaining<FzfRank>(buffer.Length))
+                _scratch = buffer;
+        }
+        var scratch = buffer.AsSpan(0, count);
 
         var from = live;
         var to = scratch;

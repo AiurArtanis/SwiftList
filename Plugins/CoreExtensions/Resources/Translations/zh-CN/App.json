@@ -413,6 +413,7 @@
   "Hotkeys_KeywordHistoryNext": "下一条关键字记录",
   "Hotkeys_KeywordHistoryDelete": "删除当前关键字记录",
   "Hotkeys_OpenFullWindow": "打开完整窗口",
+  "Hotkeys_StayOpen": "保持窗口不消失",
   "Hotkeys_StartupPanelNextTab": "初始面板:下一个标签",
   "Hotkeys_StartupPanelPreviousTab": "初始面板:上一个标签",
   "Hotkeys_QuickNavTitle": "快捷导航触发",

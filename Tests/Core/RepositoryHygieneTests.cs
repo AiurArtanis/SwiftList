@@ -69,9 +69,24 @@ public sealed class RepositoryHygieneTests
                 continue;
             if (!ScannedExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
                 continue;
+            if (IsBuildGeneratedProject(path))
+                continue;
             yield return path;
         }
     }
+
+    // Building a WPF project makes MSBuild write a temporary copy of the project file -- named
+    // <Project>_<random>_wpftmp.csproj -- into the PROJECT directory rather than into obj, so the skip
+    // list above never covered it. It is a generated file full of resolved absolute paths, NuGet package
+    // locations among them, which is to say it names the account the build ran under.
+    //
+    // It exists only while a build is in flight, so this scan hit it exactly when it ran alongside one:
+    // `dotnet test` on the whole test solution builds and tests projects concurrently by design. That
+    // made this test fail intermittently, on 49 hits in a file nobody wrote and which is gone by the time
+    // anyone looks -- the worst possible shape for a check whose entire value is being believed when it
+    // does fire.
+    private static bool IsBuildGeneratedProject(string path) =>
+        Path.GetFileNameWithoutExtension(path).EndsWith("_wpftmp", StringComparison.OrdinalIgnoreCase);
 
     [TestMethod]
     public void NothingNamesTheMachineThisRunsOn()

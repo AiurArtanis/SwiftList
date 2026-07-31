@@ -18,7 +18,11 @@ internal sealed class SearchQueryDispatchController
     private readonly Action<bool> _setIsSearching;
     private readonly Action<Visibility> _setLoadingPanelVisibility;
     private readonly Action<bool> _setIsSearchBoxEnabled;
-    private readonly Action _applyFiltersAndRender;
+    // bool: whether this render extends what is already on screen (a later paint of a search still
+    // streaming) rather than replacing it with a different result set.
+    // int: index of the first row this render changed -- everything before it is already correct on
+    // screen. See StreamingResultAccumulator.FirstChangedIndex.
+    private readonly Action<bool, int> _applyFiltersAndRender;
 
     private IReadOnlyList<string> _queryTokens = Array.Empty<string>();
 
@@ -30,7 +34,7 @@ internal sealed class SearchQueryDispatchController
         Action<bool> setIsSearching,
         Action<Visibility> setLoadingPanelVisibility,
         Action<bool> setIsSearchBoxEnabled,
-        Action applyFiltersAndRender)
+        Action<bool, int> applyFiltersAndRender)
     {
         _searchEngine = searchEngine;
         _serviceStatus = serviceStatus;
@@ -54,33 +58,34 @@ internal sealed class SearchQueryDispatchController
             return;
         }
 
+        // Per-query, because this lambda chain is rebuilt on every OnAdvancedQueryChanged call: the
+        // first paint of a query is a new result set, every later one is that same set growing as the
+        // search streams. The view uses the distinction to decide whether the user's place in the list
+        // still means anything (see ResultsControl's scroll anchor) -- without it, every 150ms repaint
+        // of a multi-second search would throw them back to the top.
+        var rendersSoFar = 0;
+
+        // Also per-query: this window paints many times as a broad search streams, and rebuilding every
+        // row from scratch each time is what made painting expensive enough to have to ration. The
+        // accumulator maps and ranks only what arrived since the previous paint and merges it into the
+        // order already established, so the total cost of painting twenty times is the cost of painting
+        // once. See StreamingResultAccumulator.
+        var accumulator = new StreamingResultAccumulator(cleanQuery, SearchHistoryStore.Snapshot());
+
         _searchEngine.QueueSearch(
             cleanQuery,
             searchScope: null,
             isInlineSearchContext: false,
             fileLimit: SearchViewModel.FullSearchFileLimit,
             appLimit: SearchViewModel.FullSearchAppLimit,
+            // Local (USN-indexed) and network-drive results stream in from separate, independently-timed
+            // sources (see Core.Services.SearchService.SearchStreamingAsync's localTask/networkTask) and
+            // land in fileResults in WHATEVER order they happened to arrive -- not relevance order.
+            // SearchResultMapper.BuildQuickResults (the quick/inline windows) re-sorts by rank before
+            // building rows; the accumulator does the same thing incrementally, merging each new arrival
+            // into the ranking rather than redoing it.
             resultMapper: (fileResults, _) =>
-            {
-                var results = new List<AppSearchResult>();
-                SearchResultMapper.RemoveQueriedDirectoryItself(fileResults, cleanQuery);
-                if (fileResults != null)
-                {
-                    // Local (USN-indexed) and network-drive results stream in from separate,
-                    // independently-timed sources (see Core.Services.SearchService.SearchStreamingAsync's
-                    // localTask/networkTask) and land in fileResults in WHATEVER order they happened to
-                    // arrive -- not relevance order. SearchResultMapper.BuildQuickResults (the quick/inline
-                    // windows) already re-sorts by rank before building rows; this window skipped that
-                    // step, so a fast-arriving low-relevance network match could sit ahead of a slower
-                    // but far more relevant local one.
-                    fileResults.Sort(new SearchResultRankComparer(SearchHistoryStore.Snapshot()));
-                    for (var i = 0; i < fileResults.Count; i++)
-                    {
-                        results.Add(SearchResultMapper.CreateUiResult(fileResults[i], cleanQuery, results.Count, isApplication: false, scope: null));
-                    }
-                }
-                return results;
-            },
+                fileResults == null ? new List<AppSearchResult>() : accumulator.Absorb(fileResults),
             searching => _setIsSearching(searching),
             (results, status, final) =>
             {
@@ -91,8 +96,14 @@ internal sealed class SearchQueryDispatchController
                 // FilteredResults) -- the shared engine's synthetic "Empty" placeholder row is meant
                 // for the quick/inline windows, which have no such hint and render it inline instead.
                 // Left in here, it counts toward FilteredResults.Count and shows up as a real grid row.
-                var filteredResults = results.Where(r => !r.IsEmptyResult).ToList();
-                _setAllResults(filteredResults);
+                // Copied only when there is genuinely something to drop. The engine appends its
+                // synthetic "Empty" placeholder in exactly one case (a final render that found nothing),
+                // so on every other paint this filter used to duplicate the entire row list -- megabytes
+                // onto the large object heap, on the UI thread, once per paint -- to remove nothing.
+                var filteredResults = results.Exists(r => r.IsEmptyResult)
+                    ? results.FindAll(r => !r.IsEmptyResult)
+                    : results;
+                var extendsContent = rendersSoFar++ > 0;
                 // Token providers (e.g. the built-in ":[SCMA]"/".ext"/"::expr" sort+filter+match
                 // plugin) render via a follow-up ApplyFiltersAndRender inside
                 // RefreshAfterTokenDispatchAsync instead of the call below -- a provider with no
@@ -101,9 +112,25 @@ internal sealed class SearchQueryDispatchController
                 // completion synchronously right here; rendering the raw (pre-token) results below
                 // would then immediately clobber its filtered result with the unfiltered one.
                 if (_queryTokens.Count > 0)
-                    _ = RefreshAfterTokenDispatchAsync(filteredResults, _queryTokens);
+                {
+                    // Copied because this outlives the render: the accumulator hands back one buffer it
+                    // reuses on the next paint, which is safe for a synchronous consumer and not for one
+                    // that awaits.
+                    //
+                    // The SAME copy has to become _allResults. RefreshAfterTokenDispatchAsync decides
+                    // whether its result is still wanted by comparing the snapshot it was handed against
+                    // _allResults BY REFERENCE, so handing it a copy while _allResults kept the original
+                    // made that check fail every single time and silently discard every token dispatch --
+                    // tokens in this window quietly stopped doing anything at all.
+                    var snapshot = new List<AppSearchResult>(filteredResults);
+                    _setAllResults(snapshot);
+                    _ = RefreshAfterTokenDispatchAsync(snapshot, _queryTokens, extendsContent);
+                }
                 else
-                    _applyFiltersAndRender();
+                {
+                    _setAllResults(filteredResults);
+                    _applyFiltersAndRender(extendsContent, accumulator.FirstChangedIndex);
+                }
                 if (final)
                     _setIsSearching(false);
             },
@@ -123,13 +150,14 @@ internal sealed class SearchQueryDispatchController
         );
     }
 
-    private async Task RefreshAfterTokenDispatchAsync(List<AppSearchResult> resultsSnapshot, IReadOnlyList<string> tokensSnapshot)
+    private async Task RefreshAfterTokenDispatchAsync(List<AppSearchResult> resultsSnapshot, IReadOnlyList<string> tokensSnapshot, bool extendsContent)
     {
         var dispatched = await QueryTokenDispatcher.ApplyAsync(resultsSnapshot, tokensSnapshot);
         if (!ReferenceEquals(_getAllResults(), resultsSnapshot) || !ReferenceEquals(_queryTokens, tokensSnapshot))
             return;
         _setAllResults(dispatched);
-        _applyFiltersAndRender();
+        // A token provider may filter or reorder anything, so no prefix survives.
+        _applyFiltersAndRender(extendsContent, 0);
     }
 
     public void PerformSearch(string query)
@@ -148,7 +176,7 @@ internal sealed class SearchQueryDispatchController
         _searchEngine.CancelPendingSearch();
         _setIsSearching(false);
         _getAllResults().Clear();
-        _applyFiltersAndRender();
+        _applyFiltersAndRender(false, 0);
         _setLoadingPanelVisibility(Visibility.Collapsed);
     }
 }

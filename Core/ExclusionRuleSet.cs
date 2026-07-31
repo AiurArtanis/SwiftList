@@ -10,6 +10,12 @@ public sealed class ExclusionRuleSet
     private readonly Regex[] _ignoredRegexes;
     private readonly string? _root;
 
+    // Concurrent because the streaming search calls in from its local-drive and network tasks at once
+    // (see SearchService.SearchStreamingAsync). Bounded by the number of distinct directories the
+    // results live in, and scoped to this instance, so it needs no invalidation of its own.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _ancestorVerdicts =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private ExclusionRuleSet(string[] excludedRoots, NetworkGlobPattern[] ignoredGlobs, Regex[] ignoredRegexes, string? root = null)
     {
         _excludedRoots = excludedRoots;
@@ -82,36 +88,97 @@ public sealed class ExclusionRuleSet
         if (_ignoredGlobs.Length == 0 && _ignoredRegexes.Length == 0)
             return false;
 
-        // 2. Check globs and regexes on the path itself and all of its parent directories
-        var current = normalized;
+        // 2. Check globs and regexes on the path itself, then on its ancestors -- which are cached,
+        // because an ancestor's verdict belongs to the ancestor rather than to whatever is under it.
+        //
+        // This used to re-walk every parent of every result. With five globs configured and paths
+        // averaging ninety characters that is roughly a hundred and twenty regex evaluations and two
+        // dozen string allocations PER RESULT, and the full window now asks about every match on the
+        // drive: measured at 30us a result, 20 seconds of one pegged core for 660k of them, against
+        // 0.26 seconds for the same set with no globs. Nearly all of it was re-deciding the same few
+        // tens of thousands of directories over and over -- the hundreds of thousands of files under one
+        // directory all get the same answer from it.
+        var leaf = normalized.TrimEnd(Path.DirectorySeparatorChar);
+        if (string.IsNullOrEmpty(leaf))
+            return false;
+        if (MatchesIgnorePatterns(normalized, leaf))
+            return true;
+
+        var parentDirectory = Path.GetDirectoryName(leaf);
+        return !string.IsNullOrEmpty(parentDirectory) && AncestorIsIgnored(parentDirectory);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="directory"/> or anything above it matches an ignore pattern, memoised
+    /// per directory for the lifetime of this rule set (which is immutable -- a settings change builds a
+    /// new one, see <see cref="From(UserSettings)"/> and <see cref="InvalidateCache"/>).
+    /// </summary>
+    private bool AncestorIsIgnored(string directory)
+    {
+        if (_ancestorVerdicts.TryGetValue(directory, out var known))
+            return known;
+
+        // Walks up collecting the levels it has to decide, then writes the answer back to all of them
+        // rather than only the one asked about, so a sibling deeper in the same tree gets a hit too.
+        // Iterative rather than recursive: a malformed parent chain has produced an unbounded walk in
+        // this codebase before, and a list can't overflow the stack the way that did.
+        List<string>? undecided = null;
+        var current = directory;
+        var verdict = false;
         while (true)
         {
-            var pathForGlob = current.TrimEnd(Path.DirectorySeparatorChar);
-            if (string.IsNullOrEmpty(pathForGlob))
+            if (_ancestorVerdicts.TryGetValue(current, out verdict))
                 break;
 
-            var name = Path.GetFileName(pathForGlob);
-            var relativePath = GetRelativePath(current);
-            var slashPath = pathForGlob.Replace('\\', '/');
+            (undecided ??= new List<string>()).Add(current);
 
-            foreach (var glob in _ignoredGlobs)
+            // Matched here, so every level collected below it is excluded too -- they are all its
+            // descendants.
+            if (MatchesIgnorePatterns(current + Path.DirectorySeparatorChar, current))
             {
-                if (glob.IsMatch(pathForGlob) || glob.IsMatch(slashPath) || glob.IsMatch(relativePath))
-                    return true;
-            }
-
-            foreach (var regex in _ignoredRegexes)
-            {
-                if (regex.IsMatch(name) || regex.IsMatch(pathForGlob) || regex.IsMatch(slashPath) || regex.IsMatch(relativePath))
-                    return true;
-            }
-
-            // Get parent directory
-            var parent = Path.GetDirectoryName(pathForGlob);
-            if (string.IsNullOrEmpty(parent) || parent == current || parent == pathForGlob)
+                verdict = true;
                 break;
+            }
 
-            current = parent + Path.DirectorySeparatorChar;
+            var parent = Path.GetDirectoryName(current);
+            // Length rather than inequality: an entry whose parent doesn't strictly shorten the path
+            // isn't a parent, and treating it as one is what makes the walk unbounded.
+            if (string.IsNullOrEmpty(parent) || parent.Length >= current.Length)
+            {
+                verdict = false;
+                break;
+            }
+            current = parent;
+        }
+
+        if (undecided != null)
+            foreach (var level in undecided)
+                _ancestorVerdicts[level] = verdict;
+
+        return verdict;
+    }
+
+    // currentWithSeparator only differs from pathForGlob for a drive root, where GetRelativePath's
+    // StartsWith(_root) check needs the separator to recognise the root as the root.
+    private bool MatchesIgnorePatterns(string currentWithSeparator, string pathForGlob)
+    {
+        var relativePath = GetRelativePath(currentWithSeparator);
+        var slashPath = pathForGlob.Replace('\\', '/');
+
+        foreach (var glob in _ignoredGlobs)
+        {
+            if (glob.IsMatch(pathForGlob) || glob.IsMatch(slashPath) || glob.IsMatch(relativePath))
+                return true;
+        }
+
+        if (_ignoredRegexes.Length == 0)
+            return false;
+
+        var name = Path.GetFileName(pathForGlob);
+        foreach (var regex in _ignoredRegexes)
+        {
+            if (regex.IsMatch(name) || regex.IsMatch(pathForGlob) || regex.IsMatch(slashPath) || regex.IsMatch(relativePath))
+                return true;
         }
 
         return false;

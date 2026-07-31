@@ -18,7 +18,12 @@ public static class FileExecutor
             return;
         if (path == "__SHOW_MORE__")
         {
-            var searchWin = new SearchWindow(currentSearchText);
+            // The full window takes over from whatever asked for it, so a preview the user had open
+            // carries across instead of closing with the window it was opened from. Read before
+            // constructing anything: the new window's own startup resets this, as does the quick window
+            // hiding below. Every route from the quick window to the full one comes through here.
+            var restorePreview = QuickLookManager.Instance.IsPreviewWanted;
+            var searchWin = new SearchWindow(currentSearchText, restorePreview);
             searchWin.Show();
             onHideWindow?.Invoke();
             return;
